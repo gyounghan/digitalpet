@@ -1,0 +1,507 @@
+---
+description: Flutter Clean Architecture 구조 및 개발 규칙
+alwaysApply: true
+---
+
+# Flutter Clean Architecture 규칙
+
+## 프로젝트 구조
+
+프로젝트는 Clean Architecture 패턴을 엄격히 따릅니다. 다음 디렉토리 구조를 준수하세요:
+
+```
+lib/
+├── core/                # 공통 유틸(constants, themes, errors)
+├── domain/              # 비즈니스 로직의 핵심 (Pure Dart)
+│   ├── entities/        # Pet 데이터 모델 (추상화)
+│   ├── repositories/    # 저장소 인터페이스
+│   └── usecases/        # 비즈니스 로직 유스케이스 (확장성 고려)
+├── data/                # 데이터 구현부
+│   ├── models/          # JSON 직렬화 및 DB 모델
+│   ├── repositories/    # 레포지토리 실제 구현 (Local/Remote)
+│   └── datasources/     # Hive, Firebase 등 실제 저장 로직
+├── presentation/        # UI 레이어 (Flutter)
+│   ├── providers/       # Riverpod 상태 관리 (ViewModel 역할)
+│   ├── screens/         # 각 화면 (Home, Selection, Library)
+│   └── widgets/         # 재사용 UI (GaugeBar, PetAvatar)
+└── main.dart
+```
+
+## 레이어 규칙
+
+### Domain 레이어 (Pure Dart)
+- **의존성 없음**: Flutter, 외부 패키지 의존 금지
+- **Entities**: 순수 Dart 클래스로 비즈니스 모델 정의
+- **Repositories**: 인터페이스만 정의 (abstract class)
+- **UseCases**: 비즈니스 로직 캡슐화 (확장성 고려)
+
+```dart
+// ✅ GOOD - domain/entities/pet.dart
+/// 반려동물 엔티티
+/// Domain 레이어의 순수 Dart 클래스로, 비즈니스 로직의 핵심 모델
+class Pet {
+  /// 반려동물 고유 ID
+  final String id;
+  
+  /// 반려동물 이름
+  final String name;
+  
+  /// 현재 레벨
+  final int level;
+  
+  Pet({
+    required this.id,
+    required this.name,
+    required this.level,
+  });
+}
+
+// ✅ GOOD - domain/repositories/pet_repository.dart
+/// 반려동물 저장소 인터페이스
+/// Domain 레이어에서 정의하며, Data 레이어에서 구현
+abstract class PetRepository {
+  /// ID로 반려동물 조회
+  Future<Pet> getPet(String id);
+  
+  /// 반려동물 저장
+  Future<void> savePet(Pet pet);
+}
+
+// ✅ GOOD - domain/usecases/get_pet_usecase.dart
+/// 반려동물 조회 유스케이스
+/// 비즈니스 로직을 캡슐화하여 확장성과 재사용성 향상
+class GetPetUseCase {
+  final PetRepository repository;
+  
+  GetPetUseCase(this.repository);
+  
+  /// 반려동물을 조회하고 비즈니스 로직 적용
+  Future<Pet> call(String id) async {
+    final pet = await repository.getPet(id);
+    // 추가 비즈니스 로직 (예: 캐시 검증, 권한 확인 등)
+    return pet;
+  }
+}
+```
+
+### Data 레이어
+- **Models**: JSON 직렬화 및 Hive 모델 (fromJson, toJson, HiveObject)
+- **Repositories**: Domain의 인터페이스 구현
+- **Datasources**: Hive, Firebase 등 실제 저장소 접근
+
+```dart
+// ✅ GOOD - data/models/pet_model.dart
+import 'package:hive/hive.dart';
+import '../../domain/entities/pet.dart';
+
+/// 반려동물 데이터 모델
+/// Domain의 Pet 엔티티를 확장하여 Hive 저장 및 JSON 직렬화 지원
+@HiveType(typeId: 0)
+class PetModel extends Pet {
+  PetModel({
+    required super.id,
+    required super.name,
+    required super.level,
+  });
+  
+  /// JSON에서 PetModel 생성
+  factory PetModel.fromJson(Map<String, dynamic> json) {
+    return PetModel(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      level: json['level'] as int,
+    );
+  }
+  
+  /// PetModel을 JSON으로 변환
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'level': level,
+    };
+  }
+  
+  /// Hive Box에서 PetModel 생성
+  factory PetModel.fromHive(Map<dynamic, dynamic> map) {
+    return PetModel(
+      id: map['id'] as String,
+      name: map['name'] as String,
+      level: map['level'] as int,
+    );
+  }
+}
+
+// ✅ GOOD - data/datasources/local/pet_local_datasource.dart
+import 'package:hive/hive.dart';
+import '../../models/pet_model.dart';
+
+/// 반려동물 로컬 데이터소스
+/// Hive를 사용한 로컬 저장소 접근
+class PetLocalDataSource {
+  static const String _boxName = 'pets';
+  Box<PetModel>? _box;
+  
+  /// Hive Box 초기화
+  Future<void> init() async {
+    _box = await Hive.openBox<PetModel>(_boxName);
+  }
+  
+  /// ID로 반려동물 조회
+  Future<PetModel?> getPet(String id) async {
+    if (_box == null) await init();
+    return _box!.get(id);
+  }
+  
+  /// 반려동물 저장
+  Future<void> savePet(PetModel pet) async {
+    if (_box == null) await init();
+    await _box!.put(pet.id, pet);
+  }
+  
+  /// 모든 반려동물 조회
+  Future<List<PetModel>> getAllPets() async {
+    if (_box == null) await init();
+    return _box!.values.toList();
+  }
+}
+
+// ✅ GOOD - data/repositories/pet_repository_impl.dart
+import '../../domain/entities/pet.dart';
+import '../../domain/repositories/pet_repository.dart';
+import '../datasources/local/pet_local_datasource.dart';
+import '../models/pet_model.dart';
+
+/// PetRepository 인터페이스 구현
+/// Domain의 추상화된 인터페이스를 실제 구현
+class PetRepositoryImpl implements PetRepository {
+  final PetLocalDataSource localDataSource;
+  
+  PetRepositoryImpl(this.localDataSource);
+  
+  @override
+  Future<Pet> getPet(String id) async {
+    final petModel = await localDataSource.getPet(id);
+    if (petModel == null) {
+      throw Exception('Pet not found: $id');
+    }
+    return petModel;
+  }
+  
+  @override
+  Future<void> savePet(Pet pet) async {
+    final petModel = PetModel(
+      id: pet.id,
+      name: pet.name,
+      level: pet.level,
+    );
+    await localDataSource.savePet(petModel);
+  }
+}
+```
+
+### Presentation 레이어
+- **Providers**: Riverpod을 사용한 상태 관리 (ViewModel 역할)
+- **Screens**: 각 화면의 위젯 트리
+- **Widgets**: 재사용 가능한 UI 컴포넌트
+
+```dart
+// ✅ GOOD - presentation/providers/pet_provider.dart
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../domain/repositories/pet_repository.dart';
+import '../../data/repositories/pet_repository_impl.dart';
+import '../../data/datasources/local/pet_local_datasource.dart';
+
+/// PetRepository Provider
+/// 의존성 주입을 위한 Riverpod Provider
+final petRepositoryProvider = Provider<PetRepository>((ref) {
+  return PetRepositoryImpl(PetLocalDataSource());
+});
+
+/// 반려동물 조회 Provider
+/// ID를 받아 해당 반려동물을 조회하는 FutureProvider
+final petProvider = FutureProvider.family<Pet, String>((ref, id) async {
+  final repository = ref.watch(petRepositoryProvider);
+  return await repository.getPet(id);
+});
+
+// ✅ GOOD - presentation/screens/home_screen.dart
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../providers/pet_provider.dart';
+
+/// 홈 화면
+/// 반려동물 정보를 표시하는 메인 화면
+class HomeScreen extends ConsumerWidget {
+  const HomeScreen({super.key});
+  
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Riverpod Provider를 통해 반려동물 데이터 조회
+    final petAsync = ref.watch(petProvider('pet-1'));
+    
+    // 비동기 상태에 따라 UI 렌더링
+    return petAsync.when(
+      data: (pet) => Text(pet.name),
+      loading: () => const CircularProgressIndicator(),
+      error: (err, stack) => Text('Error: $err'),
+    );
+  }
+}
+```
+
+## 의존성 방향
+
+**중요**: 의존성은 항상 안쪽으로만 흐릅니다.
+
+```
+Presentation → Domain ← Data
+     ↓            ↑
+     └────────────┘
+```
+
+- Presentation은 Domain과 Data에 의존 가능
+- Data는 Domain에만 의존 가능
+- Domain은 아무것도 의존하지 않음
+- Presentation은 Data를 직접 import하지 않음 (Repository를 통해서만)
+
+## 명명 규칙
+
+### 파일명
+- **snake_case** 사용
+- 파일명은 클래스명과 일치 (단, 복수형 허용)
+- 예: `pet_repository.dart`, `pet_model.dart`, `home_screen.dart`
+
+### 클래스명
+- **PascalCase** 사용
+- **Entities**: 단순 명사 (`Pet`, `User`)
+- **Models**: `{Entity}Model` (`PetModel`, `UserModel`)
+- **Repositories**: `{Entity}Repository` (인터페이스), `{Entity}RepositoryImpl` (구현)
+- **Datasources**: `{Entity}LocalDataSource`, `{Entity}RemoteDataSource`
+- **Providers**: `{Entity}Provider`, `{Entity}Notifier`
+- **Screens**: `{Name}Screen` (`HomeScreen`, `SelectionScreen`)
+- **Widgets**: `{Name}Widget` 또는 명확한 이름 (`GaugeBar`, `PetAvatar`)
+
+### 변수/함수명
+- **camelCase** 사용
+- Provider는 `{entity}Provider` (소문자 시작)
+- 예: `petProvider`, `getPet()`, `savePet()`
+
+## 코드 예시
+
+### ❌ 잘못된 예시
+
+```dart
+// ❌ BAD - Domain에서 Flutter 의존
+import 'package:flutter/material.dart';
+
+class Pet {
+  Widget buildWidget() => Container(); // Flutter 의존!
+}
+
+// ❌ BAD - Presentation에서 Data 직접 import
+import 'package:pocketpet/data/models/pet_model.dart';
+
+// ❌ BAD - 레이어 경계 위반 (SharedPreferences 직접 사용)
+class PetRepository {
+  Future<void> save() {
+    SharedPreferences.getInstance(); // Data 레이어 로직!
+  }
+}
+
+// ❌ BAD - 주석 부족
+class PetRepositoryImpl implements PetRepository {
+  final PetLocalDataSource localDataSource;
+  
+  PetRepositoryImpl(this.localDataSource);
+  
+  Future<Pet> getPet(String id) async {
+    return await localDataSource.getPet(id); // 주석 없음
+  }
+}
+
+// ❌ BAD - Hive 초기화 누락
+class PetLocalDataSource {
+  Box<PetModel>? _box;
+  
+  Future<PetModel?> getPet(String id) async {
+    return _box!.get(id); // 초기화 확인 없음
+  }
+}
+```
+
+### ✅ 올바른 예시
+
+```dart
+// ✅ GOOD - Domain은 순수 Dart (주석 포함)
+/// 반려동물 엔티티
+/// 비즈니스 로직의 핵심 모델
+class Pet {
+  final String id;
+  final String name;
+  final int level;
+  
+  Pet({
+    required this.id,
+    required this.name,
+    required this.level,
+  });
+}
+
+// ✅ GOOD - Data에서 Domain 사용 (Hive 적용)
+import 'package:hive/hive.dart';
+
+/// 반려동물 데이터 모델
+/// Hive 저장 및 JSON 직렬화 지원
+@HiveType(typeId: 0)
+class PetModel extends Pet {
+  PetModel({
+    required super.id,
+    required super.name,
+    required super.level,
+  });
+  
+  factory PetModel.fromJson(Map<String, dynamic> json) {
+    return PetModel(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      level: json['level'] as int,
+    );
+  }
+}
+
+// ✅ GOOD - Presentation은 Domain 인터페이스만 사용 (주석 포함)
+/// 반려동물 조회 Provider
+/// Riverpod을 통한 상태 관리
+final petProvider = FutureProvider<Pet>((ref) async {
+  final repo = ref.watch(petRepositoryProvider);
+  return await repo.getPet('1');
+});
+
+// ✅ GOOD - Hive 초기화 확인
+class PetLocalDataSource {
+  Box<PetModel>? _box;
+  
+  /// Hive Box 초기화 확인 및 실행
+  Future<void> _ensureInitialized() async {
+    if (_box == null) {
+      _box = await Hive.openBox<PetModel>('pets');
+    }
+  }
+  
+  Future<PetModel?> getPet(String id) async {
+    await _ensureInitialized();
+    return _box!.get(id);
+  }
+}
+```
+
+## 주석 작성 규칙
+
+모든 코드에는 충분한 주석을 작성해야 합니다:
+
+### 클래스/함수 주석
+- **클래스**: 클래스의 목적과 역할을 설명하는 문서 주석 작성
+- **함수/메서드**: 파라미터, 반환값, 동작 방식 설명
+- **복잡한 로직**: 비즈니스 로직이 복잡한 경우 단계별 설명 추가
+
+```dart
+// ✅ GOOD - 충분한 주석
+/// 반려동물 경험치 업데이트 유스케이스
+/// 걸음수와 집중 시간을 기반으로 경험치를 계산하고 업데이트
+class UpdatePetExperienceUseCase {
+  final PetRepository petRepository;
+  final ActivityRepository activityRepository;
+  
+  UpdatePetExperienceUseCase({
+    required this.petRepository,
+    required this.activityRepository,
+  });
+  
+  /// 반려동물의 경험치를 업데이트
+  /// 
+  /// [petId] 업데이트할 반려동물 ID
+  /// 
+  /// 반환: 업데이트된 Pet 엔티티
+  Future<Pet> call(String petId) async {
+    // 1. 현재 반려동물 정보 조회
+    final pet = await petRepository.getPet(petId);
+    
+    // 2. 활동 데이터 조회 (걸음수, 집중 시간)
+    final steps = await activityRepository.getStepsCount();
+    final focusTime = await activityRepository.getFocusTime();
+    
+    // 3. 경험치 계산 (걸음수 100보당 1 경험치, 집중 1분당 2 경험치)
+    final experienceFromSteps = steps ~/ 100;
+    final experienceFromFocus = focusTime.inMinutes * 2;
+    final totalExperience = pet.experience + experienceFromSteps + experienceFromFocus;
+    
+    // 4. 레벨 업 계산 (100 경험치당 1 레벨)
+    final newLevel = pet.level + (totalExperience ~/ 100);
+    
+    // 5. 업데이트된 반려동물 저장
+    final updatedPet = pet.copyWith(
+      experience: totalExperience,
+      level: newLevel,
+    );
+    await petRepository.savePet(updatedPet);
+    
+    return updatedPet;
+  }
+}
+
+// ❌ BAD - 주석 부족
+class UpdatePetExperienceUseCase {
+  final PetRepository petRepository;
+  
+  Future<Pet> call(String petId) async {
+    final pet = await petRepository.getPet(petId);
+    // 복잡한 로직이지만 주석이 없음
+    final steps = await activityRepository.getStepsCount();
+    final updatedPet = pet.copyWith(experience: pet.experience + steps);
+    await petRepository.savePet(updatedPet);
+    return updatedPet;
+  }
+}
+```
+
+### 인라인 주석
+- **복잡한 알고리즘**: 알고리즘이 복잡한 경우 단계별 설명
+- **비즈니스 규칙**: 특정 비즈니스 규칙이 적용되는 경우 설명
+- **임시 코드**: 임시로 작성된 코드는 TODO 주석과 함께 이유 명시
+
+```dart
+// ✅ GOOD
+// Hive Box 초기화 (앱 시작 시 한 번만 실행)
+if (_box == null) {
+  await init();
+}
+
+// 걸음수 기반 경험치 계산 (100보당 1 경험치)
+final experienceGain = stepsCount ~/ 100;
+
+// TODO: 배터리 최적화를 위해 백그라운드 업데이트 주기 조정 필요
+```
+
+## 확장성 고려 사항
+
+### UseCase 패턴 활용
+- **비즈니스 로직 분리**: 각 유스케이스는 단일 책임 원칙 준수
+- **재사용성**: 공통 로직은 UseCase로 추출하여 재사용
+- **테스트 용이성**: UseCase 단위로 독립적인 테스트 작성 가능
+
+### 인터페이스 우선 설계
+- **Repository 인터페이스**: Domain 레이어에서 인터페이스 정의
+- **구현체 교체 용이**: 필요시 다른 구현체로 쉽게 교체 가능
+- **의존성 역전**: 고수준 모듈이 저수준 모듈에 의존하지 않도록 설계
+
+## 추가 규칙
+
+1. **Core 폴더**: 프로젝트 전역에서 사용하는 상수, 테마, 에러 클래스 등
+2. **테스트**: 각 레이어별로 독립적인 테스트 작성
+3. **에러 처리**: Domain에서 커스텀 에러 클래스 정의, Data에서 처리
+4. **의존성 주입**: Riverpod Provider를 통한 의존성 주입 사용
+5. **로컬 저장소**: Hive를 기본 로컬 저장소로 사용 (SharedPreferences 대신)
+6. **Hive 초기화**: main.dart에서 Hive 초기화 및 TypeAdapter 등록 필수
+7. **주석 작성**: 모든 클래스, 함수, 복잡한 로직에 충분한 주석 작성
+8. **UseCase 패턴**: 비즈니스 로직은 UseCase로 캡슐화하여 확장성 확보
