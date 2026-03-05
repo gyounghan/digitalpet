@@ -25,7 +25,8 @@ android {
         applicationId = "com.example.pocketfriend"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = 21
+        // minSdk를 23으로 설정 (home_widget 패키지의 androidx.glance 라이브러리 요구사항)
+        minSdk = 23
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName

@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_container"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="@android:color/black"
+    android:gravity="center">
+
+    <!-- 펫 이모지 -->
+    <TextView
+        android:id="@+id/pet_emoji"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="🌟"
+        android:textSize="48sp"
+        android:layout_marginBottom="8dp" />
+
+    <!-- 레벨 표시 -->
+    <TextView
+        android:id="@+id/pet_level"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Lv.1"
+        android:textColor="@android:color/white"
+        android:textSize="14sp"
+        android:layout_marginBottom="12dp" />
+
+    <!-- 배고픔 바 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="6dp">
+        <TextView
+            android:layout_width="60dp"
+            android:layout_height="wrap_content"
+            android:text="배고픔"
+            android:textColor="@android:color/white"
+            android:textSize="10sp" />
+        <ProgressBar
+            android:id="@+id/hunger_bar"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="0dp"
+            android:layout_height="8dp"
+            android:layout_weight="1"
+            android:progressTint="#FF6B6B"
+            android:max="100"
+            android:progress="100" />
+    </LinearLayout>
+
+    <!-- 행복도 바 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="6dp">
+        <TextView
+            android:layout_width="60dp"
+            android:layout_height="wrap_content"
+            android:text="행복도"
+            android:textColor="@android:color/white"
+            android:textSize="10sp" />
+        <ProgressBar
+            android:id="@+id/happiness_bar"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="0dp"
+            android:layout_height="8dp"
+            android:layout_weight="1"
+            android:progressTint="#FFD93D"
+            android:max="100"
+            android:progress="100" />
+    </LinearLayout>
+
+    <!-- 체력 바 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+        <TextView
+            android:layout_width="60dp"
+            android:layout_height="wrap_content"
+            android:text="체력"
+            android:textColor="@android:color/white"
+            android:textSize="10sp" />
+        <ProgressBar
+            android:id="@+id/stamina_bar"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="0dp"
+            android:layout_height="8dp"
+            android:layout_weight="1"
+            android:progressTint="#6BCF7F"
+            android:max="100"
+            android:progress="100" />
+    </LinearLayout>
+
+</LinearLayout>

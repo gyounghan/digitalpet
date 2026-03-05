@@ -14,6 +14,7 @@ import '../../data/repository/notification_repository_impl.dart';
 import '../../data/datasource/pet_local_datasource.dart';
 import '../../data/datasource/notification_local_datasource.dart';
 import '../../data/services/notification_service.dart';
+import '../../data/services/widget_service.dart';
 import '../../domain/services/pet_state_service.dart';
 
 /// PetLocalDataSource Provider
@@ -108,6 +109,12 @@ final petStateServiceProvider = Provider<PetStateService>((ref) {
   return PetStateService(useCase);
 });
 
+/// WidgetService Provider
+/// 홈 화면 위젯 서비스 인스턴스를 제공
+final widgetServiceProvider = Provider<WidgetService>((ref) {
+  return WidgetService();
+});
+
 /// Pet Provider
 /// 특정 ID의 Pet을 조회하는 FutureProvider
 /// 
@@ -132,6 +139,7 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
   final EvolvePetUseCase evolvePetUseCase;
   final CheckNotificationUseCase checkNotificationUseCase;
   final NotificationService notificationService;
+  final WidgetService widgetService;
   final String petId;
   
   PetNotifier({
@@ -144,6 +152,7 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
     required this.evolvePetUseCase,
     required this.checkNotificationUseCase,
     required this.notificationService,
+    required this.widgetService,
     required this.petId,
   }) : super(const AsyncValue.loading()) {
     _loadPet();
@@ -175,6 +184,9 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
       final evolvedPet = await evolvePetUseCase(petId);
       state = AsyncValue.data(evolvedPet);
       
+      // 6. 위젯 업데이트
+      await widgetService.updatePetWidget(evolvedPet);
+      
       // 7. 알림 체크 (앱 실행 시)
       _checkAndShowNotification();
     } catch (e, stackTrace) {
@@ -193,9 +205,13 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
   /// 
   /// 상태 변경 후 자동으로 진화 조건을 확인하고 진화 실행
   /// 그리고 알림 조건을 확인하여 알림 발송
+  /// 그리고 위젯을 업데이트하여 홈 화면에 반영
   Future<Pet> _updateAndEvolve(Pet pet) async {
     // 진화 체크 및 실행
     final evolvedPet = await evolvePetUseCase(petId);
+    
+    // 위젯 업데이트
+    await widgetService.updatePetWidget(evolvedPet);
     
     // 알림 체크 (상태 변경 후)
     _checkAndShowNotification();
@@ -284,6 +300,7 @@ final petNotifierProvider = StateNotifierProvider.family<PetNotifier, AsyncValue
     evolvePetUseCase: ref.watch(evolvePetUseCaseProvider),
     checkNotificationUseCase: ref.watch(checkNotificationUseCaseProvider),
     notificationService: ref.watch(notificationServiceProvider),
+    widgetService: ref.watch(widgetServiceProvider),
     petId: petId,
   );
 });

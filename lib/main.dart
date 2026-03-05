@@ -5,7 +5,9 @@ import 'data/models/pet_model_adapter.dart';
 import 'data/datasource/pet_local_datasource.dart';
 import 'data/datasource/notification_local_datasource.dart';
 import 'data/services/notification_service.dart';
-import 'presentation/screens/home_screen.dart';
+import 'data/services/widget_service.dart';
+import 'presentation/screens/main_navigation_screen.dart';
+import 'core/theme/app_theme.dart';
 
 void main() async {
   // Flutter 바인딩 초기화
@@ -16,6 +18,9 @@ void main() async {
   
   // 알림 서비스 초기화
   await _initNotifications();
+  
+  // 위젯 서비스 초기화
+  await _initWidget();
   
   // 앱 실행
   runApp(
@@ -53,6 +58,14 @@ Future<void> _initNotifications() async {
   await notificationService.requestPermission();
 }
 
+/// 위젯 서비스 초기화
+/// 
+/// 앱 시작 시 한 번만 호출하여 홈 화면 위젯 서비스를 준비
+Future<void> _initWidget() async {
+  final widgetService = WidgetService();
+  await widgetService.initialize();
+}
+
 /// 메인 앱 위젯
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -61,11 +74,8 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Pocket Pet',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-        useMaterial3: true,
-      ),
-      home: const HomeScreen(),
+      theme: AppTheme.darkTheme,
+      home: const MainNavigationScreen(),
       debugShowCheckedModeBanner: false,
     );
   }
