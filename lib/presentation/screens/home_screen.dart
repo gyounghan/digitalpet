@@ -4,8 +4,10 @@ import '../providers/pet_provider.dart';
 import '../widgets/status_bar.dart';
 import '../widgets/pet_button.dart';
 import '../widgets/glass_card.dart';
-import '../widgets/sleeping_pet_animation.dart';
+import '../widgets/pet_image_animation.dart';
 import '../../core/theme/app_colors.dart';
+import '../../data/services/widget_service.dart';
+import '../../domain/entities/pet.dart';
 
 /// 홈 화면
 /// Pet의 상태를 표시하고 Feed/Play/Sleep 액션을 수행할 수 있는 메인 화면
@@ -24,6 +26,7 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _petAnimationController;
+  PetImageType _currentPetImageType = PetImageType.sleeping;
   
   @override
   void initState() {
@@ -40,13 +43,99 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     super.dispose();
   }
   
-  String _getMoodEmoji(int happiness) {
-    if (happiness >= 70) {
-      return '🌟';
-    } else if (happiness >= 40) {
-      return '💤';
-    } else {
-      return '💧';
+  /// Feed 액션 처리
+  /// 
+  /// Feed 버튼 클릭 시 호출되어 배고픈 이미지로 전환
+  Future<void> _handleFeed() async {
+    setState(() {
+      _currentPetImageType = PetImageType.hungry;
+    });
+    
+    final petNotifier = ref.read(petNotifierProvider(HomeScreen.defaultPetId).notifier);
+    await petNotifier.feed();
+    
+    // 위젯 업데이트 (배고픈 이미지로)
+    final petAsync = ref.read(petNotifierProvider(HomeScreen.defaultPetId));
+    final pet = petAsync.valueOrNull;
+    if (pet != null) {
+      final widgetService = WidgetService();
+      await widgetService.updatePetWidget(pet, imageType: 'hungry');
+    }
+    
+    // 3초 후 잠자는 상태로 복귀
+    Future.delayed(const Duration(seconds: 3), () {
+      if (mounted) {
+        setState(() {
+          _currentPetImageType = PetImageType.sleeping;
+        });
+        
+        // 위젯도 잠자는 이미지로 업데이트
+        final pet = ref.read(petNotifierProvider(HomeScreen.defaultPetId)).valueOrNull;
+        if (pet != null) {
+          final widgetService = WidgetService();
+          widgetService.updatePetWidget(pet, imageType: 'sleeping');
+        }
+      }
+    });
+  }
+  
+  /// Sleep 액션 처리
+  /// 
+  /// Sleep 버튼 클릭 시 호출되어 잠자는 이미지로 전환
+  Future<void> _handleSleep() async {
+    setState(() {
+      _currentPetImageType = PetImageType.sleeping;
+    });
+    
+    final petNotifier = ref.read(petNotifierProvider(HomeScreen.defaultPetId).notifier);
+    await petNotifier.sleep();
+    
+    // 위젯 업데이트 (잠자는 이미지로)
+    final petAsync = ref.read(petNotifierProvider(HomeScreen.defaultPetId));
+    final pet = petAsync.valueOrNull;
+    if (pet != null) {
+      final widgetService = WidgetService();
+      await widgetService.updatePetWidget(pet, imageType: 'sleeping');
+    }
+  }
+  
+  /// 펫 상태를 한국어 텍스트로 변환
+  /// 
+  /// [mood] 펫의 기분 상태
+  /// 
+  /// 반환: 한국어 상태 텍스트
+  String _getMoodText(PetMood mood) {
+    switch (mood) {
+      case PetMood.happy:
+        return '기쁨';
+      case PetMood.sleepy:
+        return '졸림';
+      case PetMood.hungry:
+        return '배고픔';
+      case PetMood.bored:
+        return '지루함';
+      case PetMood.normal:
+        return '보통';
+    }
+  }
+  
+  /// 펫 상태에 따른 색상 반환
+  /// 
+  /// [mood] 펫의 기분 상태
+  /// 
+  /// 반환: 상태에 맞는 색상
+  Color _getMoodColor(PetMood mood) {
+    switch (mood) {
+      case PetMood.happy:
+        return AppColors.accentPink;
+      case PetMood.sleepy:
+        return AppColors.primary;
+      case PetMood.hungry:
+        return Colors.orange;
+      case PetMood.bored:
+        return Colors.grey;
+      case PetMood.normal:
+        return AppColors.textSecondary;
     }
   }
   
@@ -143,10 +232,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   /// design 폴더의 Home.tsx 레이아웃을 정확히 매칭
   Widget _buildPetContent(BuildContext context, WidgetRef ref, pet) {
     final petName = 'Luna'; // TODO: Pet 엔티티에 name 필드 추가 필요
-    final moodEmoji = _getMoodEmoji(pet.happiness);
-    
-    // 기본 펫은 항상 잠자는 모습으로 표시
-    final isSleeping = true;
     
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -187,7 +272,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     },
                   ),
                 ),
-                // Pet 이름과 레벨
+                // Pet 이름, 레벨, 상태
                 Column(
                   children: [
                     Text(
@@ -203,6 +288,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       style: const TextStyle(
                         fontSize: 12,
                         color: AppColors.textTertiary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    // 펫의 현재 상태 표시
+                    Text(
+                      _getMoodText(pet.mood),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: _getMoodColor(pet.mood),
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ],
@@ -239,112 +334,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Center(
-                    child: AnimatedBuilder(
-                      animation: _petAnimationController,
-                      builder: (context, child) {
-                        // 잠자는 상태일 때는 위아래 움직임 없음
-                        final yOffset = isSleeping ? 0.0 : -10 * _petAnimationController.value;
-                        return Transform.translate(
-                          offset: Offset(0, yOffset),
-                          child: Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              // 글로우 효과 (blur-3xl scale-150)
-                              Transform.scale(
-                                scale: 1.5,
-                                child: Container(
-                                  width: 192,
-                                  height: 192,
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                      colors: [
-                                        AppColors.primary.withValues(alpha: 0.3),
-                                        AppColors.accentPink.withValues(alpha: 0.3),
-                                      ],
-                                    ),
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                              ),
-                              // Pet 컨테이너 (w-48 h-48 = 192px)
-                              Container(
-                                width: 192,
-                                height: 192,
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                    colors: [
-                                      AppColors.glassBackground,
-                                      AppColors.glassBackgroundLight,
-                                    ],
-                                  ),
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: AppColors.glassBorder,
-                                    width: 1,
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withValues(alpha: 0.3),
-                                      blurRadius: 20,
-                                      spreadRadius: 0,
-                                    ),
-                                  ],
-                                ),
-                                child: ClipOval(
-                                  child: isSleeping
-                                      ? SleepingPetAnimation(
-                                          size: 192,
-                                          duration: const Duration(milliseconds: 800),
-                                        )
-                                      : Center(
-                                          child: Text(
-                                            moodEmoji,
-                                            style: const TextStyle(fontSize: 96),
-                                          ),
-                                        ),
-                                ),
-                              ),
-                              // 플로팅 파티클 (w-2 h-2 = 8px)
-                              // 잠자는 상태일 때는 파티클 숨김
-                              if (!isSleeping)
-                                ...List.generate(3, (index) {
-                                  return Positioned(
-                                    left: (20 + index * 30) * 1.92,
-                                    top: (10 + index * 20) * 1.92,
-                                    child: AnimatedBuilder(
-                                      animation: _petAnimationController,
-                                      builder: (context, child) {
-                                        final delay = index * 0.3;
-                                        final cycle = (_petAnimationController.value + delay) % 1.0;
-                                        final yOffset = -20 + (-20 * (cycle < 0.5 ? cycle * 2 : 2 - cycle * 2));
-                                        final opacity = 0.3 + (0.5 * (cycle < 0.5 ? cycle * 2 : 2 - cycle * 2));
-                                        
-                                        return Transform.translate(
-                                          offset: Offset(0, yOffset),
-                                          child: Opacity(
-                                            opacity: opacity,
-                                            child: Container(
-                                              width: 8,
-                                              height: 8,
-                                              decoration: BoxDecoration(
-                                                color: AppColors.accentCyan.withValues(alpha: 0.5),
-                                                shape: BoxShape.circle,
-                                              ),
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                  );
-                                }),
-                            ],
-                          ),
-                        );
-                      },
+                    child: PetImageAnimation(
+                      type: _currentPetImageType,
+                      duration: const Duration(milliseconds: 800),
                     ),
                   ),
                 ],
@@ -387,12 +379,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 Expanded(
                   child: PetButton(
                     variant: PetButtonVariant.secondary,
-                    onPressed: () {
-                      ref
-                          .read(petNotifierProvider(HomeScreen.defaultPetId)
-                              .notifier)
-                          .feed();
-                    },
+                    onPressed: _handleFeed,
                     child: const Text('Feed'),
                   ),
                 ),
@@ -413,12 +400,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 Expanded(
                   child: PetButton(
                     variant: PetButtonVariant.secondary,
-                    onPressed: () {
-                      ref
-                          .read(petNotifierProvider(HomeScreen.defaultPetId)
-                              .notifier)
-                          .sleep();
-                    },
+                    onPressed: _handleSleep,
                     child: const Text('Sleep'),
                   ),
                 ),

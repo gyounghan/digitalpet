@@ -184,8 +184,8 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
       final evolvedPet = await evolvePetUseCase(petId);
       state = AsyncValue.data(evolvedPet);
       
-      // 6. 위젯 업데이트
-      await widgetService.updatePetWidget(evolvedPet);
+      // 6. 위젯 업데이트 (기본값: sleeping 이미지)
+      await widgetService.updatePetWidget(evolvedPet, imageType: 'sleeping');
       
       // 7. 알림 체크 (앱 실행 시)
       _checkAndShowNotification();
@@ -210,8 +210,8 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
     // 진화 체크 및 실행
     final evolvedPet = await evolvePetUseCase(petId);
     
-    // 위젯 업데이트
-    await widgetService.updatePetWidget(evolvedPet);
+    // 위젯 업데이트 (기본값: sleeping 이미지)
+    await widgetService.updatePetWidget(evolvedPet, imageType: 'sleeping');
     
     // 알림 체크 (상태 변경 후)
     _checkAndShowNotification();

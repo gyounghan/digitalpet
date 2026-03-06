@@ -37,6 +37,8 @@
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <!-- 애니메이션 업데이트를 위한 커스텀 액션 -->
+                <action android:name="com.example.pocketfriend.ACTION_ANIMATION_UPDATE" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"

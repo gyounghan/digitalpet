@@ -1,0 +1,234 @@
+---
+description: Flutter/Android 개발 시 발생했던 에러 방지 규칙
+alwaysApply: true
+---
+
+# Flutter/Android 에러 방지 규칙
+
+이 문서는 프로젝트 개발 중 발생했던 에러들을 방지하기 위한 규칙을 정리합니다.
+
+## PowerShell 명령어 사용 규칙
+
+### ❌ 잘못된 예시
+
+```powershell
+# ❌ BAD - PowerShell에서는 && 연산자가 유효하지 않음
+cd c:\PocketFriend && flutter pub get
+```
+
+### ✅ 올바른 예시
+
+```powershell
+# ✅ GOOD - 세미콜론(;)을 사용하여 명령어 연결
+cd c:\PocketFriend; flutter pub get
+
+# ✅ GOOD - 별도 명령어로 실행
+cd c:\PocketFriend
+flutter pub get
+```
+
+**규칙**: PowerShell에서 명령어를 연결할 때는 `&&` 대신 `;`를 사용하거나 별도 명령어로 실행합니다.
+
+---
+
+## 패키지 버전 관리 규칙
+
+### pubspec.yaml 패키지 버전 확인
+
+패키지를 추가하거나 업데이트할 때는 반드시 pub.dev에서 최신 버전을 확인합니다.
+
+### ❌ 잘못된 예시
+
+```yaml
+# ❌ BAD - 존재하지 않는 버전 사용
+dependencies:
+  home_widget: ^0.5.1  # 이 버전은 존재하지 않음
+```
+
+### ✅ 올바른 예시
+
+```yaml
+# ✅ GOOD - 최신 버전 확인 후 사용
+dependencies:
+  home_widget: ^0.9.0  # pub.dev에서 확인한 최신 버전
+```
+
+**규칙**: 
+- 패키지 버전을 추가하기 전에 `flutter pub outdated` 또는 pub.dev에서 최신 버전 확인
+- `flutter pub get` 실행 시 버전 오류가 발생하면 즉시 pub.dev에서 확인 후 수정
+
+---
+
+## Android 빌드 설정 규칙
+
+### minSdk 버전 호환성
+
+Android 라이브러리는 최소 SDK 버전을 요구합니다. 특히 `home_widget` 패키지가 사용하는 `androidx.glance`는 minSdk 23 이상을 요구합니다.
+
+### ❌ 잘못된 예시
+
+```kotlin
+// ❌ BAD - minSdk가 너무 낮음
+defaultConfig {
+    minSdk = 21  // androidx.glance는 23 이상 필요
+    // ...
+}
+```
+
+### ✅ 올바른 예시
+
+```kotlin
+// ✅ GOOD - 라이브러리 요구사항에 맞는 minSdk 설정
+defaultConfig {
+    // minSdk를 23으로 설정 (home_widget 패키지의 androidx.glance 라이브러리 요구사항)
+    minSdk = 23
+    targetSdk = flutter.targetSdkVersion
+    // ...
+}
+```
+
+**규칙**: 
+- `android/app/build.gradle.kts`에서 `minSdk`는 최소 23으로 설정
+- 새로운 Android 라이브러리를 추가할 때는 해당 라이브러리의 minSdk 요구사항 확인
+- 빌드 에러 발생 시 "Manifest merger failed : uses-sdk:minSdkVersion" 메시지 확인
+
+---
+
+## Asset 파일 관리 규칙
+
+### Asset 경로 및 확장자 확인
+
+`pubspec.yaml`에 선언된 asset 파일은 실제로 존재해야 하며, 확장자가 정확해야 합니다.
+
+### ❌ 잘못된 예시
+
+```yaml
+# ❌ BAD - 존재하지 않는 파일 또는 잘못된 확장자
+assets:
+  - assets/sleeping_1.jpg  # 실제 파일은 .png
+  - assets/nonexistent.png  # 파일이 존재하지 않음
+```
+
+```dart
+// ❌ BAD - 코드에서 잘못된 경로 사용
+Image.asset('assets/sleeping_1.jpg')  // 실제 파일은 .png
+```
+
+### ✅ 올바른 예시
+
+```yaml
+# ✅ GOOD - 실제 존재하는 파일과 정확한 확장자
+assets:
+  - assets/sleeping_1.png
+  - assets/sleeping_2.png
+  - assets/sleeping_3.png
+  - assets/hungry_1.png
+  - assets/hungry_2.png
+  - assets/hungry_3.png
+  - assets/hungry_4.png
+```
+
+```dart
+// ✅ GOOD - 정확한 경로와 확장자 사용
+Image.asset('assets/sleeping_1.png')
+```
+
+**규칙**: 
+- `pubspec.yaml`에 asset을 추가하기 전에 파일이 실제로 존재하는지 확인
+- 파일 확장자가 정확한지 확인 (.png, .jpg 등)
+- 코드에서 asset 경로를 사용할 때 `pubspec.yaml`의 경로와 일치하는지 확인
+- `flutter analyze` 실행 시 asset 관련 경고 확인
+
+---
+
+## Android 리소스 폴더 관리 규칙
+
+### drawable 폴더 파일 제한
+
+Android의 `res/drawable` 폴더에는 `.xml` 또는 `.png` 파일만 허용됩니다. 다른 형식의 파일(예: `.md`, `.txt`)이 있으면 빌드가 실패합니다.
+
+### ❌ 잘못된 예시
+
+```
+android/app/src/main/res/drawable/
+  ├── sleeping_1.png  ✅
+  ├── sleeping_2.png  ✅
+  └── README.md       ❌ 빌드 실패!
+```
+
+**에러 메시지**:
+```
+Error: The file name must end with .xml or .png
+```
+
+### ✅ 올바른 예시
+
+```
+android/app/src/main/res/drawable/
+  ├── sleeping_1.png  ✅
+  ├── sleeping_2.png  ✅
+  ├── sleeping_3.png  ✅
+  ├── hungry_1.png   ✅
+  ├── hungry_2.png   ✅
+  └── hungry_3.png   ✅
+```
+
+**규칙**: 
+- `android/app/src/main/res/drawable/` 폴더에는 `.xml` 또는 `.png` 파일만 포함
+- 문서 파일(README.md 등)은 절대 drawable 폴더에 두지 않음
+- 문서가 필요한 경우 `android/app/src/main/res/` 상위 폴더나 프로젝트 루트에 배치
+- 빌드 전에 drawable 폴더의 파일 목록 확인
+
+### drawable 폴더 파일 복사 시 주의사항
+
+Flutter `assets/` 폴더의 이미지를 Android `drawable/` 폴더로 복사할 때:
+
+```powershell
+# ✅ GOOD - 이미지 파일만 복사
+Copy-Item assets\sleeping_*.png android\app\src\main\res\drawable\ -Force
+Copy-Item assets\hungry_*.png android\app\src\main\res\drawable\ -Force
+
+# ❌ BAD - 모든 파일 복사 (README.md 등도 포함됨)
+Copy-Item assets\* android\app\src\main\res\drawable\ -Force
+```
+
+---
+
+## 빌드 전 체크리스트
+
+빌드를 실행하기 전에 다음 사항을 확인합니다:
+
+- [ ] `pubspec.yaml`의 패키지 버전이 pub.dev에서 확인한 최신 버전인가?
+- [ ] `android/app/build.gradle.kts`의 `minSdk`가 23 이상인가?
+- [ ] `pubspec.yaml`에 선언된 asset 파일이 실제로 존재하는가?
+- [ ] asset 파일의 확장자가 코드에서 사용하는 확장자와 일치하는가?
+- [ ] `android/app/src/main/res/drawable/` 폴더에 `.xml` 또는 `.png` 외의 파일이 없는가?
+- [ ] PowerShell 명령어에서 `&&` 대신 `;`를 사용했는가?
+
+---
+
+## 일반적인 에러 해결 방법
+
+### 1. 패키지 버전 오류
+```
+Error: depends on home_widget ^0.5.1 which doesn't match any versions
+```
+**해결**: pub.dev에서 최신 버전 확인 후 `pubspec.yaml` 수정
+
+### 2. minSdk 버전 오류
+```
+Manifest merger failed : uses-sdk:minSdkVersion 21 cannot be smaller than version 23
+```
+**해결**: `android/app/build.gradle.kts`에서 `minSdk = 23` 설정
+
+### 3. Asset 파일 오류
+```
+The asset file 'assets/sleeping_1.png' doesn't exist
+```
+**해결**: 파일이 실제로 존재하는지, 확장자가 정확한지 확인
+
+### 4. Android 리소스 파일 오류
+```
+Error: The file name must end with .xml or .png
+```
+**해결**: `android/app/src/main/res/drawable/` 폴더에서 `.xml` 또는 `.png` 외의 파일 삭제

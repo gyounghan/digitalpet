@@ -14,13 +14,17 @@ class WidgetService {
   static const String _keyExp = 'exp';
   static const String _keyEvolutionStage = 'evolutionStage';
   static const String _keyLastUpdated = 'lastUpdated';
+  static const String _keyImageType = 'imageType'; // 펫 이미지 타입 (sleeping/hungry/normal)
+  static const String _keyImageIndex = 'imageIndex'; // 현재 표시할 이미지 인덱스 (0~3)
+  static const String _keyMood = 'mood'; // 펫의 기분 상태 (happy, sleepy, hungry, bored, normal)
   
   /// 펫 데이터를 위젯에 업데이트
   /// 
   /// [pet] 업데이트할 펫 엔티티
+  /// [imageType] 펫 이미지 타입 (기본값: sleeping)
   /// 
   /// 펫의 상태 정보를 홈 화면 위젯에 전달하여 표시
-  Future<void> updatePetWidget(Pet pet) async {
+  Future<void> updatePetWidget(Pet pet, {String imageType = 'sleeping'}) async {
     try {
       await HomeWidget.saveWidgetData<String>(_keyHunger, pet.hunger.toString());
       await HomeWidget.saveWidgetData<String>(_keyHappiness, pet.happiness.toString());
@@ -29,6 +33,20 @@ class WidgetService {
       await HomeWidget.saveWidgetData<String>(_keyExp, pet.exp.toString());
       await HomeWidget.saveWidgetData<String>(_keyEvolutionStage, pet.evolutionStage.toString());
       await HomeWidget.saveWidgetData<String>(_keyLastUpdated, pet.lastUpdated.toString());
+      await HomeWidget.saveWidgetData<String>(_keyImageType, imageType);
+      
+      // 펫의 기분 상태 저장 (hunger, happiness, stamina 기반으로 계산)
+      final mood = pet.mood.name; // PetMood enum의 name (happy, sleepy, hungry, bored, normal)
+      await HomeWidget.saveWidgetData<String>(_keyMood, mood);
+      
+      // 현재 시간 기반으로 이미지 인덱스 계산 (애니메이션 효과)
+      // 이미지 타입에 따라 다른 개수 사용
+      // sleeping: 3장, hungry: 4장
+      final currentTime = DateTime.now().millisecondsSinceEpoch;
+      final imageCount = imageType == 'hungry' ? 4 : 3;
+      final cycleDuration = imageCount * 800; // 이미지 개수 * 800ms
+      final imageIndex = ((currentTime % cycleDuration) / 800).toInt() % imageCount;
+      await HomeWidget.saveWidgetData<String>(_keyImageIndex, imageIndex.toString());
       
       // 위젯 업데이트 요청
       // Android: PetWidgetProvider 클래스 이름 사용

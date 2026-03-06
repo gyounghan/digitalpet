@@ -1,3 +1,18 @@
+/// 펫의 기분 상태
+/// hunger, happiness, stamina 값에 따라 결정되는 펫의 현재 상태
+enum PetMood {
+  /// 기쁨 - 모든 수치가 높을 때
+  happy,
+  /// 졸림 - 체력이 낮을 때
+  sleepy,
+  /// 배고픔 - 배고픔 수치가 낮을 때
+  hungry,
+  /// 지루함 - 행복도가 낮을 때
+  bored,
+  /// 보통 - 평범한 상태
+  normal,
+}
+
 /// 반려동물 엔티티
 /// Domain 레이어의 순수 Dart 클래스로, 비즈니스 로직의 핵심 모델
 /// Flutter나 외부 패키지에 의존하지 않는 순수 Dart 클래스
@@ -30,6 +45,33 @@ class Pet {
   /// 마지막 업데이트 시간 (타임스탬프)
   /// 밀리초 단위 Unix timestamp
   final int lastUpdated;
+  
+  /// 펫의 현재 기분 상태
+  /// hunger, happiness, stamina 값에 따라 자동 계산
+  PetMood get mood {
+    // 배고픔이 30 이하이면 배고픔 상태
+    if (hunger <= 30) {
+      return PetMood.hungry;
+    }
+    
+    // 체력이 30 이하이면 졸림 상태
+    if (stamina <= 30) {
+      return PetMood.sleepy;
+    }
+    
+    // 행복도가 30 이하이면 지루함 상태
+    if (happiness <= 30) {
+      return PetMood.bored;
+    }
+    
+    // 모든 수치가 70 이상이면 기쁨 상태
+    if (hunger >= 70 && happiness >= 70 && stamina >= 70) {
+      return PetMood.happy;
+    }
+    
+    // 그 외는 보통 상태
+    return PetMood.normal;
+  }
   
   Pet({
     required this.id,

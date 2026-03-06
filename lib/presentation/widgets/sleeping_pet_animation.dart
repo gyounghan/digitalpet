@@ -32,9 +32,9 @@ class _SleepingPetAnimationState extends State<SleepingPetAnimation>
     
     // 잠자는 이미지 경로 리스트
     _sleepingImages = [
-      'assets/sleeping_1.jpg',
-      'assets/sleeping_2.jpg',
-      'assets/sleeping_3.jpg',
+      'assets/sleeping_1.png',
+      'assets/sleeping_2.png',
+      'assets/sleeping_3.png',
     ];
     
     // 애니메이션 컨트롤러 초기화
