@@ -1,5 +1,6 @@
 import 'package:hive/hive.dart';
 import '../../domain/entities/pet.dart';
+import '../../domain/entities/evolution_type.dart';
 
 /// 반려동물 데이터 모델
 /// Domain의 Pet 엔티티를 확장하여 Hive 저장 및 JSON 직렬화 지원
@@ -43,6 +44,22 @@ class PetModel extends Pet {
   @override
   final int lastUpdated;
   
+  @HiveField(8)
+  @override
+  final int totalSteps;
+  
+  @HiveField(9)
+  @override
+  final int totalExerciseMinutes;
+  
+  @HiveField(10)
+  @override
+  final int totalIdleHours;
+  
+  @HiveField(11)
+  @override
+  final EvolutionType? evolutionType;
+  
   PetModel({
     required this.id,
     required this.hunger,
@@ -52,6 +69,10 @@ class PetModel extends Pet {
     required this.exp,
     required this.evolutionStage,
     required this.lastUpdated,
+    this.totalSteps = 0,
+    this.totalExerciseMinutes = 0,
+    this.totalIdleHours = 0,
+    this.evolutionType,
   }) : super(
           id: id,
           hunger: hunger,
@@ -61,6 +82,10 @@ class PetModel extends Pet {
           exp: exp,
           evolutionStage: evolutionStage,
           lastUpdated: lastUpdated,
+          totalSteps: totalSteps,
+          totalExerciseMinutes: totalExerciseMinutes,
+          totalIdleHours: totalIdleHours,
+          evolutionType: evolutionType,
         );
   
   /// JSON에서 PetModel 생성
@@ -78,6 +103,15 @@ class PetModel extends Pet {
       exp: json['exp'] as int,
       evolutionStage: json['evolutionStage'] as int,
       lastUpdated: json['lastUpdated'] as int,
+      totalSteps: json['totalSteps'] as int? ?? 0,
+      totalExerciseMinutes: json['totalExerciseMinutes'] as int? ?? 0,
+      totalIdleHours: json['totalIdleHours'] as int? ?? 0,
+      evolutionType: json['evolutionType'] != null
+          ? EvolutionType.values.firstWhere(
+              (e) => e.name == json['evolutionType'],
+              orElse: () => EvolutionType.balanced,
+            )
+          : null,
     );
   }
   
@@ -94,6 +128,10 @@ class PetModel extends Pet {
       'exp': exp,
       'evolutionStage': evolutionStage,
       'lastUpdated': lastUpdated,
+      'totalSteps': totalSteps,
+      'totalExerciseMinutes': totalExerciseMinutes,
+      'totalIdleHours': totalIdleHours,
+      'evolutionType': evolutionType?.name,
     };
   }
   
@@ -112,6 +150,10 @@ class PetModel extends Pet {
       exp: pet.exp,
       evolutionStage: pet.evolutionStage,
       lastUpdated: pet.lastUpdated,
+      totalSteps: pet.totalSteps,
+      totalExerciseMinutes: pet.totalExerciseMinutes,
+      totalIdleHours: pet.totalIdleHours,
+      evolutionType: pet.evolutionType,
     );
   }
   
@@ -128,6 +170,10 @@ class PetModel extends Pet {
       exp: exp,
       evolutionStage: evolutionStage,
       lastUpdated: lastUpdated,
+      totalSteps: totalSteps,
+      totalExerciseMinutes: totalExerciseMinutes,
+      totalIdleHours: totalIdleHours,
+      evolutionType: evolutionType,
     );
   }
   
@@ -144,6 +190,10 @@ class PetModel extends Pet {
     int? exp,
     int? evolutionStage,
     int? lastUpdated,
+    int? totalSteps,
+    int? totalExerciseMinutes,
+    int? totalIdleHours,
+    EvolutionType? evolutionType,
   }) {
     return PetModel(
       id: id ?? this.id,
@@ -154,6 +204,10 @@ class PetModel extends Pet {
       exp: exp ?? this.exp,
       evolutionStage: evolutionStage ?? this.evolutionStage,
       lastUpdated: lastUpdated ?? this.lastUpdated,
+      totalSteps: totalSteps ?? this.totalSteps,
+      totalExerciseMinutes: totalExerciseMinutes ?? this.totalExerciseMinutes,
+      totalIdleHours: totalIdleHours ?? this.totalIdleHours,
+      evolutionType: evolutionType ?? this.evolutionType,
     );
   }
 }

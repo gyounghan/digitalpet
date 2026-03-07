@@ -2,15 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/pet_provider.dart';
 import '../widgets/status_bar.dart';
-import '../widgets/pet_button.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/pet_image_animation.dart';
+import '../widgets/pet_button.dart';
 import '../../core/theme/app_colors.dart';
-import '../../data/services/widget_service.dart';
+import '../../core/constants/app_strings.dart';
 import '../../domain/entities/pet.dart';
+import '../../core/utils/pet_image_helper.dart';
 
 /// 홈 화면
-/// Pet의 상태를 표시하고 Feed/Play/Sleep 액션을 수행할 수 있는 메인 화면
+/// Pet의 상태를 표시하는 메인 화면
+/// Feed/Play/Sleep은 자동화되어 있어 수동 버튼이 없음
 /// design 폴더의 Home.tsx를 기반으로 재디자인
 class HomeScreen extends ConsumerStatefulWidget {
   /// 기본 Pet ID
@@ -23,81 +25,11 @@ class HomeScreen extends ConsumerStatefulWidget {
   ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends ConsumerState<HomeScreen>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _petAnimationController;
-  PetImageType _currentPetImageType = PetImageType.sleeping;
+class _HomeScreenState extends ConsumerState<HomeScreen> {
   
-  @override
-  void initState() {
-    super.initState();
-    _petAnimationController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 2),
-    )..repeat(reverse: true);
-  }
-  
-  @override
-  void dispose() {
-    _petAnimationController.dispose();
-    super.dispose();
-  }
-  
-  /// Feed 액션 처리
-  /// 
-  /// Feed 버튼 클릭 시 호출되어 배고픈 이미지로 전환
-  Future<void> _handleFeed() async {
-    setState(() {
-      _currentPetImageType = PetImageType.hungry;
-    });
-    
-    final petNotifier = ref.read(petNotifierProvider(HomeScreen.defaultPetId).notifier);
-    await petNotifier.feed();
-    
-    // 위젯 업데이트 (배고픈 이미지로)
-    final petAsync = ref.read(petNotifierProvider(HomeScreen.defaultPetId));
-    final pet = petAsync.valueOrNull;
-    if (pet != null) {
-      final widgetService = WidgetService();
-      await widgetService.updatePetWidget(pet, imageType: 'hungry');
-    }
-    
-    // 3초 후 잠자는 상태로 복귀
-    Future.delayed(const Duration(seconds: 3), () {
-      if (mounted) {
-        setState(() {
-          _currentPetImageType = PetImageType.sleeping;
-        });
-        
-        // 위젯도 잠자는 이미지로 업데이트
-        final pet = ref.read(petNotifierProvider(HomeScreen.defaultPetId)).valueOrNull;
-        if (pet != null) {
-          final widgetService = WidgetService();
-          widgetService.updatePetWidget(pet, imageType: 'sleeping');
-        }
-      }
-    });
-  }
-  
-  /// Sleep 액션 처리
-  /// 
-  /// Sleep 버튼 클릭 시 호출되어 잠자는 이미지로 전환
-  Future<void> _handleSleep() async {
-    setState(() {
-      _currentPetImageType = PetImageType.sleeping;
-    });
-    
-    final petNotifier = ref.read(petNotifierProvider(HomeScreen.defaultPetId).notifier);
-    await petNotifier.sleep();
-    
-    // 위젯 업데이트 (잠자는 이미지로)
-    final petAsync = ref.read(petNotifierProvider(HomeScreen.defaultPetId));
-    final pet = petAsync.valueOrNull;
-    if (pet != null) {
-      final widgetService = WidgetService();
-      await widgetService.updatePetWidget(pet, imageType: 'sleeping');
-    }
-  }
+  // Feed 버튼: 조건부 표시 (배고픔 상태 + 식사 시간대)
+  // Play: 걷기/운동량 기반 자동
+  // Sleep: 폰 미사용 감지 기반 자동
   
   /// 펫 상태를 한국어 텍스트로 변환
   /// 
@@ -107,15 +39,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   String _getMoodText(PetMood mood) {
     switch (mood) {
       case PetMood.happy:
-        return '기쁨';
+        return AppStrings.moodHappy;
       case PetMood.sleepy:
-        return '졸림';
+        return AppStrings.moodSleepy;
       case PetMood.hungry:
-        return '배고픔';
+        return AppStrings.moodHungry;
       case PetMood.bored:
-        return '지루함';
+        return AppStrings.moodBored;
       case PetMood.normal:
-        return '보통';
+        return AppStrings.moodNormal;
     }
   }
   
@@ -150,44 +82,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         decoration: const BoxDecoration(
           gradient: AppColors.backgroundGradient,
         ),
-        child: Stack(
-          children: [
-            // 배경 글로우 효과
-            Positioned(
-              top: 80,
-              left: MediaQuery.of(context).size.width / 2 - 192,
-              child: Container(
-                width: 384,
-                height: 384,
-                decoration: BoxDecoration(
-                  color: AppColors.primaryGlow,
-                  shape: BoxShape.circle,
-                ),
+        child: SafeArea(
+          child: petAsync.when(
+            // 로딩 중
+            loading: () => const Center(
+              child: CircularProgressIndicator(
+                color: AppColors.primary,
               ),
             ),
-            Positioned(
-              bottom: 80,
-              right: 40,
-              child: Container(
-                width: 256,
-                height: 256,
-                decoration: BoxDecoration(
-                  color: AppColors.accentPink.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
-                ),
-              ),
-            ),
-            // 메인 콘텐츠
-            SafeArea(
-              child: petAsync.when(
-                // 로딩 중
-                loading: () => const Center(
-                  child: CircularProgressIndicator(
-                    color: AppColors.primary,
-                  ),
-                ),
-                // 에러 발생
-                error: (error, stackTrace) => Center(
+            // 에러 발생
+            error: (error, stackTrace) => Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -198,7 +102,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        'Error: $error',
+                        '${AppStrings.error}: $error',
                         style: const TextStyle(color: AppColors.danger),
                         textAlign: TextAlign.center,
                       ),
@@ -211,16 +115,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                   .notifier)
                               .refresh();
                         },
-                        child: const Text('Retry'),
+                        child: Text(AppStrings.retry),
                       ),
                     ],
                   ),
                 ),
-                // 데이터 로드 완료
-                data: (pet) => _buildPetContent(context, ref, pet),
-              ),
-            ),
-          ],
+            // 데이터 로드 완료
+            data: (pet) => _buildPetContent(context, ref, pet),
+          ),
         ),
       ),
     );
@@ -254,17 +156,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: AppColors.glassBackground,
+                    color: AppColors.accentCyan, // 밝은 라일락 배경 (#E0D6F5)
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: AppColors.glassBorder,
-                      width: 1,
-                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.1),
+                        blurRadius: 5,
+                        spreadRadius: 0,
+                        offset: const Offset(0, 1),
+                      ),
+                    ],
                   ),
                   child: IconButton(
-                    icon: const Icon(
+                    icon: Icon(
                       Icons.menu,
-                      color: AppColors.textSecondary,
+                      color: AppColors.primary, // 보라색 아이콘 (#A08CDB)
                       size: 20,
                     ),
                     onPressed: () {
@@ -284,10 +190,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       ),
                     ),
                     Text(
-                      'Level ${pet.level}',
+                      '${AppStrings.level} ${pet.level}',
                       style: const TextStyle(
                         fontSize: 12,
-                        color: AppColors.textTertiary,
+                        color: AppColors.primary, // 보라색 (#A08CDB)
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -307,17 +213,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: AppColors.glassBackground,
+                    color: AppColors.accentCyan, // 밝은 라일락 배경 (#E0D6F5)
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: AppColors.glassBorder,
-                      width: 1,
-                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.1),
+                        blurRadius: 5,
+                        spreadRadius: 0,
+                        offset: const Offset(0, 1),
+                      ),
+                    ],
                   ),
                   child: IconButton(
-                    icon: const Icon(
+                    icon: Icon(
                       Icons.settings,
-                      color: AppColors.textSecondary,
+                      color: AppColors.primary, // 보라색 아이콘 (#A08CDB)
                       size: 20,
                     ),
                     onPressed: () {
@@ -335,7 +245,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 children: [
                   Center(
                     child: PetImageAnimation(
-                      type: _currentPetImageType,
+                      type: getPetImageTypeFromMood(pet.mood),
                       duration: const Duration(milliseconds: 800),
                     ),
                   ),
@@ -350,21 +260,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               child: Column(
                 children: [
                   StatusBar(
-                    label: 'Hunger',
+                    label: AppStrings.hunger,
                     value: pet.hunger,
                     color: StatusBarColor.hunger,
                     icon: Icons.restaurant,
                   ),
                   const SizedBox(height: 16),
                   StatusBar(
-                    label: 'Happiness',
+                    label: AppStrings.happiness,
                     value: pet.happiness,
                     color: StatusBarColor.happiness,
                     icon: Icons.favorite,
                   ),
                   const SizedBox(height: 16),
                   StatusBar(
-                    label: 'Stamina',
+                    label: AppStrings.stamina,
                     value: pet.stamina,
                     color: StatusBarColor.stamina,
                     icon: Icons.battery_charging_full,
@@ -372,39 +282,28 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 ],
               ),
             ),
-            const SizedBox(height: 24),
-            // 액션 버튼들 (grid grid-cols-3 gap-3)
-            Row(
-              children: [
-                Expanded(
-                  child: PetButton(
-                    variant: PetButtonVariant.secondary,
-                    onPressed: _handleFeed,
-                    child: const Text('Feed'),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
+            // Feed 버튼 (조건부 표시)
+            Consumer(
+              builder: (context, ref, _) {
+                final canFeedUseCase = ref.watch(canFeedPetUseCaseProvider);
+                final canFeed = canFeedUseCase.canFeed(pet);
+                
+                if (!canFeed) {
+                  return const SizedBox.shrink();
+                }
+                
+                return Padding(
+                  padding: const EdgeInsets.only(top: 24),
                   child: PetButton(
                     variant: PetButtonVariant.primary,
+                    icon: Icons.restaurant,
                     onPressed: () {
-                      ref
-                          .read(petNotifierProvider(HomeScreen.defaultPetId)
-                              .notifier)
-                          .play();
+                      ref.read(petNotifierProvider(HomeScreen.defaultPetId).notifier).feed();
                     },
-                    child: const Text('Play'),
+                    child: Text(AppStrings.feed),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: PetButton(
-                    variant: PetButtonVariant.secondary,
-                    onPressed: _handleSleep,
-                    child: const Text('Sleep'),
-                  ),
-                ),
-              ],
+                );
+              },
             ),
                 ],
               ),

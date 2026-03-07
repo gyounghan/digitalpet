@@ -16,6 +16,18 @@ import '../../data/datasource/notification_local_datasource.dart';
 import '../../data/services/notification_service.dart';
 import '../../data/services/widget_service.dart';
 import '../../domain/services/pet_state_service.dart';
+import '../../domain/repositories/phone_usage_repository.dart';
+import '../../domain/usecases/auto_sleep_pet_usecase.dart';
+import '../../domain/usecases/detect_phone_idle_usecase.dart';
+import '../../domain/usecases/update_pet_from_activity_usecase.dart';
+import '../../domain/repositories/activity_repository.dart';
+import '../../data/repositories/phone_usage_repository_impl.dart';
+import '../../data/datasources/phone_usage_datasource.dart';
+import '../../data/repositories/activity_repository_impl.dart';
+import '../../data/datasources/health_datasource.dart';
+import '../../core/constants/app_strings.dart';
+import '../../domain/usecases/battle_with_activity_usecase.dart';
+import '../../domain/usecases/can_feed_pet_usecase.dart';
 
 /// PetLocalDataSource Provider
 /// Hive 데이터소스 인스턴스를 제공
@@ -115,6 +127,79 @@ final widgetServiceProvider = Provider<WidgetService>((ref) {
   return WidgetService();
 });
 
+/// PhoneUsageDataSource Provider
+/// 폰 사용 상태 데이터소스 인스턴스를 제공
+final phoneUsageDataSourceProvider = Provider<PhoneUsageDataSource>((ref) {
+  return PhoneUsageDataSource();
+});
+
+/// PhoneUsageRepository Provider
+/// 폰 사용 상태 저장소 인스턴스를 제공
+final phoneUsageRepositoryProvider = Provider<PhoneUsageRepository>((ref) {
+  final dataSource = ref.watch(phoneUsageDataSourceProvider);
+  return PhoneUsageRepositoryImpl(dataSource);
+});
+
+/// DetectPhoneIdleUseCase Provider
+/// 폰 미사용 감지 유스케이스 인스턴스를 제공
+final detectPhoneIdleUseCaseProvider = Provider<DetectPhoneIdleUseCase>((ref) {
+  final repository = ref.watch(phoneUsageRepositoryProvider);
+  return DetectPhoneIdleUseCase(repository);
+});
+
+/// AutoSleepPetUseCase Provider
+/// 자동 펫 재우기 유스케이스 인스턴스를 제공
+final autoSleepPetUseCaseProvider = Provider<AutoSleepPetUseCase>((ref) {
+  final petRepository = ref.watch(petRepositoryProvider);
+  final phoneUsageRepository = ref.watch(phoneUsageRepositoryProvider);
+  return AutoSleepPetUseCase(
+    petRepository: petRepository,
+    phoneUsageRepository: phoneUsageRepository,
+  );
+});
+
+/// HealthDataSource Provider
+/// 헬스케어 데이터소스 인스턴스를 제공
+final healthDataSourceProvider = Provider<HealthDataSource>((ref) {
+  return HealthDataSource();
+});
+
+/// ActivityRepository Provider
+/// 활동 데이터 저장소 인스턴스를 제공
+final activityRepositoryProvider = Provider<ActivityRepository>((ref) {
+  final dataSource = ref.watch(healthDataSourceProvider);
+  return ActivityRepositoryImpl(dataSource);
+});
+
+/// UpdatePetFromActivityUseCase Provider
+/// 활동 데이터 기반 펫 상태 업데이트 유스케이스 인스턴스를 제공
+final updatePetFromActivityUseCaseProvider = Provider<UpdatePetFromActivityUseCase>((ref) {
+  final petRepository = ref.watch(petRepositoryProvider);
+  final activityRepository = ref.watch(activityRepositoryProvider);
+  return UpdatePetFromActivityUseCase(
+    petRepository: petRepository,
+    activityRepository: activityRepository,
+  );
+});
+
+/// BattleWithActivityUseCase Provider
+/// 활동 기반 대결 유스케이스 인스턴스를 제공
+final battleWithActivityUseCaseProvider = Provider<BattleWithActivityUseCase>((ref) {
+  final petRepository = ref.watch(petRepositoryProvider);
+  final activityRepository = ref.watch(activityRepositoryProvider);
+  return BattleWithActivityUseCase(
+    petRepository: petRepository,
+    activityRepository: activityRepository,
+  );
+});
+
+/// CanFeedPetUseCase Provider
+/// Feed 가능 여부 체크 유스케이스 인스턴스를 제공
+final canFeedPetUseCaseProvider = Provider<CanFeedPetUseCase>((ref) {
+  final petRepository = ref.watch(petRepositoryProvider);
+  return CanFeedPetUseCase(petRepository);
+});
+
 /// Pet Provider
 /// 특정 ID의 Pet을 조회하는 FutureProvider
 /// 
@@ -140,6 +225,10 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
   final CheckNotificationUseCase checkNotificationUseCase;
   final NotificationService notificationService;
   final WidgetService widgetService;
+  final PhoneUsageRepository phoneUsageRepository;
+  final AutoSleepPetUseCase autoSleepPetUseCase;
+  final DetectPhoneIdleUseCase detectPhoneIdleUseCase;
+  final UpdatePetFromActivityUseCase updatePetFromActivityUseCase;
   final String petId;
   
   PetNotifier({
@@ -153,6 +242,10 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
     required this.checkNotificationUseCase,
     required this.notificationService,
     required this.widgetService,
+    required this.phoneUsageRepository,
+    required this.autoSleepPetUseCase,
+    required this.detectPhoneIdleUseCase,
+    required this.updatePetFromActivityUseCase,
     required this.petId,
   }) : super(const AsyncValue.loading()) {
     _loadPet();
@@ -177,17 +270,24 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
       // 3. 마지막 접속 시간 업데이트 (앱 실행 시)
       await checkNotificationUseCase.updateLastAccessTime();
       
-      // 4. 시간 경과에 따른 상태 업데이트 (이미 저장된 Pet이어도 시간 경과 반영)
-      await updatePetStateUseCase(petId);
+      // 4. 활동 데이터 기반 상태 업데이트 (걷기/운동량)
+      try {
+        await updatePetFromActivityUseCase(petId);
+      } catch (e) {
+        // 헬스케어 권한이 없거나 에러 발생 시 무시 (앱 동작에 영향 없음)
+      }
       
-      // 5. 진화 체크 및 실행
-      final evolvedPet = await evolvePetUseCase(petId);
+      // 5. 시간 경과에 따른 상태 업데이트 (이미 저장된 Pet이어도 시간 경과 반영)
+      final stateUpdatedPet = await updatePetStateUseCase(petId);
+      
+      // 6. 진화 체크 및 실행
+      final evolvedPet = await evolvePetUseCase(stateUpdatedPet.id);
       state = AsyncValue.data(evolvedPet);
       
-      // 6. 위젯 업데이트 (기본값: sleeping 이미지)
-      await widgetService.updatePetWidget(evolvedPet, imageType: 'sleeping');
+      // 8. 위젯 업데이트 (pet.mood 기반으로 자동 결정)
+      await widgetService.updatePetWidget(evolvedPet);
       
-      // 7. 알림 체크 (앱 실행 시)
+      // 9. 알림 체크 (앱 실행 시)
       _checkAndShowNotification();
     } catch (e, stackTrace) {
       state = AsyncValue.error(e, stackTrace);
@@ -210,8 +310,8 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
     // 진화 체크 및 실행
     final evolvedPet = await evolvePetUseCase(petId);
     
-    // 위젯 업데이트 (기본값: sleeping 이미지)
-    await widgetService.updatePetWidget(evolvedPet, imageType: 'sleeping');
+    // 위젯 업데이트 (pet.mood 기반으로 자동 결정)
+    await widgetService.updatePetWidget(evolvedPet);
     
     // 알림 체크 (상태 변경 후)
     _checkAndShowNotification();
@@ -227,7 +327,7 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
       final message = await checkNotificationUseCase(petId);
       if (message != null) {
         await notificationService.showNotification(
-          title: '내 펫',
+          title: AppStrings.notificationTitle,
           body: message,
         );
       }
@@ -283,6 +383,56 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
       state = AsyncValue.error(e, stackTrace);
     }
   }
+  
+  /// 앱이 포그라운드로 전환되었을 때 호출
+  /// 
+  /// 폰 미사용 시간을 계산하여 자동으로 Sleep 상태 적용
+  /// 활동 데이터를 기반으로 자동 Play 상태 적용
+  Future<void> onAppForeground() async {
+    try {
+      // 폰 사용 상태 업데이트 (포그라운드로 전환)
+      await phoneUsageRepository.onForeground();
+      
+      // 미사용 시간이 30분 이상이면 자동 Sleep 적용
+      final sleepUpdatedPet = await autoSleepPetUseCase(petId, isInBackground: false);
+      
+      // 활동 데이터 기반 자동 Play 적용
+      Pet activityUpdatedPet = sleepUpdatedPet;
+      try {
+        activityUpdatedPet = await updatePetFromActivityUseCase(petId);
+      } catch (e) {
+        // 헬스케어 권한이 없거나 에러 발생 시 무시
+      }
+      
+      // 상태가 변경되었으면 업데이트
+      final currentPet = state.valueOrNull;
+      if (currentPet == null || 
+          activityUpdatedPet.hunger != currentPet.hunger ||
+          activityUpdatedPet.happiness != currentPet.happiness ||
+          activityUpdatedPet.stamina != currentPet.stamina ||
+          activityUpdatedPet.exp != currentPet.exp) {
+        final evolvedPet = await _updateAndEvolve(activityUpdatedPet);
+        state = AsyncValue.data(evolvedPet);
+        
+        // 위젯도 업데이트 (pet.mood 기반으로 자동 결정)
+        await widgetService.updatePetWidget(evolvedPet);
+      }
+    } catch (e) {
+      // 에러는 무시 (앱 동작에 영향 없음)
+    }
+  }
+  
+  /// 앱이 백그라운드로 전환되었을 때 호출
+  /// 
+  /// 백그라운드 전환 시간을 기록
+  Future<void> onAppBackground() async {
+    try {
+      // 폰 사용 상태 업데이트 (백그라운드로 전환)
+      await phoneUsageRepository.onBackground();
+    } catch (e) {
+      // 에러는 무시 (앱 동작에 영향 없음)
+    }
+  }
 }
 
 /// Pet Notifier Provider
@@ -301,6 +451,10 @@ final petNotifierProvider = StateNotifierProvider.family<PetNotifier, AsyncValue
     checkNotificationUseCase: ref.watch(checkNotificationUseCaseProvider),
     notificationService: ref.watch(notificationServiceProvider),
     widgetService: ref.watch(widgetServiceProvider),
+    phoneUsageRepository: ref.watch(phoneUsageRepositoryProvider),
+    autoSleepPetUseCase: ref.watch(autoSleepPetUseCaseProvider),
+    detectPhoneIdleUseCase: ref.watch(detectPhoneIdleUseCaseProvider),
+    updatePetFromActivityUseCase: ref.watch(updatePetFromActivityUseCaseProvider),
     petId: petId,
   );
 });

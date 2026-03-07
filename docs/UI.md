@@ -34,32 +34,32 @@ AppColors.backgroundDarkSecondary // #1a1a2e - 보조 배경
 AppColors.backgroundDarkTertiary  // #16213e - 3차 배경
 ```
 
-#### Primary 색상
+#### Primary 색상 (강아지 컨셉)
 ```dart
-AppColors.primary      // #8B7FFF - 메인 색상 (보라색)
-AppColors.primaryDark // #6B5FEF - 어두운 보라색
-AppColors.primaryGlow // rgba(139, 127, 255, 0.3) - 글로우 효과
+AppColors.primary      // #FFB6C1 - 라이트 핑크 (plan 3.9에 명시된 색상)
+AppColors.primaryDark // #FFA0B0 - 진한 라이트 핑크
+AppColors.primaryGlow // rgba(255, 182, 193, 0.3) - 글로우 효과
 ```
 
-#### Accent 색상
+#### Accent 색상 (강아지 컨셉)
 ```dart
-AppColors.accentPink  // #FF6B9D - 핑크 액센트
-AppColors.accentCyan  // #5DFDCB - 시안 액센트
+AppColors.accentPink  // #FFD700 - 골드 (plan 3.9에 명시된 색상)
+AppColors.accentCyan  // #FFE4B5 - 모카신 (보조 액센트)
 ```
 
-#### 상태 색상
+#### 상태 색상 (강아지 컨셉)
 ```dart
 // 배고픔
 AppColors.hunger      // #FF8A65
 AppColors.hungerDark  // #FF6B4A
 
 // 행복도
-AppColors.happiness   // #FFD93D
+AppColors.happiness   // #FFD700 - 골드 (plan 3.9에 명시된 색상)
 AppColors.happinessDark // #FFC107
 
 // 체력
-AppColors.stamina     // #6BCF7F
-AppColors.staminaDark // #4CAF50
+AppColors.stamina     // #98D8C8 - 민트 그린 (plan 3.9에 명시된 색상)
+AppColors.staminaDark // #7FB3A3
 ```
 
 #### 글래스모피즘 색상
@@ -86,7 +86,7 @@ AppColors.backgroundGradient
 
 // 글래스 그라디언트
 AppColors.glassGradient
-// [rgba(139, 127, 255, 0.05), transparent, rgba(255, 107, 157, 0.05)]
+// [rgba(255, 182, 193, 0.05), transparent, rgba(255, 215, 0, 0.05)] - plan 3.9 색상 반영
 
 // 상태 그라디언트
 AppColors.hungerGradient
@@ -172,6 +172,35 @@ HomeScreen
 ---
 
 ## 위젯 컴포넌트
+
+### 홈 화면 위젯 (Android/iOS)
+
+홈 화면 위젯은 Android와 iOS 홈 화면에 펫 정보를 표시하는 위젯입니다.
+
+**특징:**
+- **배경색**: 투명 (`@android:color/transparent`) - 홈 화면 배경과 자연스럽게 어우러짐
+- **펫 이미지**: 상태에 따라 자동 애니메이션 (sleeping: 3장, hungry: 4장)
+- **상태 표시**: 레벨과 기분 상태만 표시 (배고픔, 행복도, 체력은 표시하지 않음)
+- **크기**: 2x2 그리드
+- **애니메이션**: 800ms 간격으로 이미지 순환
+
+**구현 파일:**
+- `android/app/src/main/res/layout/pet_widget.xml` - 위젯 레이아웃
+- `android/app/src/main/kotlin/com/example/pocketfriend/PetWidgetProvider.kt` - 위젯 Provider
+- `lib/data/services/widget_service.dart` - 위젯 업데이트 서비스
+
+**위젯 배경:**
+- 배경색: `@android:color/transparent` (투명)
+- 펫만 표시되며, 홈 화면 배경과 자연스럽게 어우러짐
+- 원형 효과나 글로우 효과 없음
+
+**상태 표시:**
+- 레벨: "Lv.X" 형식으로 표시
+- 기분 상태: 한국어로 표시 (기쁨, 졸림, 배고픔, 지루함, 보통)
+
+---
+
+## Flutter UI 위젯 컴포넌트
 
 ### PetButton
 

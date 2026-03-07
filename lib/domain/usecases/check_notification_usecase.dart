@@ -1,12 +1,14 @@
 import '../repositories/pet_repository.dart';
 import '../repositories/notification_repository.dart';
 import '../../core/constants/notification_constants.dart';
+import '../../core/constants/app_strings.dart';
 
 /// 알림 체크 유스케이스
 /// Pet의 상태를 확인하여 알림 발송이 필요한지 판단하는 비즈니스 로직
 /// 
 /// 알림 조건:
-/// - hunger < 30 → "나 너무 배고파..."
+/// - hunger < 30 + 식사 시간대 → "밥 먹을 시간이에요! 🍽️"
+/// - hunger < 30 (식사 시간대 아님) → "나 너무 배고파..."
 /// - happiness < 30 → "나 심심해..."
 /// - 6시간 미접속 → "오늘 나 안 볼거야?"
 /// 
@@ -53,18 +55,40 @@ class CheckNotificationUseCase {
     if (lastAccessTime != null) {
       final elapsedHours = (currentTime - lastAccessTime) ~/ (1000 * 60 * 60);
       if (elapsedHours >= NotificationConstants.inactiveHoursThreshold) {
-        notificationMessage = "오늘 나 안 볼거야?";
+        notificationMessage = AppStrings.notificationInactive;
       }
     }
     
-    // 우선순위 2: 배고픔 알림
+    // 우선순위 2: 배고픔 알림 (식사 시간대 확인)
     if (notificationMessage == null && pet.hunger < NotificationConstants.hungerThreshold) {
-      notificationMessage = "나 너무 배고파...";
+      // 현재 시간이 식사 시간대인지 확인
+      final now = DateTime.now();
+      final currentHour = now.hour;
+      bool isMealTime = false;
+      
+      // 식사 시간대: 아침 7-9시, 점심 12-14시, 저녁 18-20시
+      final mealTimeRanges = [
+        {'start': 7, 'end': 9},
+        {'start': 12, 'end': 14},
+        {'start': 18, 'end': 20},
+      ];
+      
+      for (final range in mealTimeRanges) {
+        if (currentHour >= range['start']! && currentHour < range['end']!) {
+          isMealTime = true;
+          break;
+        }
+      }
+      
+      // 식사 시간대이면 Feed 알림, 아니면 일반 배고픔 알림
+      notificationMessage = isMealTime 
+          ? AppStrings.notificationFeedTime 
+          : AppStrings.notificationHungry;
     }
     
     // 우선순위 3: 행복도 알림
     if (notificationMessage == null && pet.happiness < NotificationConstants.happinessThreshold) {
-      notificationMessage = "나 심심해...";
+      notificationMessage = AppStrings.notificationBored;
     }
     
     // 5. 알림 발송 및 기록

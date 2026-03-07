@@ -31,6 +31,7 @@ class CreateDefaultPetUseCase {
     final currentTime = DateTime.now().millisecondsSinceEpoch;
     
     // 기본값으로 Pet 생성
+    // evolutionStage: 1 (1단계 털뭉치 상태)
     final defaultPet = Pet(
       id: petId,
       hunger: 100,
@@ -38,8 +39,12 @@ class CreateDefaultPetUseCase {
       stamina: 100,
       level: 1,
       exp: 0,
-      evolutionStage: 0,
+      evolutionStage: 1, // 1단계 털뭉치
       lastUpdated: currentTime,
+      totalSteps: 0,
+      totalExerciseMinutes: 0,
+      totalIdleHours: 0,
+      evolutionType: null, // 아직 결정되지 않음
     );
     
     // Hive에 저장

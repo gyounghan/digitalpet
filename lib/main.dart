@@ -4,6 +4,8 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'data/models/pet_model_adapter.dart';
 import 'data/datasource/pet_local_datasource.dart';
 import 'data/datasource/notification_local_datasource.dart';
+import 'data/datasources/phone_usage_datasource.dart';
+import 'data/datasources/health_datasource.dart';
 import 'data/services/notification_service.dart';
 import 'data/services/widget_service.dart';
 import 'presentation/screens/main_navigation_screen.dart';
@@ -21,6 +23,9 @@ void main() async {
   
   // 위젯 서비스 초기화
   await _initWidget();
+  
+  // 헬스케어 데이터소스 초기화
+  await _initHealth();
   
   // 앱 실행
   runApp(
@@ -47,6 +52,10 @@ Future<void> _initHive() async {
   // NotificationLocalDataSource 초기화 (Box 열기)
   final notificationDataSource = NotificationLocalDataSource();
   await notificationDataSource.init();
+  
+  // PhoneUsageDataSource 초기화 (Box 열기)
+  final phoneUsageDataSource = PhoneUsageDataSource();
+  await phoneUsageDataSource.init();
 }
 
 /// 알림 서비스 초기화
@@ -64,6 +73,20 @@ Future<void> _initNotifications() async {
 Future<void> _initWidget() async {
   final widgetService = WidgetService();
   await widgetService.initialize();
+}
+
+/// 헬스케어 데이터소스 초기화
+/// 
+/// 앱 시작 시 한 번만 호출하여 헬스케어 권한을 요청하고 초기화
+/// 권한이 거부되면 에러를 무시하고 계속 진행 (활동 추적 기능만 비활성화)
+Future<void> _initHealth() async {
+  try {
+    final healthDataSource = HealthDataSource();
+    await healthDataSource.init();
+  } catch (e) {
+    // 헬스케어 권한이 거부되거나 초기화 실패 시 무시
+    // 앱은 정상적으로 동작하되 활동 추적 기능만 비활성화됨
+  }
 }
 
 /// 메인 앱 위젯

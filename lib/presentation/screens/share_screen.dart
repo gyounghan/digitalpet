@@ -5,6 +5,7 @@ import '../providers/pet_provider.dart';
 import '../widgets/pet_button.dart';
 import '../widgets/glass_card.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/constants/app_strings.dart';
 import 'home_screen.dart';
 
 /// 공유 화면
@@ -88,20 +89,20 @@ class _ShareScreenState extends ConsumerState<ShareScreen>
         children: [
           const SizedBox(height: 32),
           // 헤더
-          const Column(
+          Column(
             children: [
               Text(
-                'Share Your Pet',
-                style: TextStyle(
+                AppStrings.shareYourPet,
+                style: const TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.w600,
                   color: AppColors.textPrimary,
                 ),
               ),
-              SizedBox(height: 8),
+              const SizedBox(height: 8),
               Text(
-                'Let others meet your companion',
-                style: TextStyle(
+                AppStrings.shareSubtitle,
+                style: const TextStyle(
                   fontSize: 14,
                   color: AppColors.textTertiary,
                 ),
@@ -151,7 +152,7 @@ class _ShareScreenState extends ConsumerState<ShareScreen>
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Level ${pet.level} • Happy',
+                  '${AppStrings.level} ${pet.level} • ${AppStrings.moodHappy}',
                   style: const TextStyle(
                     fontSize: 14,
                     color: AppColors.textTertiary,
@@ -162,21 +163,21 @@ class _ShareScreenState extends ConsumerState<ShareScreen>
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    _buildStatItem('${pet.happiness}%', 'Happy'),
+                    _buildStatItem('${pet.happiness}%', AppStrings.shareHappy),
                     Container(
                       width: 1,
                       height: 24,
                       color: AppColors.glassBorder,
                     ),
                     const SizedBox(width: 16),
-                    _buildStatItem('${pet.hunger}%', 'Fed'),
+                    _buildStatItem('${pet.hunger}%', AppStrings.shareFed),
                     Container(
                       width: 1,
                       height: 24,
                       color: AppColors.glassBorder,
                     ),
                     const SizedBox(width: 16),
-                    _buildStatItem('${pet.stamina}%', 'Energy'),
+                    _buildStatItem('${pet.stamina}%', AppStrings.shareEnergy),
                   ],
                 ),
                 const SizedBox(height: 32),
@@ -256,7 +257,7 @@ class _ShareScreenState extends ConsumerState<ShareScreen>
                 onPressed: () {
                   // TODO: 공유 기능 구현
                 },
-                child: const Text('Share to Friends'),
+                child: Text(AppStrings.shareToFriends),
               ),
               const SizedBox(height: 12),
               PetButton(
@@ -265,7 +266,7 @@ class _ShareScreenState extends ConsumerState<ShareScreen>
                 onPressed: () {
                   // TODO: 다운로드 기능 구현
                 },
-                child: const Text('Download Card'),
+                child: Text(AppStrings.downloadCard),
               ),
             ],
           ),
@@ -281,9 +282,9 @@ class _ShareScreenState extends ConsumerState<ShareScreen>
                 width: 1,
               ),
             ),
-            child: const Text(
-              'Share your pet with friends to unlock special rewards!',
-              style: TextStyle(
+            child: Text(
+              AppStrings.shareInfo,
+              style: const TextStyle(
                 fontSize: 14,
                 color: AppColors.accentCyan,
               ),

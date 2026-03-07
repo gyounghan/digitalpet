@@ -47,6 +47,16 @@ dependencies:
   
   # 홈 화면 위젯
   home_widget: ^0.9.0
+  
+  # 백그라운드 작업
+  workmanager: ^0.9.0
+  
+  # 헬스케어 데이터
+  health: 13.1.4
+  
+  # 현지화
+  flutter_localizations:
+    sdk: flutter
 
 dev_dependencies:
   flutter_test:

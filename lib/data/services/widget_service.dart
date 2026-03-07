@@ -1,5 +1,6 @@
 import 'package:home_widget/home_widget.dart';
 import '../../domain/entities/pet.dart';
+import '../../core/utils/pet_image_helper.dart';
 
 /// 홈 화면 위젯 서비스
 /// 펫 데이터를 홈 화면 위젯에 업데이트하는 서비스
@@ -21,10 +22,15 @@ class WidgetService {
   /// 펫 데이터를 위젯에 업데이트
   /// 
   /// [pet] 업데이트할 펫 엔티티
-  /// [imageType] 펫 이미지 타입 (기본값: sleeping)
+  /// [imageType] 펫 이미지 타입 (기본값: null, null이면 pet.mood 기반으로 자동 결정)
   /// 
   /// 펫의 상태 정보를 홈 화면 위젯에 전달하여 표시
-  Future<void> updatePetWidget(Pet pet, {String imageType = 'sleeping'}) async {
+  Future<void> updatePetWidget(Pet pet, {String? imageType}) async {
+    // imageType이 제공되지 않으면 pet.mood 기반으로 자동 결정
+    if (imageType == null) {
+      final petImageType = getPetImageTypeFromMood(pet.mood);
+      imageType = getImageTypeString(petImageType);
+    }
     try {
       await HomeWidget.saveWidgetData<String>(_keyHunger, pet.hunger.toString());
       await HomeWidget.saveWidgetData<String>(_keyHappiness, pet.happiness.toString());

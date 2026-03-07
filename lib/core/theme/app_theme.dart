@@ -6,21 +6,21 @@ import 'app_colors.dart';
 class AppTheme {
   AppTheme._();
   
-  /// 다크 테마
+  /// 밝은 테마 (이미지 참고)
   static ThemeData get darkTheme {
     return ThemeData(
       useMaterial3: true,
-      brightness: Brightness.dark,
+      brightness: Brightness.light, // 밝은 배경에 맞게 변경
       scaffoldBackgroundColor: AppColors.backgroundDark,
-      colorScheme: const ColorScheme.dark(
+      colorScheme: const ColorScheme.light(
         primary: AppColors.primary,
         secondary: AppColors.accentPink,
         surface: AppColors.glassBackground,
         error: AppColors.danger,
-        onPrimary: AppColors.textPrimary,
-        onSecondary: AppColors.textPrimary,
-        onSurface: AppColors.textPrimary,
-        onError: AppColors.textPrimary,
+        onPrimary: Colors.white, // 보라색 배경 위의 흰색 텍스트
+        onSecondary: Colors.white,
+        onSurface: AppColors.textPrimary, // 어두운 회색 텍스트
+        onError: Colors.white,
       ),
       appBarTheme: const AppBarTheme(
         backgroundColor: Colors.transparent,

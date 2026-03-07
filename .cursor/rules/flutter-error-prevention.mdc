@@ -232,3 +232,136 @@ The asset file 'assets/sleeping_1.png' doesn't exist
 Error: The file name must end with .xml or .png
 ```
 **해결**: `android/app/src/main/res/drawable/` 폴더에서 `.xml` 또는 `.png` 외의 파일 삭제
+
+---
+
+## Android Gradle Plugin (AGP) 버전 호환성 규칙
+
+### health 패키지와 AGP 버전 충돌
+
+`health` 패키지의 최신 버전(13.3.1)은 `androidx.health.connect:connect-client:1.2.0-alpha02`를 사용하며, 이는 AGP 8.9.1 이상을 요구합니다. 하지만 Flutter 3.32.8은 AGP 8.8.0까지만 지원합니다.
+
+### ❌ 잘못된 예시
+
+```yaml
+# ❌ BAD - 최신 버전 사용 시 AGP 호환성 문제 발생
+dependencies:
+  health: ^13.3.1  # AGP 8.9.1 요구
+```
+
+```kotlin
+// ❌ BAD - AGP 버전이 너무 높음
+plugins {
+    id("com.android.application") version "8.9.1" apply false  // Flutter가 지원하지 않음
+}
+```
+
+### ✅ 올바른 예시
+
+```yaml
+# ✅ GOOD - AGP 8.8.0과 호환되는 버전 사용
+dependencies:
+  health: 13.1.4  # androidx.health.connect:connect-client:1.1.0-alpha11 사용
+```
+
+```kotlin
+// ✅ GOOD - Flutter가 지원하는 최대 AGP 버전 사용
+plugins {
+    id("com.android.application") version "8.8.0" apply false
+}
+```
+
+**규칙**: 
+- `health` 패키지는 `13.1.4` 버전을 사용 (AGP 8.8.0과 호환)
+- `android/settings.gradle.kts`에서 AGP 버전은 `8.8.0`으로 설정
+- 새로운 패키지를 추가할 때는 AGP 호환성을 확인
+- 빌드 에러 발생 시 "requires Android Gradle plugin X.X.X or higher" 메시지 확인
+
+---
+
+## minSdk 버전 관리 규칙
+
+### health 패키지 minSdk 요구사항
+
+`health` 패키지는 minSdk 26 이상을 요구합니다.
+
+### ❌ 잘못된 예시
+
+```kotlin
+// ❌ BAD - minSdk가 너무 낮음
+defaultConfig {
+    minSdk = 23  // health 패키지는 26 이상 필요
+    // ...
+}
+```
+
+### ✅ 올바른 예시
+
+```kotlin
+// ✅ GOOD - health 패키지 요구사항에 맞는 minSdk 설정
+defaultConfig {
+    // minSdk를 26으로 설정 (health 패키지의 최소 요구사항)
+    minSdk = 26
+    targetSdk = flutter.targetSdkVersion
+    // ...
+}
+```
+
+**규칙**: 
+- `android/app/build.gradle.kts`에서 `minSdk`는 최소 26으로 설정
+- 새로운 Android 라이브러리를 추가할 때는 해당 라이브러리의 minSdk 요구사항 확인
+- 빌드 에러 발생 시 "Manifest merger failed : uses-sdk:minSdkVersion" 메시지 확인
+
+---
+
+## UI Overflow 에러 방지 규칙
+
+### Row/Column 위젯에서 발생하는 overflow 에러
+
+작은 화면에서 Row 위젯이 고정 크기 요소들을 포함할 때 `right overflowed` 에러가 발생할 수 있습니다.
+
+### ❌ 잘못된 예시
+
+```dart
+// ❌ BAD - 고정 크기로 인한 overflow 가능성
+Row(
+  mainAxisAlignment: MainAxisAlignment.center,
+  children: [
+    Container(width: 128, height: 128, ...),  // 고정 크기
+    SizedBox(width: 32),  // 고정 간격
+    Container(width: 64, height: 64, ...),  // 고정 크기
+    SizedBox(width: 32),  // 고정 간격
+    Container(width: 128, height: 128, ...),  // 고정 크기
+  ],
+)
+```
+
+### ✅ 올바른 예시
+
+```dart
+// ✅ GOOD - LayoutBuilder로 화면 크기에 따라 조정
+LayoutBuilder(
+  builder: (context, constraints) {
+    final maxWidth = constraints.maxWidth;
+    final isSmallScreen = maxWidth < 400;
+    final imageSize = isSmallScreen ? 100.0 : 128.0;
+    final spacing = isSmallScreen ? 16.0 : 32.0;
+    
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Container(width: imageSize, height: imageSize, ...),
+        SizedBox(width: spacing),
+        Container(width: isSmallScreen ? 48.0 : 64.0, ...),
+        SizedBox(width: spacing),
+        Container(width: imageSize, height: imageSize, ...),
+      ],
+    );
+  },
+)
+```
+
+**규칙**: 
+- Row/Column 위젯에서 고정 크기 요소를 사용할 때는 `LayoutBuilder`로 화면 크기 확인
+- 작은 화면에서는 크기와 간격을 줄여서 overflow 방지
+- `SingleChildScrollView`로 감싸서 스크롤 가능하도록 처리

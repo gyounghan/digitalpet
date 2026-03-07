@@ -100,30 +100,22 @@ class _PetButtonState extends State<PetButton>
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
           decoration: BoxDecoration(
-            gradient: isPrimary ? AppColors.primaryGradient : null,
-            color: isPrimary ? null : AppColors.glassBackground,
+            color: isPrimary ? AppColors.primary : AppColors.glassBackground, // 활성: 보라색, 비활성: 흰색
             borderRadius: BorderRadius.circular(24),
             border: isPrimary
                 ? null
                 : Border.all(
-                    color: AppColors.glassBorder,
+                    color: AppColors.primary.withValues(alpha: 0.3), // 보라색 테두리
                     width: 1,
                   ),
-            boxShadow: isPrimary
-                ? [
-                    BoxShadow(
-                      color: AppColors.primaryGlow,
-                      blurRadius: 20,
-                      spreadRadius: 0,
-                    ),
-                  ]
-                : [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.3),
-                      blurRadius: 20,
-                      spreadRadius: 0,
-                    ),
-                  ],
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.1),
+                blurRadius: 10,
+                spreadRadius: 0,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -132,14 +124,14 @@ class _PetButtonState extends State<PetButton>
               if (widget.icon != null) ...[
                 Icon(
                   widget.icon,
-                  color: AppColors.textPrimary,
+                  color: isPrimary ? Colors.white : AppColors.primary, // 활성: 흰색, 비활성: 보라색
                   size: 20,
                 ),
                 const SizedBox(width: 8),
               ],
               DefaultTextStyle(
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
+                style: TextStyle(
+                  color: isPrimary ? Colors.white : AppColors.primary, // 활성: 흰색, 비활성: 보라색
                   fontSize: 16,
                   fontWeight: FontWeight.w500,
                 ),

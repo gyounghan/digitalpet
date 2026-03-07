@@ -4,6 +4,7 @@ import '../providers/pet_provider.dart';
 import '../widgets/pet_button.dart';
 import '../widgets/glass_card.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/constants/app_strings.dart';
 import 'home_screen.dart';
 
 /// 진화 화면
@@ -94,20 +95,20 @@ class _EvolutionScreenState extends ConsumerState<EvolutionScreen>
         children: [
           const SizedBox(height: 32),
           // 헤더
-          const Column(
+          Column(
             children: [
               Text(
-                'Evolution',
-                style: TextStyle(
+                AppStrings.evolution,
+                style: const TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.w600,
                   color: AppColors.textPrimary,
                 ),
               ),
-              SizedBox(height: 8),
+              const SizedBox(height: 8),
               Text(
-                'Ready to evolve your pet?',
-                style: TextStyle(
+                AppStrings.evolutionReady,
+                style: const TextStyle(
                   fontSize: 14,
                   color: AppColors.textTertiary,
                 ),
@@ -143,26 +144,33 @@ class _EvolutionScreenState extends ConsumerState<EvolutionScreen>
                     );
                   },
                 ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // Before
-                  AnimatedBuilder(
-                    animation: _evolutionController,
-                    builder: (context, child) {
-                      return Transform.scale(
-                        scale: isEvolving
-                            ? 1.0 - (0.1 * _evolutionController.value)
-                            : 1.0,
-                        child: Opacity(
-                          opacity: isEvolving
-                              ? 1.0 - (0.5 * _evolutionController.value)
-                              : 1.0,
-                          child: Column(
-                            children: [
-                              Container(
-                                width: 128,
-                                height: 128,
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final maxWidth = constraints.maxWidth;
+                  final isSmallScreen = maxWidth < 400;
+                  final imageSize = isSmallScreen ? 100.0 : 128.0;
+                  final spacing = isSmallScreen ? 16.0 : 32.0;
+                  
+                  return Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // Before
+                      AnimatedBuilder(
+                        animation: _evolutionController,
+                        builder: (context, child) {
+                          return Transform.scale(
+                            scale: isEvolving
+                                ? 1.0 - (0.1 * _evolutionController.value)
+                                : 1.0,
+                            child: Opacity(
+                              opacity: isEvolving
+                                  ? 1.0 - (0.5 * _evolutionController.value)
+                                  : 1.0,
+                              child: Column(
+                                children: [
+                                  Container(
+                                    width: imageSize,
+                                    height: imageSize,
                                 decoration: BoxDecoration(
                                   gradient: LinearGradient(
                                     begin: Alignment.topLeft,
@@ -193,9 +201,9 @@ class _EvolutionScreenState extends ConsumerState<EvolutionScreen>
                                 ),
                               ),
                               const SizedBox(height: 16),
-                              const Text(
-                                'Current',
-                                style: TextStyle(
+                              Text(
+                                AppStrings.evolutionCurrent,
+                                style: const TextStyle(
                                   fontSize: 14,
                                   color: AppColors.textTertiary,
                                 ),
@@ -223,11 +231,11 @@ class _EvolutionScreenState extends ConsumerState<EvolutionScreen>
                       );
                     },
                   ),
-                  const SizedBox(width: 32),
+                  SizedBox(width: spacing),
                   // Arrow / Animation
                   SizedBox(
-                    width: 64,
-                    height: 64,
+                    width: isSmallScreen ? 48.0 : 64.0,
+                    height: isSmallScreen ? 48.0 : 64.0,
                     child: AnimatedSwitcher(
                       duration: const Duration(milliseconds: 300),
                       child: isEvolving
@@ -251,7 +259,7 @@ class _EvolutionScreenState extends ConsumerState<EvolutionScreen>
                             ),
                     ),
                   ),
-                  const SizedBox(width: 32),
+                  SizedBox(width: spacing),
                   // After
                   AnimatedBuilder(
                     animation: _evolutionController,
@@ -265,8 +273,8 @@ class _EvolutionScreenState extends ConsumerState<EvolutionScreen>
                         child: Column(
                           children: [
                             Container(
-                              width: 128,
-                              height: 128,
+                              width: imageSize,
+                              height: imageSize,
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(
                                   begin: Alignment.topLeft,
@@ -308,9 +316,9 @@ class _EvolutionScreenState extends ConsumerState<EvolutionScreen>
                               ),
                             ),
                             const SizedBox(height: 16),
-                            const Text(
-                              'Next Stage',
-                              style: TextStyle(
+                            Text(
+                              AppStrings.evolutionNextStage,
+                              style: const TextStyle(
                                 fontSize: 14,
                                 color: AppColors.textTertiary,
                               ),
@@ -337,7 +345,9 @@ class _EvolutionScreenState extends ConsumerState<EvolutionScreen>
                       );
                     },
                   ),
-                ],
+                    ],
+                  );
+                },
               ),
             ],
           ),
@@ -369,17 +379,17 @@ class _EvolutionScreenState extends ConsumerState<EvolutionScreen>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Evolution Requirements',
-                            style: TextStyle(
+                            AppStrings.evolutionRequirements,
+                            style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w500,
                               color: AppColors.textPrimary,
                             ),
                           ),
-                          SizedBox(height: 4),
+                          const SizedBox(height: 4),
                           Text(
-                            'Level 15 or higher',
-                            style: TextStyle(
+                            AppStrings.evolutionLevelRequired,
+                            style: const TextStyle(
                               fontSize: 14,
                               color: AppColors.textTertiary,
                             ),
@@ -393,9 +403,9 @@ class _EvolutionScreenState extends ConsumerState<EvolutionScreen>
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
-                      'Current Level',
-                      style: TextStyle(
+                    Text(
+                      AppStrings.evolutionCurrentLevel,
+                      style: const TextStyle(
                         fontSize: 14,
                         color: AppColors.textTertiary,
                       ),
@@ -438,10 +448,10 @@ class _EvolutionScreenState extends ConsumerState<EvolutionScreen>
             onPressed: isEvolving ? null : _handleEvolve,
             disabled: isEvolving || currentLevel < requiredLevel,
             child: Text(isEvolving
-                ? 'Evolving...'
+                ? AppStrings.evolutionEvolving
                 : hasEvolved
-                    ? 'Evolved!'
-                    : 'Evolve Now'),
+                    ? AppStrings.evolutionEvolved
+                    : AppStrings.evolutionEvolveNow),
           ),
         ],
       ),

@@ -8,4 +8,7 @@ class HiveConstants {
   
   /// Pet 데이터 저장용 Hive Box 이름
   static const String petBoxName = 'pets';
+  
+  /// PhoneUsage 데이터 저장용 Hive Box 이름
+  static const String phoneUsageBoxName = 'phone_usage';
 }

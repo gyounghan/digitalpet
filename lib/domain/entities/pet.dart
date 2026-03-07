@@ -1,3 +1,5 @@
+import 'evolution_type.dart';
+
 /// 펫의 기분 상태
 /// hunger, happiness, stamina 값에 따라 결정되는 펫의 현재 상태
 enum PetMood {
@@ -46,6 +48,22 @@ class Pet {
   /// 밀리초 단위 Unix timestamp
   final int lastUpdated;
   
+  /// 누적 걸음 수
+  /// 펫이 생성된 이후부터의 총 걸음 수
+  final int totalSteps;
+  
+  /// 누적 운동 시간 (분)
+  /// 펫이 생성된 이후부터의 총 운동 시간
+  final int totalExerciseMinutes;
+  
+  /// 누적 미사용 시간 (시간)
+  /// 펫이 생성된 이후부터의 총 미사용 시간
+  final int totalIdleHours;
+  
+  /// 진화 방향 타입
+  /// 누적 활동 패턴에 따라 결정되는 진화 방향 (null이면 아직 결정되지 않음)
+  final EvolutionType? evolutionType;
+  
   /// 펫의 현재 기분 상태
   /// hunger, happiness, stamina 값에 따라 자동 계산
   PetMood get mood {
@@ -82,6 +100,10 @@ class Pet {
     required this.exp,
     required this.evolutionStage,
     required this.lastUpdated,
+    this.totalSteps = 0,
+    this.totalExerciseMinutes = 0,
+    this.totalIdleHours = 0,
+    this.evolutionType,
   });
   
   /// Pet 객체 복사본 생성
@@ -95,6 +117,10 @@ class Pet {
     int? exp,
     int? evolutionStage,
     int? lastUpdated,
+    int? totalSteps,
+    int? totalExerciseMinutes,
+    int? totalIdleHours,
+    EvolutionType? evolutionType,
   }) {
     return Pet(
       id: id ?? this.id,
@@ -105,6 +131,10 @@ class Pet {
       exp: exp ?? this.exp,
       evolutionStage: evolutionStage ?? this.evolutionStage,
       lastUpdated: lastUpdated ?? this.lastUpdated,
+      totalSteps: totalSteps ?? this.totalSteps,
+      totalExerciseMinutes: totalExerciseMinutes ?? this.totalExerciseMinutes,
+      totalIdleHours: totalIdleHours ?? this.totalIdleHours,
+      evolutionType: evolutionType ?? this.evolutionType,
     );
   }
 }

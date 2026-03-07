@@ -1,5 +1,6 @@
 import 'package:hive/hive.dart';
 import 'pet_model.dart';
+import '../../domain/entities/evolution_type.dart';
 
 /// PetModel Hive TypeAdapter
 /// Hive 데이터베이스에 PetModel을 저장하고 읽기 위한 어댑터
@@ -30,6 +31,15 @@ class PetModelAdapter extends TypeAdapter<PetModel> {
       exp: fields[5] as int,
       evolutionStage: fields[6] as int,
       lastUpdated: fields[7] as int,
+      totalSteps: fields[8] as int? ?? 0,
+      totalExerciseMinutes: fields[9] as int? ?? 0,
+      totalIdleHours: fields[10] as int? ?? 0,
+      evolutionType: fields[11] != null
+          ? EvolutionType.values.firstWhere(
+              (e) => e.name == fields[11],
+              orElse: () => EvolutionType.balanced,
+            )
+          : null,
     );
   }
   
@@ -38,7 +48,7 @@ class PetModelAdapter extends TypeAdapter<PetModel> {
     // Hive에 데이터 쓰기
     // 필드 개수와 각 필드를 순서대로 저장
     writer
-      ..writeByte(8) // 필드 개수 (id 포함)
+      ..writeByte(12) // 필드 개수 (id 포함)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -54,7 +64,15 @@ class PetModelAdapter extends TypeAdapter<PetModel> {
       ..writeByte(6)
       ..write(obj.evolutionStage)
       ..writeByte(7)
-      ..write(obj.lastUpdated);
+      ..write(obj.lastUpdated)
+      ..writeByte(8)
+      ..write(obj.totalSteps)
+      ..writeByte(9)
+      ..write(obj.totalExerciseMinutes)
+      ..writeByte(10)
+      ..write(obj.totalIdleHours)
+      ..writeByte(11)
+      ..write(obj.evolutionType?.name);
   }
   
   @override

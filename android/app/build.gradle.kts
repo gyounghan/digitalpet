@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace = "com.example.pocketfriend"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 36
     ndkVersion = "27.0.12077973"
 
     compileOptions {
@@ -25,8 +25,8 @@ android {
         applicationId = "com.example.pocketfriend"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        // minSdk를 23으로 설정 (home_widget 패키지의 androidx.glance 라이브러리 요구사항)
-        minSdk = 23
+        // minSdk를 26으로 설정 (health 패키지의 최소 요구사항)
+        minSdk = 26
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
@@ -44,6 +44,10 @@ android {
 flutter {
     source = "../.."
 }
+
+// androidx.health.connect:connect-client 버전 오버라이드 제거
+// health 13.1.4가 사용하는 1.1.0-alpha11 버전을 그대로 사용
+// 만약 AGP 8.8.0과 호환되지 않으면 더 낮은 health 패키지 버전 사용 필요
 
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
