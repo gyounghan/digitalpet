@@ -40,6 +40,9 @@ class PetModelAdapter extends TypeAdapter<PetModel> {
               orElse: () => EvolutionType.balanced,
             )
           : null,
+      todayFeedCount: fields[12] as int? ?? 0,
+      todaySleepHours: fields[13] as int? ?? 0,
+      lastGoalResetDate: fields[14] as String? ?? '',
     );
   }
   
@@ -48,7 +51,7 @@ class PetModelAdapter extends TypeAdapter<PetModel> {
     // Hive에 데이터 쓰기
     // 필드 개수와 각 필드를 순서대로 저장
     writer
-      ..writeByte(12) // 필드 개수 (id 포함)
+      ..writeByte(15) // 필드 개수 (id 포함)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -72,7 +75,13 @@ class PetModelAdapter extends TypeAdapter<PetModel> {
       ..writeByte(10)
       ..write(obj.totalIdleHours)
       ..writeByte(11)
-      ..write(obj.evolutionType?.name);
+      ..write(obj.evolutionType?.name)
+      ..writeByte(12)
+      ..write(obj.todayFeedCount)
+      ..writeByte(13)
+      ..write(obj.todaySleepHours)
+      ..writeByte(14)
+      ..write(obj.lastGoalResetDate);
   }
   
   @override

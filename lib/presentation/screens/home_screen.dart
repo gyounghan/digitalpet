@@ -71,6 +71,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
   }
   
+  
   @override
   Widget build(BuildContext context) {
     // Pet 상태를 관리하는 Notifier 가져오기
@@ -267,22 +268,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ),
                   const SizedBox(height: 16),
                   StatusBar(
-                    label: AppStrings.happiness,
-                    value: pet.happiness,
-                    color: StatusBarColor.happiness,
-                    icon: Icons.favorite,
-                  ),
-                  const SizedBox(height: 16),
-                  StatusBar(
                     label: AppStrings.stamina,
                     value: pet.stamina,
                     color: StatusBarColor.stamina,
-                    icon: Icons.battery_charging_full,
+                    icon: Icons.bedtime,
+                  ),
+                  const SizedBox(height: 16),
+                  StatusBar(
+                    label: AppStrings.happiness,
+                    value: pet.happiness,
+                    color: StatusBarColor.happiness,
+                    icon: Icons.directions_run,
                   ),
                 ],
               ),
             ),
-            // Feed 버튼 (조건부 표시)
+            // Feed 버튼 (조건부 표시: 배고픔 상태 + 식사 시간대 또는 매우 심한 배고픔)
             Consumer(
               builder: (context, ref, _) {
                 final canFeedUseCase = ref.watch(canFeedPetUseCaseProvider);

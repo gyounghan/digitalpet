@@ -4,9 +4,9 @@ class AppStrings {
   AppStrings._(); // private constructor
   
   // 상태 라벨
-  static const String hunger = '배고픔';
-  static const String happiness = '행복도';
-  static const String stamina = '체력';
+  static const String hunger = '포만감';
+  static const String happiness = '운동';
+  static const String stamina = '수면';
   static const String level = '레벨';
   
   // 펫 상태
@@ -70,9 +70,9 @@ class AppStrings {
   // 공유 화면
   static const String shareYourPet = '펫 공유하기';
   static const String shareSubtitle = '친구들에게 내 펫을 소개해보세요';
-  static const String shareHappy = '행복';
-  static const String shareFed = '배부름';
-  static const String shareEnergy = '에너지';
+  static const String shareHappy = '운동';
+  static const String shareFed = '포만감';
+  static const String shareEnergy = '수면';
   static const String shareToFriends = '친구에게 공유하기';
   static const String downloadCard = '카드 다운로드';
   static const String shareInfo = '펫을 친구들에게 공유하면 특별한 보상을 받을 수 있어요!';

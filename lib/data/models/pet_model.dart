@@ -60,6 +60,18 @@ class PetModel extends Pet {
   @override
   final EvolutionType? evolutionType;
   
+  @HiveField(12)
+  @override
+  final int todayFeedCount;
+  
+  @HiveField(13)
+  @override
+  final int todaySleepHours;
+  
+  @HiveField(14)
+  @override
+  final String lastGoalResetDate;
+  
   PetModel({
     required this.id,
     required this.hunger,
@@ -73,6 +85,9 @@ class PetModel extends Pet {
     this.totalExerciseMinutes = 0,
     this.totalIdleHours = 0,
     this.evolutionType,
+    this.todayFeedCount = 0,
+    this.todaySleepHours = 0,
+    this.lastGoalResetDate = '',
   }) : super(
           id: id,
           hunger: hunger,
@@ -86,6 +101,9 @@ class PetModel extends Pet {
           totalExerciseMinutes: totalExerciseMinutes,
           totalIdleHours: totalIdleHours,
           evolutionType: evolutionType,
+          todayFeedCount: todayFeedCount,
+          todaySleepHours: todaySleepHours,
+          lastGoalResetDate: lastGoalResetDate,
         );
   
   /// JSON에서 PetModel 생성
@@ -112,6 +130,9 @@ class PetModel extends Pet {
               orElse: () => EvolutionType.balanced,
             )
           : null,
+      todayFeedCount: json['todayFeedCount'] as int? ?? 0,
+      todaySleepHours: json['todaySleepHours'] as int? ?? 0,
+      lastGoalResetDate: json['lastGoalResetDate'] as String? ?? '',
     );
   }
   
@@ -132,6 +153,9 @@ class PetModel extends Pet {
       'totalExerciseMinutes': totalExerciseMinutes,
       'totalIdleHours': totalIdleHours,
       'evolutionType': evolutionType?.name,
+      'todayFeedCount': todayFeedCount,
+      'todaySleepHours': todaySleepHours,
+      'lastGoalResetDate': lastGoalResetDate,
     };
   }
   
@@ -154,6 +178,9 @@ class PetModel extends Pet {
       totalExerciseMinutes: pet.totalExerciseMinutes,
       totalIdleHours: pet.totalIdleHours,
       evolutionType: pet.evolutionType,
+      todayFeedCount: pet.todayFeedCount,
+      todaySleepHours: pet.todaySleepHours,
+      lastGoalResetDate: pet.lastGoalResetDate,
     );
   }
   
@@ -174,6 +201,9 @@ class PetModel extends Pet {
       totalExerciseMinutes: totalExerciseMinutes,
       totalIdleHours: totalIdleHours,
       evolutionType: evolutionType,
+      todayFeedCount: todayFeedCount,
+      todaySleepHours: todaySleepHours,
+      lastGoalResetDate: lastGoalResetDate,
     );
   }
   
@@ -194,6 +224,9 @@ class PetModel extends Pet {
     int? totalExerciseMinutes,
     int? totalIdleHours,
     EvolutionType? evolutionType,
+    int? todayFeedCount,
+    int? todaySleepHours,
+    String? lastGoalResetDate,
   }) {
     return PetModel(
       id: id ?? this.id,
@@ -208,6 +241,9 @@ class PetModel extends Pet {
       totalExerciseMinutes: totalExerciseMinutes ?? this.totalExerciseMinutes,
       totalIdleHours: totalIdleHours ?? this.totalIdleHours,
       evolutionType: evolutionType ?? this.evolutionType,
+      todayFeedCount: todayFeedCount ?? this.todayFeedCount,
+      todaySleepHours: todaySleepHours ?? this.todaySleepHours,
+      lastGoalResetDate: lastGoalResetDate ?? this.lastGoalResetDate,
     );
   }
 }

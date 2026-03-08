@@ -163,13 +163,6 @@ class _ShareScreenState extends ConsumerState<ShareScreen>
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    _buildStatItem('${pet.happiness}%', AppStrings.shareHappy),
-                    Container(
-                      width: 1,
-                      height: 24,
-                      color: AppColors.glassBorder,
-                    ),
-                    const SizedBox(width: 16),
                     _buildStatItem('${pet.hunger}%', AppStrings.shareFed),
                     Container(
                       width: 1,
@@ -178,6 +171,13 @@ class _ShareScreenState extends ConsumerState<ShareScreen>
                     ),
                     const SizedBox(width: 16),
                     _buildStatItem('${pet.stamina}%', AppStrings.shareEnergy),
+                    Container(
+                      width: 1,
+                      height: 24,
+                      color: AppColors.glassBorder,
+                    ),
+                    const SizedBox(width: 16),
+                    _buildStatItem('${pet.happiness}%', AppStrings.shareHappy),
                   ],
                 ),
                 const SizedBox(height: 32),

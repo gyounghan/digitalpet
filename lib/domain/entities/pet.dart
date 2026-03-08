@@ -64,6 +64,18 @@ class Pet {
   /// 누적 활동 패턴에 따라 결정되는 진화 방향 (null이면 아직 결정되지 않음)
   final EvolutionType? evolutionType;
   
+  /// 오늘의 Feed 횟수 (일일 목표 추적)
+  /// 식사 시간대에 Feed 액션을 수행한 횟수 (최대 3회)
+  final int todayFeedCount;
+  
+  /// 오늘의 수면 시간 (시간, 일일 목표 추적)
+  /// 오늘 0시부터 현재까지의 총 수면 시간
+  final int todaySleepHours;
+  
+  /// 마지막 목표 리셋 날짜 (YYYY-MM-DD 형식)
+  /// 날짜가 변경되면 todayFeedCount와 todaySleepHours를 리셋
+  final String lastGoalResetDate;
+  
   /// 펫의 현재 기분 상태
   /// hunger, happiness, stamina 값에 따라 자동 계산
   PetMood get mood {
@@ -104,6 +116,9 @@ class Pet {
     this.totalExerciseMinutes = 0,
     this.totalIdleHours = 0,
     this.evolutionType,
+    this.todayFeedCount = 0,
+    this.todaySleepHours = 0,
+    this.lastGoalResetDate = '',
   });
   
   /// Pet 객체 복사본 생성
@@ -121,6 +136,9 @@ class Pet {
     int? totalExerciseMinutes,
     int? totalIdleHours,
     EvolutionType? evolutionType,
+    int? todayFeedCount,
+    int? todaySleepHours,
+    String? lastGoalResetDate,
   }) {
     return Pet(
       id: id ?? this.id,
@@ -135,6 +153,29 @@ class Pet {
       totalExerciseMinutes: totalExerciseMinutes ?? this.totalExerciseMinutes,
       totalIdleHours: totalIdleHours ?? this.totalIdleHours,
       evolutionType: evolutionType ?? this.evolutionType,
+      todayFeedCount: todayFeedCount ?? this.todayFeedCount,
+      todaySleepHours: todaySleepHours ?? this.todaySleepHours,
+      lastGoalResetDate: lastGoalResetDate ?? this.lastGoalResetDate,
+    );
+  }
+  
+  /// 오늘 날짜 문자열 반환 (YYYY-MM-DD)
+  String get todayDateString {
+    final now = DateTime.now();
+    return '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+  }
+  
+  /// 일일 목표 리셋 필요 여부 확인
+  bool get needsGoalReset {
+    return lastGoalResetDate != todayDateString;
+  }
+  
+  /// 일일 목표 리셋된 Pet 반환
+  Pet resetDailyGoals() {
+    return copyWith(
+      todayFeedCount: 0,
+      todaySleepHours: 0,
+      lastGoalResetDate: todayDateString,
     );
   }
 }

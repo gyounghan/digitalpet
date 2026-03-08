@@ -5,6 +5,7 @@ import '../widgets/pet_button.dart';
 import '../widgets/glass_card.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/constants/app_strings.dart';
+import '../../domain/usecases/calculate_daily_goals_score_usecase.dart';
 import 'home_screen.dart';
 
 /// 진화 화면
@@ -54,6 +55,73 @@ class _EvolutionScreenState extends ConsumerState<EvolutionScreen>
         isEvolving = false;
       });
     });
+  }
+  
+  /// 일일 목표 점수 조회
+  Future<DailyGoalsScore> _getDailyGoalsScore(WidgetRef ref, dynamic pet) async {
+    final petRepository = ref.read(petRepositoryProvider);
+    final activityRepository = ref.read(activityRepositoryProvider);
+    final calculateScoreUseCase = CalculateDailyGoalsScoreUseCase(
+      petRepository: petRepository,
+      activityRepository: activityRepository,
+    );
+    return await calculateScoreUseCase(pet.id);
+  }
+  
+  /// 일일 목표 항목 빌드
+  Widget _buildGoalItem(
+    String label,
+    int progress,
+    int goal,
+    bool achieved,
+    IconData icon,
+  ) {
+    final progressValue = goal > 0 ? (progress / goal).clamp(0.0, 1.0) : 0.0;
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  icon,
+                  size: 16,
+                  color: achieved ? AppColors.accentPink : AppColors.textSecondary,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: achieved ? AppColors.accentPink : AppColors.textSecondary,
+                    fontWeight: achieved ? FontWeight.w600 : FontWeight.normal,
+                  ),
+                ),
+              ],
+            ),
+            Text(
+              achieved ? '완료' : '$progress/$goal',
+              style: TextStyle(
+                fontSize: 12,
+                color: achieved ? AppColors.accentPink : AppColors.textTertiary,
+                fontWeight: achieved ? FontWeight.w600 : FontWeight.normal,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        LinearProgressIndicator(
+          value: progressValue,
+          backgroundColor: AppColors.glassBackground,
+          valueColor: AlwaysStoppedAnimation<Color>(
+            achieved ? AppColors.accentPink : AppColors.primary,
+          ),
+        ),
+      ],
+    );
   }
   
   @override
@@ -441,6 +509,85 @@ class _EvolutionScreenState extends ConsumerState<EvolutionScreen>
             ),
           ),
           const SizedBox(height: 24),
+          // 일일 목표 진행 상황
+          FutureBuilder<DailyGoalsScore>(
+            future: _getDailyGoalsScore(ref, pet),
+            builder: (context, snapshot) {
+              if (snapshot.hasData) {
+                final scoreResult = snapshot.data!;
+                final dailyGoals = scoreResult.dailyGoals;
+                
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    GlassCard(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                '오늘의 목표',
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                              Text(
+                                '${scoreResult.score}/3',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: scoreResult.score == 3 
+                                      ? AppColors.accentPink 
+                                      : AppColors.textPrimary,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          // 포만감 목표
+                          _buildGoalItem(
+                            '포만감',
+                            dailyGoals.feedProgress,
+                            3,
+                            dailyGoals.feedGoalAchieved,
+                            Icons.restaurant,
+                          ),
+                          const SizedBox(height: 12),
+                          // 수면 목표
+                          _buildGoalItem(
+                            '수면',
+                            dailyGoals.sleepHours,
+                            6,
+                            dailyGoals.sleepGoalAchieved,
+                            Icons.bedtime,
+                          ),
+                          const SizedBox(height: 12),
+                          // 운동 목표
+                          _buildGoalItem(
+                            '운동',
+                            dailyGoals.exerciseSteps >= 10000 
+                                ? 100 
+                                : (dailyGoals.exerciseMinutes >= 30 ? 100 : 0),
+                            100,
+                            dailyGoals.exerciseGoalAchieved,
+                            Icons.directions_run,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                  ],
+                );
+              } else {
+                return const SizedBox.shrink();
+              }
+            },
+          ),
           // 액션 버튼
           PetButton(
             variant: PetButtonVariant.primary,

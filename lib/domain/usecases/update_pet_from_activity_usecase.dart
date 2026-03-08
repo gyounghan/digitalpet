@@ -48,46 +48,42 @@ class UpdatePetFromActivityUseCase {
   /// 
   /// 동작:
   /// 1. 최근 24시간 활동 데이터 조회
-  /// 2. 걸음 수와 운동 시간에 따라 happiness, stamina 증가
-  /// 3. 일일 목표 달성 시 보너스 경험치 추가
-  /// 4. 업데이트된 Pet 저장
+  /// 2. 일일 목표 리셋 확인 (날짜 변경 시)
+  /// 3. 걸음 수와 운동 시간에 따라 happiness, stamina 증가
+  /// 4. 일일 목표 달성 시 보너스 경험치 추가 (운동 목표만, 나머지는 별도 UseCase에서 처리)
+  /// 5. 업데이트된 Pet 저장
   Future<Pet> call(String petId) async {
     // 1. 현재 Pet 조회
-    final pet = await petRepository.getPet(petId);
+    var pet = await petRepository.getPet(petId);
     
-    // 2. 최근 24시간 활동 데이터 조회
+    // 2. 일일 목표 리셋 확인
+    if (pet.needsGoalReset) {
+      pet = pet.resetDailyGoals();
+    }
+    
+    // 3. 최근 24시간 활동 데이터 조회
     final activityData = await activityRepository.getLast24HoursActivityData();
     
-    // 3. 걸음 수 기반 상태 업데이트 계산
+    // 4. 걸음 수 기반 상태 업데이트 계산
     final stepsIncrement = activityData.steps ~/ 1000;
     final happinessFromSteps = stepsIncrement * happinessPer1000Steps;
     final staminaFromSteps = stepsIncrement * staminaPer1000Steps;
     
-    // 4. 운동 시간 기반 상태 업데이트 계산
+    // 5. 운동 시간 기반 상태 업데이트 계산
     final exerciseIncrement = activityData.exerciseMinutes ~/ 10;
     final happinessFromExercise = exerciseIncrement * happinessPer10Minutes;
     final staminaFromExercise = exerciseIncrement * staminaPer10Minutes;
     
-    // 5. 총 증가량 계산
+    // 6. 총 증가량 계산
     final totalHappinessIncrease = happinessFromSteps + happinessFromExercise;
     final totalStaminaIncrease = staminaFromSteps + staminaFromExercise;
-    
-    // 6. 일일 목표 달성 여부 확인
-    int bonusExp = 0;
-    if (activityData.steps >= dailyGoalSteps || 
-        activityData.exerciseMinutes >= dailyGoalExerciseMinutes) {
-      bonusExp = bonusExpOnGoalAchievement;
-    }
     
     // 7. 새로운 상태 값 계산 (최대 100)
     final newHappiness = (pet.happiness + totalHappinessIncrease).clamp(0, 100);
     final newStamina = (pet.stamina + totalStaminaIncrease).clamp(0, 100);
-    final newExp = pet.exp + bonusExp;
     
-    // 8. 레벨 업 계산 (100 경험치당 1 레벨)
-    final oldLevel = pet.exp ~/ 100;
-    final newLevel = newExp ~/ 100;
-    final levelIncrease = newLevel - oldLevel;
+    // 8. 일일 목표 달성 보너스 경험치는 별도 UseCase에서 처리하므로 여기서는 제거
+    // (운동 목표는 CalculateDailyGoalsScoreUseCase에서 처리)
     
     // 9. 현재 시간으로 업데이트
     final currentTime = DateTime.now().millisecondsSinceEpoch;
@@ -102,14 +98,12 @@ class UpdatePetFromActivityUseCase {
     final updatedPet = pet.copyWith(
       happiness: newHappiness,
       stamina: newStamina,
-      exp: newExp,
-      level: pet.level + levelIncrease,
       lastUpdated: currentTime,
       totalSteps: newTotalSteps,
       totalExerciseMinutes: newTotalExerciseMinutes,
     );
     
-    // 11. 저장
+    // 12. 저장
     await petRepository.updatePet(updatedPet);
     
     return updatedPet;

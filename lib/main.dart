@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'data/models/pet_model_adapter.dart';
+import 'data/models/battle_history_model_adapter.dart';
 import 'data/datasource/pet_local_datasource.dart';
+import 'data/datasources/battle_history_datasource.dart';
 import 'data/datasource/notification_local_datasource.dart';
 import 'data/datasources/phone_usage_datasource.dart';
 import 'data/datasources/health_datasource.dart';
 import 'data/services/notification_service.dart';
 import 'data/services/widget_service.dart';
+import 'data/services/background_service.dart';
 import 'presentation/screens/main_navigation_screen.dart';
 import 'core/theme/app_theme.dart';
 
@@ -27,6 +30,9 @@ void main() async {
   // 헬스케어 데이터소스 초기화
   await _initHealth();
   
+  // 백그라운드 작업 초기화
+  await _initBackgroundService();
+  
   // 앱 실행
   runApp(
     const ProviderScope(
@@ -45,6 +51,9 @@ Future<void> _initHive() async {
   // PetModelAdapter 등록
   Hive.registerAdapter(PetModelAdapter());
   
+  // BattleHistoryModelAdapter 등록
+  Hive.registerAdapter(BattleHistoryModelAdapter());
+  
   // PetLocalDataSource 초기화 (Box 열기)
   final dataSource = PetLocalDataSource();
   await dataSource.init();
@@ -56,6 +65,10 @@ Future<void> _initHive() async {
   // PhoneUsageDataSource 초기화 (Box 열기)
   final phoneUsageDataSource = PhoneUsageDataSource();
   await phoneUsageDataSource.init();
+  
+  // BattleHistoryDataSource 초기화 (Box 열기)
+  final battleHistoryDataSource = BattleHistoryDataSource();
+  await battleHistoryDataSource.init();
 }
 
 /// 알림 서비스 초기화
@@ -87,6 +100,13 @@ Future<void> _initHealth() async {
     // 헬스케어 권한이 거부되거나 초기화 실패 시 무시
     // 앱은 정상적으로 동작하되 활동 추적 기능만 비활성화됨
   }
+}
+
+/// 백그라운드 작업 서비스 초기화
+/// 
+/// 앱 시작 시 한 번만 호출하여 WorkManager를 초기화하고 백그라운드 작업을 등록
+Future<void> _initBackgroundService() async {
+  await BackgroundService.initialize();
 }
 
 /// 메인 앱 위젯

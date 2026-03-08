@@ -32,6 +32,9 @@ class CreateDefaultPetUseCase {
     
     // 기본값으로 Pet 생성
     // evolutionStage: 1 (1단계 털뭉치 상태)
+    final today = DateTime.now();
+    final todayDate = '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+    
     final defaultPet = Pet(
       id: petId,
       hunger: 100,
@@ -45,6 +48,9 @@ class CreateDefaultPetUseCase {
       totalExerciseMinutes: 0,
       totalIdleHours: 0,
       evolutionType: null, // 아직 결정되지 않음
+      todayFeedCount: 0,
+      todaySleepHours: 0,
+      lastGoalResetDate: todayDate,
     );
     
     // Hive에 저장

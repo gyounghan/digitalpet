@@ -5,7 +5,7 @@ import '../widgets/pet_button.dart';
 import '../widgets/glass_card.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/constants/app_strings.dart';
-import '../../domain/usecases/battle_with_activity_usecase.dart';
+import '../../domain/entities/battle_history.dart';
 import 'home_screen.dart';
 
 /// 배틀 화면
@@ -21,28 +21,11 @@ class BattleScreen extends ConsumerStatefulWidget {
 class _BattleScreenState extends ConsumerState<BattleScreen> {
   bool? battleResult; // true: 승리, false: 패배, null: 아직 대결 안 함
   bool isLoading = false;
-  int todaySteps = 0;
-  int todayExerciseMinutes = 0;
   int expGained = 0;
   
   @override
   void initState() {
     super.initState();
-    _loadTodayActivity();
-  }
-  
-  /// 오늘의 활동 데이터 로드
-  Future<void> _loadTodayActivity() async {
-    try {
-      final activityRepository = ref.read(activityRepositoryProvider);
-      final todayActivity = await activityRepository.getTodayActivityData();
-      setState(() {
-        todaySteps = todayActivity.steps;
-        todayExerciseMinutes = todayActivity.exerciseMinutes;
-      });
-    } catch (e) {
-      // 에러 무시
-    }
   }
   
   /// 활동 기반 대결 실행
@@ -54,13 +37,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
     });
     
     try {
-      final petRepository = ref.read(petRepositoryProvider);
-      final activityRepository = ref.read(activityRepositoryProvider);
-      final battleUseCase = BattleWithActivityUseCase(
-        petRepository: petRepository,
-        activityRepository: activityRepository,
-      );
-      
+      final battleUseCase = ref.read(battleWithActivityUseCaseProvider);
       final result = await battleUseCase(HomeScreen.defaultPetId);
       
       // Pet 상태 새로고침
@@ -68,8 +45,6 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
       
       setState(() {
         battleResult = result.isVictory;
-        todaySteps = result.todaySteps;
-        todayExerciseMinutes = result.todayExerciseMinutes;
         expGained = result.expGained;
         isLoading = false;
       });
@@ -78,6 +53,14 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
         isLoading = false;
       });
     }
+  }
+  
+  /// 대결 초기화
+  void _resetBattle() {
+    setState(() {
+      battleResult = null;
+      expGained = 0;
+    });
   }
   
   @override
@@ -109,112 +92,82 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
   }
   
   Widget _buildBattleContent(BuildContext context, pet) {
-    // 일일 목표 달성률 계산
-    final stepsProgress = (todaySteps / BattleWithActivityUseCase.dailyGoalSteps).clamp(0.0, 1.0);
-    final exerciseProgress = (todayExerciseMinutes / BattleWithActivityUseCase.dailyGoalExerciseMinutes).clamp(0.0, 1.0);
-    
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const SizedBox(height: 16),
           // 헤더
-          Column(
-            children: [
-              Text(
-                AppStrings.battleArena,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                '일일 목표 달성 대결',
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: AppColors.textTertiary,
-                ),
-              ),
-            ],
+          Text(
+            AppStrings.battleArena,
+            style: const TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary,
+            ),
+            textAlign: TextAlign.center,
           ),
           const SizedBox(height: 32),
-          // 목표 달성 현황
-          GlassCard(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '오늘의 활동',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
+          
+          // 전적 통계 카드
+          FutureBuilder<BattleStats>(
+            future: _getBattleStats(),
+            builder: (context, snapshot) {
+              if (snapshot.hasData) {
+                final stats = snapshot.data!;
+                return GlassCard(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          _buildStatItem('총 대결', '${stats.total}', AppColors.textPrimary),
+                          Container(
+                            width: 1,
+                            height: 40,
+                            color: AppColors.glassBorder,
+                          ),
+                          _buildStatItem('승리', '${stats.victories}', AppColors.accentPink),
+                          Container(
+                            width: 1,
+                            height: 40,
+                            color: AppColors.glassBorder,
+                          ),
+                          _buildStatItem('패배', '${stats.defeats}', AppColors.textSecondary),
+                        ],
+                      ),
+                      if (stats.total > 0) ...[
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            '승률: ${((stats.victories / stats.total) * 100).toStringAsFixed(1)}%',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
-                ),
-                const SizedBox(height: 16),
-                // 걸음 수
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      '걸음 수',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                    Text(
-                      '$todaySteps / ${BattleWithActivityUseCase.dailyGoalSteps}보',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                LinearProgressIndicator(
-                  value: stepsProgress,
-                  backgroundColor: AppColors.glassBackground,
-                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
-                ),
-                const SizedBox(height: 16),
-                // 운동 시간
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      '운동 시간',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                    Text(
-                      '$todayExerciseMinutes / ${BattleWithActivityUseCase.dailyGoalExerciseMinutes}분',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                LinearProgressIndicator(
-                  value: exerciseProgress,
-                  backgroundColor: AppColors.glassBackground,
-                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.accentPink),
-                ),
-              ],
-            ),
+                );
+              } else {
+                return const SizedBox.shrink();
+              }
+            },
           ),
+          
           const SizedBox(height: 24),
-          // 대결 버튼
+          
+          // 대결 버튼 또는 결과
           if (battleResult == null)
             PetButton(
               variant: PetButtonVariant.primary,
@@ -223,7 +176,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
               disabled: isLoading,
               child: Text(isLoading ? '대결 중...' : '대결 시작'),
             ),
-          // 대결 결과
+          
           if (battleResult != null) ...[
             GlassCard(
               padding: const EdgeInsets.all(24),
@@ -231,36 +184,43 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
                 children: [
                   Icon(
                     battleResult! ? Icons.celebration : Icons.sentiment_dissatisfied,
-                    size: 64,
+                    size: 80,
                     color: battleResult! ? AppColors.accentPink : AppColors.textSecondary,
                   ),
                   const SizedBox(height: 16),
                   Text(
                     battleResult! ? AppStrings.battleVictory : AppStrings.battleDefeat,
-                    style: const TextStyle(
-                      fontSize: 24,
+                    style: TextStyle(
+                      fontSize: 28,
                       fontWeight: FontWeight.w600,
-                      color: AppColors.textPrimary,
+                      color: battleResult! ? AppColors.accentPink : AppColors.textSecondary,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     battleResult!
-                        ? AppStrings.battleWon
-                        : AppStrings.battleLost,
+                        ? '축하합니다! 목표를 달성했습니다!'
+                        : '아쉽네요. 다음에는 목표를 달성해보세요!',
                     style: const TextStyle(
                       fontSize: 14,
                       color: AppColors.textSecondary,
                     ),
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 16),
-                  Text(
-                    '획득 경험치: +$expGained',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                      color: AppColors.accentPink,
+                  const SizedBox(height: 20),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: AppColors.accentPink.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      '획득 경험치: +$expGained',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.accentPink,
+                      ),
                     ),
                   ),
                 ],
@@ -270,18 +230,170 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
             PetButton(
               variant: PetButtonVariant.secondary,
               icon: Icons.refresh,
-              onPressed: () {
-                setState(() {
-                  battleResult = null;
-                  expGained = 0;
-                });
-                _loadTodayActivity();
-              },
+              onPressed: _resetBattle,
               child: const Text('다시 대결하기'),
             ),
           ],
+          
+          const SizedBox(height: 32),
+          
+          // 최근 전적 목록
+          FutureBuilder<List<BattleHistory>>(
+            future: _getRecentBattleHistory(),
+            builder: (context, snapshot) {
+              if (snapshot.hasData && snapshot.data!.isNotEmpty) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      '최근 전적',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    ...snapshot.data!.map((history) => _buildHistoryItem(history)),
+                  ],
+                );
+              } else {
+                return const SizedBox.shrink();
+              }
+            },
+          ),
         ],
       ),
     );
   }
+  
+  /// 통계 항목 빌드
+  Widget _buildStatItem(String label, String value, Color color) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.w600,
+            color: color,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12,
+            color: AppColors.textTertiary,
+          ),
+        ),
+      ],
+    );
+  }
+  
+  /// 전적 항목 빌드
+  Widget _buildHistoryItem(BattleHistory history) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: GlassCard(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: history.isVictory
+                    ? AppColors.accentPink.withValues(alpha: 0.2)
+                    : AppColors.textSecondary.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                history.isVictory ? Icons.check_circle : Icons.cancel,
+                color: history.isVictory ? AppColors.accentPink : AppColors.textSecondary,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    history.isVictory ? '승리' : '패배',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: history.isVictory ? AppColors.accentPink : AppColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${history.dateString} ${history.timeString}',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textTertiary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  '+${history.expGained} EXP',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.accentPink,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${history.steps}보',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textTertiary,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  
+  /// 전적 통계 조회
+  Future<BattleStats> _getBattleStats() async {
+    final repository = ref.read(battleHistoryRepositoryProvider);
+    final total = await repository.getTotalBattleCount();
+    final victories = await repository.getVictoryCount();
+    final defeats = await repository.getDefeatCount();
+    return BattleStats(
+      total: total,
+      victories: victories,
+      defeats: defeats,
+    );
+  }
+  
+  /// 최근 전적 조회
+  Future<List<BattleHistory>> _getRecentBattleHistory() async {
+    final repository = ref.read(battleHistoryRepositoryProvider);
+    return await repository.getRecentBattleHistory(10);
+  }
+}
+
+/// 전적 통계
+class BattleStats {
+  final int total;
+  final int victories;
+  final int defeats;
+  
+  BattleStats({
+    required this.total,
+    required this.victories,
+    required this.defeats,
+  });
 }

@@ -2,26 +2,26 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 
 /// 상태바 위젯
-/// Pet의 상태(hunger, happiness, stamina)를 시각적으로 표시
+/// Pet의 상태(포만감, 수면, 운동)를 시각적으로 표시
 /// design 폴더의 StatusBar 컴포넌트를 Flutter로 구현
 /// 
 /// 사용 예시:
 /// ```dart
 /// StatusBar(
-///   label: 'Hunger',
+///   label: '포만감',
 ///   value: 75,
 ///   color: StatusBarColor.hunger,
 ///   icon: Icons.restaurant,
 /// )
 /// ```
 enum StatusBarColor {
-  hunger,
-  happiness,
-  stamina,
+  hunger, // 포만감
+  stamina, // 수면
+  happiness, // 운동
 }
 
 class StatusBar extends StatefulWidget {
-  /// 상태바 라벨 (예: "Hunger", "Happiness", "Stamina")
+  /// 상태바 라벨 (예: "포만감", "수면", "운동")
   final String label;
   
   /// 상태 값 (0~100)

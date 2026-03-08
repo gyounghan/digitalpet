@@ -28,6 +28,11 @@ import '../../data/datasources/health_datasource.dart';
 import '../../core/constants/app_strings.dart';
 import '../../domain/usecases/battle_with_activity_usecase.dart';
 import '../../domain/usecases/can_feed_pet_usecase.dart';
+import '../../domain/repositories/battle_history_repository.dart';
+import '../../data/repositories/battle_history_repository_impl.dart';
+import '../../data/datasources/battle_history_datasource.dart';
+import '../../domain/usecases/calculate_daily_goals_score_usecase.dart';
+import '../../domain/usecases/apply_daily_goals_score_usecase.dart';
 
 /// PetLocalDataSource Provider
 /// Hive 데이터소스 인스턴스를 제공
@@ -182,14 +187,29 @@ final updatePetFromActivityUseCaseProvider = Provider<UpdatePetFromActivityUseCa
   );
 });
 
+/// BattleHistoryDataSource Provider
+/// 대결 전적 데이터소스 인스턴스를 제공
+final battleHistoryDataSourceProvider = Provider<BattleHistoryDataSource>((ref) {
+  return BattleHistoryDataSource();
+});
+
+/// BattleHistoryRepository Provider
+/// 대결 전적 저장소 인스턴스를 제공
+final battleHistoryRepositoryProvider = Provider<BattleHistoryRepository>((ref) {
+  final dataSource = ref.watch(battleHistoryDataSourceProvider);
+  return BattleHistoryRepositoryImpl(dataSource);
+});
+
 /// BattleWithActivityUseCase Provider
 /// 활동 기반 대결 유스케이스 인스턴스를 제공
 final battleWithActivityUseCaseProvider = Provider<BattleWithActivityUseCase>((ref) {
   final petRepository = ref.watch(petRepositoryProvider);
   final activityRepository = ref.watch(activityRepositoryProvider);
+  final battleHistoryRepository = ref.watch(battleHistoryRepositoryProvider);
   return BattleWithActivityUseCase(
     petRepository: petRepository,
     activityRepository: activityRepository,
+    battleHistoryRepository: battleHistoryRepository,
   );
 });
 
@@ -198,6 +218,28 @@ final battleWithActivityUseCaseProvider = Provider<BattleWithActivityUseCase>((r
 final canFeedPetUseCaseProvider = Provider<CanFeedPetUseCase>((ref) {
   final petRepository = ref.watch(petRepositoryProvider);
   return CanFeedPetUseCase(petRepository);
+});
+
+/// CalculateDailyGoalsScoreUseCase Provider
+/// 일일 목표 점수 계산 유스케이스 인스턴스를 제공
+final calculateDailyGoalsScoreUseCaseProvider = Provider<CalculateDailyGoalsScoreUseCase>((ref) {
+  final petRepository = ref.watch(petRepositoryProvider);
+  final activityRepository = ref.watch(activityRepositoryProvider);
+  return CalculateDailyGoalsScoreUseCase(
+    petRepository: petRepository,
+    activityRepository: activityRepository,
+  );
+});
+
+/// ApplyDailyGoalsScoreUseCase Provider
+/// 일일 목표 점수 적용 유스케이스 인스턴스를 제공
+final applyDailyGoalsScoreUseCaseProvider = Provider<ApplyDailyGoalsScoreUseCase>((ref) {
+  final petRepository = ref.watch(petRepositoryProvider);
+  final calculateScoreUseCase = ref.watch(calculateDailyGoalsScoreUseCaseProvider);
+  return ApplyDailyGoalsScoreUseCase(
+    petRepository: petRepository,
+    calculateScoreUseCase: calculateScoreUseCase,
+  );
 });
 
 /// Pet Provider
@@ -229,6 +271,7 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
   final AutoSleepPetUseCase autoSleepPetUseCase;
   final DetectPhoneIdleUseCase detectPhoneIdleUseCase;
   final UpdatePetFromActivityUseCase updatePetFromActivityUseCase;
+  final ApplyDailyGoalsScoreUseCase applyDailyGoalsScoreUseCase;
   final String petId;
   
   PetNotifier({
@@ -246,6 +289,7 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
     required this.autoSleepPetUseCase,
     required this.detectPhoneIdleUseCase,
     required this.updatePetFromActivityUseCase,
+    required this.applyDailyGoalsScoreUseCase,
     required this.petId,
   }) : super(const AsyncValue.loading()) {
     _loadPet();
@@ -280,8 +324,11 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
       // 5. 시간 경과에 따른 상태 업데이트 (이미 저장된 Pet이어도 시간 경과 반영)
       final stateUpdatedPet = await updatePetStateUseCase(petId);
       
-      // 6. 진화 체크 및 실행
-      final evolvedPet = await evolvePetUseCase(stateUpdatedPet.id);
+      // 6. 일일 목표 점수 적용
+      final scoreAppliedPet = await applyDailyGoalsScoreUseCase(petId);
+      
+      // 7. 진화 체크 및 실행
+      final evolvedPet = await evolvePetUseCase(scoreAppliedPet.id);
       state = AsyncValue.data(evolvedPet);
       
       // 8. 위젯 업데이트 (pet.mood 기반으로 자동 결정)
@@ -301,12 +348,17 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
     await _loadPet();
   }
   
-  /// 상태 업데이트 후 진화 체크 및 알림 체크
+  /// 상태 업데이트 후 일일 목표 점수 적용, 진화 체크 및 알림 체크
   /// 
-  /// 상태 변경 후 자동으로 진화 조건을 확인하고 진화 실행
-  /// 그리고 알림 조건을 확인하여 알림 발송
-  /// 그리고 위젯을 업데이트하여 홈 화면에 반영
+  /// 상태 변경 후 자동으로:
+  /// 1. 일일 목표 점수 적용
+  /// 2. 진화 조건을 확인하고 진화 실행
+  /// 3. 알림 조건을 확인하여 알림 발송
+  /// 4. 위젯을 업데이트하여 홈 화면에 반영
   Future<Pet> _updateAndEvolve(Pet pet) async {
+    // 일일 목표 점수 적용
+    final scoreAppliedPet = await applyDailyGoalsScoreUseCase(petId);
+    
     // 진화 체크 및 실행
     final evolvedPet = await evolvePetUseCase(petId);
     
@@ -388,6 +440,7 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
   /// 
   /// 폰 미사용 시간을 계산하여 자동으로 Sleep 상태 적용
   /// 활동 데이터를 기반으로 자동 Play 상태 적용
+  /// 알림 체크 및 발송
   Future<void> onAppForeground() async {
     try {
       // 폰 사용 상태 업데이트 (포그라운드로 전환)
@@ -416,6 +469,9 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
         
         // 위젯도 업데이트 (pet.mood 기반으로 자동 결정)
         await widgetService.updatePetWidget(evolvedPet);
+      } else {
+        // 상태가 변경되지 않았어도 알림 체크 (포그라운드 전환 시)
+        _checkAndShowNotification();
       }
     } catch (e) {
       // 에러는 무시 (앱 동작에 영향 없음)
@@ -455,6 +511,7 @@ final petNotifierProvider = StateNotifierProvider.family<PetNotifier, AsyncValue
     autoSleepPetUseCase: ref.watch(autoSleepPetUseCaseProvider),
     detectPhoneIdleUseCase: ref.watch(detectPhoneIdleUseCaseProvider),
     updatePetFromActivityUseCase: ref.watch(updatePetFromActivityUseCaseProvider),
+    applyDailyGoalsScoreUseCase: ref.watch(applyDailyGoalsScoreUseCaseProvider),
     petId: petId,
   );
 });

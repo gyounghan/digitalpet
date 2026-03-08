@@ -90,54 +90,64 @@ class _PetButtonState extends State<PetButton>
   @override
   Widget build(BuildContext context) {
     final isPrimary = widget.variant == PetButtonVariant.primary;
+    final isDisabled = widget.disabled || widget.onPressed == null;
     
     return GestureDetector(
-      onTapDown: _handleTapDown,
-      onTapUp: _handleTapUp,
-      onTapCancel: _handleTapCancel,
+      onTapDown: isDisabled ? null : _handleTapDown,
+      onTapUp: isDisabled ? null : _handleTapUp,
+      onTapCancel: isDisabled ? null : _handleTapCancel,
       child: ScaleTransition(
         scale: _scaleAnimation,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-          decoration: BoxDecoration(
-            color: isPrimary ? AppColors.primary : AppColors.glassBackground, // 활성: 보라색, 비활성: 흰색
-            borderRadius: BorderRadius.circular(24),
-            border: isPrimary
-                ? null
-                : Border.all(
-                    color: AppColors.primary.withValues(alpha: 0.3), // 보라색 테두리
-                    width: 1,
-                  ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.1),
-                blurRadius: 10,
-                spreadRadius: 0,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              if (widget.icon != null) ...[
-                Icon(
-                  widget.icon,
-                  color: isPrimary ? Colors.white : AppColors.primary, // 활성: 흰색, 비활성: 보라색
-                  size: 20,
+        child: Opacity(
+          opacity: isDisabled ? 0.5 : 1.0,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+            decoration: BoxDecoration(
+              color: isDisabled 
+                  ? AppColors.glassBackground 
+                  : (isPrimary ? AppColors.primary : AppColors.glassBackground),
+              borderRadius: BorderRadius.circular(24),
+              border: isPrimary && !isDisabled
+                  ? null
+                  : Border.all(
+                      color: AppColors.primary.withValues(alpha: isDisabled ? 0.2 : 0.3),
+                      width: 1,
+                    ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: isDisabled ? 0.05 : 0.1),
+                  blurRadius: 10,
+                  spreadRadius: 0,
+                  offset: const Offset(0, 2),
                 ),
-                const SizedBox(width: 8),
               ],
-              DefaultTextStyle(
-                style: TextStyle(
-                  color: isPrimary ? Colors.white : AppColors.primary, // 활성: 흰색, 비활성: 보라색
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (widget.icon != null) ...[
+                  Icon(
+                    widget.icon,
+                    color: isDisabled
+                        ? AppColors.textTertiary
+                        : (isPrimary ? Colors.white : AppColors.primary),
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                ],
+                DefaultTextStyle(
+                  style: TextStyle(
+                    color: isDisabled
+                        ? AppColors.textTertiary
+                        : (isPrimary ? Colors.white : AppColors.primary),
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  child: widget.child,
                 ),
-                child: widget.child,
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

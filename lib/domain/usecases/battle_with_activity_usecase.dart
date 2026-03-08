@@ -1,7 +1,9 @@
 import '../entities/pet.dart';
 import '../entities/activity_data.dart';
+import '../entities/battle_history.dart';
 import '../repositories/pet_repository.dart';
 import '../repositories/activity_repository.dart';
+import '../repositories/battle_history_repository.dart';
 
 /// 활동 기반 대결 유스케이스
 /// 사용자의 실제 활동량을 기반으로 대결 결과를 결정하는 비즈니스 로직
@@ -17,6 +19,7 @@ import '../repositories/activity_repository.dart';
 class BattleWithActivityUseCase {
   final PetRepository petRepository;
   final ActivityRepository activityRepository;
+  final BattleHistoryRepository battleHistoryRepository;
   
   /// 일일 목표 걸음 수
   static const int dailyGoalSteps = 10000;
@@ -33,6 +36,7 @@ class BattleWithActivityUseCase {
   BattleWithActivityUseCase({
     required this.petRepository,
     required this.activityRepository,
+    required this.battleHistoryRepository,
   });
   
   /// 활동 기반 대결 실행
@@ -80,7 +84,18 @@ class BattleWithActivityUseCase {
     // 8. 저장
     await petRepository.updatePet(updatedPet);
     
-    // 9. 대결 결과 반환
+    // 9. 대결 전적 저장
+    final battleHistory = BattleHistory(
+      id: '${petId}_${currentTime}',
+      date: currentTime,
+      isVictory: isGoalAchieved,
+      expGained: expGain,
+      steps: todayActivity.steps,
+      exerciseMinutes: todayActivity.exerciseMinutes,
+    );
+    await battleHistoryRepository.saveBattleHistory(battleHistory);
+    
+    // 10. 대결 결과 반환
     return BattleResult(
       isVictory: isGoalAchieved,
       expGained: expGain,

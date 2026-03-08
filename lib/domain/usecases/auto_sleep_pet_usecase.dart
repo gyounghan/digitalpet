@@ -32,42 +32,53 @@ class AutoSleepPetUseCase {
   /// 
   /// 동작:
   /// 1. 현재 Pet 조회
-  /// 2. 미사용 시간 계산
-  /// 3. 30분 이상이면 stamina 증가 (30분당 +5)
-  /// 4. 업데이트된 Pet 저장
+  /// 2. 일일 목표 리셋 확인 (날짜 변경 시)
+  /// 3. 미사용 시간 계산
+  /// 4. 30분 이상이면 stamina 증가 (30분당 +5)
+  /// 5. 오늘의 수면 시간 업데이트
+  /// 6. 업데이트된 Pet 저장
   Future<Pet> call(String petId, {required bool isInBackground}) async {
     // 1. 현재 Pet 조회
-    final pet = await petRepository.getPet(petId);
+    var pet = await petRepository.getPet(petId);
     
-    // 2. 미사용 시간 계산
+    // 2. 일일 목표 리셋 확인
+    if (pet.needsGoalReset) {
+      pet = pet.resetDailyGoals();
+    }
+    
+    // 3. 미사용 시간 계산
     final phoneUsage = await phoneUsageRepository.getPhoneUsage();
     final idleMinutes = phoneUsage.getIdleMinutes(isInBackground: isInBackground);
     
-    // 3. 미사용 시간이 30분 미만이면 업데이트하지 않음
+    // 4. 미사용 시간이 30분 미만이면 업데이트하지 않음
     if (idleMinutes < idleThresholdMinutes) {
       return pet;
     }
     
-    // 4. 30분 단위로 stamina 증가 계산
+    // 5. 30분 단위로 stamina 증가 계산
     final increments = idleMinutes ~/ idleThresholdMinutes;
     final staminaIncrease = increments * staminaIncreasePer30Minutes;
     final newStamina = (pet.stamina + staminaIncrease).clamp(0, 100);
     
-    // 5. 누적 미사용 시간 업데이트 (시간 단위)
+    // 6. 누적 미사용 시간 업데이트 (시간 단위)
     final idleHours = idleMinutes ~/ 60;
     final newTotalIdleHours = pet.totalIdleHours + idleHours;
     
-    // 6. 현재 시간으로 업데이트
+    // 7. 오늘의 수면 시간 업데이트 (시간 단위)
+    final newTodaySleepHours = pet.todaySleepHours + idleHours;
+    
+    // 8. 현재 시간으로 업데이트
     final currentTime = DateTime.now().millisecondsSinceEpoch;
     
-    // 7. 업데이트된 Pet 생성
+    // 9. 업데이트된 Pet 생성
     final updatedPet = pet.copyWith(
       stamina: newStamina,
       lastUpdated: currentTime,
       totalIdleHours: newTotalIdleHours,
+      todaySleepHours: newTodaySleepHours,
     );
     
-    // 7. 저장
+    // 10. 저장
     await petRepository.updatePet(updatedPet);
     
     return updatedPet;

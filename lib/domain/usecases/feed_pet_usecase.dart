@@ -20,26 +20,37 @@ class FeedPetUseCase {
   /// 
   /// 동작:
   /// 1. 현재 Pet 조회
-  /// 2. hunger +10 (최대 100)
-  /// 3. lastUpdated를 현재 시간으로 업데이트
-  /// 4. 업데이트된 Pet 저장
+  /// 2. 일일 목표 리셋 확인 (날짜 변경 시)
+  /// 3. hunger +10 (최대 100)
+  /// 4. 오늘의 Feed 횟수 증가 (최대 3회)
+  /// 5. lastUpdated를 현재 시간으로 업데이트
+  /// 6. 업데이트된 Pet 저장
   Future<Pet> call(String petId) async {
     // 1. 현재 Pet 조회
-    final pet = await petRepository.getPet(petId);
+    var pet = await petRepository.getPet(petId);
     
-    // 2. hunger +10 (최대 100을 넘지 않도록 처리)
+    // 2. 일일 목표 리셋 확인
+    if (pet.needsGoalReset) {
+      pet = pet.resetDailyGoals();
+    }
+    
+    // 3. hunger +10 (최대 100을 넘지 않도록 처리)
     final newHunger = (pet.hunger + 10).clamp(0, 100);
     
-    // 3. 현재 시간으로 업데이트
+    // 4. 오늘의 Feed 횟수 증가 (최대 3회)
+    final newFeedCount = (pet.todayFeedCount + 1).clamp(0, 3);
+    
+    // 5. 현재 시간으로 업데이트
     final currentTime = DateTime.now().millisecondsSinceEpoch;
     
-    // 4. 업데이트된 Pet 생성
+    // 6. 업데이트된 Pet 생성
     final updatedPet = pet.copyWith(
       hunger: newHunger,
+      todayFeedCount: newFeedCount,
       lastUpdated: currentTime,
     );
     
-    // 5. 저장
+    // 7. 저장
     await petRepository.updatePet(updatedPet);
     
     return updatedPet;
