@@ -11,6 +11,11 @@ import '../../presentation/widgets/pet_image_animation.dart';
 /// - hungry → hungry
 /// - bored → normal (지루한 애니메이션, 추후 추가 가능)
 /// - normal → normal
+/// - energetic → normal (활기참 애니메이션, 추후 추가 가능)
+/// - tired → sleeping (피곤함은 수면 이미지 사용)
+/// - full → normal (배부름은 normal 이미지 사용)
+/// - anxious → normal (불안함은 normal 이미지 사용)
+/// - satisfied → normal (만족함은 normal 이미지 사용)
 PetImageType getPetImageTypeFromMood(PetMood mood) {
   switch (mood) {
     case PetMood.happy:
@@ -22,6 +27,16 @@ PetImageType getPetImageTypeFromMood(PetMood mood) {
     case PetMood.bored:
       return PetImageType.normal;
     case PetMood.normal:
+      return PetImageType.normal;
+    case PetMood.energetic:
+      return PetImageType.normal;
+    case PetMood.tired:
+      return PetImageType.sleeping;
+    case PetMood.full:
+      return PetImageType.normal;
+    case PetMood.anxious:
+      return PetImageType.normal;
+    case PetMood.satisfied:
       return PetImageType.normal;
   }
 }

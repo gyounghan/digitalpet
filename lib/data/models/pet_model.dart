@@ -15,65 +15,71 @@ class PetModel extends Pet {
   @override
   final String id;
   
-  /// Hive 필드 어노테이션
+  /// 반려동물 이름
   @HiveField(1)
+  @override
+  final String name;
+  
+  /// Hive 필드 어노테이션
+  @HiveField(2)
   @override
   final int hunger;
   
-  @HiveField(2)
+  @HiveField(3)
   @override
   final int happiness;
   
-  @HiveField(3)
+  @HiveField(4)
   @override
   final int stamina;
   
-  @HiveField(4)
+  @HiveField(5)
   @override
   final int level;
   
-  @HiveField(5)
+  @HiveField(6)
   @override
   final int exp;
   
-  @HiveField(6)
+  @HiveField(7)
   @override
   final int evolutionStage;
   
-  @HiveField(7)
+  @HiveField(8)
   @override
   final int lastUpdated;
   
-  @HiveField(8)
+  @HiveField(9)
   @override
   final int totalSteps;
   
-  @HiveField(9)
+  @HiveField(10)
   @override
   final int totalExerciseMinutes;
   
-  @HiveField(10)
+  @HiveField(11)
   @override
   final int totalIdleHours;
   
-  @HiveField(11)
+  @HiveField(12)
   @override
   final EvolutionType? evolutionType;
   
-  @HiveField(12)
+  @HiveField(13)
   @override
   final int todayFeedCount;
   
-  @HiveField(13)
+  @HiveField(14)
   @override
   final int todaySleepHours;
   
-  @HiveField(14)
+  @HiveField(15)
   @override
   final String lastGoalResetDate;
   
   PetModel({
     required this.id,
+    this.name = '펫',
     required this.hunger,
     required this.happiness,
     required this.stamina,
@@ -90,6 +96,7 @@ class PetModel extends Pet {
     this.lastGoalResetDate = '',
   }) : super(
           id: id,
+          name: name,
           hunger: hunger,
           happiness: happiness,
           stamina: stamina,
@@ -114,6 +121,7 @@ class PetModel extends Pet {
   factory PetModel.fromJson(Map<String, dynamic> json) {
     return PetModel(
       id: json['id'] as String,
+      name: json['name'] as String? ?? '펫',
       hunger: json['hunger'] as int,
       happiness: json['happiness'] as int,
       stamina: json['stamina'] as int,
@@ -142,6 +150,7 @@ class PetModel extends Pet {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
+      'name': name,
       'hunger': hunger,
       'happiness': happiness,
       'stamina': stamina,
@@ -167,6 +176,7 @@ class PetModel extends Pet {
   factory PetModel.fromEntity(Pet pet) {
     return PetModel(
       id: pet.id,
+      name: pet.name,
       hunger: pet.hunger,
       happiness: pet.happiness,
       stamina: pet.stamina,
@@ -190,6 +200,7 @@ class PetModel extends Pet {
   Pet toEntity() {
     return Pet(
       id: id,
+      name: name,
       hunger: hunger,
       happiness: happiness,
       stamina: stamina,
@@ -213,6 +224,7 @@ class PetModel extends Pet {
   @override
   PetModel copyWith({
     String? id,
+    String? name,
     int? hunger,
     int? happiness,
     int? stamina,
@@ -230,6 +242,7 @@ class PetModel extends Pet {
   }) {
     return PetModel(
       id: id ?? this.id,
+      name: name ?? this.name,
       hunger: hunger ?? this.hunger,
       happiness: happiness ?? this.happiness,
       stamina: stamina ?? this.stamina,

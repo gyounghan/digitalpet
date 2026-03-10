@@ -130,6 +130,11 @@ class PetWidgetProvider : AppWidgetProvider() {
             val level = prefs.getString("level", "1")?.toIntOrNull() ?: 1
             val imageType = prefs.getString("imageType", "sleeping") ?: "sleeping"
             val mood = prefs.getString("mood", "normal") ?: "normal"
+            // Flutter에서 저장한 상태 텍스트 읽기 (앱 내 상태와 동기화)
+            val moodText = prefs.getString("moodText", null)
+            
+            // 디버깅: moodText가 제대로 읽히는지 확인
+            Log.d("PetWidgetProvider", "Widget update - level: $level, moodText: $moodText, mood: $mood, hunger: $hunger, happiness: $happiness, stamina: $stamina")
             
             // 현재 시간 기반으로 이미지 인덱스 계산 (애니메이션 효과)
             // 이미지 타입에 따라 다른 개수 사용: hungry는 4장, sleeping은 3장
@@ -196,15 +201,47 @@ class PetWidgetProvider : AppWidgetProvider() {
             views.setTextViewText(R.id.pet_level, "Lv.$level")
             
             // 상태 텍스트 설정 (한국어)
-            // 상태는 hunger, happiness, stamina 값으로 계산
-            val moodText = when {
-                hunger <= 30 -> "배고픔"
-                stamina <= 30 -> "졸림"
-                happiness <= 30 -> "지루함"
-                hunger >= 70 && happiness >= 70 && stamina >= 70 -> "기쁨"
-                else -> "보통"
+            // Flutter에서 저장한 moodText를 우선 사용 (앱 내 상태와 동기화)
+            // moodText가 없으면 Pet.mood 로직과 동일하게 계산 (하위 호환성)
+            val displayMoodText = moodText ?: run {
+                // Pet.mood 로직과 동일하게 계산
+                when {
+                    // 모든 수치가 90 이상이면 활기참 상태
+                    hunger >= 90 && happiness >= 90 && stamina >= 90 -> "활기참"
+                    // 모든 수치가 80 이상이면 기쁨 상태
+                    hunger >= 80 && happiness >= 80 && stamina >= 80 -> "기쁨"
+                    // 포만감이 90 이상이고 다른 수치도 60 이상이면 배부름 상태
+                    hunger >= 90 && happiness >= 60 && stamina >= 60 -> "배부름"
+                    // 대부분의 수치가 70 이상이면 만족함 상태
+                    (hunger >= 70 && happiness >= 70) || 
+                    (hunger >= 70 && stamina >= 70) || 
+                    (happiness >= 70 && stamina >= 70) -> "만족함"
+                    // 배고픔이 20 이하이면 배고픔 상태
+                    hunger <= 20 -> "배고픔"
+                    // 체력이 20 이하이면 피곤함 상태
+                    stamina <= 20 -> "피곤함"
+                    // 체력이 30 이하이면 졸림 상태
+                    stamina <= 30 -> "졸림"
+                    // 행복도가 20 이하이면 불안함 상태
+                    happiness <= 20 -> "불안함"
+                    // 행복도가 30 이하이면 지루함 상태
+                    happiness <= 30 -> "지루함"
+                    // 수치가 불균형할 때 불안함 상태
+                    else -> {
+                        val avg = (hunger + happiness + stamina) / 3.0
+                        val maxDiff = maxOf(
+                            kotlin.math.abs(hunger - avg),
+                            kotlin.math.abs(happiness - avg),
+                            kotlin.math.abs(stamina - avg)
+                        )
+                        if (maxDiff > 40) "불안함" else "보통"
+                    }
+                }
             }
-            views.setTextViewText(R.id.pet_mood, moodText)
+            views.setTextViewText(R.id.pet_mood, displayMoodText)
+            
+            // 디버깅: 실제로 표시되는 값 확인
+            Log.d("PetWidgetProvider", "Displaying - level: $level, moodText: $displayMoodText (from moodText: $moodText)")
             
             // 위젯 클릭 시 앱 열기
             val intent = android.content.Intent(context, MainActivity::class.java)
@@ -241,6 +278,11 @@ class PetWidgetProvider : AppWidgetProvider() {
             val stamina = prefs.getString("stamina", "100")?.toIntOrNull() ?: 100
             val level = prefs.getString("level", "1")?.toIntOrNull() ?: 1
             val imageType = prefs.getString("imageType", "sleeping") ?: "sleeping"
+            // Flutter에서 저장한 상태 텍스트 읽기 (앱 내 상태와 동기화)
+            val moodText = prefs.getString("moodText", null)
+            
+            // 디버깅: 애니메이션 업데이트 시에도 moodText 확인
+            Log.d("PetWidgetProvider", "Animation update - level: $level, moodText: $moodText")
             
             // 현재 시간 기반으로 이미지 인덱스 계산 (애니메이션 효과)
             // 시간 기반으로 순환하여 위젯이 업데이트될 때마다 다른 이미지 표시
@@ -303,15 +345,47 @@ class PetWidgetProvider : AppWidgetProvider() {
             views.setTextViewText(R.id.pet_level, "Lv.$level")
             
             // 상태 텍스트 설정 (한국어)
-            // 상태는 hunger, happiness, stamina 값으로 계산
-            val moodText = when {
-                hunger <= 30 -> "배고픔"
-                stamina <= 30 -> "졸림"
-                happiness <= 30 -> "지루함"
-                hunger >= 70 && happiness >= 70 && stamina >= 70 -> "기쁨"
-                else -> "보통"
+            // Flutter에서 저장한 moodText를 우선 사용 (앱 내 상태와 동기화)
+            // moodText가 없으면 Pet.mood 로직과 동일하게 계산 (하위 호환성)
+            val displayMoodText = moodText ?: run {
+                // Pet.mood 로직과 동일하게 계산
+                when {
+                    // 모든 수치가 90 이상이면 활기참 상태
+                    hunger >= 90 && happiness >= 90 && stamina >= 90 -> "활기참"
+                    // 모든 수치가 80 이상이면 기쁨 상태
+                    hunger >= 80 && happiness >= 80 && stamina >= 80 -> "기쁨"
+                    // 포만감이 90 이상이고 다른 수치도 60 이상이면 배부름 상태
+                    hunger >= 90 && happiness >= 60 && stamina >= 60 -> "배부름"
+                    // 대부분의 수치가 70 이상이면 만족함 상태
+                    (hunger >= 70 && happiness >= 70) || 
+                    (hunger >= 70 && stamina >= 70) || 
+                    (happiness >= 70 && stamina >= 70) -> "만족함"
+                    // 배고픔이 20 이하이면 배고픔 상태
+                    hunger <= 20 -> "배고픔"
+                    // 체력이 20 이하이면 피곤함 상태
+                    stamina <= 20 -> "피곤함"
+                    // 체력이 30 이하이면 졸림 상태
+                    stamina <= 30 -> "졸림"
+                    // 행복도가 20 이하이면 불안함 상태
+                    happiness <= 20 -> "불안함"
+                    // 행복도가 30 이하이면 지루함 상태
+                    happiness <= 30 -> "지루함"
+                    // 수치가 불균형할 때 불안함 상태
+                    else -> {
+                        val avg = (hunger + happiness + stamina) / 3.0
+                        val maxDiff = maxOf(
+                            kotlin.math.abs(hunger - avg),
+                            kotlin.math.abs(happiness - avg),
+                            kotlin.math.abs(stamina - avg)
+                        )
+                        if (maxDiff > 40) "불안함" else "보통"
+                    }
+                }
             }
-            views.setTextViewText(R.id.pet_mood, moodText)
+            views.setTextViewText(R.id.pet_mood, displayMoodText)
+            
+            // 디버깅: 애니메이션 업데이트 시에도 실제로 표시되는 값 확인
+            Log.d("PetWidgetProvider", "Animation displaying - level: $level, moodText: $displayMoodText (from moodText: $moodText)")
             
             // 위젯 클릭 시 앱 열기
             val intent = android.content.Intent(context, MainActivity::class.java)

@@ -13,6 +13,16 @@ enum PetMood {
   bored,
   /// 보통 - 평범한 상태
   normal,
+  /// 활기참 - 모든 수치가 매우 높을 때
+  energetic,
+  /// 피곤함 - 체력이 매우 낮을 때
+  tired,
+  /// 배부름 - 포만감이 매우 높을 때
+  full,
+  /// 불안함 - 수치가 불균형할 때
+  anxious,
+  /// 만족함 - 대부분의 수치가 좋을 때
+  satisfied,
 }
 
 /// 반려동물 엔티티
@@ -21,6 +31,10 @@ enum PetMood {
 class Pet {
   /// 반려동물 고유 ID
   final String id;
+  
+  /// 반려동물 이름
+  /// 사용자가 지정한 펫의 이름 (기본값: '펫')
+  final String name;
   
   /// 배고픔 수치 (0~100)
   /// 0: 매우 배고픔, 100: 배부름
@@ -79,9 +93,36 @@ class Pet {
   /// 펫의 현재 기분 상태
   /// hunger, happiness, stamina 값에 따라 자동 계산
   PetMood get mood {
-    // 배고픔이 30 이하이면 배고픔 상태
-    if (hunger <= 30) {
+    // 모든 수치가 90 이상이면 활기참 상태
+    if (hunger >= 90 && happiness >= 90 && stamina >= 90) {
+      return PetMood.energetic;
+    }
+    
+    // 모든 수치가 80 이상이면 기쁨 상태
+    if (hunger >= 80 && happiness >= 80 && stamina >= 80) {
+      return PetMood.happy;
+    }
+    
+    // 포만감이 90 이상이고 다른 수치도 60 이상이면 배부름 상태
+    if (hunger >= 90 && happiness >= 60 && stamina >= 60) {
+      return PetMood.full;
+    }
+    
+    // 대부분의 수치가 70 이상이면 만족함 상태
+    if ((hunger >= 70 && happiness >= 70) || 
+        (hunger >= 70 && stamina >= 70) || 
+        (happiness >= 70 && stamina >= 70)) {
+      return PetMood.satisfied;
+    }
+    
+    // 배고픔이 20 이하이면 배고픔 상태
+    if (hunger <= 20) {
       return PetMood.hungry;
+    }
+    
+    // 체력이 20 이하이면 피곤함 상태
+    if (stamina <= 20) {
+      return PetMood.tired;
     }
     
     // 체력이 30 이하이면 졸림 상태
@@ -89,14 +130,25 @@ class Pet {
       return PetMood.sleepy;
     }
     
+    // 행복도가 20 이하이면 불안함 상태
+    if (happiness <= 20) {
+      return PetMood.anxious;
+    }
+    
     // 행복도가 30 이하이면 지루함 상태
     if (happiness <= 30) {
       return PetMood.bored;
     }
     
-    // 모든 수치가 70 이상이면 기쁨 상태
-    if (hunger >= 70 && happiness >= 70 && stamina >= 70) {
-      return PetMood.happy;
+    // 수치가 불균형할 때 (한 수치는 높고 다른 수치는 낮을 때) 불안함 상태
+    final avg = (hunger + happiness + stamina) / 3;
+    final maxDiff = [
+      (hunger - avg).abs(),
+      (happiness - avg).abs(),
+      (stamina - avg).abs(),
+    ].reduce((a, b) => a > b ? a : b);
+    if (maxDiff > 40) {
+      return PetMood.anxious;
     }
     
     // 그 외는 보통 상태
@@ -105,6 +157,7 @@ class Pet {
   
   Pet({
     required this.id,
+    this.name = '펫',
     required this.hunger,
     required this.happiness,
     required this.stamina,
@@ -125,6 +178,7 @@ class Pet {
   /// 특정 필드만 변경하여 새로운 Pet 인스턴스 반환
   Pet copyWith({
     String? id,
+    String? name,
     int? hunger,
     int? happiness,
     int? stamina,
@@ -142,6 +196,7 @@ class Pet {
   }) {
     return Pet(
       id: id ?? this.id,
+      name: name ?? this.name,
       hunger: hunger ?? this.hunger,
       happiness: happiness ?? this.happiness,
       stamina: stamina ?? this.stamina,

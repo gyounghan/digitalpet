@@ -549,33 +549,53 @@ class _EvolutionScreenState extends ConsumerState<EvolutionScreen>
                             ],
                           ),
                           const SizedBox(height: 16),
-                          // 포만감 목표
+                          // 포만감 목표 (레벨에 따라 1~3회)
                           _buildGoalItem(
                             '포만감',
                             dailyGoals.feedProgress,
-                            3,
+                            scoreResult.feedGoalCount,
                             dailyGoals.feedGoalAchieved,
                             Icons.restaurant,
                           ),
                           const SizedBox(height: 12),
-                          // 수면 목표
+                          // 수면 목표 (레벨에 따라 4~6시간)
                           _buildGoalItem(
                             '수면',
                             dailyGoals.sleepHours,
-                            6,
+                            scoreResult.sleepGoalHours,
                             dailyGoals.sleepGoalAchieved,
                             Icons.bedtime,
                           ),
                           const SizedBox(height: 12),
-                          // 운동 목표
-                          _buildGoalItem(
-                            '운동',
-                            dailyGoals.exerciseSteps >= 10000 
-                                ? 100 
-                                : (dailyGoals.exerciseMinutes >= 30 ? 100 : 0),
-                            100,
-                            dailyGoals.exerciseGoalAchieved,
-                            Icons.directions_run,
+                          // 운동 목표 (레벨에 따라 다름)
+                          // 걸음 수와 운동 시간 중 더 높은 진행도를 표시
+                          Builder(
+                            builder: (context) {
+                              // 걸음 수 진행도
+                              final stepsProgress = dailyGoals.exerciseSteps;
+                              final stepsProgressPercent = (stepsProgress / scoreResult.exerciseGoalSteps * 100).clamp(0.0, 100.0);
+                              
+                              // 운동 시간 진행도 (걸음 수 기준으로 변환)
+                              final minutesProgressPercent = (dailyGoals.exerciseMinutes / scoreResult.exerciseGoalMinutes * 100).clamp(0.0, 100.0);
+                              
+                              // 더 높은 진행도 사용
+                              final exerciseProgressPercent = stepsProgressPercent > minutesProgressPercent 
+                                  ? stepsProgressPercent 
+                                  : minutesProgressPercent;
+                              
+                              // 목표 달성 여부에 따라 진행도 표시
+                              final exerciseProgress = dailyGoals.exerciseGoalAchieved 
+                                  ? scoreResult.exerciseGoalSteps 
+                                  : (exerciseProgressPercent / 100 * scoreResult.exerciseGoalSteps).round();
+                              
+                              return _buildGoalItem(
+                                '운동',
+                                exerciseProgress,
+                                scoreResult.exerciseGoalSteps,
+                                dailyGoals.exerciseGoalAchieved,
+                                Icons.directions_run,
+                              );
+                            },
                           ),
                         ],
                       ),

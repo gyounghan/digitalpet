@@ -37,6 +37,7 @@ class CreateDefaultPetUseCase {
     
     final defaultPet = Pet(
       id: petId,
+      name: '펫', // 기본 이름
       hunger: 100,
       happiness: 100,
       stamina: 100,

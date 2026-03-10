@@ -48,6 +48,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         return AppStrings.moodBored;
       case PetMood.normal:
         return AppStrings.moodNormal;
+      case PetMood.energetic:
+        return AppStrings.moodEnergetic;
+      case PetMood.tired:
+        return AppStrings.moodTired;
+      case PetMood.full:
+        return AppStrings.moodFull;
+      case PetMood.anxious:
+        return AppStrings.moodAnxious;
+      case PetMood.satisfied:
+        return AppStrings.moodSatisfied;
     }
   }
   
@@ -68,6 +78,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         return Colors.grey;
       case PetMood.normal:
         return AppColors.textSecondary;
+      case PetMood.energetic:
+        return Colors.yellow.shade700;
+      case PetMood.tired:
+        return Colors.deepPurple;
+      case PetMood.full:
+        return Colors.green;
+      case PetMood.anxious:
+        return Colors.red.shade300;
+      case PetMood.satisfied:
+        return Colors.blue;
     }
   }
   
@@ -134,7 +154,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   /// Pet 정보와 상태바, 액션 버튼을 표시
   /// design 폴더의 Home.tsx 레이아웃을 정확히 매칭
   Widget _buildPetContent(BuildContext context, WidgetRef ref, pet) {
-    final petName = 'Luna'; // TODO: Pet 엔티티에 name 필드 추가 필요
+    final petName = pet.name;
     
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -180,16 +200,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ),
                 ),
                 // Pet 이름, 레벨, 상태
-                Column(
-                  children: [
-                    Text(
-                      petName,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.textPrimary,
+                GestureDetector(
+                  onTap: () => _showNameEditDialog(context, ref, pet),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            petName,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w500,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Icon(
+                            Icons.edit,
+                            size: 14,
+                            color: AppColors.textSecondary,
+                          ),
+                        ],
                       ),
-                    ),
                     Text(
                       '${AppStrings.level} ${pet.level}',
                       style: const TextStyle(
@@ -197,17 +230,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         color: AppColors.primary, // 보라색 (#A08CDB)
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    // 펫의 현재 상태 표시
-                    Text(
-                      _getMoodText(pet.mood),
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: _getMoodColor(pet.mood),
-                        fontWeight: FontWeight.w500,
+                      const SizedBox(height: 4),
+                      // 펫의 현재 상태 표시
+                      Text(
+                        _getMoodText(pet.mood),
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: _getMoodColor(pet.mood),
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
                 // 설정 버튼
                 Container(
@@ -310,6 +344,68 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
             ),
           ),
+        );
+      },
+    );
+  }
+  
+  /// 펫 이름 편집 다이얼로그 표시
+  /// 
+  /// [context] BuildContext
+  /// [ref] WidgetRef
+  /// [pet] 현재 Pet 엔티티
+  void _showNameEditDialog(BuildContext context, WidgetRef ref, Pet pet) {
+    final TextEditingController nameController = TextEditingController(text: pet.name);
+    
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: AppColors.backgroundDark,
+          title: const Text(
+            '펫 이름 변경',
+            style: TextStyle(color: AppColors.textPrimary),
+          ),
+          content: TextField(
+            controller: nameController,
+            style: const TextStyle(color: AppColors.textPrimary),
+            decoration: InputDecoration(
+              hintText: '펫 이름을 입력하세요',
+              hintStyle: TextStyle(color: AppColors.textSecondary),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: AppColors.primary),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: AppColors.primary, width: 2),
+              ),
+            ),
+            maxLength: 20,
+            autofocus: true,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(
+                '취소',
+                style: TextStyle(color: AppColors.textSecondary),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                final newName = nameController.text.trim();
+                if (newName.isNotEmpty) {
+                  ref.read(petNotifierProvider(HomeScreen.defaultPetId).notifier).updateName(newName);
+                }
+                Navigator.of(context).pop();
+              },
+              child: Text(
+                '확인',
+                style: TextStyle(color: AppColors.primary),
+              ),
+            ),
+          ],
         );
       },
     );

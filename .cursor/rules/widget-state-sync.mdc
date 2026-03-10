@@ -1,0 +1,112 @@
+---
+description: 홈 위젯과 앱 내 펫 상태 동기화 규칙
+alwaysApply: true
+---
+
+# 홈 위젯과 앱 내 펫 상태 동기화 규칙
+
+**핵심 원칙**: 홈 위젯의 상태와 앱 내의 펫 상태는 항상 동일해야 합니다.
+
+## 필수 규칙
+
+### 1. 모든 상태 변경 시 위젯 업데이트
+
+펫의 상태가 변경되는 모든 경우에 위젯을 업데이트해야 합니다:
+
+- ✅ 앱 시작 시 (`_loadPet()`)
+- ✅ Feed/Play/Sleep 액션 후 (`feed()`, `play()`, `sleep()`)
+- ✅ 이름 변경 후 (`updateName()`)
+- ✅ 포그라운드 전환 시 (`onAppForeground()`)
+- ✅ 백그라운드 작업 후 (`background_service.dart`)
+- ✅ 시간 경과에 따른 자동 상태 업데이트 후
+
+### 2. 중복 업데이트 방지
+
+위젯 업데이트는 `_updateAndEvolve()` 메서드 내에서 한 번만 수행됩니다:
+
+```dart
+// ✅ GOOD - _updateAndEvolve()가 위젯 업데이트 포함
+final evolvedPet = await _updateAndEvolve(updatedPet);
+state = AsyncValue.data(evolvedPet);
+// 위젯은 이미 업데이트됨
+
+// ❌ BAD - 중복 업데이트
+final evolvedPet = await _updateAndEvolve(updatedPet);
+state = AsyncValue.data(evolvedPet);
+await widgetService.updatePetWidget(evolvedPet); // 중복!
+```
+
+### 3. 최신 상태 사용
+
+위젯 업데이트 시 항상 최신 Pet 엔티티를 사용해야 합니다:
+
+```dart
+// ✅ GOOD - 진화/점수 적용 후 최신 상태 사용
+final evolvedPet = await evolvePetUseCase(petId);
+await widgetService.updatePetWidget(evolvedPet);
+
+// ❌ BAD - 이전 상태 사용
+await widgetService.updatePetWidget(pet); // 진화 전 상태
+final evolvedPet = await evolvePetUseCase(petId);
+```
+
+## 위젯 업데이트 체크리스트
+
+상태 변경 시 다음을 확인합니다:
+
+- [ ] `_updateAndEvolve()` 메서드를 통해 상태 변경 처리
+- [ ] 위젯 업데이트가 `_updateAndEvolve()` 내에서 수행됨
+- [ ] 중복 위젯 업데이트 호출 없음
+- [ ] 최신 Pet 엔티티(진화/점수 적용 후)를 위젯에 전달
+- [ ] 위젯 업데이트 실패 시 앱 동작에 영향 없음 (try-catch 처리)
+
+## 위젯에 저장되는 데이터
+
+위젯은 다음 데이터를 앱 내 상태와 동기화합니다:
+
+- 포만감 (hunger)
+- 운동 (happiness)
+- 수면 (stamina)
+- 레벨 (level)
+- 경험치 (exp)
+- 진화 단계 (evolutionStage)
+- 펫 이름 (name)
+- 펫 상태 (mood)
+- 펫 상태 한국어 텍스트 (moodText)
+- 이미지 타입 (imageType)
+- 이미지 인덱스 (imageIndex)
+- 마지막 업데이트 시간 (lastUpdated)
+
+## 예외 처리
+
+위젯 업데이트 실패는 앱 동작에 영향을 주지 않아야 합니다:
+
+```dart
+try {
+  await widgetService.updatePetWidget(pet);
+} catch (e) {
+  // 위젯 업데이트 실패는 무시 (앱 동작에 영향 없음)
+  // 위젯이 설치되지 않았거나 권한이 없는 경우 발생할 수 있음
+}
+```
+
+## 검증 방법
+
+코드 수정 후 다음을 확인합니다:
+
+1. **상태 변경 시 위젯 업데이트 확인**
+   - 모든 상태 변경 경로에서 `_updateAndEvolve()` 호출 확인
+   - 위젯 업데이트가 중복되지 않는지 확인
+
+2. **실제 동작 확인**
+   - 앱에서 상태 변경 후 위젯 확인
+   - 위젯의 상태가 앱 내 상태와 일치하는지 확인
+
+3. **에러 처리 확인**
+   - 위젯 업데이트 실패 시 앱이 정상 동작하는지 확인
+
+## 관련 파일
+
+- `lib/data/services/widget_service.dart` - 위젯 업데이트 서비스
+- `lib/presentation/providers/pet_provider.dart` - 상태 관리 및 위젯 업데이트 호출
+- `lib/data/services/background_service.dart` - 백그라운드 작업 시 위젯 업데이트

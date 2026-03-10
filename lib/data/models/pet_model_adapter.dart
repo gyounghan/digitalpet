@@ -24,25 +24,26 @@ class PetModelAdapter extends TypeAdapter<PetModel> {
     
     return PetModel(
       id: fields[0] as String,
-      hunger: fields[1] as int,
-      happiness: fields[2] as int,
-      stamina: fields[3] as int,
-      level: fields[4] as int,
-      exp: fields[5] as int,
-      evolutionStage: fields[6] as int,
-      lastUpdated: fields[7] as int,
-      totalSteps: fields[8] as int? ?? 0,
-      totalExerciseMinutes: fields[9] as int? ?? 0,
-      totalIdleHours: fields[10] as int? ?? 0,
-      evolutionType: fields[11] != null
+      name: fields[1] as String? ?? '펫', // name 필드 추가 (기본값 '펫')
+      hunger: fields[2] as int,
+      happiness: fields[3] as int,
+      stamina: fields[4] as int,
+      level: fields[5] as int,
+      exp: fields[6] as int,
+      evolutionStage: fields[7] as int,
+      lastUpdated: fields[8] as int,
+      totalSteps: fields[9] as int? ?? 0,
+      totalExerciseMinutes: fields[10] as int? ?? 0,
+      totalIdleHours: fields[11] as int? ?? 0,
+      evolutionType: fields[12] != null
           ? EvolutionType.values.firstWhere(
-              (e) => e.name == fields[11],
+              (e) => e.name == fields[12],
               orElse: () => EvolutionType.balanced,
             )
           : null,
-      todayFeedCount: fields[12] as int? ?? 0,
-      todaySleepHours: fields[13] as int? ?? 0,
-      lastGoalResetDate: fields[14] as String? ?? '',
+      todayFeedCount: fields[13] as int? ?? 0,
+      todaySleepHours: fields[14] as int? ?? 0,
+      lastGoalResetDate: fields[15] as String? ?? '',
     );
   }
   
@@ -51,36 +52,38 @@ class PetModelAdapter extends TypeAdapter<PetModel> {
     // Hive에 데이터 쓰기
     // 필드 개수와 각 필드를 순서대로 저장
     writer
-      ..writeByte(15) // 필드 개수 (id 포함)
+      ..writeByte(16) // 필드 개수 (id, name 포함)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
-      ..write(obj.hunger)
+      ..write(obj.name) // name 필드 추가
       ..writeByte(2)
-      ..write(obj.happiness)
+      ..write(obj.hunger)
       ..writeByte(3)
-      ..write(obj.stamina)
+      ..write(obj.happiness)
       ..writeByte(4)
-      ..write(obj.level)
+      ..write(obj.stamina)
       ..writeByte(5)
-      ..write(obj.exp)
+      ..write(obj.level)
       ..writeByte(6)
-      ..write(obj.evolutionStage)
+      ..write(obj.exp)
       ..writeByte(7)
-      ..write(obj.lastUpdated)
+      ..write(obj.evolutionStage)
       ..writeByte(8)
-      ..write(obj.totalSteps)
+      ..write(obj.lastUpdated)
       ..writeByte(9)
-      ..write(obj.totalExerciseMinutes)
+      ..write(obj.totalSteps)
       ..writeByte(10)
-      ..write(obj.totalIdleHours)
+      ..write(obj.totalExerciseMinutes)
       ..writeByte(11)
-      ..write(obj.evolutionType?.name)
+      ..write(obj.totalIdleHours)
       ..writeByte(12)
-      ..write(obj.todayFeedCount)
+      ..write(obj.evolutionType?.name)
       ..writeByte(13)
-      ..write(obj.todaySleepHours)
+      ..write(obj.todayFeedCount)
       ..writeByte(14)
+      ..write(obj.todaySleepHours)
+      ..writeByte(15)
       ..write(obj.lastGoalResetDate);
   }
   

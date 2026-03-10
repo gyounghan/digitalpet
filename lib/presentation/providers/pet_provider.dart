@@ -33,6 +33,7 @@ import '../../data/repositories/battle_history_repository_impl.dart';
 import '../../data/datasources/battle_history_datasource.dart';
 import '../../domain/usecases/calculate_daily_goals_score_usecase.dart';
 import '../../domain/usecases/apply_daily_goals_score_usecase.dart';
+import '../../domain/usecases/update_pet_name_usecase.dart';
 
 /// PetLocalDataSource Provider
 /// Hive 데이터소스 인스턴스를 제공
@@ -242,6 +243,13 @@ final applyDailyGoalsScoreUseCaseProvider = Provider<ApplyDailyGoalsScoreUseCase
   );
 });
 
+/// UpdatePetNameUseCase Provider
+/// 펫 이름 변경 유스케이스 인스턴스를 제공
+final updatePetNameUseCaseProvider = Provider<UpdatePetNameUseCase>((ref) {
+  final repository = ref.watch(petRepositoryProvider);
+  return UpdatePetNameUseCase(repository);
+});
+
 /// Pet Provider
 /// 특정 ID의 Pet을 조회하는 FutureProvider
 /// 
@@ -272,6 +280,7 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
   final DetectPhoneIdleUseCase detectPhoneIdleUseCase;
   final UpdatePetFromActivityUseCase updatePetFromActivityUseCase;
   final ApplyDailyGoalsScoreUseCase applyDailyGoalsScoreUseCase;
+  final UpdatePetNameUseCase updatePetNameUseCase;
   final String petId;
   
   PetNotifier({
@@ -290,6 +299,7 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
     required this.detectPhoneIdleUseCase,
     required this.updatePetFromActivityUseCase,
     required this.applyDailyGoalsScoreUseCase,
+    required this.updatePetNameUseCase,
     required this.petId,
   }) : super(const AsyncValue.loading()) {
     _loadPet();
@@ -324,18 +334,11 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
       // 5. 시간 경과에 따른 상태 업데이트 (이미 저장된 Pet이어도 시간 경과 반영)
       final stateUpdatedPet = await updatePetStateUseCase(petId);
       
-      // 6. 일일 목표 점수 적용
-      final scoreAppliedPet = await applyDailyGoalsScoreUseCase(petId);
-      
-      // 7. 진화 체크 및 실행
-      final evolvedPet = await evolvePetUseCase(scoreAppliedPet.id);
+      // 6. 일일 목표 점수 적용, 진화 체크, 위젯 업데이트를 한 번에 처리
+      // stateUpdatedPet을 전달하여 위젯이 최신 상태를 반영하도록 보장
+      // _updateAndEvolve()가 위젯 업데이트를 포함하므로 중복 호출 불필요
+      final evolvedPet = await _updateAndEvolve(stateUpdatedPet);
       state = AsyncValue.data(evolvedPet);
-      
-      // 8. 위젯 업데이트 (pet.mood 기반으로 자동 결정)
-      await widgetService.updatePetWidget(evolvedPet);
-      
-      // 9. 알림 체크 (앱 실행 시)
-      _checkAndShowNotification();
     } catch (e, stackTrace) {
       state = AsyncValue.error(e, stackTrace);
     }
@@ -351,21 +354,32 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
   /// 상태 업데이트 후 일일 목표 점수 적용, 진화 체크 및 알림 체크
   /// 
   /// 상태 변경 후 자동으로:
-  /// 1. 일일 목표 점수 적용
-  /// 2. 진화 조건을 확인하고 진화 실행
-  /// 3. 알림 조건을 확인하여 알림 발송
-  /// 4. 위젯을 업데이트하여 홈 화면에 반영
+  /// 1. 전달받은 Pet을 먼저 저장하여 최신 상태 보장
+  /// 2. 일일 목표 점수 적용
+  /// 3. 진화 조건을 확인하고 진화 실행
+  /// 4. 위젯을 업데이트하여 홈 화면에 반영 (앱 내 상태와 동기화)
+  /// 5. 알림 조건을 확인하여 알림 발송
+  /// 
+  /// 중요: 모든 상태 변경은 이 메서드를 통해 처리되어야 하며,
+  /// 위젯은 항상 앱 내 펫 상태와 동일하게 유지됩니다.
+  /// 
+  /// [pet] 업데이트할 Pet 엔티티 (이 Pet의 상태가 위젯에 반영됨)
   Future<Pet> _updateAndEvolve(Pet pet) async {
-    // 일일 목표 점수 적용
-    final scoreAppliedPet = await applyDailyGoalsScoreUseCase(petId);
+    // 1. 전달받은 Pet을 먼저 저장하여 최신 상태 보장
+    // 이렇게 하면 위젯 업데이트 시 전달받은 Pet의 상태가 반영됨
+    await repository.updatePet(pet);
     
-    // 진화 체크 및 실행
+    // 2. 일일 목표 점수 적용 (저장된 Pet을 기반으로)
+    await applyDailyGoalsScoreUseCase(petId);
+    
+    // 3. 진화 체크 및 실행 (저장된 Pet을 기반으로)
     final evolvedPet = await evolvePetUseCase(petId);
     
-    // 위젯 업데이트 (pet.mood 기반으로 자동 결정)
+    // 4. 위젯 업데이트 (앱 내 펫 상태와 동기화)
+    // evolvedPet은 최신 상태를 반영하므로 항상 위젯에 반영
     await widgetService.updatePetWidget(evolvedPet);
     
-    // 알림 체크 (상태 변경 후)
+    // 5. 알림 체크 (상태 변경 후)
     _checkAndShowNotification();
     
     return evolvedPet;
@@ -463,14 +477,14 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
           activityUpdatedPet.hunger != currentPet.hunger ||
           activityUpdatedPet.happiness != currentPet.happiness ||
           activityUpdatedPet.stamina != currentPet.stamina ||
-          activityUpdatedPet.exp != currentPet.exp) {
+          activityUpdatedPet.exp != currentPet.exp ||
+          activityUpdatedPet.name != currentPet.name) {
+        // _updateAndEvolve()가 위젯 업데이트를 포함하므로 중복 호출 불필요
         final evolvedPet = await _updateAndEvolve(activityUpdatedPet);
         state = AsyncValue.data(evolvedPet);
-        
-        // 위젯도 업데이트 (pet.mood 기반으로 자동 결정)
-        await widgetService.updatePetWidget(evolvedPet);
       } else {
         // 상태가 변경되지 않았어도 알림 체크 (포그라운드 전환 시)
+        // 위젯은 이미 최신 상태이므로 업데이트 불필요
         _checkAndShowNotification();
       }
     } catch (e) {
@@ -487,6 +501,23 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
       await phoneUsageRepository.onBackground();
     } catch (e) {
       // 에러는 무시 (앱 동작에 영향 없음)
+    }
+  }
+  
+  /// 펫 이름 변경
+  /// 
+  /// [newName] 새로운 이름
+  /// 
+  /// 이름 변경 후 상태 업데이트 및 위젯 업데이트
+  Future<void> updateName(String newName) async {
+    if (state.isLoading || state.hasError) return;
+    
+    try {
+      final updatedPet = await updatePetNameUseCase(petId, newName);
+      final evolvedPet = await _updateAndEvolve(updatedPet);
+      state = AsyncValue.data(evolvedPet);
+    } catch (e, stackTrace) {
+      state = AsyncValue.error(e, stackTrace);
     }
   }
 }
@@ -512,6 +543,7 @@ final petNotifierProvider = StateNotifierProvider.family<PetNotifier, AsyncValue
     detectPhoneIdleUseCase: ref.watch(detectPhoneIdleUseCaseProvider),
     updatePetFromActivityUseCase: ref.watch(updatePetFromActivityUseCaseProvider),
     applyDailyGoalsScoreUseCase: ref.watch(applyDailyGoalsScoreUseCaseProvider),
+    updatePetNameUseCase: ref.watch(updatePetNameUseCaseProvider),
     petId: petId,
   );
 });

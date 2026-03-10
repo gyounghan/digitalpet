@@ -15,6 +15,11 @@ class AppStrings {
   static const String moodHungry = '배고픔';
   static const String moodBored = '지루함';
   static const String moodNormal = '보통';
+  static const String moodEnergetic = '활기참';
+  static const String moodTired = '피곤함';
+  static const String moodFull = '배부름';
+  static const String moodAnxious = '불안함';
+  static const String moodSatisfied = '만족함';
   
   // 화면 제목
   static const String home = '홈';
