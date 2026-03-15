@@ -47,10 +47,16 @@ class CreateDefaultPetUseCase {
       lastUpdated: currentTime,
       totalSteps: 0,
       totalExerciseMinutes: 0,
+      todaySyncedSteps: 0,
+      todaySyncedExerciseMinutes: 0,
       totalIdleHours: 0,
       evolutionType: null, // 아직 결정되지 않음
       todayFeedCount: 0,
+      todayFedMealSlots: 0,
       todaySleepHours: 0,
+      todayAlternativeFeedCount: 0,
+      todayAlternativeSleepCount: 0,
+      todayAlternativeExerciseCount: 0,
       lastGoalResetDate: todayDate,
     );
     

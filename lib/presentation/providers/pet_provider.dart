@@ -34,6 +34,9 @@ import '../../data/datasources/battle_history_datasource.dart';
 import '../../domain/usecases/calculate_daily_goals_score_usecase.dart';
 import '../../domain/usecases/apply_daily_goals_score_usecase.dart';
 import '../../domain/usecases/update_pet_name_usecase.dart';
+import '../../domain/usecases/alternative_feed_pet_usecase.dart';
+import '../../domain/usecases/alternative_sleep_pet_usecase.dart';
+import '../../domain/usecases/alternative_exercise_pet_usecase.dart';
 
 /// PetLocalDataSource Provider
 /// Hive 데이터소스 인스턴스를 제공
@@ -250,6 +253,27 @@ final updatePetNameUseCaseProvider = Provider<UpdatePetNameUseCase>((ref) {
   return UpdatePetNameUseCase(repository);
 });
 
+/// AlternativeFeedPetUseCase Provider
+/// 대체 급식 유스케이스 인스턴스를 제공
+final alternativeFeedPetUseCaseProvider = Provider<AlternativeFeedPetUseCase>((ref) {
+  final repository = ref.watch(petRepositoryProvider);
+  return AlternativeFeedPetUseCase(repository);
+});
+
+/// AlternativeSleepPetUseCase Provider
+/// 대체 수면 유스케이스 인스턴스를 제공
+final alternativeSleepPetUseCaseProvider = Provider<AlternativeSleepPetUseCase>((ref) {
+  final repository = ref.watch(petRepositoryProvider);
+  return AlternativeSleepPetUseCase(repository);
+});
+
+/// AlternativeExercisePetUseCase Provider
+/// 대체 운동 유스케이스 인스턴스를 제공
+final alternativeExercisePetUseCaseProvider = Provider<AlternativeExercisePetUseCase>((ref) {
+  final repository = ref.watch(petRepositoryProvider);
+  return AlternativeExercisePetUseCase(repository);
+});
+
 /// Pet Provider
 /// 특정 ID의 Pet을 조회하는 FutureProvider
 /// 
@@ -281,6 +305,9 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
   final UpdatePetFromActivityUseCase updatePetFromActivityUseCase;
   final ApplyDailyGoalsScoreUseCase applyDailyGoalsScoreUseCase;
   final UpdatePetNameUseCase updatePetNameUseCase;
+  final AlternativeFeedPetUseCase alternativeFeedPetUseCase;
+  final AlternativeSleepPetUseCase alternativeSleepPetUseCase;
+  final AlternativeExercisePetUseCase alternativeExercisePetUseCase;
   final String petId;
   
   PetNotifier({
@@ -300,6 +327,9 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
     required this.updatePetFromActivityUseCase,
     required this.applyDailyGoalsScoreUseCase,
     required this.updatePetNameUseCase,
+    required this.alternativeFeedPetUseCase,
+    required this.alternativeSleepPetUseCase,
+    required this.alternativeExercisePetUseCase,
     required this.petId,
   }) : super(const AsyncValue.loading()) {
     _loadPet();
@@ -323,21 +353,25 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
       
       // 3. 마지막 접속 시간 업데이트 (앱 실행 시)
       await checkNotificationUseCase.updateLastAccessTime();
-      
-      // 4. 활동 데이터 기반 상태 업데이트 (걷기/운동량)
+
+      // 4. 앱 비사용 시간 수면 반영(포그라운드 전환 전에 계산)
+      await autoSleepPetUseCase(petId, isInBackground: true);
+
+      // 5. 포그라운드 전환 처리 (다음 수면 계산 기준 시각 갱신)
+      await phoneUsageRepository.onForeground();
+
+      // 6. 시간 경과에 따른 상태 업데이트
+      var updatedPet = await updatePetStateUseCase(petId);
+
+      // 7. 활동 데이터 기반 상태 업데이트 (걷기/운동량)
       try {
-        await updatePetFromActivityUseCase(petId);
+        updatedPet = await updatePetFromActivityUseCase(petId);
       } catch (e) {
         // 헬스케어 권한이 없거나 에러 발생 시 무시 (앱 동작에 영향 없음)
       }
-      
-      // 5. 시간 경과에 따른 상태 업데이트 (이미 저장된 Pet이어도 시간 경과 반영)
-      final stateUpdatedPet = await updatePetStateUseCase(petId);
-      
-      // 6. 일일 목표 점수 적용, 진화 체크, 위젯 업데이트를 한 번에 처리
-      // stateUpdatedPet을 전달하여 위젯이 최신 상태를 반영하도록 보장
-      // _updateAndEvolve()가 위젯 업데이트를 포함하므로 중복 호출 불필요
-      final evolvedPet = await _updateAndEvolve(stateUpdatedPet);
+
+      // 8. 일일 목표 점수 적용, 진화 체크, 위젯 업데이트를 한 번에 처리
+      final evolvedPet = await _updateAndEvolve(updatedPet);
       state = AsyncValue.data(evolvedPet);
     } catch (e, stackTrace) {
       state = AsyncValue.error(e, stackTrace);
@@ -349,6 +383,37 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
   /// 상태를 다시 로드하고 업데이트
   Future<void> refresh() async {
     await _loadPet();
+  }
+
+  /// 앱 포그라운드에서 1분 주기로 호출되는 경량 상태 업데이트
+  /// 
+  /// - 접속 시간/수면 기준 시간은 건드리지 않고
+  /// - 수치 감소 + 활동 반영만 처리
+  Future<void> onMinuteTick() async {
+    if (state.isLoading || state.hasError) return;
+
+    try {
+      var updatedPet = await updatePetStateUseCase(petId);
+
+      try {
+        updatedPet = await updatePetFromActivityUseCase(petId);
+      } catch (e) {
+        // 헬스케어 권한이 없거나 에러 발생 시 무시
+      }
+
+      final currentPet = state.valueOrNull;
+      if (currentPet == null ||
+          updatedPet.hunger != currentPet.hunger ||
+          updatedPet.happiness != currentPet.happiness ||
+          updatedPet.stamina != currentPet.stamina ||
+          updatedPet.totalSteps != currentPet.totalSteps ||
+          updatedPet.totalExerciseMinutes != currentPet.totalExerciseMinutes) {
+        final evolvedPet = await _updateAndEvolve(updatedPet);
+        state = AsyncValue.data(evolvedPet);
+      }
+    } catch (e) {
+      // 앱 동작에 영향 없도록 무시
+    }
   }
   
   /// 상태 업데이트 후 일일 목표 점수 적용, 진화 체크 및 알림 체크
@@ -449,29 +514,77 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
       state = AsyncValue.error(e, stackTrace);
     }
   }
+
+  /// 대체 급식
+  ///
+  /// 실제 식사 시간대 Feed가 어려운 사용자를 위한 저효율 대체 액션
+  Future<void> performAlternativeFeed() async {
+    if (state.isLoading || state.hasError) return;
+
+    try {
+      final updatedPet = await alternativeFeedPetUseCase(petId);
+      final evolvedPet = await _updateAndEvolve(updatedPet);
+      state = AsyncValue.data(evolvedPet);
+    } catch (e, stackTrace) {
+      state = AsyncValue.error(e, stackTrace);
+    }
+  }
+
+  /// 대체 수면
+  ///
+  /// 실제 수면 연동이 어려운 사용자를 위한 저효율 대체 액션
+  Future<void> performAlternativeSleep() async {
+    if (state.isLoading || state.hasError) return;
+
+    try {
+      final updatedPet = await alternativeSleepPetUseCase(petId);
+      final evolvedPet = await _updateAndEvolve(updatedPet);
+      state = AsyncValue.data(evolvedPet);
+    } catch (e, stackTrace) {
+      state = AsyncValue.error(e, stackTrace);
+    }
+  }
+
+  /// 대체 운동
+  ///
+  /// 실내 운동 1분 완료 후 적용되는 저효율 대체 액션
+  Future<void> performAlternativeExercise() async {
+    if (state.isLoading || state.hasError) return;
+
+    try {
+      final updatedPet = await alternativeExercisePetUseCase(petId);
+      final evolvedPet = await _updateAndEvolve(updatedPet);
+      state = AsyncValue.data(evolvedPet);
+    } catch (e, stackTrace) {
+      state = AsyncValue.error(e, stackTrace);
+    }
+  }
   
   /// 앱이 포그라운드로 전환되었을 때 호출
   /// 
   /// 폰 미사용 시간을 계산하여 자동으로 Sleep 상태 적용
+  /// 시간 경과에 따른 상태 업데이트 수행
   /// 활동 데이터를 기반으로 자동 Play 상태 적용
   /// 알림 체크 및 발송
   Future<void> onAppForeground() async {
     try {
-      // 폰 사용 상태 업데이트 (포그라운드로 전환)
+      // 1. 앱 비사용 시간 수면 반영 (포그라운드 전환 전에 계산)
+      await autoSleepPetUseCase(petId, isInBackground: true);
+
+      // 2. 폰 사용 상태 업데이트 (포그라운드로 전환)
       await phoneUsageRepository.onForeground();
-      
-      // 미사용 시간이 30분 이상이면 자동 Sleep 적용
-      final sleepUpdatedPet = await autoSleepPetUseCase(petId, isInBackground: false);
-      
-      // 활동 데이터 기반 자동 Play 적용
-      Pet activityUpdatedPet = sleepUpdatedPet;
+
+      // 3. 시간 경과에 따른 상태 업데이트 (hunger, happiness, stamina 감소)
+      var activityUpdatedPet = await updatePetStateUseCase(petId);
+
+      // 4. 활동 데이터 기반 자동 Play 적용
       try {
         activityUpdatedPet = await updatePetFromActivityUseCase(petId);
       } catch (e) {
         // 헬스케어 권한이 없거나 에러 발생 시 무시
       }
       
-      // 상태가 변경되었으면 업데이트
+      // 5. 상태가 변경되었으면 업데이트
       final currentPet = state.valueOrNull;
       if (currentPet == null || 
           activityUpdatedPet.hunger != currentPet.hunger ||
@@ -544,6 +657,9 @@ final petNotifierProvider = StateNotifierProvider.family<PetNotifier, AsyncValue
     updatePetFromActivityUseCase: ref.watch(updatePetFromActivityUseCaseProvider),
     applyDailyGoalsScoreUseCase: ref.watch(applyDailyGoalsScoreUseCaseProvider),
     updatePetNameUseCase: ref.watch(updatePetNameUseCaseProvider),
+    alternativeFeedPetUseCase: ref.watch(alternativeFeedPetUseCaseProvider),
+    alternativeSleepPetUseCase: ref.watch(alternativeSleepPetUseCaseProvider),
+    alternativeExercisePetUseCase: ref.watch(alternativeExercisePetUseCaseProvider),
     petId: petId,
   );
 });

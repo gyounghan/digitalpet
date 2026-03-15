@@ -4,7 +4,7 @@ import '../../domain/entities/evolution_type.dart';
 
 /// PetModel Hive TypeAdapter
 /// Hive 데이터베이스에 PetModel을 저장하고 읽기 위한 어댑터
-/// 
+///
 /// 사용법:
 /// ```dart
 /// Hive.registerAdapter(PetModelAdapter());
@@ -12,7 +12,7 @@ import '../../domain/entities/evolution_type.dart';
 class PetModelAdapter extends TypeAdapter<PetModel> {
   @override
   final int typeId = 0;
-  
+
   @override
   PetModel read(BinaryReader reader) {
     // Hive에서 데이터 읽기
@@ -21,7 +21,15 @@ class PetModelAdapter extends TypeAdapter<PetModel> {
     final fields = <int, dynamic>{
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
-    
+
+    final isNewSchema = fields.containsKey(16);
+    final todaySleepHours = isNewSchema
+        ? (fields[15] as int? ?? 0)
+        : (fields[14] as int? ?? 0);
+    final lastGoalResetDate = isNewSchema
+        ? (fields[16] as String? ?? '')
+        : (fields[15] as String? ?? '');
+
     return PetModel(
       id: fields[0] as String,
       name: fields[1] as String? ?? '펫', // name 필드 추가 (기본값 '펫')
@@ -34,6 +42,8 @@ class PetModelAdapter extends TypeAdapter<PetModel> {
       lastUpdated: fields[8] as int,
       totalSteps: fields[9] as int? ?? 0,
       totalExerciseMinutes: fields[10] as int? ?? 0,
+      todaySyncedSteps: fields[17] as int? ?? 0,
+      todaySyncedExerciseMinutes: fields[18] as int? ?? 0,
       totalIdleHours: fields[11] as int? ?? 0,
       evolutionType: fields[12] != null
           ? EvolutionType.values.firstWhere(
@@ -42,17 +52,21 @@ class PetModelAdapter extends TypeAdapter<PetModel> {
             )
           : null,
       todayFeedCount: fields[13] as int? ?? 0,
-      todaySleepHours: fields[14] as int? ?? 0,
-      lastGoalResetDate: fields[15] as String? ?? '',
+      todayFedMealSlots: isNewSchema ? (fields[14] as int? ?? 0) : 0,
+      todaySleepHours: todaySleepHours,
+      lastGoalResetDate: lastGoalResetDate,
+      todayAlternativeFeedCount: fields[19] as int? ?? 0,
+      todayAlternativeSleepCount: fields[20] as int? ?? 0,
+      todayAlternativeExerciseCount: fields[21] as int? ?? 0,
     );
   }
-  
+
   @override
   void write(BinaryWriter writer, PetModel obj) {
     // Hive에 데이터 쓰기
     // 필드 개수와 각 필드를 순서대로 저장
     writer
-      ..writeByte(16) // 필드 개수 (id, name 포함)
+      ..writeByte(22) // 필드 개수 (id, name 포함)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -82,14 +96,26 @@ class PetModelAdapter extends TypeAdapter<PetModel> {
       ..writeByte(13)
       ..write(obj.todayFeedCount)
       ..writeByte(14)
-      ..write(obj.todaySleepHours)
+      ..write(obj.todayFedMealSlots)
       ..writeByte(15)
-      ..write(obj.lastGoalResetDate);
+      ..write(obj.todaySleepHours)
+      ..writeByte(16)
+      ..write(obj.lastGoalResetDate)
+      ..writeByte(17)
+      ..write(obj.todaySyncedSteps)
+      ..writeByte(18)
+      ..write(obj.todaySyncedExerciseMinutes)
+      ..writeByte(19)
+      ..write(obj.todayAlternativeFeedCount)
+      ..writeByte(20)
+      ..write(obj.todayAlternativeSleepCount)
+      ..writeByte(21)
+      ..write(obj.todayAlternativeExerciseCount);
   }
-  
+
   @override
   int get hashCode => typeId.hashCode;
-  
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||

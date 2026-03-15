@@ -55,30 +55,51 @@ class AutoSleepPetUseCase {
       return pet;
     }
     
-    // 5. 30분 단위로 stamina 증가 계산
-    final increments = idleMinutes ~/ idleThresholdMinutes;
+    // 5. 마지막 업데이트 시간 이후의 미사용 시간만 계산하여 중복 누적 방지
+    // phoneUsage의 lastForegroundTime과 pet의 lastUpdated를 비교하여
+    // 이미 처리된 시간은 제외
+    final lastUpdateTime = DateTime.fromMillisecondsSinceEpoch(pet.lastUpdated);
+    final lastForegroundTime = DateTime.fromMillisecondsSinceEpoch(phoneUsage.lastForegroundTime);
+    
+    // 마지막 업데이트 시간이 마지막 포그라운드 시간보다 이전이면,
+    // 마지막 포그라운드 시간부터의 미사용 시간을 사용
+    // 그렇지 않으면 마지막 업데이트 시간부터의 미사용 시간을 사용
+    final effectiveStartTime = lastUpdateTime.isBefore(lastForegroundTime) 
+        ? lastForegroundTime 
+        : lastUpdateTime;
+    
+    final currentTime = DateTime.now();
+    final effectiveIdleMinutes = currentTime.difference(effectiveStartTime).inMinutes;
+    
+    // 유효한 미사용 시간이 30분 미만이면 업데이트하지 않음
+    if (effectiveIdleMinutes < idleThresholdMinutes) {
+      return pet;
+    }
+    
+    // 6. 30분 단위로 stamina 증가 계산
+    final increments = effectiveIdleMinutes ~/ idleThresholdMinutes;
     final staminaIncrease = increments * staminaIncreasePer30Minutes;
     final newStamina = (pet.stamina + staminaIncrease).clamp(0, 100);
     
-    // 6. 누적 미사용 시간 업데이트 (시간 단위)
-    final idleHours = idleMinutes ~/ 60;
-    final newTotalIdleHours = pet.totalIdleHours + idleHours;
+    // 7. 누적 미사용 시간 업데이트 (시간 단위, 중복 방지)
+    final effectiveIdleHours = effectiveIdleMinutes ~/ 60;
+    final newTotalIdleHours = pet.totalIdleHours + effectiveIdleHours;
     
-    // 7. 오늘의 수면 시간 업데이트 (시간 단위)
-    final newTodaySleepHours = pet.todaySleepHours + idleHours;
+    // 8. 오늘의 수면 시간 업데이트 (시간 단위, 중복 방지)
+    final newTodaySleepHours = pet.todaySleepHours + effectiveIdleHours;
     
-    // 8. 현재 시간으로 업데이트
-    final currentTime = DateTime.now().millisecondsSinceEpoch;
+    // 9. 현재 시간으로 업데이트
+    final currentTimeMillis = DateTime.now().millisecondsSinceEpoch;
     
-    // 9. 업데이트된 Pet 생성
+    // 10. 업데이트된 Pet 생성
     final updatedPet = pet.copyWith(
       stamina: newStamina,
-      lastUpdated: currentTime,
+      lastUpdated: currentTimeMillis,
       totalIdleHours: newTotalIdleHours,
       todaySleepHours: newTodaySleepHours,
     );
     
-    // 10. 저장
+    // 11. 저장
     await petRepository.updatePet(updatedPet);
     
     return updatedPet;

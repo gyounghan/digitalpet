@@ -31,6 +31,13 @@ class AppStrings {
   static const String feed = '먹이주기';
   static const String play = '놀아주기';
   static const String sleep = '재우기';
+  static const String alternativeCareTitle = '대체 케어';
+  static const String alternativeFeed = '간편 급식';
+  static const String alternativeSleep = '낮잠 모드 15분';
+  static const String alternativeExercise = '실내 운동 1분';
+  static const String alternativeExerciseRunning = '운동 진행 중';
+  static const String snackTimeGuide = '간식 시간: 10-11시, 15-16시, 20-21시';
+  static const String napModeRunning = '낮잠 모드 진행 중';
   
   // 알림 메시지
   static const String notificationTitle = '내 펫';

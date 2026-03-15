@@ -1,5 +1,4 @@
 import '../entities/pet.dart';
-import '../entities/activity_data.dart';
 import '../repositories/pet_repository.dart';
 import '../repositories/activity_repository.dart';
 
@@ -47,52 +46,71 @@ class UpdatePetFromActivityUseCase {
   /// 반환: 업데이트된 Pet 엔티티
   /// 
   /// 동작:
-  /// 1. 최근 24시간 활동 데이터 조회
+  /// 1. 오늘 활동 데이터 조회
   /// 2. 일일 목표 리셋 확인 (날짜 변경 시)
-  /// 3. 걸음 수와 운동 시간에 따라 happiness, stamina 증가
-  /// 4. 일일 목표 달성 시 보너스 경험치 추가 (운동 목표만, 나머지는 별도 UseCase에서 처리)
+  /// 3. 마지막 "오늘 동기화 기준값"과의 차이(delta)를 계산해 중복 반영 방지
+  /// 4. 걸음 수와 운동 시간에 따라 happiness, stamina 증가
+  /// 5. 일일 목표 달성 보너스는 별도 UseCase에서 처리
   /// 5. 업데이트된 Pet 저장
   Future<Pet> call(String petId) async {
     // 1. 현재 Pet 조회
     var pet = await petRepository.getPet(petId);
     
     // 2. 일일 목표 리셋 확인
+    var hasDailyReset = false;
     if (pet.needsGoalReset) {
       pet = pet.resetDailyGoals();
+      hasDailyReset = true;
     }
     
-    // 3. 최근 24시간 활동 데이터 조회
-    final activityData = await activityRepository.getLast24HoursActivityData();
+    // 3. 오늘 활동 데이터 조회
+    final currentTime = DateTime.now().millisecondsSinceEpoch;
+    final todayActivity = await activityRepository.getTodayActivityData();
+
+    // 4. 마지막 오늘 동기화 값과의 차이(delta) 계산
+    // todaySyncedSteps / todaySyncedExerciseMinutes는 "오늘 0시 이후 마지막 동기화 기준값"이다.
+    // 음수가 되면(플랫폼 집계 리셋/오차) 0으로 보정한다.
+    final stepsDelta = (todayActivity.steps - pet.todaySyncedSteps)
+        .clamp(0, todayActivity.steps)
+        .toInt();
+    final exerciseMinutesDelta =
+        (todayActivity.exerciseMinutes - pet.todaySyncedExerciseMinutes)
+        .clamp(0, todayActivity.exerciseMinutes)
+        .toInt();
+
+    if (stepsDelta == 0 && exerciseMinutesDelta == 0) {
+      // 날짜 변경으로 리셋만 필요한 경우에도 저장해 다음 계산 기준을 맞춘다.
+      if (hasDailyReset) {
+        await petRepository.updatePet(pet);
+      }
+      return pet;
+    }
     
-    // 4. 걸음 수 기반 상태 업데이트 계산
-    final stepsIncrement = activityData.steps ~/ 1000;
+    // 5. 걸음 수 기반 상태 업데이트 계산
+    final stepsIncrement = stepsDelta ~/ 1000;
     final happinessFromSteps = stepsIncrement * happinessPer1000Steps;
     final staminaFromSteps = stepsIncrement * staminaPer1000Steps;
     
-    // 5. 운동 시간 기반 상태 업데이트 계산
-    final exerciseIncrement = activityData.exerciseMinutes ~/ 10;
+    // 6. 운동 시간 기반 상태 업데이트 계산
+    final exerciseIncrement = exerciseMinutesDelta ~/ 10;
     final happinessFromExercise = exerciseIncrement * happinessPer10Minutes;
     final staminaFromExercise = exerciseIncrement * staminaPer10Minutes;
     
-    // 6. 총 증가량 계산
+    // 7. 총 증가량 계산
     final totalHappinessIncrease = happinessFromSteps + happinessFromExercise;
     final totalStaminaIncrease = staminaFromSteps + staminaFromExercise;
     
-    // 7. 새로운 상태 값 계산 (최대 100)
+    // 8. 새로운 상태 값 계산 (최대 100)
     final newHappiness = (pet.happiness + totalHappinessIncrease).clamp(0, 100);
     final newStamina = (pet.stamina + totalStaminaIncrease).clamp(0, 100);
     
-    // 8. 일일 목표 달성 보너스 경험치는 별도 UseCase에서 처리하므로 여기서는 제거
-    // (운동 목표는 CalculateDailyGoalsScoreUseCase에서 처리)
+    // 9. 일일 목표 달성 보너스는 별도 UseCase에서 처리
     
-    // 9. 현재 시간으로 업데이트
-    final currentTime = DateTime.now().millisecondsSinceEpoch;
-    
-    // 10. 누적 활동 필드 업데이트
-    // 최근 24시간 활동 데이터를 누적 (중복 방지를 위해 마지막 업데이트 시간 확인 필요하지만,
-    // 여기서는 간단히 추가)
-    final newTotalSteps = pet.totalSteps + activityData.steps;
-    final newTotalExerciseMinutes = pet.totalExerciseMinutes + activityData.exerciseMinutes;
+    // 10. 누적 활동값/오늘 동기화 기준값 갱신
+    final newTotalSteps = pet.totalSteps + stepsDelta;
+    final newTotalExerciseMinutes = pet.totalExerciseMinutes + exerciseMinutesDelta;
+    final newTodaySyncedSteps = todayActivity.steps;
+    final newTodaySyncedExerciseMinutes = todayActivity.exerciseMinutes;
     
     // 11. 업데이트된 Pet 생성
     final updatedPet = pet.copyWith(
@@ -101,6 +119,8 @@ class UpdatePetFromActivityUseCase {
       lastUpdated: currentTime,
       totalSteps: newTotalSteps,
       totalExerciseMinutes: newTotalExerciseMinutes,
+      todaySyncedSteps: newTodaySyncedSteps,
+      todaySyncedExerciseMinutes: newTodaySyncedExerciseMinutes,
     );
     
     // 12. 저장

@@ -3,10 +3,13 @@ import 'package:hive_flutter/hive_flutter.dart';
 import '../../domain/usecases/auto_sleep_pet_usecase.dart';
 import '../../domain/usecases/auto_feed_pet_usecase.dart';
 import '../../domain/usecases/update_pet_from_activity_usecase.dart';
+import '../../domain/usecases/update_pet_state_usecase.dart';
 import '../../domain/usecases/check_notification_usecase.dart';
 import '../../domain/usecases/evolve_pet_usecase.dart';
 import '../../domain/usecases/calculate_daily_goals_score_usecase.dart';
 import '../../domain/usecases/apply_daily_goals_score_usecase.dart';
+import '../../core/constants/notification_constants.dart';
+import '../../core/constants/app_strings.dart';
 import '../../data/repository/pet_repository_impl.dart';
 import '../../data/datasource/pet_local_datasource.dart';
 import '../../data/repositories/phone_usage_repository_impl.dart';
@@ -165,6 +168,8 @@ void callbackDispatcher() {
       await widgetService.initialize();
       
       // UseCase 인스턴스 생성
+      final updatePetStateUseCase = UpdatePetStateUseCase(petRepository);
+      
       final autoSleepUseCase = AutoSleepPetUseCase(
         petRepository: petRepository,
         phoneUsageRepository: phoneUsageRepository,
@@ -197,33 +202,14 @@ void callbackDispatcher() {
       // 펫 ID
       const petId = HomeScreen.defaultPetId;
       
-      // 1. 자동 Sleep 적용 (폰 미사용 시간 기반)
-      var pet = await autoSleepUseCase(petId, isInBackground: true);
+      // 1. 시간 경과에 따른 상태 업데이트 (hunger, happiness, stamina 감소)
+      var pet = await updatePetStateUseCase(petId);
       
-      // 2. 자동 Feed 적용 (시간 기반)
-      pet = await autoFeedUseCase(petId);
+      // 2. 자동 Sleep 적용 (폰 미사용 시간 기반)
+      pet = await autoSleepUseCase(petId, isInBackground: true);
       
-      // 3. 활동 데이터 기반 상태 업데이트 (걷기/운동량)
-      try {
-        pet = await updateFromActivityUseCase(petId);
-      } catch (e) {
-        // 헬스케어 권한이 없거나 에러 발생 시 무시
-      }
-      
-      // 4. 일일 목표 점수 적용
-      pet = await applyDailyGoalsScoreUseCase(petId);
-      
-      // 5. 진화 체크 및 실행
-      pet = await evolvePetUseCase(petId);
-      
-      // 5. 위젯 업데이트
-      try {
-        await widgetService.updatePetWidget(pet);
-      } catch (e) {
-        // 위젯 업데이트 실패는 무시
-      }
-      
-      // 6. 알림 체크 및 발송
+      // 3. 알림 체크 및 발송
+      // 먹이 알림이 자동 Feed에 의해 사라지지 않도록 Feed 적용 전에 검사
       try {
         final message = await checkNotificationUseCase(petId);
         if (message != null) {
@@ -234,6 +220,29 @@ void callbackDispatcher() {
         }
       } catch (e) {
         // 알림 발송 실패는 무시
+      }
+
+      // 4. 자동 Feed 적용 (시간 기반)
+      pet = await autoFeedUseCase(petId);
+      
+      // 5. 활동 데이터 기반 상태 업데이트 (걷기/운동량)
+      try {
+        pet = await updateFromActivityUseCase(petId);
+      } catch (e) {
+        // 헬스케어 권한이 없거나 에러 발생 시 무시
+      }
+      
+      // 6. 일일 목표 점수 적용
+      pet = await applyDailyGoalsScoreUseCase(petId);
+      
+      // 7. 진화 체크 및 실행
+      pet = await evolvePetUseCase(petId);
+      
+      // 8. 위젯 업데이트
+      try {
+        await widgetService.updatePetWidget(pet);
+      } catch (e) {
+        // 위젯 업데이트 실패는 무시
       }
       
       return true;
@@ -264,21 +273,18 @@ Future<void> _checkMealTimeNotification() async {
     final notificationService = NotificationService();
     await notificationService.init();
     
-    final checkNotificationUseCase = CheckNotificationUseCase(
-      petRepository: petRepository,
-      notificationRepository: notificationRepository,
-    );
-    
     // 펫 ID
     const petId = HomeScreen.defaultPetId;
-    
-    // 알림 체크 및 발송 (식사 시간대이므로 배고픔 알림이 우선적으로 발송됨)
-    final message = await checkNotificationUseCase(petId);
-    if (message != null) {
+
+    // 식사 시간대 작업에서는 "배고픔 + 식사 시간" 조건을 직접 평가하여
+    // 미접속 알림 우선순위 때문에 식사 알림이 가려지지 않게 처리
+    final pet = await petRepository.getPet(petId);
+    if (pet.hunger < NotificationConstants.hungerThreshold) {
       await notificationService.showNotification(
-        title: '내 펫',
-        body: message,
+        title: AppStrings.notificationTitle,
+        body: AppStrings.notificationFeedTime,
       );
+      await notificationRepository.recordNotification();
     }
   } catch (e) {
     // 알림 발송 실패는 무시

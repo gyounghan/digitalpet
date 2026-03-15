@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'home_screen.dart';
@@ -20,6 +21,7 @@ class MainNavigationScreen extends ConsumerStatefulWidget {
 
 class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> with WidgetsBindingObserver {
   int _currentIndex = 0;
+  Timer? _periodicUpdateTimer;
   
   final List<Widget> _screens = const [
     HomeScreen(),
@@ -32,12 +34,31 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> wit
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    
+    // 앱 실행 중 1분마다 펫 상태 업데이트
+    _startPeriodicUpdate();
   }
   
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _periodicUpdateTimer?.cancel();
     super.dispose();
+  }
+  
+  /// 주기적 상태 업데이트 시작
+  /// 
+  /// 앱이 포그라운드에 있을 때 1분마다 펫 상태를 업데이트
+  void _startPeriodicUpdate() {
+    _periodicUpdateTimer?.cancel();
+    _periodicUpdateTimer = Timer.periodic(
+      const Duration(minutes: 1),
+      (_) {
+        // 앱이 포그라운드에 있을 때만 업데이트
+        final petNotifier = ref.read(petNotifierProvider(HomeScreen.defaultPetId).notifier);
+        petNotifier.onMinuteTick();
+      },
+    );
   }
   
   @override
@@ -50,9 +71,13 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> wit
     if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
       // 앱이 백그라운드로 전환됨
       petNotifier.onAppBackground();
+      // 백그라운드로 전환 시 타이머 중지
+      _periodicUpdateTimer?.cancel();
     } else if (state == AppLifecycleState.resumed) {
       // 앱이 포그라운드로 전환됨
       petNotifier.onAppForeground();
+      // 포그라운드로 전환 시 타이머 재시작
+      _startPeriodicUpdate();
     }
   }
   

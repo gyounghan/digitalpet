@@ -51,16 +51,9 @@ class CheckNotificationUseCase {
     // 4. 알림 조건 확인 (우선순위 순서)
     String? notificationMessage;
     
-    // 우선순위 1: 미접속 알림 (6시간 이상)
-    if (lastAccessTime != null) {
-      final elapsedHours = (currentTime - lastAccessTime) ~/ (1000 * 60 * 60);
-      if (elapsedHours >= NotificationConstants.inactiveHoursThreshold) {
-        notificationMessage = AppStrings.notificationInactive;
-      }
-    }
-    
-    // 우선순위 2: 배고픔 알림 (식사 시간대 확인)
-    if (notificationMessage == null && pet.hunger < NotificationConstants.hungerThreshold) {
+    // 우선순위 1: 배고픔 알림 (식사 시간대 확인)
+    // 식사 알림이 미접속 알림에 가려지지 않도록 최우선 처리
+    if (pet.hunger < NotificationConstants.hungerThreshold) {
       // 현재 시간이 식사 시간대인지 확인
       final now = DateTime.now();
       final currentHour = now.hour;
@@ -86,9 +79,17 @@ class CheckNotificationUseCase {
           : AppStrings.notificationHungry;
     }
     
-    // 우선순위 3: 행복도 알림
+    // 우선순위 2: 행복도 알림
     if (notificationMessage == null && pet.happiness < NotificationConstants.happinessThreshold) {
       notificationMessage = AppStrings.notificationBored;
+    }
+
+    // 우선순위 3: 미접속 알림 (6시간 이상)
+    if (notificationMessage == null && lastAccessTime != null) {
+      final elapsedHours = (currentTime - lastAccessTime) ~/ (1000 * 60 * 60);
+      if (elapsedHours >= NotificationConstants.inactiveHoursThreshold) {
+        notificationMessage = AppStrings.notificationInactive;
+      }
     }
     
     // 5. 알림 발송 및 기록

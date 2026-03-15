@@ -58,6 +58,8 @@ class _EvolutionScreenState extends ConsumerState<EvolutionScreen>
   }
   
   /// 일일 목표 점수 조회
+  /// 
+  /// pet 상태 변경 시 자동으로 갱신되도록 FutureProvider 사용
   Future<DailyGoalsScore> _getDailyGoalsScore(WidgetRef ref, dynamic pet) async {
     final petRepository = ref.read(petRepositoryProvider);
     final activityRepository = ref.read(activityRepositoryProvider);
@@ -510,9 +512,29 @@ class _EvolutionScreenState extends ConsumerState<EvolutionScreen>
           ),
           const SizedBox(height: 24),
           // 일일 목표 진행 상황
+          // pet 상태 변경 시 자동으로 갱신되도록 FutureBuilder의 key를 pet 상태로 설정
           FutureBuilder<DailyGoalsScore>(
+            key: ValueKey('daily_goals_${pet.todayFeedCount}_${pet.todaySleepHours}_${pet.lastUpdated}_${pet.level}'),
             future: _getDailyGoalsScore(ref, pet),
             builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(24.0),
+                    child: CircularProgressIndicator(color: AppColors.primary),
+                  ),
+                );
+              }
+              
+              if (snapshot.hasError) {
+                return Center(
+                  child: Text(
+                    '목표를 불러오는 중 오류가 발생했습니다.',
+                    style: const TextStyle(color: AppColors.danger),
+                  ),
+                );
+              }
+              
               if (snapshot.hasData) {
                 final scoreResult = snapshot.data!;
                 final dailyGoals = scoreResult.dailyGoals;
