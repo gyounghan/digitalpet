@@ -126,54 +126,42 @@ class Pet {
   /// 펫의 현재 기분 상태
   /// hunger, happiness, stamina 값에 따라 자동 계산
   PetMood get mood {
-    // 모든 수치가 90 이상이면 활기참 상태
+    // 1) 생존 지표 우선: 배고픔/수면 부족은 최우선으로 감정 반영
+    if (hunger <= 20) {
+      return PetMood.hungry;
+    }
+    if (stamina <= 20) {
+      return PetMood.tired;
+    }
+    if (stamina <= 30) {
+      return PetMood.sleepy;
+    }
+    if (happiness <= 20) {
+      return PetMood.anxious;
+    }
+    if (happiness <= 30) {
+      return PetMood.bored;
+    }
+
+    // 2) 상위 긍정 상태
     if (hunger >= 90 && happiness >= 90 && stamina >= 90) {
       return PetMood.energetic;
     }
-
-    // 모든 수치가 80 이상이면 기쁨 상태
     if (hunger >= 80 && happiness >= 80 && stamina >= 80) {
       return PetMood.happy;
     }
 
-    // 포만감이 90 이상이고 다른 수치도 60 이상이면 배부름 상태
+    // 3) 보조 긍정 상태
     if (hunger >= 90 && happiness >= 60 && stamina >= 60) {
       return PetMood.full;
     }
-
-    // 대부분의 수치가 70 이상이면 만족함 상태
     if ((hunger >= 70 && happiness >= 70) ||
         (hunger >= 70 && stamina >= 70) ||
         (happiness >= 70 && stamina >= 70)) {
       return PetMood.satisfied;
     }
 
-    // 배고픔이 20 이하이면 배고픔 상태
-    if (hunger <= 20) {
-      return PetMood.hungry;
-    }
-
-    // 체력이 20 이하이면 피곤함 상태
-    if (stamina <= 20) {
-      return PetMood.tired;
-    }
-
-    // 체력이 30 이하이면 졸림 상태
-    if (stamina <= 30) {
-      return PetMood.sleepy;
-    }
-
-    // 행복도가 20 이하이면 불안함 상태
-    if (happiness <= 20) {
-      return PetMood.anxious;
-    }
-
-    // 행복도가 30 이하이면 지루함 상태
-    if (happiness <= 30) {
-      return PetMood.bored;
-    }
-
-    // 수치가 불균형할 때 (한 수치는 높고 다른 수치는 낮을 때) 불안함 상태
+    // 4) 수치 불균형 보정
     final avg = (hunger + happiness + stamina) / 3;
     final maxDiff = [
       (hunger - avg).abs(),
@@ -184,7 +172,7 @@ class Pet {
       return PetMood.anxious;
     }
 
-    // 그 외는 보통 상태
+    // 5) 그 외는 보통 상태
     return PetMood.normal;
   }
 

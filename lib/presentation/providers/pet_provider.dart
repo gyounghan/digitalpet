@@ -410,6 +410,14 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
           updatedPet.totalExerciseMinutes != currentPet.totalExerciseMinutes) {
         final evolvedPet = await _updateAndEvolve(updatedPet);
         state = AsyncValue.data(evolvedPet);
+      } else {
+        // 상태 수치가 동일해도 위젯 데이터가 뒤처질 수 있어 동기화 보강
+        // (예: 위젯 재설치/프로세스 재시작 후 stale 데이터)
+        try {
+          await widgetService.updatePetWidget(currentPet);
+        } catch (e) {
+          // 위젯 업데이트 실패는 무시
+        }
       }
     } catch (e) {
       // 앱 동작에 영향 없도록 무시
@@ -596,8 +604,15 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
         final evolvedPet = await _updateAndEvolve(activityUpdatedPet);
         state = AsyncValue.data(evolvedPet);
       } else {
-        // 상태가 변경되지 않았어도 알림 체크 (포그라운드 전환 시)
-        // 위젯은 이미 최신 상태이므로 업데이트 불필요
+        // 상태가 변경되지 않아도 포그라운드 전환 시 위젯 재동기화
+        // (위젯 stale 데이터 복구 목적)
+        try {
+          await widgetService.updatePetWidget(currentPet);
+        } catch (e) {
+          // 위젯 업데이트 실패는 무시
+        }
+
+        // 알림 체크 (포그라운드 전환 시)
         _checkAndShowNotification();
       }
     } catch (e) {

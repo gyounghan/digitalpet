@@ -82,13 +82,7 @@ flutter:
 
   # Assets
   assets:
-    - assets/sleeping_1.png
-    - assets/sleeping_2.png
-    - assets/sleeping_3.png
-    - assets/hungry_1.png
-    - assets/hungry_2.png
-    - assets/hungry_3.png
-    - assets/hungry_4.png
+    - assets/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

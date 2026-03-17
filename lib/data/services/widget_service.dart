@@ -20,11 +20,12 @@ class WidgetService {
   static const String _keyExp = 'exp';
   static const String _keyEvolutionStage = 'evolutionStage';
   static const String _keyLastUpdated = 'lastUpdated';
-  static const String _keyImageType = 'imageType'; // 펫 이미지 타입 (sleeping/hungry/normal)
+  static const String _keyImageType = 'imageType'; // 펫 이미지 타입 (feed/sleep/exercise/happy/sad)
   static const String _keyImageIndex = 'imageIndex'; // 현재 표시할 이미지 인덱스 (0~3)
   static const String _keyMood = 'mood'; // 펫의 기분 상태 (happy, sleepy, hungry, bored, normal 등)
   static const String _keyMoodText = 'moodText'; // 펫의 기분 상태 한국어 텍스트
   static const String _keyName = 'name'; // 펫의 이름
+  static const String _keySyncTraceId = 'syncTraceId'; // 앱-위젯 동기화 추적 ID
   
   /// 펫 데이터를 위젯에 업데이트
   /// 
@@ -42,6 +43,8 @@ class WidgetService {
       imageType = getImageTypeString(petImageType);
     }
     try {
+      final syncTraceId = DateTime.now().microsecondsSinceEpoch.toString();
+
       await HomeWidget.saveWidgetData<String>(_keyHunger, pet.hunger.toString());
       await HomeWidget.saveWidgetData<String>(_keyHappiness, pet.happiness.toString());
       await HomeWidget.saveWidgetData<String>(_keyStamina, pet.stamina.toString());
@@ -57,6 +60,7 @@ class WidgetService {
       
       // 펫의 이름 저장
       await HomeWidget.saveWidgetData<String>(_keyName, pet.name);
+      await HomeWidget.saveWidgetData<String>(_keySyncTraceId, syncTraceId);
       
       // 펫의 기분 상태 한국어 텍스트 저장
       final moodText = _getMoodText(pet.mood);
@@ -64,14 +68,18 @@ class WidgetService {
       
       // 디버깅: 위젯 업데이트 시 저장되는 값 확인
       if (kDebugMode) {
-        debugPrint('WidgetService: Updating widget - level: ${pet.level}, moodText: $moodText, mood: ${pet.mood.name}, hunger: ${pet.hunger}, happiness: ${pet.happiness}, stamina: ${pet.stamina}');
+        debugPrint(
+          'WidgetService: syncTraceId=$syncTraceId, '
+          'level=${pet.level}, mood=${pet.mood.name}, moodText=$moodText, imageType=$imageType, '
+          'hunger=${pet.hunger}, happiness=${pet.happiness}, stamina=${pet.stamina}',
+        );
       }
       
       // 현재 시간 기반으로 이미지 인덱스 계산 (애니메이션 효과)
       // 이미지 타입에 따라 다른 개수 사용
-      // sleeping: 3장, hungry: 4장
+      // feed: 4장, 나머지: 3장
       final currentTime = DateTime.now().millisecondsSinceEpoch;
-      final imageCount = imageType == 'hungry' ? 4 : 3;
+      final imageCount = imageType == 'feed' ? 4 : 3;
       final cycleDuration = imageCount * 800; // 이미지 개수 * 800ms
       final imageIndex = ((currentTime % cycleDuration) / 800).toInt() % imageCount;
       await HomeWidget.saveWidgetData<String>(_keyImageIndex, imageIndex.toString());
@@ -83,15 +91,17 @@ class WidgetService {
       try {
         await HomeWidget.updateWidget(
           name: 'PetWidgetProvider',
+          androidName: 'PetWidgetProvider',
+          qualifiedAndroidName: 'com.example.pocketfriend.PetWidgetProvider',
           iOSName: 'PetWidget',
         );
         if (kDebugMode) {
-          debugPrint('WidgetService: Widget update requested successfully');
+          debugPrint('WidgetService: syncTraceId=$syncTraceId, widget update requested successfully');
         }
       } catch (e) {
         // 위젯 업데이트 실패 시 로그 출력
         if (kDebugMode) {
-          debugPrint('WidgetService: Failed to request widget update: $e');
+          debugPrint('WidgetService: syncTraceId=$syncTraceId, failed to request widget update: $e');
         }
         // 실패해도 계속 진행 (위젯이 없을 수 있음)
       }

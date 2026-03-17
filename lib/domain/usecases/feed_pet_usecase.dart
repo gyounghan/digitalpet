@@ -44,6 +44,11 @@ class FeedPetUseCase {
 
     // 3. 현재 식사 시간대 슬롯 확인
     final currentMealSlot = _getCurrentMealSlot();
+    if (currentMealSlot == 0) {
+      // 식사 시간대 외에는 기본 Feed 불가 (대체 급식 사용)
+      return pet;
+    }
+
     if (currentMealSlot > 0 && _hasFedInMealSlot(pet, currentMealSlot)) {
       // 이미 해당 식사 시간대에 Feed를 완료했으면 중복 Feed 방지
       return pet;

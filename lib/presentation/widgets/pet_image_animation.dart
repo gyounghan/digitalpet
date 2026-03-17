@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 /// 펫 이미지 애니메이션 위젯
 /// 
-/// 펫의 상태(잠자는, 배고픈, 기본)에 따라 다른 이미지를 표시
+/// 펫의 상태(급식, 수면, 운동, 행복, 슬픔)에 따라 다른 이미지를 표시
 /// 이미지의 실제 크기에 맞춰서 표시
 class PetImageAnimation extends StatefulWidget {
   /// 펫 상태 타입
@@ -23,12 +23,22 @@ class PetImageAnimation extends StatefulWidget {
 
 /// 펫 이미지 타입
 enum PetImageType {
-  /// 기본 상태
-  normal,
-  /// 잠자는 상태
-  sleeping,
-  /// 배고픈 상태
-  hungry,
+  /// 급식 상태
+  feed,
+  /// 수면 상태
+  sleep,
+  /// 운동 상태
+  exercise,
+  /// 행복 상태
+  happy,
+  /// 지루함 상태
+  bored,
+  /// 불안함 상태
+  anxious,
+  /// 배부름 상태
+  full,
+  /// 슬픔/불안 상태
+  sad,
 }
 
 class _PetImageAnimationState extends State<PetImageAnimation>
@@ -109,28 +119,62 @@ class _PetImageAnimationState extends State<PetImageAnimation>
   /// 펫 상태에 따라 이미지 리스트 업데이트
   void _updateImages() {
     switch (widget.type) {
-      case PetImageType.sleeping:
+      case PetImageType.sleep:
         _images = [
-          'assets/sleeping_1.png',
-          'assets/sleeping_2.png',
-          'assets/sleeping_3.png',
+          'assets/sleep_1.png',
+          'assets/sleep_2.png',
+          'assets/sleep_3.png',
         ];
         break;
-      case PetImageType.hungry:
-        // 배고픈 이미지 4장 사용 (hungry_1, hungry_2, hungry_3, hungry_4 순서)
+      case PetImageType.feed:
+        // 급식 이미지 4장 사용
         _images = [
-          'assets/hungry_1.png',
-          'assets/hungry_2.png',
-          'assets/hungry_3.png',
-          'assets/hungry_4.png',
+          'assets/feed_1.png',
+          'assets/feed_2.png',
+          'assets/feed_3.png',
+          'assets/feed_4.png',
         ];
         break;
-      case PetImageType.normal:
-        // 기본 상태는 잠자는 이미지 사용
+      case PetImageType.exercise:
         _images = [
-          'assets/sleeping_1.png',
-          'assets/sleeping_2.png',
-          'assets/sleeping_3.png',
+          'assets/exercise_1.png',
+          'assets/exercise_2.png',
+          'assets/exercise_3.png',
+        ];
+        break;
+      case PetImageType.happy:
+        _images = [
+          'assets/happy_1.png',
+          'assets/happy_2.png',
+          'assets/happy_3.png',
+        ];
+        break;
+      case PetImageType.bored:
+        _images = [
+          'assets/bored_1.png',
+          'assets/bored_2.png',
+          'assets/bored_3.png',
+        ];
+        break;
+      case PetImageType.anxious:
+        _images = [
+          'assets/anxious_1.png',
+          'assets/anxious_2.png',
+          'assets/anxious_3.png',
+        ];
+        break;
+      case PetImageType.full:
+        _images = [
+          'assets/full_1.png',
+          'assets/full_2.png',
+          'assets/full_3.png',
+        ];
+        break;
+      case PetImageType.sad:
+        _images = [
+          'assets/sad_1.png',
+          'assets/sad_2.png',
+          'assets/sad_3.png',
         ];
         break;
     }
@@ -161,9 +205,11 @@ class _PetImageAnimationState extends State<PetImageAnimation>
         final imagePath = _images[imageIndex];
         final imageSize = _imageSizes[imagePath];
         
+        Widget content;
+
         // 이미지 크기가 아직 로드되지 않았으면 로딩 중 표시
         if (imageSize == null) {
-          return Image.asset(
+          content = Image.asset(
             imagePath,
             frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
               if (frame != null) {
@@ -185,10 +231,12 @@ class _PetImageAnimationState extends State<PetImageAnimation>
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
-                  widget.type == PetImageType.sleeping
+                  widget.type == PetImageType.sleep
                       ? Icons.bedtime
-                      : widget.type == PetImageType.hungry
+                      : widget.type == PetImageType.feed
                           ? Icons.restaurant
+                          : widget.type == PetImageType.sad
+                              ? Icons.sentiment_dissatisfied
                           : Icons.pets,
                   size: 64,
                   color: Colors.white,
@@ -196,52 +244,64 @@ class _PetImageAnimationState extends State<PetImageAnimation>
               );
             },
           );
-        }
-        
-        // 각 이미지의 실제 크기를 기준으로 스케일링하여 표시
-        // 최대 400px로 제한하면서 비율 유지
-        double scale = 1.0;
-        if (imageSize.width > maxImageSize) {
-          scale = maxImageSize / imageSize.width;
-        }
-        if (imageSize.height * scale > maxImageSize) {
-          scale = maxImageSize / imageSize.height;
-        }
-        
-        final displayWidth = imageSize.width * scale;
-        final displayHeight = imageSize.height * scale;
-        
-        // 이미지가 잘리지 않도록 FittedBox로 감싸서 비율 유지
-        return FittedBox(
-          fit: BoxFit.contain,
-          child: SizedBox(
-            width: displayWidth,
-            height: displayHeight,
-            child: Image.asset(
-              imagePath,
+        } else {
+          // 각 이미지의 실제 크기를 기준으로 스케일링하여 표시
+          // 최대 300px로 제한하면서 비율 유지
+          double scale = 1.0;
+          if (imageSize.width > maxImageSize) {
+            scale = maxImageSize / imageSize.width;
+          }
+          if (imageSize.height * scale > maxImageSize) {
+            scale = maxImageSize / imageSize.height;
+          }
+          
+          final displayWidth = imageSize.width * scale;
+          final displayHeight = imageSize.height * scale;
+          
+          content = FittedBox(
+            fit: BoxFit.contain,
+            child: SizedBox(
               width: displayWidth,
               height: displayHeight,
-              fit: BoxFit.contain,
-              errorBuilder: (context, error, stackTrace) {
-                return Container(
-                  width: displayWidth,
-                  height: displayHeight,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.withValues(alpha: 0.3),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    widget.type == PetImageType.sleeping
-                        ? Icons.bedtime
-                        : widget.type == PetImageType.hungry
-                            ? Icons.restaurant
-                            : Icons.pets,
-                    size: 64,
-                    color: Colors.white,
-                  ),
-                );
-              },
+              child: Image.asset(
+                imagePath,
+                width: displayWidth,
+                height: displayHeight,
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    width: displayWidth,
+                    height: displayHeight,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.withValues(alpha: 0.3),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      widget.type == PetImageType.sleep
+                          ? Icons.bedtime
+                          : widget.type == PetImageType.feed
+                              ? Icons.restaurant
+                              : widget.type == PetImageType.sad
+                                  ? Icons.sentiment_dissatisfied
+                              : Icons.pets,
+                      size: 64,
+                      color: Colors.white,
+                    ),
+                  );
+                },
+              ),
             ),
+          );
+        }
+
+        // 모든 프레임을 동일한 박스 하단에 고정해
+        // 이미지 전환 시 펫이 위아래로 흔들리지 않게 한다.
+        return SizedBox(
+          width: maxImageSize,
+          height: maxImageSize,
+          child: Align(
+            alignment: Alignment.bottomCenter,
+            child: content,
           ),
         );
       },

@@ -17,6 +17,11 @@ import android.os.Looper
 class PetWidgetProvider : AppWidgetProvider() {
     
     companion object {
+        /// home_widget Android 플러그인의 실제 SharedPreferences 이름
+        private const val HOME_WIDGET_PREFS = "HomeWidgetPreferences"
+        /// 과거 구현과의 호환을 위한 레거시 이름
+        private const val LEGACY_WIDGET_PREFS = "HomeWidget"
+
         /// 애니메이션 업데이트 간격 (밀리초)
         /// 800ms마다 이미지를 변경하여 애니메이션 효과 생성
         private const val ANIMATION_UPDATE_INTERVAL = 800L
@@ -75,10 +80,12 @@ class PetWidgetProvider : AppWidgetProvider() {
     
     override fun onReceive(context: Context, intent: Intent) {
         super.onReceive(context, intent)
+        Log.d("PetWidgetProvider", "onReceive action=${intent.action}")
         
         when (intent.action) {
             AppWidgetManager.ACTION_APPWIDGET_UPDATE,
-            "es.antonborri.home_widget.UPDATE_WIDGET" -> {
+            "es.antonborri.home_widget.UPDATE_WIDGET",
+            "es.antonborri.home_widget.action.UPDATE" -> {
                 // 위젯 업데이트 요청 시 onUpdate 호출
                 // home_widget 패키지가 보내는 ACTION_APPWIDGET_UPDATE 브로드캐스트 처리
                 val appWidgetManager = AppWidgetManager.getInstance(context)
@@ -107,6 +114,9 @@ class PetWidgetProvider : AppWidgetProvider() {
                     stopAnimationUpdates()
                 }
             }
+            else -> {
+                Log.d("PetWidgetProvider", "onReceive ignored action=${intent.action}")
+            }
         }
     }
     
@@ -119,27 +129,30 @@ class PetWidgetProvider : AppWidgetProvider() {
         appWidgetId: Int
     ) {
         try {
-            // SharedPreferences에서 펫 데이터 읽기
-            // home_widget 패키지는 "HomeWidget" 이름의 SharedPreferences에 데이터를 저장
-            val prefs = context.getSharedPreferences("HomeWidget", Context.MODE_PRIVATE)
-            
-            // 문자열로 저장된 데이터를 읽어서 정수로 변환
-            val hunger = prefs.getString("hunger", "100")?.toIntOrNull() ?: 100
-            val happiness = prefs.getString("happiness", "100")?.toIntOrNull() ?: 100
-            val stamina = prefs.getString("stamina", "100")?.toIntOrNull() ?: 100
-            val level = prefs.getString("level", "1")?.toIntOrNull() ?: 1
-            val imageType = prefs.getString("imageType", "sleeping") ?: "sleeping"
-            val mood = prefs.getString("mood", "normal") ?: "normal"
+            val level = getWidgetString(context, "level", "1")?.toIntOrNull() ?: 1
+            val hunger = getWidgetString(context, "hunger", "100")?.toIntOrNull() ?: 100
+            val happiness = getWidgetString(context, "happiness", "100")?.toIntOrNull() ?: 100
+            val stamina = getWidgetString(context, "stamina", "100")?.toIntOrNull() ?: 100
+            val syncTraceId = getWidgetString(context, "syncTraceId", "unknown") ?: "unknown"
+            val rawMood = getWidgetString(context, "mood", "normal") ?: "normal"
+            val resolvedMood = resolveMood(rawMood, hunger, happiness, stamina)
+            val imageType = resolveImageType(
+                getWidgetString(context, "imageType", null),
+                resolvedMood
+            )
             // Flutter에서 저장한 상태 텍스트 읽기 (앱 내 상태와 동기화)
-            val moodText = prefs.getString("moodText", null)
+            val moodText = getWidgetString(context, "moodText", null)
             
             // 디버깅: moodText가 제대로 읽히는지 확인
-            Log.d("PetWidgetProvider", "Widget update - level: $level, moodText: $moodText, mood: $mood, hunger: $hunger, happiness: $happiness, stamina: $stamina")
+            Log.d(
+                "PetWidgetProvider",
+                "Widget update - syncTraceId: $syncTraceId, level: $level, rawMood: $rawMood, resolvedMood: $resolvedMood, moodText: $moodText, imageType: $imageType, hunger: $hunger, happiness: $happiness, stamina: $stamina"
+            )
             
             // 현재 시간 기반으로 이미지 인덱스 계산 (애니메이션 효과)
-            // 이미지 타입에 따라 다른 개수 사용: hungry는 4장, sleeping은 3장
+            // 이미지 타입에 따라 다른 개수 사용: feed는 4장, 그 외는 3장
             val currentTime = System.currentTimeMillis()
-            val imageCount = if (imageType == "hungry") 4 else 3
+            val imageCount = getImageCountForImageType(imageType)
             val cycleDuration = imageCount * ANIMATION_UPDATE_INTERVAL // 이미지 개수 * 800ms
             val imageIndex = ((currentTime % cycleDuration) / ANIMATION_UPDATE_INTERVAL).toInt() % imageCount
             
@@ -149,28 +162,7 @@ class PetWidgetProvider : AppWidgetProvider() {
             // 펫 이미지 결정 (앱 홈 화면과 동일한 로직)
             // 이미지 타입에 따라 다른 이미지 표시
             // 주의: 이미지는 android/app/src/main/res/drawable/ 폴더에 있어야 함
-            val imageResourceName = when (imageType) {
-                "hungry" -> {
-                    // 배고픈 이미지 (hungry_1, hungry_2, hungry_3, hungry_4)
-                    when (imageIndex) {
-                        0 -> "hungry_1"
-                        1 -> "hungry_2"
-                        2 -> "hungry_3"
-                        3 -> "hungry_4"
-                        else -> "hungry_1"
-                    }
-                }
-                "sleeping", "normal" -> {
-                    // 잠자는 이미지 (sleeping_1, sleeping_2, sleeping_3)
-                    when (imageIndex) {
-                        0 -> "sleeping_1"
-                        1 -> "sleeping_2"
-                        2 -> "sleeping_3"
-                        else -> "sleeping_1"
-                    }
-                }
-                else -> "sleeping_1" // 기본값
-            }
+            val imageResourceName = resolveImageResourceName(imageType, imageIndex)
             
             // 리소스 ID 가져오기 (없으면 기본 아이콘 사용)
             val imageResourceId = context.resources.getIdentifier(
@@ -187,12 +179,7 @@ class PetWidgetProvider : AppWidgetProvider() {
                 views.setViewVisibility(R.id.pet_image_text, android.view.View.GONE)
             } else {
                 // 이미지가 없으면 이모지로 대체 (앱 홈 화면과 유사하게)
-                val petEmoji = when {
-                    imageType == "hungry" -> "🍽️"
-                    happiness >= 70 -> "🌟"
-                    happiness >= 40 -> "💤"
-                    else -> "💧"
-                }
+                val petEmoji = resolveImageFallbackEmoji(imageType)
                 views.setTextViewText(R.id.pet_image_text, petEmoji)
                 views.setViewVisibility(R.id.pet_image, android.view.View.GONE)
                 views.setViewVisibility(R.id.pet_image_text, android.view.View.VISIBLE)
@@ -200,48 +187,13 @@ class PetWidgetProvider : AppWidgetProvider() {
             
             views.setTextViewText(R.id.pet_level, "Lv.$level")
             
-            // 상태 텍스트 설정 (한국어)
-            // Flutter에서 저장한 moodText를 우선 사용 (앱 내 상태와 동기화)
-            // moodText가 없으면 Pet.mood 로직과 동일하게 계산 (하위 호환성)
-            val displayMoodText = moodText ?: run {
-                // Pet.mood 로직과 동일하게 계산
-                when {
-                    // 모든 수치가 90 이상이면 활기참 상태
-                    hunger >= 90 && happiness >= 90 && stamina >= 90 -> "활기참"
-                    // 모든 수치가 80 이상이면 기쁨 상태
-                    hunger >= 80 && happiness >= 80 && stamina >= 80 -> "기쁨"
-                    // 포만감이 90 이상이고 다른 수치도 60 이상이면 배부름 상태
-                    hunger >= 90 && happiness >= 60 && stamina >= 60 -> "배부름"
-                    // 대부분의 수치가 70 이상이면 만족함 상태
-                    (hunger >= 70 && happiness >= 70) || 
-                    (hunger >= 70 && stamina >= 70) || 
-                    (happiness >= 70 && stamina >= 70) -> "만족함"
-                    // 배고픔이 20 이하이면 배고픔 상태
-                    hunger <= 20 -> "배고픔"
-                    // 체력이 20 이하이면 피곤함 상태
-                    stamina <= 20 -> "피곤함"
-                    // 체력이 30 이하이면 졸림 상태
-                    stamina <= 30 -> "졸림"
-                    // 행복도가 20 이하이면 불안함 상태
-                    happiness <= 20 -> "불안함"
-                    // 행복도가 30 이하이면 지루함 상태
-                    happiness <= 30 -> "지루함"
-                    // 수치가 불균형할 때 불안함 상태
-                    else -> {
-                        val avg = (hunger + happiness + stamina) / 3.0
-                        val maxDiff = maxOf(
-                            kotlin.math.abs(hunger - avg),
-                            kotlin.math.abs(happiness - avg),
-                            kotlin.math.abs(stamina - avg)
-                        )
-                        if (maxDiff > 40) "불안함" else "보통"
-                    }
-                }
-            }
+            // 상태 텍스트는 Flutter가 저장한 moodText를 최우선 사용한다.
+            // 없을 경우에는 mood 문자열만으로 하위 호환 처리한다.
+            val displayMoodText = resolveMoodText(moodText, resolvedMood)
             views.setTextViewText(R.id.pet_mood, displayMoodText)
             
             // 디버깅: 실제로 표시되는 값 확인
-            Log.d("PetWidgetProvider", "Displaying - level: $level, moodText: $displayMoodText (from moodText: $moodText)")
+            Log.d("PetWidgetProvider", "Displaying - syncTraceId: $syncTraceId, level: $level, moodText: $displayMoodText (from moodText: $moodText)")
             
             // 위젯 클릭 시 앱 열기
             val intent = android.content.Intent(context, MainActivity::class.java)
@@ -270,25 +222,32 @@ class PetWidgetProvider : AppWidgetProvider() {
         appWidgetId: Int
     ) {
         try {
-            val prefs = context.getSharedPreferences("HomeWidget", Context.MODE_PRIVATE)
-            
             // 기존 데이터 읽기
-            val hunger = prefs.getString("hunger", "100")?.toIntOrNull() ?: 100
-            val happiness = prefs.getString("happiness", "100")?.toIntOrNull() ?: 100
-            val stamina = prefs.getString("stamina", "100")?.toIntOrNull() ?: 100
-            val level = prefs.getString("level", "1")?.toIntOrNull() ?: 1
-            val imageType = prefs.getString("imageType", "sleeping") ?: "sleeping"
+            val level = getWidgetString(context, "level", "1")?.toIntOrNull() ?: 1
+            val hunger = getWidgetString(context, "hunger", "100")?.toIntOrNull() ?: 100
+            val happiness = getWidgetString(context, "happiness", "100")?.toIntOrNull() ?: 100
+            val stamina = getWidgetString(context, "stamina", "100")?.toIntOrNull() ?: 100
+            val syncTraceId = getWidgetString(context, "syncTraceId", "unknown") ?: "unknown"
+            val rawMood = getWidgetString(context, "mood", "normal") ?: "normal"
+            val resolvedMood = resolveMood(rawMood, hunger, happiness, stamina)
+            val imageType = resolveImageType(
+                getWidgetString(context, "imageType", null),
+                resolvedMood
+            )
             // Flutter에서 저장한 상태 텍스트 읽기 (앱 내 상태와 동기화)
-            val moodText = prefs.getString("moodText", null)
+            val moodText = getWidgetString(context, "moodText", null)
             
             // 디버깅: 애니메이션 업데이트 시에도 moodText 확인
-            Log.d("PetWidgetProvider", "Animation update - level: $level, moodText: $moodText")
+            Log.d(
+                "PetWidgetProvider",
+                "Animation update - syncTraceId: $syncTraceId, level: $level, rawMood: $rawMood, resolvedMood: $resolvedMood, moodText: $moodText, imageType: $imageType"
+            )
             
             // 현재 시간 기반으로 이미지 인덱스 계산 (애니메이션 효과)
             // 시간 기반으로 순환하여 위젯이 업데이트될 때마다 다른 이미지 표시
             val currentTime = System.currentTimeMillis()
-            // 이미지 타입에 따라 다른 개수 사용: hungry는 4장, sleeping은 3장
-            val imageCount = if (imageType == "hungry") 4 else 3
+            // 이미지 타입에 따라 다른 개수 사용: feed는 4장, 그 외는 3장
+            val imageCount = getImageCountForImageType(imageType)
             val cycleDuration = imageCount * ANIMATION_UPDATE_INTERVAL // 이미지 개수 * 800ms
             val imageIndex = ((currentTime % cycleDuration) / ANIMATION_UPDATE_INTERVAL).toInt() % imageCount
             
@@ -297,26 +256,7 @@ class PetWidgetProvider : AppWidgetProvider() {
             val views = RemoteViews(context.packageName, R.layout.pet_widget)
             
             // 펫 이미지 결정
-            val imageResourceName = when (imageType) {
-                "hungry" -> {
-                    when (imageIndex) {
-                        0 -> "hungry_1"
-                        1 -> "hungry_2"
-                        2 -> "hungry_3"
-                        3 -> "hungry_4"
-                        else -> "hungry_1"
-                    }
-                }
-                "sleeping", "normal" -> {
-                    when (imageIndex) {
-                        0 -> "sleeping_1"
-                        1 -> "sleeping_2"
-                        2 -> "sleeping_3"
-                        else -> "sleeping_1"
-                    }
-                }
-                else -> "sleeping_1"
-            }
+            val imageResourceName = resolveImageResourceName(imageType, imageIndex)
             
             val imageResourceId = context.resources.getIdentifier(
                 imageResourceName,
@@ -330,12 +270,7 @@ class PetWidgetProvider : AppWidgetProvider() {
                 views.setViewVisibility(R.id.pet_image, android.view.View.VISIBLE)
                 views.setViewVisibility(R.id.pet_image_text, android.view.View.GONE)
             } else {
-                val petEmoji = when {
-                    imageType == "hungry" -> "🍽️"
-                    happiness >= 70 -> "🌟"
-                    happiness >= 40 -> "💤"
-                    else -> "💧"
-                }
+                val petEmoji = resolveImageFallbackEmoji(imageType)
                 views.setTextViewText(R.id.pet_image_text, petEmoji)
                 views.setViewVisibility(R.id.pet_image, android.view.View.GONE)
                 views.setViewVisibility(R.id.pet_image_text, android.view.View.VISIBLE)
@@ -344,48 +279,13 @@ class PetWidgetProvider : AppWidgetProvider() {
             // 기존 데이터 유지
             views.setTextViewText(R.id.pet_level, "Lv.$level")
             
-            // 상태 텍스트 설정 (한국어)
-            // Flutter에서 저장한 moodText를 우선 사용 (앱 내 상태와 동기화)
-            // moodText가 없으면 Pet.mood 로직과 동일하게 계산 (하위 호환성)
-            val displayMoodText = moodText ?: run {
-                // Pet.mood 로직과 동일하게 계산
-                when {
-                    // 모든 수치가 90 이상이면 활기참 상태
-                    hunger >= 90 && happiness >= 90 && stamina >= 90 -> "활기참"
-                    // 모든 수치가 80 이상이면 기쁨 상태
-                    hunger >= 80 && happiness >= 80 && stamina >= 80 -> "기쁨"
-                    // 포만감이 90 이상이고 다른 수치도 60 이상이면 배부름 상태
-                    hunger >= 90 && happiness >= 60 && stamina >= 60 -> "배부름"
-                    // 대부분의 수치가 70 이상이면 만족함 상태
-                    (hunger >= 70 && happiness >= 70) || 
-                    (hunger >= 70 && stamina >= 70) || 
-                    (happiness >= 70 && stamina >= 70) -> "만족함"
-                    // 배고픔이 20 이하이면 배고픔 상태
-                    hunger <= 20 -> "배고픔"
-                    // 체력이 20 이하이면 피곤함 상태
-                    stamina <= 20 -> "피곤함"
-                    // 체력이 30 이하이면 졸림 상태
-                    stamina <= 30 -> "졸림"
-                    // 행복도가 20 이하이면 불안함 상태
-                    happiness <= 20 -> "불안함"
-                    // 행복도가 30 이하이면 지루함 상태
-                    happiness <= 30 -> "지루함"
-                    // 수치가 불균형할 때 불안함 상태
-                    else -> {
-                        val avg = (hunger + happiness + stamina) / 3.0
-                        val maxDiff = maxOf(
-                            kotlin.math.abs(hunger - avg),
-                            kotlin.math.abs(happiness - avg),
-                            kotlin.math.abs(stamina - avg)
-                        )
-                        if (maxDiff > 40) "불안함" else "보통"
-                    }
-                }
-            }
+            // 상태 텍스트는 Flutter가 저장한 moodText를 최우선 사용한다.
+            // 없을 경우에는 mood 문자열만으로 하위 호환 처리한다.
+            val displayMoodText = resolveMoodText(moodText, resolvedMood)
             views.setTextViewText(R.id.pet_mood, displayMoodText)
             
             // 디버깅: 애니메이션 업데이트 시에도 실제로 표시되는 값 확인
-            Log.d("PetWidgetProvider", "Animation displaying - level: $level, moodText: $displayMoodText (from moodText: $moodText)")
+            Log.d("PetWidgetProvider", "Animation displaying - syncTraceId: $syncTraceId, level: $level, moodText: $displayMoodText (from moodText: $moodText)")
             
             // 위젯 클릭 시 앱 열기
             val intent = android.content.Intent(context, MainActivity::class.java)
@@ -400,6 +300,170 @@ class PetWidgetProvider : AppWidgetProvider() {
             appWidgetManager.updateAppWidget(appWidgetId, views)
         } catch (e: Exception) {
             Log.e("PetWidgetProvider", "Error updating widget for animation", e)
+        }
+    }
+
+    /// 위젯 데이터 문자열 조회
+    /// home_widget 최신 저장소(HomeWidgetPreferences)를 우선 사용하고,
+    /// 값이 없으면 레거시 저장소(HomeWidget)를 fallback으로 조회한다.
+    private fun getWidgetString(context: Context, key: String, defaultValue: String?): String? {
+        val currentPrefs = context.getSharedPreferences(HOME_WIDGET_PREFS, Context.MODE_PRIVATE)
+        val currentValue = currentPrefs.getString(key, null)
+        if (currentValue != null) {
+            return currentValue
+        }
+
+        val legacyPrefs = context.getSharedPreferences(LEGACY_WIDGET_PREFS, Context.MODE_PRIVATE)
+        return legacyPrefs.getString(key, defaultValue)
+    }
+
+    /// imageType을 최종 결정
+    /// 동기화 일관성을 위해 mood를 단일 기준으로 사용한다.
+    /// (mood가 없거나 알 수 없는 경우에만 imageType으로 보정)
+    private fun resolveImageType(imageType: String?, mood: String): String {
+        val mappedFromMood = mapMoodToImageType(mood)
+        if (mappedFromMood != null) {
+            return mappedFromMood
+        }
+
+        // mood가 비어 있거나 알 수 없는 경우에만 imageType 하위 호환 처리
+        val legacyType = imageType?.trim()
+        return when (legacyType) {
+            "feed", "sleep", "exercise", "happy", "bored", "anxious", "full", "sad" -> legacyType
+            "hungry" -> "feed"
+            "sleeping" -> "sleep"
+            "normal" -> "exercise"
+            else -> "sleep"
+        }
+    }
+
+    /// mood를 imageType으로 변환
+    private fun mapMoodToImageType(mood: String): String? {
+        return when (mood.trim()) {
+            "hungry" -> "feed"
+            "sleepy", "tired" -> "sleep"
+            "bored" -> "bored"
+            "anxious" -> "anxious"
+            "happy" -> "happy"
+            "full", "satisfied" -> "full"
+            "energetic", "normal" -> "exercise"
+            else -> null
+        }
+    }
+
+    /// mood 최종 결정
+    /// - 유효한 mood면 그대로 사용
+    /// - 유효하지 않거나 비어있으면 수치(hunger/happiness/stamina)로 재계산
+    private fun resolveMood(mood: String?, hunger: Int, happiness: Int, stamina: Int): String {
+        val normalizedMood = mood?.trim()?.lowercase() ?: ""
+        if (isKnownMood(normalizedMood)) {
+            return normalizedMood
+        }
+        return calculateMoodFromStats(hunger, happiness, stamina)
+    }
+
+    /// 유효한 mood 문자열인지 확인
+    private fun isKnownMood(mood: String): Boolean {
+        return mood == "happy" ||
+            mood == "sleepy" ||
+            mood == "hungry" ||
+            mood == "bored" ||
+            mood == "normal" ||
+            mood == "energetic" ||
+            mood == "tired" ||
+            mood == "full" ||
+            mood == "anxious" ||
+            mood == "satisfied"
+    }
+
+    /// Flutter Pet.mood 로직과 동일한 상태 판정
+    private fun calculateMoodFromStats(hunger: Int, happiness: Int, stamina: Int): String {
+        if (hunger <= 20) return "hungry"
+        if (stamina <= 20) return "tired"
+        if (stamina <= 30) return "sleepy"
+        if (happiness <= 20) return "anxious"
+        if (happiness <= 30) return "bored"
+
+        if (hunger >= 90 && happiness >= 90 && stamina >= 90) return "energetic"
+        if (hunger >= 80 && happiness >= 80 && stamina >= 80) return "happy"
+
+        if (hunger >= 90 && happiness >= 60 && stamina >= 60) return "full"
+        if ((hunger >= 70 && happiness >= 70) ||
+            (hunger >= 70 && stamina >= 70) ||
+            (happiness >= 70 && stamina >= 70)
+        ) return "satisfied"
+
+        val avg = (hunger + happiness + stamina) / 3.0
+        val maxDiff = maxOf(
+            kotlin.math.abs(hunger - avg),
+            kotlin.math.abs(happiness - avg),
+            kotlin.math.abs(stamina - avg)
+        )
+        if (maxDiff > 40) return "anxious"
+
+        return "normal"
+    }
+
+    /// 이미지 타입별 프레임 수 반환
+    private fun getImageCountForImageType(imageType: String): Int {
+        return if (imageType == "feed") 4 else 3
+    }
+
+    /// 이미지 타입/인덱스로 drawable 리소스명 반환
+    private fun resolveImageResourceName(imageType: String, imageIndex: Int): String {
+        return when (imageType) {
+            "feed" -> listOf("feed_1", "feed_2", "feed_3", "feed_4").getOrElse(imageIndex) { "feed_1" }
+            "sleep" -> listOf("sleep_1", "sleep_2", "sleep_3").getOrElse(imageIndex) { "sleep_1" }
+            "exercise" -> listOf("exercise_1", "exercise_2", "exercise_3").getOrElse(imageIndex) { "exercise_1" }
+            "happy" -> listOf("happy_1", "happy_2", "happy_3").getOrElse(imageIndex) { "happy_1" }
+            "bored" -> listOf("bored_1", "bored_2", "bored_3").getOrElse(imageIndex) { "bored_1" }
+            "anxious" -> listOf("anxious_1", "anxious_2", "anxious_3").getOrElse(imageIndex) { "anxious_1" }
+            "full" -> listOf("full_1", "full_2", "full_3").getOrElse(imageIndex) { "full_1" }
+            "sad" -> listOf("sad_1", "sad_2", "sad_3").getOrElse(imageIndex) { "sad_1" }
+            else -> "sleep_1"
+        }
+    }
+
+    /// 이미지 로드 실패 시 이모지 폴백
+    private fun resolveImageFallbackEmoji(imageType: String): String {
+        return when (imageType) {
+            "feed" -> "🍽️"
+            "sleep" -> "💤"
+            "sad" -> "😢"
+            "happy" -> "😊"
+            "bored" -> "😐"
+            "anxious" -> "😟"
+            "full" -> "😋"
+            else -> "🏃"
+        }
+    }
+
+    /// 표시용 상태 텍스트 결정 (한국어)
+    /// 동기화 일관성을 위해 mood를 기준으로 텍스트를 결정한다.
+    /// mood를 알 수 없을 때만 moodText를 사용한다.
+    private fun resolveMoodText(moodText: String?, mood: String): String {
+        val mappedFromMood = mapMoodToKoreanText(mood)
+        if (mappedFromMood != null) {
+            return mappedFromMood
+        }
+
+        return if (!moodText.isNullOrBlank()) moodText else "보통"
+    }
+
+    /// mood를 한국어 상태 텍스트로 변환
+    private fun mapMoodToKoreanText(mood: String): String? {
+        return when (mood.trim()) {
+            "hungry" -> "배고픔"
+            "tired" -> "피곤함"
+            "sleepy" -> "졸림"
+            "anxious" -> "불안함"
+            "bored" -> "지루함"
+            "energetic" -> "활기참"
+            "happy" -> "기쁨"
+            "full" -> "배부름"
+            "satisfied" -> "만족함"
+            "normal" -> "보통"
+            else -> null
         }
     }
     
