@@ -49,6 +49,10 @@ class PetModel extends Pet {
   @override
   final int lastUpdated;
 
+  @HiveField(22)
+  @override
+  final int lastStatusDecayUpdated;
+
   @HiveField(9)
   @override
   final int totalSteps;
@@ -111,6 +115,7 @@ class PetModel extends Pet {
     required this.exp,
     required this.evolutionStage,
     required this.lastUpdated,
+    required this.lastStatusDecayUpdated,
     this.totalSteps = 0,
     this.totalExerciseMinutes = 0,
     this.todaySyncedSteps = 0,
@@ -134,6 +139,7 @@ class PetModel extends Pet {
          exp: exp,
          evolutionStage: evolutionStage,
          lastUpdated: lastUpdated,
+         lastStatusDecayUpdated: lastStatusDecayUpdated,
          totalSteps: totalSteps,
          totalExerciseMinutes: totalExerciseMinutes,
          todaySyncedSteps: todaySyncedSteps,
@@ -165,6 +171,7 @@ class PetModel extends Pet {
       exp: json['exp'] as int,
       evolutionStage: json['evolutionStage'] as int,
       lastUpdated: json['lastUpdated'] as int,
+      lastStatusDecayUpdated: json['lastStatusDecayUpdated'] as int? ?? json['lastUpdated'] as int,
       totalSteps: json['totalSteps'] as int? ?? 0,
       totalExerciseMinutes: json['totalExerciseMinutes'] as int? ?? 0,
       todaySyncedSteps: json['todaySyncedSteps'] as int? ?? 0,
@@ -200,6 +207,7 @@ class PetModel extends Pet {
       'exp': exp,
       'evolutionStage': evolutionStage,
       'lastUpdated': lastUpdated,
+      'lastStatusDecayUpdated': lastStatusDecayUpdated,
       'totalSteps': totalSteps,
       'totalExerciseMinutes': totalExerciseMinutes,
       'todaySyncedSteps': todaySyncedSteps,
@@ -232,6 +240,7 @@ class PetModel extends Pet {
       exp: pet.exp,
       evolutionStage: pet.evolutionStage,
       lastUpdated: pet.lastUpdated,
+      lastStatusDecayUpdated: pet.lastStatusDecayUpdated,
       totalSteps: pet.totalSteps,
       totalExerciseMinutes: pet.totalExerciseMinutes,
       todaySyncedSteps: pet.todaySyncedSteps,
@@ -262,6 +271,7 @@ class PetModel extends Pet {
       exp: exp,
       evolutionStage: evolutionStage,
       lastUpdated: lastUpdated,
+      lastStatusDecayUpdated: lastStatusDecayUpdated,
       totalSteps: totalSteps,
       totalExerciseMinutes: totalExerciseMinutes,
       todaySyncedSteps: todaySyncedSteps,
@@ -292,6 +302,7 @@ class PetModel extends Pet {
     int? exp,
     int? evolutionStage,
     int? lastUpdated,
+    int? lastStatusDecayUpdated,
     int? totalSteps,
     int? totalExerciseMinutes,
     int? todaySyncedSteps,
@@ -316,6 +327,7 @@ class PetModel extends Pet {
       exp: exp ?? this.exp,
       evolutionStage: evolutionStage ?? this.evolutionStage,
       lastUpdated: lastUpdated ?? this.lastUpdated,
+      lastStatusDecayUpdated: lastStatusDecayUpdated ?? this.lastStatusDecayUpdated,
       totalSteps: totalSteps ?? this.totalSteps,
       totalExerciseMinutes: totalExerciseMinutes ?? this.totalExerciseMinutes,
       todaySyncedSteps: todaySyncedSteps ?? this.todaySyncedSteps,

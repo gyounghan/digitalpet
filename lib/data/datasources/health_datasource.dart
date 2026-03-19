@@ -1,4 +1,7 @@
 import 'package:health/health.dart';
+import 'package:flutter/foundation.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'dart:io';
 import '../../domain/entities/activity_data.dart';
 
 /// 헬스케어 데이터소스
@@ -26,6 +29,22 @@ class HealthDataSource {
     }
 
     health = Health();
+
+    if (Platform.isAndroid) {
+      // Android에서 걸음수 수집을 위해 ACTIVITY_RECOGNITION 런타임 권한이 필요하다.
+      final activityPermission = await Permission.activityRecognition.status;
+      if (!activityPermission.isGranted) {
+        final requestedPermission = await Permission.activityRecognition.request();
+        if (kDebugMode) {
+          debugPrint(
+            'HealthDataSource: activityRecognition permission '
+            'requested -> $requestedPermission',
+          );
+        }
+      } else if (kDebugMode) {
+        debugPrint('HealthDataSource: activityRecognition permission already granted');
+      }
+    }
     
     // 권한 요청 및 초기화 (READ 권한만 요청)
     // WRITE 권한까지 함께 요청하면 사용자 권한 거부 가능성이 커져
@@ -34,6 +53,11 @@ class HealthDataSource {
       _requiredHealthDataTypes,
       permissions: [HealthDataAccess.READ],
     );
+    if (kDebugMode) {
+      debugPrint(
+        'HealthDataSource: health requestAuthorization(STEPS/READ) -> $requested',
+      );
+    }
     if (!requested) {
       throw Exception('Health data permission denied');
     }
@@ -68,14 +92,35 @@ class HealthDataSource {
       );
       if (totalStepsFromInterval != null && totalStepsFromInterval > 0) {
         totalSteps = totalStepsFromInterval;
+        if (kDebugMode) {
+          debugPrint(
+            'HealthDataSource: getTotalStepsInInterval success '
+            '[$startTime ~ $endTime] = $totalSteps',
+          );
+        }
       } else {
+        if (kDebugMode) {
+          debugPrint(
+            'HealthDataSource: getTotalStepsInInterval returned $totalStepsFromInterval, '
+            'fallback to raw STEPS records',
+          );
+        }
         final steps = await health.getHealthDataFromTypes(
           startTime: startTime,
           endTime: endTime,
           types: [HealthDataType.STEPS],
         );
+        if (kDebugMode) {
+          debugPrint('HealthDataSource: raw STEPS record count = ${steps.length}');
+        }
         for (final step in steps) {
           totalSteps += _extractNumericValue(step.value);
+        }
+        if (kDebugMode) {
+          debugPrint(
+            'HealthDataSource: raw STEPS aggregated total '
+            '[$startTime ~ $endTime] = $totalSteps',
+          );
         }
       }
       
@@ -87,6 +132,9 @@ class HealthDataSource {
           endTime: endTime,
           types: [HealthDataType.WORKOUT],
         );
+        if (kDebugMode) {
+          debugPrint('HealthDataSource: WORKOUT record count = ${workouts.length}');
+        }
         for (final workout in workouts) {
           // HealthDataPoint의 dateFrom과 dateTo를 사용하여 운동 시간 계산
           final duration = workout.dateTo.difference(workout.dateFrom);
@@ -94,6 +142,9 @@ class HealthDataSource {
         }
       } catch (_) {
         // 운동 데이터 권한 미허용 시 0으로 처리 (걸음 수 동기화는 유지)
+        if (kDebugMode) {
+          debugPrint('HealthDataSource: failed to read WORKOUT records (ignored)');
+        }
       }
       
       return ActivityData(
@@ -103,6 +154,9 @@ class HealthDataSource {
         endTime: endTime.millisecondsSinceEpoch,
       );
     } catch (e) {
+      if (kDebugMode) {
+        debugPrint('HealthDataSource: getActivityData failed: $e');
+      }
       // 에러 발생 시 빈 데이터 반환
       return ActivityData.empty();
     }

@@ -99,6 +99,7 @@ Future<void> _initHealth() async {
   } catch (e) {
     // 헬스케어 권한이 거부되거나 초기화 실패 시 무시
     // 앱은 정상적으로 동작하되 활동 추적 기능만 비활성화됨
+    debugPrint('main._initHealth: Health init failed: $e');
   }
 }
 

@@ -23,7 +23,7 @@ class UpdatePetStateUseCase {
   /// 반환: 업데이트된 Pet 엔티티
   /// 
   /// 동작:
-  /// 1. 현재 시간과 lastUpdated 비교하여 경과 시간(분 단위) 계산
+  /// 1. 현재 시간과 lastStatusDecayUpdated 비교하여 경과 시간(분 단위) 계산
   /// 2. 경과 시간에 따라 30분 단위 감소 횟수 계산
   /// 3. 감소 횟수에 따라 hunger, happiness, stamina 감소
   /// 3. 값이 0 이하로 내려가지 않도록 처리
@@ -32,9 +32,9 @@ class UpdatePetStateUseCase {
     // 1. 현재 Pet 조회
     final pet = await petRepository.getPet(petId);
     
-    // 2. 현재 시간과 lastUpdated 비교하여 경과 시간 계산 (분 단위)
+    // 2. 현재 시간과 lastStatusDecayUpdated 비교하여 경과 시간 계산 (분 단위)
     final currentTime = DateTime.now().millisecondsSinceEpoch;
-    final elapsedMilliseconds = currentTime - pet.lastUpdated;
+    final elapsedMilliseconds = currentTime - pet.lastStatusDecayUpdated;
     final elapsedMinutes = elapsedMilliseconds ~/ (1000 * 60); // 분 단위로 변환
     
     // 경과 시간이 30분 미만이면 업데이트 불필요
@@ -58,6 +58,7 @@ class UpdatePetStateUseCase {
       hunger: newHunger,
       happiness: newHappiness,
       stamina: newStamina,
+      lastStatusDecayUpdated: currentTime,
       lastUpdated: currentTime, // 현재 시간으로 업데이트
     );
     

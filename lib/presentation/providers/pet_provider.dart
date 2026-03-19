@@ -37,6 +37,7 @@ import '../../domain/usecases/update_pet_name_usecase.dart';
 import '../../domain/usecases/alternative_feed_pet_usecase.dart';
 import '../../domain/usecases/alternative_sleep_pet_usecase.dart';
 import '../../domain/usecases/alternative_exercise_pet_usecase.dart';
+import 'package:flutter/foundation.dart';
 
 /// PetLocalDataSource Provider
 /// Hive 데이터소스 인스턴스를 제공
@@ -368,6 +369,9 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
         updatedPet = await updatePetFromActivityUseCase(petId);
       } catch (e) {
         // 헬스케어 권한이 없거나 에러 발생 시 무시 (앱 동작에 영향 없음)
+        if (kDebugMode) {
+          debugPrint('PetNotifier._loadPet: activity update failed: $e');
+        }
       }
 
       // 8. 일일 목표 점수 적용, 진화 체크, 위젯 업데이트를 한 번에 처리
@@ -399,6 +403,9 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
         updatedPet = await updatePetFromActivityUseCase(petId);
       } catch (e) {
         // 헬스케어 권한이 없거나 에러 발생 시 무시
+        if (kDebugMode) {
+          debugPrint('PetNotifier.onMinuteTick: activity update failed: $e');
+        }
       }
 
       final currentPet = state.valueOrNull;
@@ -590,6 +597,9 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
         activityUpdatedPet = await updatePetFromActivityUseCase(petId);
       } catch (e) {
         // 헬스케어 권한이 없거나 에러 발생 시 무시
+        if (kDebugMode) {
+          debugPrint('PetNotifier.onAppForeground: activity update failed: $e');
+        }
       }
       
       // 5. 상태가 변경되었으면 업데이트

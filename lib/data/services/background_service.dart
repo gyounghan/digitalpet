@@ -1,5 +1,6 @@
 import 'package:workmanager/workmanager.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:flutter/foundation.dart';
 import '../../domain/usecases/auto_sleep_pet_usecase.dart';
 import '../../domain/usecases/auto_feed_pet_usecase.dart';
 import '../../domain/usecases/update_pet_from_activity_usecase.dart';
@@ -230,6 +231,9 @@ void callbackDispatcher() {
         pet = await updateFromActivityUseCase(petId);
       } catch (e) {
         // 헬스케어 권한이 없거나 에러 발생 시 무시
+        if (kDebugMode) {
+          debugPrint('BackgroundService: updateFromActivityUseCase failed: $e');
+        }
       }
       
       // 6. 일일 목표 점수 적용

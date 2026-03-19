@@ -84,3 +84,4 @@ class CanFeedPetUseCase {
     return (pet.todayFedMealSlots & slotBit) != 0;
   }
 }
+

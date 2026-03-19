@@ -1,6 +1,7 @@
 import '../entities/pet.dart';
 import '../repositories/pet_repository.dart';
 import '../repositories/activity_repository.dart';
+import 'package:flutter/foundation.dart';
 
 /// 활동 데이터 기반 펫 상태 업데이트 유스케이스
 /// 걷기 수와 운동 시간을 기반으로 펫의 상태를 자동으로 업데이트
@@ -66,6 +67,14 @@ class UpdatePetFromActivityUseCase {
     // 3. 오늘 활동 데이터 조회
     final currentTime = DateTime.now().millisecondsSinceEpoch;
     final todayActivity = await activityRepository.getTodayActivityData();
+    if (kDebugMode) {
+      debugPrint(
+        'UpdatePetFromActivityUseCase: todayActivity '
+        'steps=${todayActivity.steps}, exerciseMinutes=${todayActivity.exerciseMinutes}, '
+        'pet.todaySyncedSteps=${pet.todaySyncedSteps}, '
+        'pet.todaySyncedExerciseMinutes=${pet.todaySyncedExerciseMinutes}',
+      );
+    }
 
     // 4. 마지막 오늘 동기화 값과의 차이(delta) 계산
     // todaySyncedSteps / todaySyncedExerciseMinutes는 "오늘 0시 이후 마지막 동기화 기준값"이다.
@@ -79,11 +88,20 @@ class UpdatePetFromActivityUseCase {
         .toInt();
 
     if (stepsDelta == 0 && exerciseMinutesDelta == 0) {
+      if (kDebugMode) {
+        debugPrint('UpdatePetFromActivityUseCase: delta is zero (no activity update)');
+      }
       // 날짜 변경으로 리셋만 필요한 경우에도 저장해 다음 계산 기준을 맞춘다.
       if (hasDailyReset) {
         await petRepository.updatePet(pet);
       }
       return pet;
+    }
+    if (kDebugMode) {
+      debugPrint(
+        'UpdatePetFromActivityUseCase: stepsDelta=$stepsDelta, '
+        'exerciseMinutesDelta=$exerciseMinutesDelta',
+      );
     }
     
     // 5. 걸음 수 기반 상태 업데이트 계산

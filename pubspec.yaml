@@ -57,6 +57,7 @@ dependencies:
   # 현지화
   flutter_localizations:
     sdk: flutter
+  permission_handler: ^12.0.1
 
 dev_dependencies:
   flutter_test:

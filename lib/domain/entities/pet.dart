@@ -71,6 +71,10 @@ class Pet {
   /// 밀리초 단위 Unix timestamp
   final int lastUpdated;
 
+  /// 마지막 수치 감소 계산 시간 (타임스탬프)
+  /// 포만감/운동/수면 감소 로직 전용 기준 시간
+  final int lastStatusDecayUpdated;
+
   /// 누적 걸음 수
   /// 펫이 생성된 이후부터의 총 걸음 수
   final int totalSteps;
@@ -186,6 +190,7 @@ class Pet {
     required this.exp,
     required this.evolutionStage,
     required this.lastUpdated,
+    required this.lastStatusDecayUpdated,
     this.totalSteps = 0,
     this.totalExerciseMinutes = 0,
     this.todaySyncedSteps = 0,
@@ -213,6 +218,7 @@ class Pet {
     int? exp,
     int? evolutionStage,
     int? lastUpdated,
+    int? lastStatusDecayUpdated,
     int? totalSteps,
     int? totalExerciseMinutes,
     int? todaySyncedSteps,
@@ -237,6 +243,7 @@ class Pet {
       exp: exp ?? this.exp,
       evolutionStage: evolutionStage ?? this.evolutionStage,
       lastUpdated: lastUpdated ?? this.lastUpdated,
+      lastStatusDecayUpdated: lastStatusDecayUpdated ?? this.lastStatusDecayUpdated,
       totalSteps: totalSteps ?? this.totalSteps,
       totalExerciseMinutes: totalExerciseMinutes ?? this.totalExerciseMinutes,
       todaySyncedSteps: todaySyncedSteps ?? this.todaySyncedSteps,

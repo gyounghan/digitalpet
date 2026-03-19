@@ -45,6 +45,7 @@ class CreateDefaultPetUseCase {
       exp: 0,
       evolutionStage: 1, // 1단계 털뭉치
       lastUpdated: currentTime,
+      lastStatusDecayUpdated: currentTime,
       totalSteps: 0,
       totalExerciseMinutes: 0,
       todaySyncedSteps: 0,
