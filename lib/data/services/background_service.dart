@@ -39,11 +39,12 @@ class BackgroundService {
       isInDebugMode: false,
     );
     
-    // 주기적 백그라운드 작업 등록 (15분마다 실행)
+    // 주기적 백그라운드 작업 등록 (30분마다 실행)
+    // WorkManager 최소 단위는 15분이나, 배터리 소모를 줄이기 위해 30분 사용
     await Workmanager().registerPeriodicTask(
       taskName,
       taskName,
-      frequency: const Duration(minutes: 15),
+      frequency: const Duration(minutes: 30),
       constraints: Constraints(
         requiresBatteryNotLow: false,
         requiresCharging: false,
