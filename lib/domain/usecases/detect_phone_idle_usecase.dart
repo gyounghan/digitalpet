@@ -1,4 +1,3 @@
-import '../entities/phone_usage.dart';
 import '../repositories/phone_usage_repository.dart';
 
 /// 폰 미사용 감지 유스케이스

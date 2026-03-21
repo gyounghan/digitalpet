@@ -450,16 +450,16 @@ class _EvolutionScreenState extends ConsumerState<EvolutionScreen>
                         children: [
                           Text(
                             AppStrings.evolutionRequirements,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w500,
                               color: AppColors.textPrimary,
                             ),
                           ),
-                          const SizedBox(height: 4),
+                          SizedBox(height: 4),
                           Text(
                             AppStrings.evolutionLevelRequired,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 14,
                               color: AppColors.textTertiary,
                             ),

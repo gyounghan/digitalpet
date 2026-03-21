@@ -1,5 +1,4 @@
 import '../entities/pet.dart';
-import '../entities/activity_data.dart';
 import '../entities/battle_history.dart';
 import '../repositories/pet_repository.dart';
 import '../repositories/activity_repository.dart';
@@ -86,7 +85,7 @@ class BattleWithActivityUseCase {
     
     // 9. 대결 전적 저장
     final battleHistory = BattleHistory(
-      id: '${petId}_${currentTime}',
+      id: '${petId}_$currentTime',
       date: currentTime,
       isVictory: isGoalAchieved,
       expGained: expGain,

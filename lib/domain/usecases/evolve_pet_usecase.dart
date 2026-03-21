@@ -55,9 +55,7 @@ class EvolvePetUseCase {
     if (pet.level >= 10 && newEvolutionStage < 3) {
       newEvolutionStage = 3;
       // 3단계 진화 시에는 진화 방향 유지 (이미 결정됨)
-      if (newEvolutionType == null) {
-        newEvolutionType = EvolutionType.balanced; // 기본값
-      }
+      newEvolutionType ??= EvolutionType.balanced;
     }
     // 레벨 5 달성 시: 1단계 → 2단계
     else if (pet.level >= 5 && newEvolutionStage < 2) {

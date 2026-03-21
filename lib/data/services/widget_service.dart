@@ -87,32 +87,32 @@ class WidgetService {
       // 위젯 업데이트 요청
       // Android: PetWidgetProvider 클래스 이름 사용
       // iOS: 위젯 Extension 이름 사용
-      // 중요: 위젯이 즉시 업데이트되도록 보장
-      try {
-        await HomeWidget.updateWidget(
-          name: 'PetWidgetProvider',
-          androidName: 'PetWidgetProvider',
-          qualifiedAndroidName: 'com.example.pocketfriend.PetWidgetProvider',
-          iOSName: 'PetWidget',
-        );
-        if (kDebugMode) {
-          debugPrint('WidgetService: syncTraceId=$syncTraceId, widget update requested successfully');
+        // 중요: 위젯이 즉시 업데이트되도록 보장
+        try {
+          await HomeWidget.updateWidget(
+            name: 'PetWidgetProvider',
+            androidName: 'PetWidgetProvider',
+            qualifiedAndroidName: 'com.example.pocketfriend.PetWidgetProvider',
+            iOSName: 'PetWidget',
+          );
+          if (kDebugMode) {
+            debugPrint('WidgetService: syncTraceId=$syncTraceId, widget update requested successfully');
+          }
+        } catch (e) {
+          // 위젯 업데이트 실패 시 로그 출력
+          if (kDebugMode) {
+            debugPrint('WidgetService: syncTraceId=$syncTraceId, failed to request widget update: $e');
+          }
+          // 실패해도 계속 진행 (위젯이 없을 수 있음)
         }
       } catch (e) {
-        // 위젯 업데이트 실패 시 로그 출력
-        if (kDebugMode) {
-          debugPrint('WidgetService: syncTraceId=$syncTraceId, failed to request widget update: $e');
-        }
-        // 실패해도 계속 진행 (위젯이 없을 수 있음)
+        // 위젯 업데이트 실패는 무시 (앱 동작에 영향 없음)
+        // 위젯이 설치되지 않았거나 권한이 없는 경우 발생할 수 있음
       }
-    } catch (e) {
-      // 위젯 업데이트 실패는 무시 (앱 동작에 영향 없음)
-      // 위젯이 설치되지 않았거나 권한이 없는 경우 발생할 수 있음
     }
-  }
-  
-  /// 펫 상태를 한국어 텍스트로 변환
-  /// 
+    
+    /// 펫 상태를 한국어 텍스트로 변환
+    /// 
   /// [mood] 펫의 기분 상태
   /// 
   /// 반환: 한국어 상태 텍스트
