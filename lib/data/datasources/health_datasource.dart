@@ -6,13 +6,19 @@ import '../../domain/entities/activity_data.dart';
 
 /// 헬스케어 데이터소스
 /// Health 패키지를 사용하여 플랫폼의 헬스케어 API에 접근
-/// 
-/// Android: Google Fit
+///
+/// Android: Health Connect (health 패키지 13.x)
 /// iOS: HealthKit
+///
+/// [주의] _initialized는 static으로 선언하여 여러 인스턴스 간 공유.
+/// Riverpod Provider와 BackgroundService에서 각각 인스턴스를 생성해도
+/// 권한 요청이 중복 발생하지 않도록 보장한다.
 class HealthDataSource {
   /// Health 인스턴스
   late final Health health;
-  bool _initialized = false;
+
+  /// 초기화 완료 여부 (모든 인스턴스 공유)
+  static bool _initialized = false;
   
   /// 권한 요청용 데이터 타입 목록
   /// 걸음 수 동기화를 우선 보장하기 위해 STEPS만 필수 요청
@@ -59,6 +65,12 @@ class HealthDataSource {
       );
     }
     if (!requested) {
+      if (kDebugMode) {
+        debugPrint(
+          'HealthDataSource: requestAuthorization returned false. '
+          'Health Connect 앱이 설치되어 있는지, 권한이 허용되어 있는지 확인하세요.',
+        );
+      }
       throw Exception('Health data permission denied');
     }
 

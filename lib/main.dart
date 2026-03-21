@@ -28,8 +28,10 @@ void main() async {
   await _initWidget();
   
   // 헬스케어 데이터소스 초기화
+  // HealthDataSource._initialized는 static이므로 Provider의 lazy 초기화와 공유됨.
+  // 앱 시작 시 미리 권한을 요청하여 첫 동기화 지연을 방지한다.
   await _initHealth();
-  
+
   // 백그라운드 작업 초기화
   await _initBackgroundService();
   
