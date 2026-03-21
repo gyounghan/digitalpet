@@ -45,7 +45,7 @@ class _PetImageAnimationState extends State<PetImageAnimation>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late List<String> _images;
-  Map<String, Size> _imageSizes = {};
+  final Map<String, Size> _imageSizes = {};
   
   /// 최대 이미지 크기 (픽셀)
   /// 하단 overflow 방지를 위해 300px로 제한

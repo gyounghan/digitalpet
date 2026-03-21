@@ -377,29 +377,47 @@ class PetWidgetProvider : AppWidgetProvider() {
     }
 
     /// Flutter Pet.mood 로직과 동일한 상태 판정
+    /// pet.dart의 mood getter와 동일한 우선순위·임계값 유지
     private fun calculateMoodFromStats(hunger: Int, happiness: Int, stamina: Int): String {
-        if (hunger <= 20) return "hungry"
-        if (stamina <= 20) return "tired"
-        if (stamina <= 30) return "sleepy"
+        val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
+        val isNightTime = hour >= 22 || hour < 6
+
+        // 1단계: 위기 상태 (10 이하)
+        if (hunger <= 10) return "hungry"
+        if (stamina <= 10) return "tired"
+
+        // 2단계: 경고 상태 (25 이하)
+        if (hunger <= 25) return "hungry"
+        if (stamina <= 25) return "tired"
+
+        // 3단계: 수면 신호 (시간대 반영)
+        if (isNightTime && stamina <= 60) return "sleepy"
+        if (stamina <= 35) return "sleepy"
+
+        // 4단계: 감정 위기
         if (happiness <= 20) return "anxious"
-        if (happiness <= 30) return "bored"
+        if (happiness <= 35) return "bored"
 
+        // 5단계: 최상 긍정 상태
         if (hunger >= 90 && happiness >= 90 && stamina >= 90) return "energetic"
-        if (hunger >= 80 && happiness >= 80 && stamina >= 80) return "happy"
+        if (hunger >= 80 && happiness >= 85 && stamina >= 80) return "happy"
 
-        if (hunger >= 90 && happiness >= 60 && stamina >= 60) return "full"
+        // 6단계: 부분 긍정 상태
+        if (hunger >= 85 && happiness >= 60 && stamina >= 55) return "full"
+        if (happiness >= 75 && stamina >= 45 && hunger >= 55) return "satisfied"
         if ((hunger >= 70 && happiness >= 70) ||
-            (hunger >= 70 && stamina >= 70) ||
-            (happiness >= 70 && stamina >= 70)
+            (hunger >= 70 && stamina >= 65) ||
+            (happiness >= 70 && stamina >= 65)
         ) return "satisfied"
 
+        // 7단계: 불균형 감지 (35 기준 — flutter와 동일)
         val avg = (hunger + happiness + stamina) / 3.0
         val maxDiff = maxOf(
             kotlin.math.abs(hunger - avg),
             kotlin.math.abs(happiness - avg),
             kotlin.math.abs(stamina - avg)
         )
-        if (maxDiff > 40) return "anxious"
+        if (maxDiff > 35) return "anxious"
 
         return "normal"
     }

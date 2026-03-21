@@ -128,55 +128,59 @@ class Pet {
   final String lastGoalResetDate;
 
   /// 펫의 현재 기분 상태
-  /// hunger, happiness, stamina 값에 따라 자동 계산
+  /// hunger, happiness, stamina + 현재 시간대에 따라 자동 계산
+  ///
+  /// 판단 우선순위:
+  /// 1단계 위기(≤10) → 2단계 경고(≤25) → 3단계 수면신호(시간대 반영)
+  /// → 4단계 감정위기 → 5단계 최상긍정 → 6단계 부분긍정
+  /// → 7단계 불균형 → 8단계 기본값
   PetMood get mood {
-    // 1) 생존 지표 우선: 배고픔/수면 부족은 최우선으로 감정 반영
-    if (hunger <= 20) {
-      return PetMood.hungry;
-    }
-    if (stamina <= 20) {
-      return PetMood.tired;
-    }
-    if (stamina <= 30) {
-      return PetMood.sleepy;
-    }
-    if (happiness <= 20) {
-      return PetMood.anxious;
-    }
-    if (happiness <= 30) {
-      return PetMood.bored;
-    }
+    final hour = DateTime.now().hour;
+    // 밤 22시~새벽 6시: 수면 시간대 (stamina 기준 완화)
+    final isNightTime = hour >= 22 || hour < 6;
 
-    // 2) 상위 긍정 상태
-    if (hunger >= 90 && happiness >= 90 && stamina >= 90) {
-      return PetMood.energetic;
-    }
-    if (hunger >= 80 && happiness >= 80 && stamina >= 80) {
-      return PetMood.happy;
-    }
+    // 1단계: 위기 상태 (10 이하 — 즉각 개입 필요)
+    if (hunger <= 10) return PetMood.hungry;
+    if (stamina <= 10) return PetMood.tired;
 
-    // 3) 보조 긍정 상태
-    if (hunger >= 90 && happiness >= 60 && stamina >= 60) {
-      return PetMood.full;
-    }
+    // 2단계: 경고 상태 (25 이하)
+    if (hunger <= 25) return PetMood.hungry;
+    if (stamina <= 25) return PetMood.tired;
+
+    // 3단계: 수면 신호 (시간대 반영)
+    // 밤 시간대에는 stamina 60 이하면 졸림 — 실생활 패턴 반영
+    if (isNightTime && stamina <= 60) return PetMood.sleepy;
+    if (stamina <= 35) return PetMood.sleepy;
+
+    // 4단계: 감정 위기
+    if (happiness <= 20) return PetMood.anxious;
+    if (happiness <= 35) return PetMood.bored;
+
+    // 5단계: 최상 긍정 상태
+    if (hunger >= 90 && happiness >= 90 && stamina >= 90) return PetMood.energetic;
+    if (hunger >= 80 && happiness >= 85 && stamina >= 80) return PetMood.happy;
+
+    // 6단계: 부분 긍정 상태
+    // 배부른 상태: 포만감 매우 높고 나머지 양호
+    if (hunger >= 85 && happiness >= 60 && stamina >= 55) return PetMood.full;
+    // 활동/운동 후 만족: stamina가 다소 소모됐어도 happiness가 높으면 만족
+    if (happiness >= 75 && stamina >= 45 && hunger >= 55) return PetMood.satisfied;
     if ((hunger >= 70 && happiness >= 70) ||
-        (hunger >= 70 && stamina >= 70) ||
-        (happiness >= 70 && stamina >= 70)) {
+        (hunger >= 70 && stamina >= 65) ||
+        (happiness >= 70 && stamina >= 65)) {
       return PetMood.satisfied;
     }
 
-    // 4) 수치 불균형 보정
+    // 7단계: 불균형 감지 (기존 40 → 35로 낮춰 더 민감하게 반응)
     final avg = (hunger + happiness + stamina) / 3;
     final maxDiff = [
       (hunger - avg).abs(),
       (happiness - avg).abs(),
       (stamina - avg).abs(),
     ].reduce((a, b) => a > b ? a : b);
-    if (maxDiff > 40) {
-      return PetMood.anxious;
-    }
+    if (maxDiff > 35) return PetMood.anxious;
 
-    // 5) 그 외는 보통 상태
+    // 8단계: 기본값
     return PetMood.normal;
   }
 
