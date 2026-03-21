@@ -1,38 +1,76 @@
 ---
 name: commit-work
-description: 작업 완료 후 GIT_WORKFLOW.md 규격에 맞게 커밋 메시지 작성 및 커밋
+description: 작업 완료 후 브랜치 검증 + Conventional Commits 규격으로 자동 커밋
 disable-model-invocation: false
 ---
 
-# 커밋 자동화
+# 자동 커밋 (브랜치 검증 포함)
 
-작업 완료 후 Conventional Commits 규격에 맞게 자동으로 커밋합니다.
+작업 완료 후 브랜치를 검증하고 Conventional Commits 규격에 맞게 자동으로 커밋합니다.
 
-## 자동 동작
+## 🔄 커밋 전 자동 검증
+
+```
+1️⃣ 브랜치 확인
+   현재 브랜치: feature/xxx 또는 bugfix/xxx?
+   ├─ YES → 진행
+   └─ NO → 경고 + 올바른 브랜치로 이동 또는 계속 진행 확인
+
+2️⃣ 변경사항 확인
+   git status
+   ├─ 변경사항 있음 → 커밋 진행
+   └─ 변경사항 없음 → 종료
+
+3️⃣ 커밋 메시지 자동 생성
+   파일 분석 → 커밋 타입 판단
+   ├─ feat (기능)
+   ├─ fix (버그)
+   ├─ test (테스트)
+   ├─ refactor (리팩토링)
+   ├─ docs (문서)
+   └─ chore (기타)
+
+4️⃣ 최종 확인 후 커밋
+   git add .
+   git commit -m "..."
+
+5️⃣ 상태 보고
+   ✓ 커밋 완료
+   ✓ 현재 브랜치: feature/xxx
+   ✓ 다음 단계: PR 생성 (develop으로)
+```
+
+## 자동 동작 흐름
 
 ```
 변경사항 감지
   ↓
+브랜치 검증
+  ├─ develop에 있으면? → 경고: develop은 직접 커밋 금지
+  ├─ master/main에 있으면? → 경고: 배포 브랜치 직접 커밋 금지
+  └─ feature/bugfix/hotfix? → 진행
+  ↓
 파일 변경 내용 분석
   ↓
 커밋 타입 판단
-  ├─ 기능 추가 → feat
-  ├─ 버그 수정 → fix
-  ├─ 테스트 → test
-  ├─ 리팩토링 → refactor
-  ├─ 문서 → docs
+  ├─ lib/domain/ 변경? → feat, fix, refactor
+  ├─ test/ 변경? → test
+  ├─ 문서 변경? → docs
   └─ 기타 → chore
   ↓
 커밋 메시지 자동 생성
   ├─ <타입>(<범위>): <제목>
-  ├─ 본문 (필요시)
-  └─ 푸터 (이슈 번호 등)
+  ├─ 본문 (필수: 변경 이유, 변경 내용)
+  └─ 푸터 (선택: Closes #123 등)
   ↓
 git add .
   ↓
 git commit -m "..."
   ↓
 커밋 완료 및 결과 보고
+  ↓
+다음 단계 제시
+  └─ PR 생성: /pr-create (develop으로 PR)
 ```
 
 ## 사용 방법

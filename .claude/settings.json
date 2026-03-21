@@ -1,0 +1,65 @@
+{
+  "hooks": {
+    "on_task_start": {
+      "description": "작업 시작 시 - 브랜치 검증 및 최신화",
+      "enabled": true,
+      "commands": [
+        "git branch -v",
+        "git pull origin develop 2>/dev/null || true",
+        "git status"
+      ]
+    },
+    "on_task_complete": {
+      "description": "작업 완료 시 - 코드 분석 및 변경사항 스테이징",
+      "enabled": true,
+      "commands": [
+        "flutter analyze",
+        "git add .",
+        "git status"
+      ]
+    },
+    "before_commit": {
+      "description": "커밋 전 - 테스트 실행 (선택사항)",
+      "enabled": false,
+      "commands": [
+        "flutter test"
+      ]
+    },
+    "after_commit": {
+      "description": "커밋 후 - 완료 상태 확인",
+      "enabled": true,
+      "commands": [
+        "git log -1 --oneline",
+        "git status"
+      ]
+    }
+  },
+  "workflow": {
+    "description": "PocketFriend 자동 워크플로우",
+    "branch_strategy": {
+      "main_branch": "master",
+      "develop_branch": "develop",
+      "feature_prefix": "feature/",
+      "bugfix_prefix": "bugfix/",
+      "hotfix_prefix": "hotfix/"
+    },
+    "auto_commit": {
+      "enabled": true,
+      "conventional_commits": true,
+      "scope_from_files": true
+    }
+  },
+  "permissions": {
+    "allow": [
+      "Bash(flutter analyze:*)",
+      "Bash(flutter test:*)",
+      "Bash(git branch:*)",
+      "Bash(git checkout:*)",
+      "Bash(git pull:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git log:*)",
+      "Bash(git status:*)"
+    ]
+  }
+}

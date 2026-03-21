@@ -1,48 +1,116 @@
 ---
 name: start-task
-description: 작업 시작 - 브랜치 검증, 생성/이동, 작업 진행, 종료 후 자동 커밋
-disable-model-invocation: true
+description: 작업 시작 - 브랜치 자동 검증, 생성/이동, 작업 진행, 종료 후 자동 커밋 (자동 감지)
+disable-model-invocation: false
 ---
 
-# 작업 시작 및 관리
+# 작업 시작 및 자동 브랜치 관리
 
 새로운 작업(기능, 버그 수정)을 시작할 때 사용합니다.
 
-## 실행 흐름
+## 🔄 완전 자동 브랜치 관리 흐름
 
-### 1️⃣ 브랜치 확인 및 검증
 ```
-현재 브랜치 확인
+1️⃣ 브랜치 검증
+   현재 브랜치 확인 (git branch)
+   ↓
+2️⃣ 잘못된 브랜치 처리
+   master / main 에 있으면?
+   ├─ YES → develop으로 자동 이동
+   └─ NO → develop인가? → feature/bugfix에서? → 진행
+   ↓
+3️⃣ develop 최신화
+   develop 존재 확인
+   ├─ NO → develop 생성 (현재 커밋 base)
+   └─ YES → git pull origin develop
+   ↓
+4️⃣ 작업 브랜치 생성
+   /start-task feature 기능명
+   → feature/기능명 생성 및 체크아웃
+   ↓
+5️⃣ 상태 보고
+   현재 브랜치: feature/기능명 (ON)
+   develop 동기화: 최신 상태
+   ↓
+6️⃣ 작업 진행
+   Claude Code가 사용자의 지시를 따라 작업
+   ↓
+7️⃣ 자동 커밋 (작업 완료 후)
+   git add .
+   feat(scope): 커밋 메시지 자동 생성
+   git commit
+```
+
+### 자동 브랜치 검증 상세 로직
+
+#### 1️⃣ 현재 상태 확인
+```bash
+git branch          # 현재 브랜치 확인
+git status          # 작업 상태 확인
+git log -1 --oneline # 최근 커밋 확인
+```
+
+#### 2️⃣ 브랜치 검증 및 자동 교정
+```
+if (현재 브랜치 == "master" || "main") {
+  ✓ git checkout develop  // develop으로 자동 이동
+  ✓ 상태: develop (ON)
+}
+
+if (develop 브랜치 없음) {
+  ✓ git branch develop    // 신규 생성
+}
+
+if (브랜치 == "develop") {
+  ✓ git pull origin develop  // 최신 상태 동기화
+}
+
+if (feature/xxx 또는 bugfix/xxx 에서 작업 중) {
+  ✓ 계속 진행 (이미 올바른 브랜치)
+}
+```
+
+#### 3️⃣ 작업 브랜치 생성
+```
+입력: /start-task feature 기능명
+
+git checkout develop
+git pull origin develop
+git checkout -b feature/기능명  # 또는 bugfix/버그명, hotfix/긴급-사항
+
+예:
+- /start-task feature mood-system → feature/mood-system 생성
+- /start-task bugfix health-auth → bugfix/health-auth 생성
+- /start-task hotfix critical-crash → hotfix/critical-crash 생성
+```
+
+#### 4️⃣ 작업 진행 (Claude Code)
+```
+현재 브랜치: feature/기능명 (ON)
+
+✓ 코드 작성
+✓ flutter analyze 실행 (CLAUDE.md 규칙)
+✓ 테스트 작성 (필요시)
+✓ 모든 변경 완료
+
+현재 브랜치: feature/기능명 (유지)
+```
+
+#### 5️⃣ 자동 커밋 (작업 완료 후)
+```
+변경사항 감지
   ↓
-develop / feature/xxx / bugfix/xxx 인가?
-  ├─ YES → 진행
-  └─ NO → develop으로 이동 후 새 브랜치 생성
-```
-
-### 2️⃣ 브랜치 생성 (필요시)
-```
-작업 타입 판단:
-├─ 기능 → feature/기능명
-├─ 버그 → bugfix/버그명
-└─ 긴급 → hotfix/긴급사항
-```
-
-### 3️⃣ 작업 진행
-```
-Claude Code가 작업 수행
-  ├─ 코드 작성
-  ├─ flutter analyze 실행
-  ├─ 테스트 작성 (필요시)
-  └─ 모든 변경 완료
-```
-
-### 4️⃣ 커밋 (자동)
-```
-작업 완료 후 자동 커밋:
-├─ Conventional Commits 형식으로 메시지 작성
-├─ git add .
-├─ git commit -m "..."
-└─ 커밋 완료 보고
+Conventional Commits 규격 자동 적용
+  ├─ feat(scope): 기능 추가
+  ├─ fix(scope): 버그 수정
+  ├─ test(scope): 테스트 추가
+  ├─ refactor(scope): 코드 정리
+  └─ docs: 문서
+  ↓
+git add .
+git commit -m "feat(pet): mood 시스템 개선"
+  ↓
+커밋 완료 보고
 ```
 
 ## 사용 방법

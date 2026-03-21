@@ -25,17 +25,77 @@ flutter test
 
 ## Git Workflow & Commits
 
-See **[GIT_WORKFLOW.md](./GIT_WORKFLOW.md)** for:
-- **Branch strategy**: main (production) ← develop ← feature/bugfix/hotfix
-- **Commit message format**: `<type>(<scope>): <subject>` (Conventional Commits)
-- **Type**: feat, fix, docs, style, refactor, test, chore, ci, perf
-- **Branch naming**: `feature/기능명`, `bugfix/버그명`, `hotfix/긴급-사항`
+See **[GIT_WORKFLOW.md](./GIT_WORKFLOW.md)** for detailed guide.
 
-**Before committing:**
-1. Switch to correct branch (develop for features, or create feature/xxx)
-2. Run `flutter analyze` and `flutter test`
-3. Write clear commit message following Conventional Commits format
-4. Example: `feat(pet): mood 8단계 우선순위 로직 추가`
+### ⚡ 완전 자동 워크플로우 (Hooks 기반)
+
+**Claude Code가 모든 작업 시 자동으로 실행하는 플로우:**
+
+```
+당신: mood 시스템 개선해줘
+
+Claude Code (자동 실행):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔴 on_task_start (작업 시작)
+   ✓ git branch -v
+   ✓ git pull origin develop
+   ✓ git status
+
+작업 진행 (코드 작성, 수정)
+   ✓ flutter analyze (자동 실행)
+
+🟡 on_task_complete (작업 완료)
+   ✓ flutter analyze (최종 확인)
+   ✓ git add . (모든 변경사항 스테이징)
+   ✓ git status
+
+🔵 before_commit (커밋 전)
+   ✓ 선택사항: flutter test (현재 비활성화)
+
+자동 커밋:
+   feat(pet): mood 8단계 우선순위 개선
+   ✓ git commit
+
+🟢 after_commit (커밋 후)
+   ✓ git log -1 --oneline (커밋 확인)
+   ✓ git status (완료 상태)
+
+✅ 완료!
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+**설정 파일**: `.claude/settings.json`
+- `on_task_start`: 작업 시작 시 브랜치 검증 + 최신화
+- `on_task_complete`: 작업 완료 시 분석 + 스테이징
+- `before_commit`: 커밋 전 테스트 (선택사항, 현재 비활성화)
+- `after_commit`: 커밋 후 상태 확인
+
+**사용자가 해야 할 일:**
+- 자연어로 작업 명령만 입력
+- 예: "mood 시스템 개선해줘", "Health Connect 버그 고쳐줘"
+- 나머지는 모두 자동!
+
+### 커밋 메시지 규격
+
+| Type | 설명 | 예 |
+|------|------|-----|
+| **feat** | 새로운 기능 | `feat(pet): mood 8단계 우선순위 추가` |
+| **fix** | 버그 수정 | `fix(health): Health Connect 권한 오류` |
+| **test** | 테스트 추가 | `test(pet): mood 테스트 케이스 추가` |
+| **refactor** | 코드 개선 | `refactor(domain): UseCase 구조 정리` |
+| **docs** | 문서 | `docs: GIT_WORKFLOW.md 추가` |
+| **chore** | 기타 | `chore: 의존성 업그레이드` |
+
+**예시:**
+```
+feat(pet): mood 8단계 우선순위 시스템 개선
+
+기존: 단순 임계값(20, 30) 기반
+개선: 8단계 우선순위 + 시간대 반영 + 활동 패턴 감지
+
+Closes #45
+```
 
 ## Architecture
 
