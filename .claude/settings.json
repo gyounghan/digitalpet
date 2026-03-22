@@ -1,0 +1,54 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "git branch -v && echo '현재 브랜치 확인 완료' || true",
+            "statusMessage": "🔴 on_task_start: 브랜치 검증 중...",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "flutter analyze && git add . 2>/dev/null && echo '✓ 코드 분석 및 스테이징 완료' || true",
+            "statusMessage": "🟡 on_task_complete: 코드 분석 중...",
+            "timeout": 60
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.command // empty' | grep -q 'git commit' && (echo '🟢 after_commit: 커밋 확인' && git log -1 --oneline && git status) || true",
+            "statusMessage": "🟢 after_commit: 커밋 후 상태 확인 중...",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "Bash(flutter analyze:*)",
+      "Bash(flutter test:*)",
+      "Bash(git branch:*)",
+      "Bash(git checkout:*)",
+      "Bash(git pull:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git log:*)",
+      "Bash(git status:*)"
+    ]
+  }
+}

@@ -6,6 +6,7 @@ import '../widgets/glass_card.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/constants/app_strings.dart';
 import '../../domain/usecases/calculate_daily_goals_score_usecase.dart';
+import '../../domain/entities/evolution_type.dart';
 import 'home_screen.dart';
 
 /// 진화 화면
@@ -57,8 +58,62 @@ class _EvolutionScreenState extends ConsumerState<EvolutionScreen>
     });
   }
   
+  /// EvolutionType별 테마 색상 반환
+  Color _getEvolutionThemeColor(EvolutionType? type) {
+    switch (type) {
+      case EvolutionType.active:
+        return const Color(0xFFFF6B6B); // 활동형: 붉은색
+      case EvolutionType.restful:
+        return const Color(0xFF4ECDC4); // 휴식형: 청록색
+      case EvolutionType.balanced:
+        return AppColors.primary; // 균형형: 기본 핑크
+      default:
+        return AppColors.primary;
+    }
+  }
+
+  /// EvolutionType별 라벨 텍스트 반환
+  String _getEvolutionTypeLabel(EvolutionType? type) {
+    return switch (type) {
+      EvolutionType.active => '활동형 진화',
+      EvolutionType.restful => '휴식형 진화',
+      EvolutionType.balanced => '균형형 진화',
+      null => '진화 타입 미결정',
+    };
+  }
+
+  /// EvolutionType별 설명 반환
+  String _getEvolutionTypeDescription(EvolutionType? type) {
+    switch (type) {
+      case EvolutionType.active:
+        return '활동형 진화\n운동과 활동을 좋아하는 펫';
+      case EvolutionType.restful:
+        return '휴식형 진화\n편안함과 안정을 추구하는 펫';
+      case EvolutionType.balanced:
+        return '균형형 진화\n활동과 휴식이 조화로운 펫';
+      default:
+        return '진화 타입 미결정\n더 활동하면서 진화 타입이 결정됩니다';
+    }
+  }
+
+  /// 진화 후 펫 이름 생성
+  String _getEvolvedPetName(String baseName, EvolutionType? type) {
+    const activeNames = {'Luna': '루나 아로우', '별': '불꽃별', '봄': '봄 엘프'};
+    const restfulNames = {'Luna': '루나 문라이트', '별': '은별', '봄': '봄 요정'};
+    const balancedNames = {'Luna': '루나 셀레스티아', '별': '빛별', '봄': '봄 수호자'};
+
+    final nameMap = switch (type) {
+      EvolutionType.active => activeNames,
+      EvolutionType.restful => restfulNames,
+      EvolutionType.balanced => balancedNames,
+      null => {'default': '$baseName+'},
+    };
+
+    return nameMap[baseName] ?? '$baseName+';
+  }
+
   /// 일일 목표 점수 조회
-  /// 
+  ///
   /// pet 상태 변경 시 자동으로 갱신되도록 FutureProvider 사용
   Future<DailyGoalsScore> _getDailyGoalsScore(WidgetRef ref, dynamic pet) async {
     final petRepository = ref.read(petRepositoryProvider);
@@ -158,7 +213,9 @@ class _EvolutionScreenState extends ConsumerState<EvolutionScreen>
     final requiredLevel = 15;
     final currentLevel = pet.level;
     final progress = (currentLevel / requiredLevel).clamp(0.0, 1.0);
-    
+    final themeColor = _getEvolutionThemeColor(pet.evolutionType);
+    final evolvedName = _getEvolvedPetName(pet.name, pet.evolutionType);
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -185,7 +242,41 @@ class _EvolutionScreenState extends ConsumerState<EvolutionScreen>
               ),
             ],
           ),
-          const SizedBox(height: 48),
+          const SizedBox(height: 24),
+          // 진화 타입 정보 카드
+          GlassCard(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: themeColor.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    _getEvolutionTypeLabel(pet.evolutionType),
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: themeColor,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  _getEvolutionTypeDescription(pet.evolutionType),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textSecondary,
+                    height: 1.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 32),
           // 진화 디스플레이
           Stack(
             alignment: Alignment.center,
@@ -238,65 +329,88 @@ class _EvolutionScreenState extends ConsumerState<EvolutionScreen>
                                   : 1.0,
                               child: Column(
                                 children: [
-                                  Container(
-                                    width: imageSize,
-                                    height: imageSize,
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                    colors: [
-                                      AppColors.glassBackground,
-                                      AppColors.glassBackgroundLight,
+                                  Stack(
+                                    alignment: Alignment.topRight,
+                                    children: [
+                                      Container(
+                                        width: imageSize,
+                                        height: imageSize,
+                                        decoration: BoxDecoration(
+                                          gradient: LinearGradient(
+                                            begin: Alignment.topLeft,
+                                            end: Alignment.bottomRight,
+                                            colors: [
+                                              AppColors.glassBackground,
+                                              AppColors.glassBackgroundLight,
+                                            ],
+                                          ),
+                                          borderRadius: BorderRadius.circular(24),
+                                          border: Border.all(
+                                            color: AppColors.glassBorder,
+                                            width: 1,
+                                          ),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.black.withValues(alpha: 0.3),
+                                              blurRadius: 20,
+                                              spreadRadius: 0,
+                                            ),
+                                          ],
+                                        ),
+                                        child: const Center(
+                                          child: Text(
+                                            '🌟',
+                                            style: TextStyle(fontSize: 64),
+                                          ),
+                                        ),
+                                      ),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 4,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.primary,
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: const Text(
+                                          'Stage 1',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w600,
+                                            color: AppColors.textPrimary,
+                                          ),
+                                        ),
+                                      ),
                                     ],
                                   ),
-                                  borderRadius: BorderRadius.circular(24),
-                                  border: Border.all(
-                                    color: AppColors.glassBorder,
-                                    width: 1,
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withValues(alpha: 0.3),
-                                      blurRadius: 20,
-                                      spreadRadius: 0,
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    AppStrings.evolutionCurrent,
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      color: AppColors.textTertiary,
                                     ),
-                                  ],
-                                ),
-                                child: const Center(
-                                  child: Text(
-                                    '🌟',
-                                    style: TextStyle(fontSize: 64),
                                   ),
-                                ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    pet.name,
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w500,
+                                      color: AppColors.textPrimary,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Lv. $currentLevel',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: AppColors.textTertiary,
+                                    ),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(height: 16),
-                              Text(
-                                AppStrings.evolutionCurrent,
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  color: AppColors.textTertiary,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              const Text(
-                                'Luna',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w500,
-                                  color: AppColors.textPrimary,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Lv. $currentLevel',
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: AppColors.textTertiary,
-                                ),
-                              ),
-                            ],
-                          ),
                         ),
                       );
                     },
@@ -342,48 +456,64 @@ class _EvolutionScreenState extends ConsumerState<EvolutionScreen>
                                 : 1.0,
                         child: Column(
                           children: [
-                            Container(
-                              width: imageSize,
-                              height: imageSize,
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                  colors: [
-                                    AppColors.glassBackground,
-                                    AppColors.glassBackgroundLight,
-                                  ],
-                                ),
-                                borderRadius: BorderRadius.circular(24),
-                                border: Border.all(
-                                  color: AppColors.glassBorder,
-                                  width: 1,
-                                ),
-                                boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withValues(alpha: 0.3),
-                                      blurRadius: 20,
-                                      spreadRadius: 0,
+                            Stack(
+                              alignment: Alignment.topRight,
+                              children: [
+                                Container(
+                                  width: imageSize,
+                                  height: imageSize,
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: [
+                                        AppColors.glassBackground,
+                                        AppColors.glassBackgroundLight,
+                                      ],
                                     ),
-                                ],
-                              ),
-                              child: Stack(
-                                children: [
-                                  if (hasEvolved)
-                                    Container(
-                                      decoration: BoxDecoration(
-                                        gradient: AppColors.glassGradient,
-                                        borderRadius: BorderRadius.circular(24),
+                                    borderRadius: BorderRadius.circular(24),
+                                    border: Border.all(
+                                      color: hasEvolved ? themeColor : AppColors.glassBorder,
+                                      width: hasEvolved ? 2 : 1,
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: hasEvolved
+                                            ? themeColor.withValues(alpha: 0.3)
+                                            : Colors.black.withValues(alpha: 0.3),
+                                        blurRadius: 20,
+                                        spreadRadius: hasEvolved ? 4 : 0,
                                       ),
-                                    ),
-                                  Center(
+                                    ],
+                                  ),
+                                  child: Center(
                                     child: Text(
                                       hasEvolved ? '✨' : '?',
                                       style: const TextStyle(fontSize: 64),
                                     ),
                                   ),
-                                ],
-                              ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: hasEvolved ? themeColor : AppColors.glassBackground,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    'Stage 2',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: hasEvolved
+                                          ? AppColors.textPrimary
+                                          : AppColors.textTertiary,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                             const SizedBox(height: 16),
                             Text(
@@ -395,11 +525,13 @@ class _EvolutionScreenState extends ConsumerState<EvolutionScreen>
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              hasEvolved ? 'Celestia' : '???',
-                              style: const TextStyle(
+                              hasEvolved ? evolvedName : '???',
+                              style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w500,
-                                color: AppColors.textPrimary,
+                                color: hasEvolved
+                                    ? themeColor
+                                    : AppColors.textPrimary,
                               ),
                             ),
                             const SizedBox(height: 4),

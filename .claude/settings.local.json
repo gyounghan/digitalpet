@@ -6,8 +6,11 @@
       "Bash(git config:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
+      "Bash(git branch:*)",
       "Bash(git merge:*)",
-      "Bash(git stash:*)"
+      "Bash(git stash:*)",
+      "Skill(update-config)",
+      "Bash(grep -E \"\\\\.\\(dart\\)$\")"
     ]
   }
 }

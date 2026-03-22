@@ -12,6 +12,7 @@ import '../../domain/entities/pet.dart';
 import '../../domain/usecases/alternative_feed_pet_usecase.dart';
 import '../../domain/usecases/alternative_sleep_pet_usecase.dart';
 import '../../domain/usecases/alternative_exercise_pet_usecase.dart';
+import '../../domain/usecases/calculate_daily_goals_score_usecase.dart';
 import '../../core/utils/pet_image_helper.dart';
 
 /// 홈 화면
@@ -69,10 +70,90 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
   }
   
+  /// 일일 목표 점수 조회
+  ///
+  /// [ref] WidgetRef
+  /// [pet] 현재 Pet 엔티티
+  ///
+  /// 반환: DailyGoalsScore
+  Future<DailyGoalsScore> _getDailyGoalsScore(WidgetRef ref, dynamic pet) async {
+    final petRepository = ref.read(petRepositoryProvider);
+    final activityRepository = ref.read(activityRepositoryProvider);
+    final calculateScoreUseCase = CalculateDailyGoalsScoreUseCase(
+      petRepository: petRepository,
+      activityRepository: activityRepository,
+    );
+    return await calculateScoreUseCase(pet.id);
+  }
+
+  /// 일일 목표 항목 빌드
+  ///
+  /// [label] 목표 라벨 (포만감, 수면, 운동)
+  /// [progress] 현재 진행도
+  /// [goal] 목표값
+  /// [achieved] 달성 여부
+  /// [icon] 아이콘
+  ///
+  /// 반환: 목표 항목 위젯
+  Widget _buildGoalItem(
+    String label,
+    int progress,
+    int goal,
+    bool achieved,
+    IconData icon,
+  ) {
+    final progressValue = goal > 0 ? (progress / goal).clamp(0.0, 1.0) : 0.0;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  icon,
+                  size: 16,
+                  color: achieved ? AppColors.accentPink : AppColors.textSecondary,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: achieved ? AppColors.accentPink : AppColors.textSecondary,
+                    fontWeight: achieved ? FontWeight.w600 : FontWeight.normal,
+                  ),
+                ),
+              ],
+            ),
+            Text(
+              achieved ? '완료' : '$progress/$goal',
+              style: TextStyle(
+                fontSize: 12,
+                color: achieved ? AppColors.accentPink : AppColors.textTertiary,
+                fontWeight: achieved ? FontWeight.w600 : FontWeight.normal,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        LinearProgressIndicator(
+          value: progressValue,
+          backgroundColor: AppColors.glassBackground,
+          valueColor: AlwaysStoppedAnimation<Color>(
+            achieved ? AppColors.accentPink : AppColors.primary,
+          ),
+        ),
+      ],
+    );
+  }
+
   /// 펫 상태에 따른 색상 반환
-  /// 
+  ///
   /// [mood] 펫의 기분 상태
-  /// 
+  ///
   /// 반환: 상태에 맞는 색상
   Color _getMoodColor(PetMood mood) {
     switch (mood) {
@@ -593,6 +674,139 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ),
                 ],
               ),
+            ),
+            const SizedBox(height: 24),
+            // 오늘의 목표
+            FutureBuilder<DailyGoalsScore>(
+              key: ValueKey('daily_goals_home_${pet.todayFeedCount}_${pet.todaySleepHours}_${pet.lastUpdated}_${pet.level}'),
+              future: _getDailyGoalsScore(ref, pet),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return GlassCard(
+                    gradient: true,
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          '오늘의 목표',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        const Center(
+                          child: CircularProgressIndicator(color: AppColors.primary),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                if (snapshot.hasError) {
+                  return const SizedBox.shrink();
+                }
+
+                if (snapshot.hasData) {
+                  final scoreResult = snapshot.data!;
+                  final dailyGoals = scoreResult.dailyGoals;
+
+                  return GlassCard(
+                    gradient: true,
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              '오늘의 목표',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                            Text(
+                              '${scoreResult.score}/3',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: scoreResult.score == 3
+                                    ? AppColors.accentPink
+                                    : AppColors.textPrimary,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        // 포만감 목표 (레벨에 따라 1~3회)
+                        _buildGoalItem(
+                          '포만감',
+                          dailyGoals.feedProgress,
+                          scoreResult.feedGoalCount,
+                          dailyGoals.feedGoalAchieved,
+                          Icons.restaurant,
+                        ),
+                        const SizedBox(height: 12),
+                        // 수면 목표 (레벨에 따라 4~6시간)
+                        _buildGoalItem(
+                          '수면',
+                          dailyGoals.sleepHours,
+                          scoreResult.sleepGoalHours,
+                          dailyGoals.sleepGoalAchieved,
+                          Icons.bedtime,
+                        ),
+                        const SizedBox(height: 12),
+                        // 운동 목표 (레벨에 따라 다름)
+                        Builder(
+                          builder: (context) {
+                            // 걸음 수 진행도
+                            final stepsProgress = dailyGoals.exerciseSteps;
+                            final stepsProgressPercent =
+                                (stepsProgress / scoreResult.exerciseGoalSteps * 100)
+                                    .clamp(0.0, 100.0);
+
+                            // 운동 시간 진행도 (걸음 수 기준으로 변환)
+                            final minutesProgressPercent =
+                                (dailyGoals.exerciseMinutes /
+                                        scoreResult.exerciseGoalMinutes *
+                                        100)
+                                    .clamp(0.0, 100.0);
+
+                            // 더 높은 진행도 사용
+                            final exerciseProgressPercent = stepsProgressPercent >
+                                    minutesProgressPercent
+                                ? stepsProgressPercent
+                                : minutesProgressPercent;
+
+                            // 목표 달성 여부에 따라 진행도 표시
+                            final exerciseProgress =
+                                dailyGoals.exerciseGoalAchieved
+                                    ? scoreResult.exerciseGoalSteps
+                                    : (exerciseProgressPercent / 100 *
+                                            scoreResult.exerciseGoalSteps)
+                                        .round();
+
+                            return _buildGoalItem(
+                              '운동',
+                              exerciseProgress,
+                              scoreResult.exerciseGoalSteps,
+                              dailyGoals.exerciseGoalAchieved,
+                              Icons.directions_run,
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  );
+                } else {
+                  return const SizedBox.shrink();
+                }
+              },
             ),
             // Feed 버튼 (조건부 표시: 배고픔 상태 + 식사 시간대)
             Consumer(
