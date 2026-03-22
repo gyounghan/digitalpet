@@ -180,8 +180,88 @@ class _PetImageAnimationState extends State<PetImageAnimation>
     }
   }
   
+  /// 펫 상태의 한글 이름 반환
+  String _getMoodText() {
+    switch (widget.type) {
+      case PetImageType.sleep:
+        return '수면 중💤';
+      case PetImageType.feed:
+        return '먹는 중🍖';
+      case PetImageType.exercise:
+        return '운동 중⚡';
+      case PetImageType.happy:
+        return '행복함😊';
+      case PetImageType.bored:
+        return '지루함😑';
+      case PetImageType.anxious:
+        return '불안함😰';
+      case PetImageType.full:
+        return '배부름🤢';
+      case PetImageType.sad:
+        return '슬픔😢';
+    }
+  }
+
+  /// 펫 상태의 아이콘 반환
+  IconData _getMoodIcon() {
+    switch (widget.type) {
+      case PetImageType.sleep:
+        return Icons.bedtime;
+      case PetImageType.feed:
+        return Icons.restaurant;
+      case PetImageType.exercise:
+        return Icons.fitness_center;
+      case PetImageType.happy:
+        return Icons.sentiment_satisfied;
+      case PetImageType.bored:
+        return Icons.sentiment_neutral;
+      case PetImageType.anxious:
+        return Icons.sentiment_very_dissatisfied;
+      case PetImageType.full:
+        return Icons.sentiment_dissatisfied;
+      case PetImageType.sad:
+        return Icons.sentiment_dissatisfied;
+    }
+  }
+
+  /// 이미지 로드 실패 시 표시할 fallback 위젯
+  Widget _buildFallback(double width, double height) {
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        color: Colors.grey.withValues(alpha: 0.2),
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: Colors.grey.withValues(alpha: 0.4),
+          width: 2,
+        ),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            _getMoodIcon(),
+            size: 48,
+            color: Colors.grey[600],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            _getMoodText(),
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey[600],
+              fontWeight: FontWeight.w500,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
   /// 현재 애니메이션 값에 따라 표시할 이미지 인덱스 결정
-  /// 
+  ///
   /// 0.0 ~ 1.0 범위를 이미지 개수만큼 등분하여 각 이미지를 순환
   int _getCurrentImageIndex() {
     final value = _controller.value;
@@ -223,25 +303,7 @@ class _PetImageAnimationState extends State<PetImageAnimation>
               return child;
             },
             errorBuilder: (context, error, stackTrace) {
-              return Container(
-                width: 200,
-                height: 200,
-                decoration: BoxDecoration(
-                  color: Colors.grey.withValues(alpha: 0.3),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  widget.type == PetImageType.sleep
-                      ? Icons.bedtime
-                      : widget.type == PetImageType.feed
-                          ? Icons.restaurant
-                          : widget.type == PetImageType.sad
-                              ? Icons.sentiment_dissatisfied
-                          : Icons.pets,
-                  size: 64,
-                  color: Colors.white,
-                ),
-              );
+              return _buildFallback(200, 200);
             },
           );
         } else {
@@ -269,25 +331,7 @@ class _PetImageAnimationState extends State<PetImageAnimation>
                 height: displayHeight,
                 fit: BoxFit.contain,
                 errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    width: displayWidth,
-                    height: displayHeight,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.withValues(alpha: 0.3),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      widget.type == PetImageType.sleep
-                          ? Icons.bedtime
-                          : widget.type == PetImageType.feed
-                              ? Icons.restaurant
-                              : widget.type == PetImageType.sad
-                                  ? Icons.sentiment_dissatisfied
-                              : Icons.pets,
-                      size: 64,
-                      color: Colors.white,
-                    ),
-                  );
+                  return _buildFallback(displayWidth, displayHeight);
                 },
               ),
             ),
