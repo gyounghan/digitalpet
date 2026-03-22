@@ -5,7 +5,11 @@
       "Bash(find /c/PocketFriend/test -type f -name *.dart)",
       "Bash(git config:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(git branch:*)",
+      "Skill(update-config)",
+      "Bash(grep -E \"\\\\.\\(dart\\)$\")",
+      "Bash(git stash:*)"
     ]
   }
 }
