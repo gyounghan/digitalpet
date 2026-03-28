@@ -2,63 +2,36 @@ import '../entities/pet.dart';
 import '../repositories/pet_repository.dart';
 
 /// Feed 가능 여부 체크 유스케이스
-/// 배고픔 상태와 식사 시간대를 확인하여 Feed 버튼을 표시할지 결정하는 비즈니스 로직
+/// 식사 시간대를 확인하여 Feed 버튼을 표시할지 결정하는 비즈니스 로직
 ///
 /// Feed 가능 조건:
-/// - 현재 시간이 식사 시간대 (아침 7-9시, 점심 12-14시, 저녁 18-20시)
+/// - 현재 시간이 식사 시간대 (아침 6:30-10:00, 점심 11:00-14:30, 저녁 17:00-21:00)
 /// - 해당 식사 슬롯에서 아직 Feed를 하지 않았을 때
 class CanFeedPetUseCase {
   final PetRepository petRepository;
 
-  /// 식사 시간대 (시간)
-  /// 아침: 7-9시, 점심: 12-14시, 저녁: 18-20시
+  /// 식사 시간대 (분 단위)
   static const List<Map<String, int>> mealTimeRanges = [
-    {'start': 7, 'end': 9}, // 아침
-    {'start': 12, 'end': 14}, // 점심
-    {'start': 18, 'end': 20}, // 저녁
+    {'startHour': 6, 'startMin': 30, 'endHour': 10, 'endMin': 0},
+    {'startHour': 11, 'startMin': 0, 'endHour': 14, 'endMin': 30},
+    {'startHour': 17, 'startMin': 0, 'endHour': 21, 'endMin': 0},
   ];
 
   CanFeedPetUseCase(this.petRepository);
 
-  /// Feed 가능 여부 확인
-  ///
-  /// [petId] 확인할 반려동물 ID
-  ///
-  /// 반환: Feed 가능하면 true, 아니면 false
-  ///
-  /// 동작:
-  /// 1. 현재 Pet 조회
-  /// 2. 현재 시간이 식사 시간대인지 확인
-  /// 3. 해당 식사 슬롯에서 이미 Feed했는지 확인
+  /// Feed 가능 여부 확인 (Repository 조회)
   Future<bool> call(String petId) async {
-    // 1. 현재 Pet 조회
     final pet = await petRepository.getPet(petId);
-
-    // 2. 현재 시간이 식사 시간대인지 확인
-    final currentMealSlot = _getCurrentMealSlot();
-    if (currentMealSlot > 0) {
-      // 식사 시간대에는 해당 슬롯에서 이미 Feed 했는지 확인
-      return !_hasFedInMealSlot(pet, currentMealSlot);
-    }
-
-    // 3. 식사 시간대가 아니면 Feed 버튼을 표시하지 않음
-    return false;
+    return canFeed(pet);
   }
 
   /// Feed 가능 여부 확인 (Pet 엔티티 직접 전달)
-  ///
-  /// [pet] 확인할 Pet 엔티티
-  ///
-  /// 반환: Feed 가능하면 true, 아니면 false
   bool canFeed(Pet pet) {
-    // 현재 시간이 식사 시간대인지 확인
+    if (pet.isDead) return false;
     final currentMealSlot = _getCurrentMealSlot();
     if (currentMealSlot > 0) {
-      // 식사 시간대에는 해당 슬롯에서 이미 Feed 했는지 확인
       return !_hasFedInMealSlot(pet, currentMealSlot);
     }
-
-    // 식사 시간대가 아니면 Feed 버튼을 표시하지 않음
     return false;
   }
 
@@ -66,11 +39,13 @@ class CanFeedPetUseCase {
   /// 0: 식사 시간대 아님, 1: 아침, 2: 점심, 3: 저녁
   int _getCurrentMealSlot() {
     final now = DateTime.now();
-    final currentHour = now.hour;
+    final currentMinutes = now.hour * 60 + now.minute;
 
     for (int i = 0; i < mealTimeRanges.length; i++) {
       final range = mealTimeRanges[i];
-      if (currentHour >= range['start']! && currentHour < range['end']!) {
+      final startMinutes = range['startHour']! * 60 + range['startMin']!;
+      final endMinutes = range['endHour']! * 60 + range['endMin']!;
+      if (currentMinutes >= startMinutes && currentMinutes < endMinutes) {
         return i + 1;
       }
     }
@@ -84,15 +59,3 @@ class CanFeedPetUseCase {
     return (pet.todayFedMealSlots & slotBit) != 0;
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-

@@ -6,19 +6,11 @@ import '../repositories/pet_repository.dart';
 class AlternativeFeedPetUseCase {
   final PetRepository petRepository;
 
-  /// 대체 급식 1회 회복량 (실제 Feed보다 낮음)
-  static const int hungerRecoveryAmount = 5;
+  /// 대체 급식 1회 회복량
+  static const int hungerRecoveryAmount = 8;
 
   /// 하루 최대 사용 횟수
-  static const int maxAlternativeFeedsPerDay = 2;
-
-  /// 간식 시간대 (시간)
-  /// 오전: 10-11시, 오후: 15-16시, 야간: 20-21시
-  static const List<Map<String, int>> snackTimeRanges = [
-    {'start': 10, 'end': 11},
-    {'start': 15, 'end': 16},
-    {'start': 20, 'end': 21},
-  ];
+  static const int maxAlternativeFeedsPerDay = 3;
 
   AlternativeFeedPetUseCase(this.petRepository);
 
@@ -40,11 +32,6 @@ class AlternativeFeedPetUseCase {
       return pet;
     }
 
-    // 간식 시간대가 아니면 대체 급식 불가
-    if (!_isSnackTime()) {
-      return pet;
-    }
-
     final currentTime = DateTime.now().millisecondsSinceEpoch;
     final updatedPet = pet.copyWith(
       hunger: (pet.hunger + hungerRecoveryAmount).clamp(0, 100),
@@ -56,21 +43,8 @@ class AlternativeFeedPetUseCase {
     return updatedPet;
   }
 
-  /// 대체 급식 가능 여부 확인
+  /// 대체 급식 가능 여부 확인 (시간대 제한 없음)
   bool canUse(Pet pet) {
-    return pet.todayAlternativeFeedCount < maxAlternativeFeedsPerDay && _isSnackTime();
-  }
-
-  /// 현재 시간이 간식 시간대인지 확인
-  bool _isSnackTime() {
-    final currentHour = DateTime.now().hour;
-
-    for (final range in snackTimeRanges) {
-      if (currentHour >= range['start']! && currentHour < range['end']!) {
-        return true;
-      }
-    }
-
-    return false;
+    return pet.todayAlternativeFeedCount < maxAlternativeFeedsPerDay;
   }
 }

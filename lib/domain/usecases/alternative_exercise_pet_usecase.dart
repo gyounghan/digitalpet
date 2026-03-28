@@ -7,13 +7,13 @@ class AlternativeExercisePetUseCase {
   final PetRepository petRepository;
 
   /// 대체 운동 1회 행복도 증가량 (실제 활동 연동보다 낮음)
-  static const int happinessRecoveryAmount = 5;
+  static const int happinessRecoveryAmount = 6;
 
-  /// 대체 운동 1회 체력 증가량 (실제 활동 연동보다 낮음)
-  static const int staminaRecoveryAmount = 3;
+  /// 대체 운동 1회 체력 증가량
+  static const int staminaRecoveryAmount = 4;
 
   /// 하루 최대 사용 횟수
-  static const int maxAlternativeExercisesPerDay = 3;
+  static const int maxAlternativeExercisesPerDay = 5;
 
   AlternativeExercisePetUseCase(this.petRepository);
 

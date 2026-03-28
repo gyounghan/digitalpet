@@ -13,7 +13,7 @@ class CheckPetDeathUseCase {
   final PetRepository petRepository;
 
   /// 사망 판정까지의 일수
-  static const int deathThresholdDays = 3;
+  static const int deathThresholdDays = 5;
 
   CheckPetDeathUseCase(this.petRepository);
 

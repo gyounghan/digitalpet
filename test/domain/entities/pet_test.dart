@@ -77,8 +77,8 @@ void main() {
   });
 
   group('Pet.shouldDie', () {
-    test('모든 수치 0 + zeroStatStartDate 3일 전이면 true', () {
-      final threeDaysAgo = DateTime.now().subtract(const Duration(days: 3));
+    test('모든 수치 0 + zeroStatStartDate 5일 전이면 true', () {
+      final threeDaysAgo = DateTime.now().subtract(const Duration(days: 5));
       final dateStr =
           '${threeDaysAgo.year}-${threeDaysAgo.month.toString().padLeft(2, '0')}-${threeDaysAgo.day.toString().padLeft(2, '0')}';
       final pet = _createPet(
@@ -90,8 +90,8 @@ void main() {
       expect(pet.shouldDie, true);
     });
 
-    test('모든 수치 0 + zeroStatStartDate 2일 전이면 false', () {
-      final twoDaysAgo = DateTime.now().subtract(const Duration(days: 2));
+    test('모든 수치 0 + zeroStatStartDate 4일 전이면 false', () {
+      final twoDaysAgo = DateTime.now().subtract(const Duration(days: 4));
       final dateStr =
           '${twoDaysAgo.year}-${twoDaysAgo.month.toString().padLeft(2, '0')}-${twoDaysAgo.day.toString().padLeft(2, '0')}';
       final pet = _createPet(

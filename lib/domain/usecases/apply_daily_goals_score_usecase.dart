@@ -17,7 +17,7 @@ class ApplyDailyGoalsScoreUseCase {
   final CalculateDailyGoalsScoreUseCase calculateScoreUseCase;
 
   /// 기간 만료 페널티 수치
-  static const int expiredPenalty = 5;
+  static const int expiredPenalty = 3;
 
   ApplyDailyGoalsScoreUseCase({
     required this.petRepository,

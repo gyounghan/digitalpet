@@ -15,25 +15,24 @@ class UpdatePetFromActivityUseCase {
   final ActivityRepository activityRepository;
   
   /// 걸음 수당 happiness 증가량 (1000보당)
-  static const int happinessPer1000Steps = 5;
-  
+  static const int happinessPer1000Steps = 3;
+
   /// 걸음 수당 stamina 증가량 (1000보당)
-  static const int staminaPer1000Steps = 3;
-  
+  static const int staminaPer1000Steps = 2;
+
   /// 운동 시간당 happiness 증가량 (10분당)
-  static const int happinessPer10Minutes = 10;
-  
+  static const int happinessPer10Minutes = 5;
+
   /// 운동 시간당 stamina 증가량 (10분당)
-  static const int staminaPer10Minutes = 5;
-  
-  /// 일일 목표 걸음 수
-  static const int dailyGoalSteps = 10000;
-  
-  /// 일일 목표 운동 시간 (분)
-  static const int dailyGoalExerciseMinutes = 30;
-  
-  /// 일일 목표 달성 시 보너스 경험치
-  static const int bonusExpOnGoalAchievement = 50;
+  static const int staminaPer10Minutes = 3;
+
+  /// 단계별 걸음 보너스
+  static const int stepsBonus5000 = 10; // 5,000보 달성 시 happiness
+  static const int stepsBonus10000 = 15; // 10,000보 달성 시 추가 happiness
+
+  /// 단계별 운동 보너스
+  static const int exerciseBonus15min = 8; // 15분 달성 시 happiness
+  static const int exerciseBonus30min = 12; // 30분 달성 시 추가 happiness
   
   UpdatePetFromActivityUseCase({
     required this.petRepository,
@@ -114,8 +113,25 @@ class UpdatePetFromActivityUseCase {
     final happinessFromExercise = exerciseIncrement * happinessPer10Minutes;
     final staminaFromExercise = exerciseIncrement * staminaPer10Minutes;
     
-    // 7. 총 증가량 계산
-    final totalHappinessIncrease = happinessFromSteps + happinessFromExercise;
+    // 7. 단계별 보너스 계산 (오늘 전체 활동량 기준)
+    int stepsBonusHappiness = 0;
+    if (todayActivity.steps >= 10000) {
+      stepsBonusHappiness = stepsBonus5000 + stepsBonus10000;
+    } else if (todayActivity.steps >= 5000) {
+      stepsBonusHappiness = stepsBonus5000;
+    }
+
+    int exerciseBonusHappiness = 0;
+    if (todayActivity.exerciseMinutes >= 30) {
+      exerciseBonusHappiness = exerciseBonus15min + exerciseBonus30min;
+    } else if (todayActivity.exerciseMinutes >= 15) {
+      exerciseBonusHappiness = exerciseBonus15min;
+    }
+
+    // 보너스는 delta가 있을 때만 적용 (중복 방지를 위해 delta와 함께 계산)
+    final totalHappinessIncrease = happinessFromSteps + happinessFromExercise
+        + (stepsDelta > 0 ? stepsBonusHappiness : 0)
+        + (exerciseMinutesDelta > 0 ? exerciseBonusHappiness : 0);
     final totalStaminaIncrease = staminaFromSteps + staminaFromExercise;
     
     // 8. 새로운 상태 값 계산 (최대 100)

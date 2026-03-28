@@ -26,58 +26,42 @@ class CalculateDailyGoalsScoreUseCase {
   /// 
   /// 반환: 목표 식사 횟수 (1~3)
   static int getFeedGoalCount(int level) {
-    if (level <= 5) {
-      return 1;
-    } else if (level <= 10) {
-      return 2;
-    } else {
-      return 3;
-    }
+    if (level <= 3) return 1;
+    if (level <= 9) return 2;
+    return 3;
   }
-  
-  /// 레벨에 따른 수면 목표 시간 반환
-  /// 
-  /// [level] 펫의 현재 레벨
-  /// 
-  /// 반환: 목표 수면 시간 (시간)
+
+  /// 레벨에 따른 수면 목표 시간 반환 (7단계 세분화)
   static int getSleepGoalHours(int level) {
-    if (level <= 5) {
-      return 4;
-    } else if (level <= 10) {
-      return 5;
-    } else {
-      return 6;
-    }
+    if (level <= 3) return 3;
+    if (level <= 6) return 4;
+    if (level <= 9) return 5;
+    if (level <= 12) return 5;
+    if (level <= 15) return 6;
+    if (level <= 20) return 6;
+    return 7;
   }
-  
-  /// 레벨에 따른 운동 목표 걸음 수 반환
-  /// 
-  /// [level] 펫의 현재 레벨
-  /// 
-  /// 반환: 목표 걸음 수
+
+  /// 레벨에 따른 운동 목표 걸음 수 반환 (7단계 세분화)
   static int getExerciseGoalSteps(int level) {
-    if (level <= 5) {
-      return 5000;
-    } else if (level <= 10) {
-      return 7500;
-    } else {
-      return 10000;
-    }
+    if (level <= 3) return 3000;
+    if (level <= 6) return 5000;
+    if (level <= 9) return 6000;
+    if (level <= 12) return 7000;
+    if (level <= 15) return 8000;
+    if (level <= 20) return 9000;
+    return 10000;
   }
-  
-  /// 레벨에 따른 운동 목표 시간 반환
-  /// 
-  /// [level] 펫의 현재 레벨
-  /// 
-  /// 반환: 목표 운동 시간 (분)
+
+  /// 레벨에 따른 운동 목표 시간 반환 (7단계 세분화)
   static int getExerciseGoalMinutes(int level) {
-    if (level <= 5) {
-      return 15;
-    } else if (level <= 10) {
-      return 22;
-    } else {
-      return 30;
-    }
+    if (level <= 3) return 10;
+    if (level <= 6) return 15;
+    if (level <= 9) return 20;
+    if (level <= 12) return 22;
+    if (level <= 15) return 25;
+    if (level <= 20) return 28;
+    return 30;
   }
   
   CalculateDailyGoalsScoreUseCase({

@@ -13,7 +13,7 @@ class AutoSleepPetUseCase {
   final PhoneUsageRepository phoneUsageRepository;
   
   /// 미사용 시간당 stamina 증가량
-  static const int staminaIncreasePer30Minutes = 5;
+  static const int staminaIncreasePer30Minutes = 3;
   
   /// 미사용으로 간주할 최소 시간 (분)
   static const int idleThresholdMinutes = 30;

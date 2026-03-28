@@ -7,10 +7,10 @@ class AlternativeSleepPetUseCase {
   final PetRepository petRepository;
 
   /// 대체 수면 1회 회복량 (실제 Sleep보다 낮음)
-  static const int staminaRecoveryAmount = 5;
+  static const int staminaRecoveryAmount = 6;
 
   /// 하루 최대 사용 횟수
-  static const int maxAlternativeSleepsPerDay = 3;
+  static const int maxAlternativeSleepsPerDay = 4;
 
   AlternativeSleepPetUseCase(this.petRepository);
 

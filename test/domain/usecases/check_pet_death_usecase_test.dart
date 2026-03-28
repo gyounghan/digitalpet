@@ -76,8 +76,8 @@ void main() {
       expect(result.zeroStatStartDate, isNotNull);
     });
 
-    test('모든 수치 0 + 3일 경과면 사망 처리', () async {
-      final threeDaysAgo = DateTime.now().subtract(const Duration(days: 3));
+    test('모든 수치 0 + 5일 경과면 사망 처리', () async {
+      final threeDaysAgo = DateTime.now().subtract(const Duration(days: 5));
       final dateStr =
           '${threeDaysAgo.year}-${threeDaysAgo.month.toString().padLeft(2, '0')}-${threeDaysAgo.day.toString().padLeft(2, '0')}';
       final pet = _createPet(
@@ -93,8 +93,8 @@ void main() {
       expect(result.deathDate, isNotNull);
     });
 
-    test('모든 수치 0 + 2일 경과면 아직 생존', () async {
-      final twoDaysAgo = DateTime.now().subtract(const Duration(days: 2));
+    test('모든 수치 0 + 4일 경과면 아직 생존', () async {
+      final twoDaysAgo = DateTime.now().subtract(const Duration(days: 4));
       final dateStr =
           '${twoDaysAgo.year}-${twoDaysAgo.month.toString().padLeft(2, '0')}-${twoDaysAgo.day.toString().padLeft(2, '0')}';
       final pet = _createPet(

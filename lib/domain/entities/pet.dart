@@ -367,7 +367,7 @@ class Pet {
     try {
       final startDate = DateTime.parse(zeroStatStartDate!);
       final now = DateTime.now();
-      return now.difference(startDate).inDays >= 3;
+      return now.difference(startDate).inDays >= 5;
     } catch (e) {
       return false;
     }
@@ -433,16 +433,29 @@ class Pet {
     );
   }
 
-  /// 부활 처리 (수치 50/50/50으로 복구)
+  /// 부활 처리 (부활 횟수에 따라 차등 회복)
+  /// 1회: 50/50/50, 2회: 40/40/40, 3회+: 30/30/30 + 레벨 -1
   Pet resurrect() {
     final now = DateTime.now().millisecondsSinceEpoch;
+    final int recoveryAmount;
+    final int levelPenalty;
+    if (resurrectCount == 0) {
+      recoveryAmount = 50;
+      levelPenalty = 0;
+    } else if (resurrectCount == 1) {
+      recoveryAmount = 40;
+      levelPenalty = 0;
+    } else {
+      recoveryAmount = 30;
+      levelPenalty = 1;
+    }
     return Pet(
       id: id,
       name: name,
-      hunger: 50,
-      happiness: 50,
-      stamina: 50,
-      level: level,
+      hunger: recoveryAmount,
+      happiness: recoveryAmount,
+      stamina: recoveryAmount,
+      level: (level - levelPenalty).clamp(1, level),
       exp: exp,
       evolutionStage: evolutionStage,
       lastUpdated: now,
