@@ -137,6 +137,38 @@ class PetModel extends Pet {
   @override
   final int goalStartTotalExerciseMinutes;
 
+  @HiveField(31)
+  @override
+  final int battleVictoryCount;
+
+  @HiveField(32)
+  @override
+  final String todayEvent;
+
+  @HiveField(33)
+  @override
+  final String lastEventDate;
+
+  @HiveField(34)
+  @override
+  final int consecutiveLoginDays;
+
+  @HiveField(35)
+  @override
+  final String lastLoginDate;
+
+  @HiveField(36)
+  @override
+  final int todayBattleCount;
+
+  @HiveField(37)
+  @override
+  final int todayLoginCount;
+
+  @HiveField(38)
+  @override
+  final int lastLoginTime;
+
   PetModel({
     required this.id,
     this.name = '펫',
@@ -169,6 +201,14 @@ class PetModel extends Pet {
     this.goalStreakCount = 0,
     this.goalStartTotalSteps = 0,
     this.goalStartTotalExerciseMinutes = 0,
+    this.battleVictoryCount = 0,
+    this.todayEvent = '',
+    this.lastEventDate = '',
+    this.consecutiveLoginDays = 0,
+    this.lastLoginDate = '',
+    this.todayBattleCount = 0,
+    this.todayLoginCount = 0,
+    this.lastLoginTime = 0,
   }) : super(
          id: id,
          name: name,
@@ -201,6 +241,14 @@ class PetModel extends Pet {
          goalStreakCount: goalStreakCount,
          goalStartTotalSteps: goalStartTotalSteps,
          goalStartTotalExerciseMinutes: goalStartTotalExerciseMinutes,
+         battleVictoryCount: battleVictoryCount,
+         todayEvent: todayEvent,
+         lastEventDate: lastEventDate,
+         consecutiveLoginDays: consecutiveLoginDays,
+         lastLoginDate: lastLoginDate,
+         todayBattleCount: todayBattleCount,
+         todayLoginCount: todayLoginCount,
+         lastLoginTime: lastLoginTime,
        );
 
   /// JSON에서 PetModel 생성
@@ -246,6 +294,14 @@ class PetModel extends Pet {
       goalStreakCount: json['goalStreakCount'] as int? ?? 0,
       goalStartTotalSteps: json['goalStartTotalSteps'] as int? ?? 0,
       goalStartTotalExerciseMinutes: json['goalStartTotalExerciseMinutes'] as int? ?? 0,
+      battleVictoryCount: json['battleVictoryCount'] as int? ?? 0,
+      todayEvent: json['todayEvent'] as String? ?? '',
+      lastEventDate: json['lastEventDate'] as String? ?? '',
+      consecutiveLoginDays: json['consecutiveLoginDays'] as int? ?? 0,
+      lastLoginDate: json['lastLoginDate'] as String? ?? '',
+      todayBattleCount: json['todayBattleCount'] as int? ?? 0,
+      todayLoginCount: json['todayLoginCount'] as int? ?? 0,
+      lastLoginTime: json['lastLoginTime'] as int? ?? 0,
     );
   }
 
@@ -285,6 +341,14 @@ class PetModel extends Pet {
       'goalStreakCount': goalStreakCount,
       'goalStartTotalSteps': goalStartTotalSteps,
       'goalStartTotalExerciseMinutes': goalStartTotalExerciseMinutes,
+      'battleVictoryCount': battleVictoryCount,
+      'todayEvent': todayEvent,
+      'lastEventDate': lastEventDate,
+      'consecutiveLoginDays': consecutiveLoginDays,
+      'lastLoginDate': lastLoginDate,
+      'todayBattleCount': todayBattleCount,
+      'todayLoginCount': todayLoginCount,
+      'lastLoginTime': lastLoginTime,
     };
   }
 
@@ -326,6 +390,14 @@ class PetModel extends Pet {
       goalStreakCount: pet.goalStreakCount,
       goalStartTotalSteps: pet.goalStartTotalSteps,
       goalStartTotalExerciseMinutes: pet.goalStartTotalExerciseMinutes,
+      battleVictoryCount: pet.battleVictoryCount,
+      todayEvent: pet.todayEvent,
+      lastEventDate: pet.lastEventDate,
+      consecutiveLoginDays: pet.consecutiveLoginDays,
+      lastLoginDate: pet.lastLoginDate,
+      todayBattleCount: pet.todayBattleCount,
+      todayLoginCount: pet.todayLoginCount,
+      lastLoginTime: pet.lastLoginTime,
     );
   }
 
@@ -365,6 +437,14 @@ class PetModel extends Pet {
       goalStreakCount: goalStreakCount,
       goalStartTotalSteps: goalStartTotalSteps,
       goalStartTotalExerciseMinutes: goalStartTotalExerciseMinutes,
+      battleVictoryCount: battleVictoryCount,
+      todayEvent: todayEvent,
+      lastEventDate: lastEventDate,
+      consecutiveLoginDays: consecutiveLoginDays,
+      lastLoginDate: lastLoginDate,
+      todayBattleCount: todayBattleCount,
+      todayLoginCount: todayLoginCount,
+      lastLoginTime: lastLoginTime,
     );
   }
 
@@ -404,6 +484,14 @@ class PetModel extends Pet {
     int? goalStreakCount,
     int? goalStartTotalSteps,
     int? goalStartTotalExerciseMinutes,
+    int? battleVictoryCount,
+    String? todayEvent,
+    String? lastEventDate,
+    int? consecutiveLoginDays,
+    String? lastLoginDate,
+    int? todayBattleCount,
+    int? todayLoginCount,
+    int? lastLoginTime,
   }) {
     return PetModel(
       id: id ?? this.id,
@@ -437,6 +525,14 @@ class PetModel extends Pet {
       goalStreakCount: goalStreakCount ?? this.goalStreakCount,
       goalStartTotalSteps: goalStartTotalSteps ?? this.goalStartTotalSteps,
       goalStartTotalExerciseMinutes: goalStartTotalExerciseMinutes ?? this.goalStartTotalExerciseMinutes,
+      battleVictoryCount: battleVictoryCount ?? this.battleVictoryCount,
+      todayEvent: todayEvent ?? this.todayEvent,
+      lastEventDate: lastEventDate ?? this.lastEventDate,
+      consecutiveLoginDays: consecutiveLoginDays ?? this.consecutiveLoginDays,
+      lastLoginDate: lastLoginDate ?? this.lastLoginDate,
+      todayBattleCount: todayBattleCount ?? this.todayBattleCount,
+      todayLoginCount: todayLoginCount ?? this.todayLoginCount,
+      lastLoginTime: lastLoginTime ?? this.lastLoginTime,
     );
   }
 }

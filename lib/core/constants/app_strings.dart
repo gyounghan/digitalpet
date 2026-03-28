@@ -98,6 +98,16 @@ class AppStrings {
   static const String deathWarning = '수치가 모두 0이에요! 3일 안에 회복하지 않으면...';
   static const String deathNotification = '펫이 죽었어요... 부활시켜 주세요.';
 
+  // 일일 이벤트
+  static const Map<String, String> eventNames = {
+    'sunny': '맑은 날 - 걸음 보상 1.5배',
+    'cozy': '포근한 날 - 수면 회복 1.5배',
+    'tasty': '맛있는 날 - 식사 회복 +5',
+    'happy_day': '행복한 날 - Decay 절반',
+    'adventure': '모험의 날 - 배틀 EXP 2배',
+    'normal': '평범한 날',
+  };
+
   // 목표 기간
   static const String goalPeriod = '목표 기간';
   static const String goalStreak = '연속 달성';

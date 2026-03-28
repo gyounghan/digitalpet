@@ -39,6 +39,7 @@ import '../../domain/usecases/alternative_sleep_pet_usecase.dart';
 import '../../domain/usecases/alternative_exercise_pet_usecase.dart';
 import '../../domain/usecases/check_pet_death_usecase.dart';
 import '../../domain/usecases/resurrect_pet_usecase.dart';
+import '../../domain/usecases/login_bonus_usecase.dart';
 import 'package:flutter/foundation.dart';
 
 /// PetLocalDataSource Provider
@@ -277,6 +278,12 @@ final alternativeExercisePetUseCaseProvider = Provider<AlternativeExercisePetUse
   return AlternativeExercisePetUseCase(repository);
 });
 
+/// LoginBonusUseCase Provider
+final loginBonusUseCaseProvider = Provider<LoginBonusUseCase>((ref) {
+  final repository = ref.watch(petRepositoryProvider);
+  return LoginBonusUseCase(repository);
+});
+
 /// CheckPetDeathUseCase Provider
 /// 펫 사망 체크 유스케이스 인스턴스를 제공
 final checkPetDeathUseCaseProvider = Provider<CheckPetDeathUseCase>((ref) {
@@ -327,6 +334,7 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
   final AlternativeExercisePetUseCase alternativeExercisePetUseCase;
   final CheckPetDeathUseCase checkPetDeathUseCase;
   final ResurrectPetUseCase resurrectPetUseCase;
+  final LoginBonusUseCase loginBonusUseCase;
   final String petId;
   
   PetNotifier({
@@ -351,6 +359,7 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
     required this.alternativeExercisePetUseCase,
     required this.checkPetDeathUseCase,
     required this.resurrectPetUseCase,
+    required this.loginBonusUseCase,
     required this.petId,
   }) : super(const AsyncValue.loading()) {
     _loadPet();
@@ -394,7 +403,17 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
         }
       }
 
-      // 8. 일일 목표 점수 적용, 진화 체크, 위젯 업데이트를 한 번에 처리
+      // 8. 접속 보너스 + 일일 이벤트
+      try {
+        await loginBonusUseCase(petId);
+        updatedPet = await repository.getPet(petId);
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint('PetNotifier._loadPet: login bonus failed: $e');
+        }
+      }
+
+      // 9. 일일 목표 점수 적용, 진화 체크, 위젯 업데이트를 한 번에 처리
       final evolvedPet = await _updateAndEvolve(updatedPet);
       state = AsyncValue.data(evolvedPet);
     } catch (e, stackTrace) {
@@ -736,6 +755,7 @@ final petNotifierProvider = StateNotifierProvider.family<PetNotifier, AsyncValue
     alternativeExercisePetUseCase: ref.watch(alternativeExercisePetUseCaseProvider),
     checkPetDeathUseCase: ref.watch(checkPetDeathUseCaseProvider),
     resurrectPetUseCase: ref.watch(resurrectPetUseCaseProvider),
+    loginBonusUseCase: ref.watch(loginBonusUseCaseProvider),
     petId: petId,
   );
 });

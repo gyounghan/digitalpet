@@ -62,21 +62,34 @@ class ApplyDailyGoalsScoreUseCase {
       pet = pet.resetGoalPeriod(completed: true);
     }
 
-    // 6. 경험치 적용
-    final newExp = pet.exp + scoreResult.expGain;
+    // 6. 경험치 적용 + 점진적 레벨업
+    var currentExp = pet.exp + scoreResult.expGain;
+    var currentLevel = pet.level;
+    int levelUps = 0;
 
-    // 7. 레벨 업 계산 (100 경험치당 1 레벨)
-    final oldLevel = pet.exp ~/ 100;
-    final newLevel = newExp ~/ 100;
-    final levelIncrease = newLevel - oldLevel;
+    // 레벨별 필요 경험치로 레벨업 판정
+    while (true) {
+      final requiredExp = Pet.getRequiredExpForLevel(currentLevel);
+      if (currentExp >= requiredExp) {
+        currentExp -= requiredExp;
+        currentLevel++;
+        levelUps++;
+      } else {
+        break;
+      }
+    }
 
-    // 8. 현재 시간으로 업데이트
+    // 7. 레벨업 보너스: 매 레벨업 시 수치 각 +10
+    final levelUpStatBonus = levelUps * 10;
     final currentTime = DateTime.now().millisecondsSinceEpoch;
 
-    // 9. 업데이트된 Pet 생성
+    // 8. 업데이트된 Pet 생성
     final updatedPet = pet.copyWith(
-      exp: newExp,
-      level: pet.level + levelIncrease,
+      exp: currentExp,
+      level: currentLevel,
+      hunger: (pet.hunger + levelUpStatBonus).clamp(0, 100),
+      happiness: (pet.happiness + levelUpStatBonus).clamp(0, 100),
+      stamina: (pet.stamina + levelUpStatBonus).clamp(0, 100),
       lastUpdated: currentTime,
     );
 

@@ -67,6 +67,14 @@ class PetModelAdapter extends TypeAdapter<PetModel> {
       goalStreakCount: fields[28] as int? ?? 0,
       goalStartTotalSteps: fields[29] as int? ?? 0,
       goalStartTotalExerciseMinutes: fields[30] as int? ?? 0,
+      battleVictoryCount: fields[31] as int? ?? 0,
+      todayEvent: fields[32] as String? ?? '',
+      lastEventDate: fields[33] as String? ?? '',
+      consecutiveLoginDays: fields[34] as int? ?? 0,
+      lastLoginDate: fields[35] as String? ?? '',
+      todayBattleCount: fields[36] as int? ?? 0,
+      todayLoginCount: fields[37] as int? ?? 0,
+      lastLoginTime: fields[38] as int? ?? 0,
     );
   }
 
@@ -75,7 +83,7 @@ class PetModelAdapter extends TypeAdapter<PetModel> {
     // Hive에 데이터 쓰기
     // 필드 개수와 각 필드를 순서대로 저장
     writer
-      ..writeByte(31) // 필드 개수 (HiveField 0-30)
+      ..writeByte(39) // 필드 개수 (HiveField 0-38)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -137,7 +145,23 @@ class PetModelAdapter extends TypeAdapter<PetModel> {
       ..writeByte(29)
       ..write(obj.goalStartTotalSteps)
       ..writeByte(30)
-      ..write(obj.goalStartTotalExerciseMinutes);
+      ..write(obj.goalStartTotalExerciseMinutes)
+      ..writeByte(31)
+      ..write(obj.battleVictoryCount)
+      ..writeByte(32)
+      ..write(obj.todayEvent)
+      ..writeByte(33)
+      ..write(obj.lastEventDate)
+      ..writeByte(34)
+      ..write(obj.consecutiveLoginDays)
+      ..writeByte(35)
+      ..write(obj.lastLoginDate)
+      ..writeByte(36)
+      ..write(obj.todayBattleCount)
+      ..writeByte(37)
+      ..write(obj.todayLoginCount)
+      ..writeByte(38)
+      ..write(obj.lastLoginTime);
   }
 
   @override

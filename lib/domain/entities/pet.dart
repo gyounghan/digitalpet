@@ -154,6 +154,30 @@ class Pet {
   /// 목표 기간 시작 시 누적 운동 시간 (기간 운동량 계산용)
   final int goalStartTotalExerciseMinutes;
 
+  /// 누적 배틀 승리 횟수 (진화 조건용)
+  final int battleVictoryCount;
+
+  /// 오늘의 일일 이벤트 ID (sunny/cozy/tasty/happy_day/adventure/normal)
+  final String todayEvent;
+
+  /// 마지막 이벤트 부여 날짜 (YYYY-MM-DD)
+  final String lastEventDate;
+
+  /// 연속 접속 일수
+  final int consecutiveLoginDays;
+
+  /// 마지막 접속 날짜 (YYYY-MM-DD)
+  final String lastLoginDate;
+
+  /// 오늘 배틀 횟수
+  final int todayBattleCount;
+
+  /// 오늘 접속 횟수 (접속 보너스 계산용)
+  final int todayLoginCount;
+
+  /// 마지막 접속 시각 (밀리초, 4시간 간격 체크용)
+  final int lastLoginTime;
+
   /// 펫의 현재 기분 상태
   /// hunger, happiness, stamina + 현재 시간대에 따라 자동 계산
   ///
@@ -246,6 +270,14 @@ class Pet {
     this.goalStreakCount = 0,
     this.goalStartTotalSteps = 0,
     this.goalStartTotalExerciseMinutes = 0,
+    this.battleVictoryCount = 0,
+    this.todayEvent = '',
+    this.lastEventDate = '',
+    this.consecutiveLoginDays = 0,
+    this.lastLoginDate = '',
+    this.todayBattleCount = 0,
+    this.todayLoginCount = 0,
+    this.lastLoginTime = 0,
   });
 
   /// Pet 객체 복사본 생성
@@ -282,6 +314,14 @@ class Pet {
     int? goalStreakCount,
     int? goalStartTotalSteps,
     int? goalStartTotalExerciseMinutes,
+    int? battleVictoryCount,
+    String? todayEvent,
+    String? lastEventDate,
+    int? consecutiveLoginDays,
+    String? lastLoginDate,
+    int? todayBattleCount,
+    int? todayLoginCount,
+    int? lastLoginTime,
   }) {
     return Pet(
       id: id ?? this.id,
@@ -315,7 +355,25 @@ class Pet {
       goalStreakCount: goalStreakCount ?? this.goalStreakCount,
       goalStartTotalSteps: goalStartTotalSteps ?? this.goalStartTotalSteps,
       goalStartTotalExerciseMinutes: goalStartTotalExerciseMinutes ?? this.goalStartTotalExerciseMinutes,
+      battleVictoryCount: battleVictoryCount ?? this.battleVictoryCount,
+      todayEvent: todayEvent ?? this.todayEvent,
+      lastEventDate: lastEventDate ?? this.lastEventDate,
+      consecutiveLoginDays: consecutiveLoginDays ?? this.consecutiveLoginDays,
+      lastLoginDate: lastLoginDate ?? this.lastLoginDate,
+      todayBattleCount: todayBattleCount ?? this.todayBattleCount,
+      todayLoginCount: todayLoginCount ?? this.todayLoginCount,
+      lastLoginTime: lastLoginTime ?? this.lastLoginTime,
     );
+  }
+
+  /// 레벨��에 필요한 경험치 (점진적 증가)
+  static int getRequiredExpForLevel(int level) {
+    if (level <= 5) return 80;
+    if (level <= 10) return 120;
+    if (level <= 15) return 160;
+    if (level <= 20) return 200;
+    if (level <= 25) return 250;
+    return 300;
   }
 
   /// 오늘 날짜 문자열 반환 (YYYY-MM-DD)
@@ -430,6 +488,14 @@ class Pet {
       goalStreakCount: goalStreakCount,
       goalStartTotalSteps: goalStartTotalSteps,
       goalStartTotalExerciseMinutes: goalStartTotalExerciseMinutes,
+      battleVictoryCount: battleVictoryCount,
+      todayEvent: todayEvent,
+      lastEventDate: lastEventDate,
+      consecutiveLoginDays: consecutiveLoginDays,
+      lastLoginDate: lastLoginDate,
+      todayBattleCount: todayBattleCount,
+      todayLoginCount: todayLoginCount,
+      lastLoginTime: lastLoginTime,
     );
   }
 
@@ -479,6 +545,14 @@ class Pet {
       goalStreakCount: goalStreakCount,
       goalStartTotalSteps: goalStartTotalSteps,
       goalStartTotalExerciseMinutes: goalStartTotalExerciseMinutes,
+      battleVictoryCount: battleVictoryCount,
+      todayEvent: todayEvent,
+      lastEventDate: lastEventDate,
+      consecutiveLoginDays: consecutiveLoginDays,
+      lastLoginDate: lastLoginDate,
+      todayBattleCount: todayBattleCount,
+      todayLoginCount: todayLoginCount,
+      lastLoginTime: lastLoginTime,
     );
   }
 
@@ -515,6 +589,14 @@ class Pet {
       goalStreakCount: goalStreakCount,
       goalStartTotalSteps: goalStartTotalSteps,
       goalStartTotalExerciseMinutes: goalStartTotalExerciseMinutes,
+      battleVictoryCount: battleVictoryCount,
+      todayEvent: todayEvent,
+      lastEventDate: lastEventDate,
+      consecutiveLoginDays: consecutiveLoginDays,
+      lastLoginDate: lastLoginDate,
+      todayBattleCount: todayBattleCount,
+      todayLoginCount: todayLoginCount,
+      lastLoginTime: lastLoginTime,
     );
   }
 }

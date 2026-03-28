@@ -707,6 +707,51 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ],
             ),
             const SizedBox(height: 32),
+            // 일일 이벤트 배너 + 연속 접속
+            if (pet.todayEvent.isNotEmpty && pet.todayEvent != 'normal') ...[
+              const SizedBox(height: 8),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.primary.withValues(alpha: 0.15),
+                      AppColors.accentPink.withValues(alpha: 0.1),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.auto_awesome, size: 14, color: AppColors.primary),
+                    const SizedBox(width: 6),
+                    Text(
+                      AppStrings.eventNames[pet.todayEvent] ?? pet.todayEvent,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            if (pet.consecutiveLoginDays >= 3) ...[
+              const SizedBox(height: 4),
+              Center(
+                child: Text(
+                  '${pet.consecutiveLoginDays}일 연속 접속 중',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: AppColors.accentPink.withValues(alpha: 0.8),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
             // Pet Display (flex-1 역할 - 남은 공간 차지)
             Expanded(
               child: Column(
