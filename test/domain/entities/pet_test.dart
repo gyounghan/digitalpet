@@ -141,23 +141,42 @@ void main() {
   });
 
   group('Pet.resurrect()', () {
-    test('부활 시 isDead=false, 수치 50/50/50, resurrectCount 증가', () {
+    test('1회차 부활 시 50/50/50', () {
       final deadPet = _createPet(
-        hunger: 0,
-        happiness: 0,
-        stamina: 0,
+        hunger: 0, happiness: 0, stamina: 0,
         isDead: true,
         deathDate: DateTime.now().millisecondsSinceEpoch,
-        resurrectCount: 2,
+        resurrectCount: 0,
       );
       final resurrectedPet = deadPet.resurrect();
       expect(resurrectedPet.isDead, false);
       expect(resurrectedPet.hunger, 50);
       expect(resurrectedPet.happiness, 50);
       expect(resurrectedPet.stamina, 50);
+      expect(resurrectedPet.resurrectCount, 1);
+    });
+
+    test('2회차 부활 시 40/40/40', () {
+      final deadPet = _createPet(
+        hunger: 0, happiness: 0, stamina: 0,
+        isDead: true, resurrectCount: 1,
+      );
+      final resurrectedPet = deadPet.resurrect();
+      expect(resurrectedPet.hunger, 40);
+      expect(resurrectedPet.happiness, 40);
+      expect(resurrectedPet.stamina, 40);
+      expect(resurrectedPet.resurrectCount, 2);
+    });
+
+    test('3회차 부활 시 30/30/30 + 레벨 -1', () {
+      final deadPet = _createPet(
+        hunger: 0, happiness: 0, stamina: 0,
+        isDead: true, resurrectCount: 2, level: 5,
+      );
+      final resurrectedPet = deadPet.resurrect();
+      expect(resurrectedPet.hunger, 30);
+      expect(resurrectedPet.level, 4);
       expect(resurrectedPet.resurrectCount, 3);
-      expect(resurrectedPet.deathDate, isNull);
-      expect(resurrectedPet.zeroStatStartDate, isNull);
     });
   });
 

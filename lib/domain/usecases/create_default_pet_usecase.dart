@@ -65,6 +65,14 @@ class CreateDefaultPetUseCase {
       goalStreakCount: 0,
       goalStartTotalSteps: 0,
       goalStartTotalExerciseMinutes: 0,
+      battleVictoryCount: 0,
+      todayEvent: '',
+      lastEventDate: '',
+      consecutiveLoginDays: 0,
+      lastLoginDate: todayDate,
+      todayBattleCount: 0,
+      todayLoginCount: 0,
+      lastLoginTime: 0,
     );
     
     // Hive에 저장

@@ -7,6 +7,7 @@ import '../widgets/glass_card.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/constants/app_strings.dart';
 import '../../domain/entities/battle_history.dart';
+import '../../domain/usecases/battle_with_activity_usecase.dart' show BattleTurn, BattleResult;
 import 'home_screen.dart';
 
 /// 배틀 화면
@@ -48,9 +49,8 @@ class _BattleScreenState extends ConsumerState<BattleScreen>
     super.dispose();
   }
   
-  /// 턴 기반 배틀 시뮬레이션
+  /// 스탯 기반 배틀 시뮬레이션
   Future<void> _simulateTurns() async {
-    // 초기 상태 설정
     setState(() {
       turns = [];
       currentTurnIndex = -1;
@@ -58,49 +58,41 @@ class _BattleScreenState extends ConsumerState<BattleScreen>
       opponentPetHp = 100;
     });
 
-    // 최대 5턴 진행
-    for (int turn = 0; turn < 5; turn++) {
-      await Future.delayed(const Duration(milliseconds: 800));
-
-      // 우리 펫 행동
-      final ourAction = _getRandomAction();
-      int ourDamage = ourAction == '공격' ? _calculateDamage(true) : 0;
-
-      // 상대 펫 행동
-      final opponentAction = _getRandomAction();
-      int opponentDamage = opponentAction == '공격' ? _calculateDamage(false) : 0;
-
-      // 체력 업데이트
-      setState(() {
-        opponentPetHp = (opponentPetHp - ourDamage).clamp(0, 100);
-        ourPetHp = (ourPetHp - opponentDamage).clamp(0, 100);
-
-        turns.add(BattleTurn(
-          turnNumber: turn + 1,
-          ourAction: ourAction,
-          ourDamage: ourDamage,
-          opponentAction: opponentAction,
-          opponentDamage: opponentDamage,
-        ));
-        currentTurnIndex = turn;
-      });
-
-      // 누군가 체력이 0이 되면 종료
-      if (ourPetHp == 0 || opponentPetHp == 0) break;
-    }
-
-    // 배틀 결과 결정 및 저장
-    await _finalizeBattle();
-  }
-
-  /// 배틀 결과 최종화
-  Future<void> _finalizeBattle() async {
-    // 활동 기반 승패 결정 (기존 로직)
     try {
       final battleUseCase = ref.read(battleWithActivityUseCaseProvider);
       final result = await battleUseCase(HomeScreen.defaultPetId);
 
-      // Pet 상태 새로고침
+      // 배틀 횟수 제한
+      if (result.limitReached) {
+        setState(() { isLoading = false; });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('오늘 배틀 횟수를 모두 사용했습니다 (3/3)')),
+          );
+        }
+        return;
+      }
+
+      // 턴 결과를 애니메이션으로 표시
+      if (result.turns.isNotEmpty) {
+        final firstTurn = result.turns.first;
+        setState(() {
+          ourPetHp = firstTurn.playerHpRemaining + firstTurn.opponentDamage;
+          opponentPetHp = firstTurn.opponentHpRemaining + firstTurn.playerDamage;
+        });
+
+        for (int i = 0; i < result.turns.length; i++) {
+          await Future.delayed(const Duration(milliseconds: 800));
+          final turn = result.turns[i];
+          setState(() {
+            turns.add(turn);
+            currentTurnIndex = i;
+            ourPetHp = turn.playerHpRemaining;
+            opponentPetHp = turn.opponentHpRemaining;
+          });
+        }
+      }
+
       await ref.read(petNotifierProvider(HomeScreen.defaultPetId).notifier).refresh();
 
       setState(() {
@@ -109,25 +101,11 @@ class _BattleScreenState extends ConsumerState<BattleScreen>
         isLoading = false;
       });
     } catch (e) {
-      setState(() {
-        isLoading = false;
-      });
+      setState(() { isLoading = false; });
     }
   }
 
-  /// 랜덤 액션 선택
-  String _getRandomAction() {
-    final actions = ['공격', '방어'];
-    return actions[DateTime.now().microsecond % 2];
-  }
-
-  /// 대미지 계산
-  int _calculateDamage(bool isOurPet) {
-    // 1~20 사이의 랜덤 대미지
-    return 5 + (DateTime.now().microsecond % 16);
-  }
-
-  /// 활동 기반 대결 실행 (턴 애니메이션 포함)
+  /// 배틀 시작 (턴 애니메이션 포함)
   Future<void> _startBattle() async {
     if (isLoading || battleResult != null) return;
 
@@ -483,17 +461,17 @@ class _BattleScreenState extends ConsumerState<BattleScreen>
               child: Column(
                 children: [
                   Text(
-                    '${pet.name}: ${turns[currentTurnIndex].ourAction}',
+                    '${pet.name}: 공격!',
                     style: const TextStyle(
                       fontSize: 13,
                       color: AppColors.primary,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                  if (turns[currentTurnIndex].ourDamage > 0) ...[
+                  if (turns[currentTurnIndex].playerDamage > 0) ...[
                     const SizedBox(height: 4),
                     Text(
-                      '→ -${turns[currentTurnIndex].opponentDamage} 대미지!',
+                      '→ -${turns[currentTurnIndex].playerDamage} 대미지!',
                       style: const TextStyle(
                         fontSize: 12,
                         color: Colors.red,
@@ -503,7 +481,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen>
                   ],
                   const SizedBox(height: 8),
                   Text(
-                    '상대: ${turns[currentTurnIndex].opponentAction}',
+                    '상대: 공격!',
                     style: const TextStyle(
                       fontSize: 13,
                       color: AppColors.textSecondary,
@@ -513,7 +491,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen>
                   if (turns[currentTurnIndex].opponentDamage > 0) ...[
                     const SizedBox(height: 4),
                     Text(
-                      '→ -${turns[currentTurnIndex].ourDamage} 대미지!',
+                      '→ -${turns[currentTurnIndex].opponentDamage} 대미지!',
                       style: const TextStyle(
                         fontSize: 12,
                         color: Colors.red,
@@ -666,19 +644,3 @@ class BattleStats {
   });
 }
 
-/// 한 턴의 배틀 정보
-class BattleTurn {
-  final int turnNumber;
-  final String ourAction;
-  final int ourDamage;
-  final String opponentAction;
-  final int opponentDamage;
-
-  BattleTurn({
-    required this.turnNumber,
-    required this.ourAction,
-    required this.ourDamage,
-    required this.opponentAction,
-    required this.opponentDamage,
-  });
-}
