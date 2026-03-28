@@ -20,6 +20,7 @@ class AppStrings {
   static const String moodFull = '배부름';
   static const String moodAnxious = '불안함';
   static const String moodSatisfied = '만족함';
+  static const String moodDead = '사망';
   
   // 화면 제목
   static const String home = '홈';
@@ -89,6 +90,21 @@ class AppStrings {
   static const String downloadCard = '카드 다운로드';
   static const String shareInfo = '펫을 친구들에게 공유하면 특별한 보상을 받을 수 있어요!';
   
+  // 사망/부활
+  static const String petDead = '사망';
+  static const String gravestoneTitle = '여기 잠들다';
+  static const String resurrectButton = '부활하기 (광고 시청)';
+  static const String resurrectSuccess = '펫이 부활했어요!';
+  static const String deathWarning = '수치가 모두 0이에요! 3일 안에 회복하지 않으면...';
+  static const String deathNotification = '펫이 죽었어요... 부활시켜 주세요.';
+
+  // 목표 기간
+  static const String goalPeriod = '목표 기간';
+  static const String goalStreak = '연속 달성';
+  static const String goalExpired = '목표 기간 만료! 페널티가 적용됩니다.';
+  static const String goalStreakBonus = '연속 달성 보너스!';
+  static const String goalDaysRemaining = '남은 기간';
+
   // 에러 메시지
   static const String error = '오류';
   static const String retry = '다시 시도';

@@ -32,6 +32,9 @@ enum PetMood {
 
   /// 만족함 - 대부분의 수치가 좋을 때
   satisfied,
+
+  /// 사망 - isDead가 true일 때
+  dead,
 }
 
 /// 반려동물 엔티티
@@ -124,8 +127,32 @@ class Pet {
   final int todayAlternativeExerciseCount;
 
   /// 마지막 목표 리셋 날짜 (YYYY-MM-DD 형식)
-  /// 날짜가 변경되면 todayFeedCount와 todaySleepHours를 리셋
+  /// 날짜가 변경되면 일일 항목(식사 슬롯, 대체 액션 등)만 리셋
   final String lastGoalResetDate;
+
+  /// 사망 여부
+  final bool isDead;
+
+  /// 사망 시각 (밀리초 타임스탬프, null이면 살아있음)
+  final int? deathDate;
+
+  /// 모든 수치가 0이 된 시점 (YYYY-MM-DD 형식, null이면 0 상태 아님)
+  final String? zeroStatStartDate;
+
+  /// 부활 횟수
+  final int resurrectCount;
+
+  /// 현재 목표 기간 시작 날짜 (YYYY-MM-DD 형식)
+  final String goalStartDate;
+
+  /// 연속 목표 달성 횟수
+  final int goalStreakCount;
+
+  /// 목표 기간 시작 시 누적 걸음 수 (기간 운동량 계산용)
+  final int goalStartTotalSteps;
+
+  /// 목표 기간 시작 시 누적 운동 시간 (기간 운동량 계산용)
+  final int goalStartTotalExerciseMinutes;
 
   /// 펫의 현재 기분 상태
   /// hunger, happiness, stamina + 현재 시간대에 따라 자동 계산
@@ -135,6 +162,9 @@ class Pet {
   /// → 4단계 감정위기 → 5단계 최상긍정 → 6단계 부분긍정
   /// → 7단계 불균형 → 8단계 기본값
   PetMood get mood {
+    // 0단계: 사망 상태
+    if (isDead) return PetMood.dead;
+
     final hour = DateTime.now().hour;
     // 밤 22시~새벽 6시: 수면 시간대 (stamina 기준 완화)
     final isNightTime = hour >= 22 || hour < 6;
@@ -208,6 +238,14 @@ class Pet {
     this.todayAlternativeSleepCount = 0,
     this.todayAlternativeExerciseCount = 0,
     this.lastGoalResetDate = '',
+    this.isDead = false,
+    this.deathDate,
+    this.zeroStatStartDate,
+    this.resurrectCount = 0,
+    this.goalStartDate = '',
+    this.goalStreakCount = 0,
+    this.goalStartTotalSteps = 0,
+    this.goalStartTotalExerciseMinutes = 0,
   });
 
   /// Pet 객체 복사본 생성
@@ -236,6 +274,14 @@ class Pet {
     int? todayAlternativeSleepCount,
     int? todayAlternativeExerciseCount,
     String? lastGoalResetDate,
+    bool? isDead,
+    int? deathDate,
+    String? zeroStatStartDate,
+    int? resurrectCount,
+    String? goalStartDate,
+    int? goalStreakCount,
+    int? goalStartTotalSteps,
+    int? goalStartTotalExerciseMinutes,
   }) {
     return Pet(
       id: id ?? this.id,
@@ -261,6 +307,14 @@ class Pet {
       todayAlternativeSleepCount: todayAlternativeSleepCount ?? this.todayAlternativeSleepCount,
       todayAlternativeExerciseCount: todayAlternativeExerciseCount ?? this.todayAlternativeExerciseCount,
       lastGoalResetDate: lastGoalResetDate ?? this.lastGoalResetDate,
+      isDead: isDead ?? this.isDead,
+      deathDate: deathDate ?? this.deathDate,
+      zeroStatStartDate: zeroStatStartDate ?? this.zeroStatStartDate,
+      resurrectCount: resurrectCount ?? this.resurrectCount,
+      goalStartDate: goalStartDate ?? this.goalStartDate,
+      goalStreakCount: goalStreakCount ?? this.goalStreakCount,
+      goalStartTotalSteps: goalStartTotalSteps ?? this.goalStartTotalSteps,
+      goalStartTotalExerciseMinutes: goalStartTotalExerciseMinutes ?? this.goalStartTotalExerciseMinutes,
     );
   }
 
@@ -275,18 +329,179 @@ class Pet {
     return lastGoalResetDate != todayDateString;
   }
 
-  /// 일일 목표 리셋된 Pet 반환
+  /// 일일 항목만 리셋 (기간 누적 카운터는 유지)
+  /// todayFeedCount, todaySleepHours는 기간 내 누적이므로 리셋하지 않음
   Pet resetDailyGoals() {
     return copyWith(
-      todayFeedCount: 0,
       todayFedMealSlots: 0,
-      todaySleepHours: 0,
       todayAlternativeFeedCount: 0,
       todayAlternativeSleepCount: 0,
       todayAlternativeExerciseCount: 0,
       todaySyncedSteps: 0,
       todaySyncedExerciseMinutes: 0,
       lastGoalResetDate: todayDateString,
+    );
+  }
+
+  /// 목표 기간 전체 리셋
+  /// 모든 목표 달성 또는 7일 초과 시 호출
+  Pet resetGoalPeriod({bool completed = false}) {
+    return copyWith(
+      todayFeedCount: 0,
+      todaySleepHours: 0,
+      goalStartDate: todayDateString,
+      goalStartTotalSteps: totalSteps,
+      goalStartTotalExerciseMinutes: totalExerciseMinutes,
+      goalStreakCount: completed ? goalStreakCount + 1 : 0,
+    );
+  }
+
+  /// 모든 수치가 0인지 확인
+  bool get isAllStatsZero => hunger == 0 && happiness == 0 && stamina == 0;
+
+  /// 사망 조건 충족 여부 (모든 수치 0이 3일 이상 지속)
+  bool get shouldDie {
+    if (isDead) return false;
+    if (!isAllStatsZero) return false;
+    if (zeroStatStartDate == null) return false;
+    try {
+      final startDate = DateTime.parse(zeroStatStartDate!);
+      final now = DateTime.now();
+      return now.difference(startDate).inDays >= 3;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// 목표 기간 경과 일수
+  int get goalDaysElapsed {
+    if (goalStartDate.isEmpty) return 0;
+    try {
+      final startDate = DateTime.parse(goalStartDate);
+      final now = DateTime.now();
+      return now.difference(startDate).inDays;
+    } catch (e) {
+      return 0;
+    }
+  }
+
+  /// 목표 기간 강제 리셋 필요 여부 (7일 초과)
+  bool get needsGoalPeriodReset {
+    return goalDaysElapsed > 7;
+  }
+
+  /// 기간 내 운동 걸음 수
+  int get periodExerciseSteps => totalSteps - goalStartTotalSteps;
+
+  /// 기간 내 운동 시간 (분)
+  int get periodExerciseMinutes => totalExerciseMinutes - goalStartTotalExerciseMinutes;
+
+  /// 사망 처리
+  Pet die() {
+    return Pet(
+      id: id,
+      name: name,
+      hunger: hunger,
+      happiness: happiness,
+      stamina: stamina,
+      level: level,
+      exp: exp,
+      evolutionStage: evolutionStage,
+      lastUpdated: DateTime.now().millisecondsSinceEpoch,
+      lastStatusDecayUpdated: lastStatusDecayUpdated,
+      totalSteps: totalSteps,
+      totalExerciseMinutes: totalExerciseMinutes,
+      todaySyncedSteps: todaySyncedSteps,
+      todaySyncedExerciseMinutes: todaySyncedExerciseMinutes,
+      totalIdleHours: totalIdleHours,
+      evolutionType: evolutionType,
+      todayFeedCount: todayFeedCount,
+      todayFedMealSlots: todayFedMealSlots,
+      todaySleepHours: todaySleepHours,
+      todayAlternativeFeedCount: todayAlternativeFeedCount,
+      todayAlternativeSleepCount: todayAlternativeSleepCount,
+      todayAlternativeExerciseCount: todayAlternativeExerciseCount,
+      lastGoalResetDate: lastGoalResetDate,
+      isDead: true,
+      deathDate: DateTime.now().millisecondsSinceEpoch,
+      zeroStatStartDate: zeroStatStartDate,
+      resurrectCount: resurrectCount,
+      goalStartDate: goalStartDate,
+      goalStreakCount: goalStreakCount,
+      goalStartTotalSteps: goalStartTotalSteps,
+      goalStartTotalExerciseMinutes: goalStartTotalExerciseMinutes,
+    );
+  }
+
+  /// 부활 처리 (수치 50/50/50으로 복구)
+  Pet resurrect() {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    return Pet(
+      id: id,
+      name: name,
+      hunger: 50,
+      happiness: 50,
+      stamina: 50,
+      level: level,
+      exp: exp,
+      evolutionStage: evolutionStage,
+      lastUpdated: now,
+      lastStatusDecayUpdated: now,
+      totalSteps: totalSteps,
+      totalExerciseMinutes: totalExerciseMinutes,
+      todaySyncedSteps: todaySyncedSteps,
+      todaySyncedExerciseMinutes: todaySyncedExerciseMinutes,
+      totalIdleHours: totalIdleHours,
+      evolutionType: evolutionType,
+      todayFeedCount: todayFeedCount,
+      todayFedMealSlots: todayFedMealSlots,
+      todaySleepHours: todaySleepHours,
+      todayAlternativeFeedCount: todayAlternativeFeedCount,
+      todayAlternativeSleepCount: todayAlternativeSleepCount,
+      todayAlternativeExerciseCount: todayAlternativeExerciseCount,
+      lastGoalResetDate: lastGoalResetDate,
+      isDead: false,
+      resurrectCount: resurrectCount + 1,
+      goalStartDate: goalStartDate,
+      goalStreakCount: goalStreakCount,
+      goalStartTotalSteps: goalStartTotalSteps,
+      goalStartTotalExerciseMinutes: goalStartTotalExerciseMinutes,
+    );
+  }
+
+  /// zeroStatStartDate를 null로 클리어
+  Pet clearZeroStatStartDate() {
+    return Pet(
+      id: id,
+      name: name,
+      hunger: hunger,
+      happiness: happiness,
+      stamina: stamina,
+      level: level,
+      exp: exp,
+      evolutionStage: evolutionStage,
+      lastUpdated: lastUpdated,
+      lastStatusDecayUpdated: lastStatusDecayUpdated,
+      totalSteps: totalSteps,
+      totalExerciseMinutes: totalExerciseMinutes,
+      todaySyncedSteps: todaySyncedSteps,
+      todaySyncedExerciseMinutes: todaySyncedExerciseMinutes,
+      totalIdleHours: totalIdleHours,
+      evolutionType: evolutionType,
+      todayFeedCount: todayFeedCount,
+      todayFedMealSlots: todayFedMealSlots,
+      todaySleepHours: todaySleepHours,
+      todayAlternativeFeedCount: todayAlternativeFeedCount,
+      todayAlternativeSleepCount: todayAlternativeSleepCount,
+      todayAlternativeExerciseCount: todayAlternativeExerciseCount,
+      lastGoalResetDate: lastGoalResetDate,
+      isDead: isDead,
+      deathDate: deathDate,
+      resurrectCount: resurrectCount,
+      goalStartDate: goalStartDate,
+      goalStreakCount: goalStreakCount,
+      goalStartTotalSteps: goalStartTotalSteps,
+      goalStartTotalExerciseMinutes: goalStartTotalExerciseMinutes,
     );
   }
 }

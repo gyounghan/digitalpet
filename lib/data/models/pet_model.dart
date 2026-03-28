@@ -105,6 +105,38 @@ class PetModel extends Pet {
   @override
   final int todayAlternativeExerciseCount;
 
+  @HiveField(23)
+  @override
+  final bool isDead;
+
+  @HiveField(24)
+  @override
+  final int? deathDate;
+
+  @HiveField(25)
+  @override
+  final String? zeroStatStartDate;
+
+  @HiveField(26)
+  @override
+  final int resurrectCount;
+
+  @HiveField(27)
+  @override
+  final String goalStartDate;
+
+  @HiveField(28)
+  @override
+  final int goalStreakCount;
+
+  @HiveField(29)
+  @override
+  final int goalStartTotalSteps;
+
+  @HiveField(30)
+  @override
+  final int goalStartTotalExerciseMinutes;
+
   PetModel({
     required this.id,
     this.name = '펫',
@@ -129,6 +161,14 @@ class PetModel extends Pet {
     this.todayAlternativeSleepCount = 0,
     this.todayAlternativeExerciseCount = 0,
     this.lastGoalResetDate = '',
+    this.isDead = false,
+    this.deathDate,
+    this.zeroStatStartDate,
+    this.resurrectCount = 0,
+    this.goalStartDate = '',
+    this.goalStreakCount = 0,
+    this.goalStartTotalSteps = 0,
+    this.goalStartTotalExerciseMinutes = 0,
   }) : super(
          id: id,
          name: name,
@@ -153,6 +193,14 @@ class PetModel extends Pet {
          todayAlternativeSleepCount: todayAlternativeSleepCount,
          todayAlternativeExerciseCount: todayAlternativeExerciseCount,
          lastGoalResetDate: lastGoalResetDate,
+         isDead: isDead,
+         deathDate: deathDate,
+         zeroStatStartDate: zeroStatStartDate,
+         resurrectCount: resurrectCount,
+         goalStartDate: goalStartDate,
+         goalStreakCount: goalStreakCount,
+         goalStartTotalSteps: goalStartTotalSteps,
+         goalStartTotalExerciseMinutes: goalStartTotalExerciseMinutes,
        );
 
   /// JSON에서 PetModel 생성
@@ -190,6 +238,14 @@ class PetModel extends Pet {
       todayAlternativeSleepCount: json['todayAlternativeSleepCount'] as int? ?? 0,
       todayAlternativeExerciseCount: json['todayAlternativeExerciseCount'] as int? ?? 0,
       lastGoalResetDate: json['lastGoalResetDate'] as String? ?? '',
+      isDead: json['isDead'] as bool? ?? false,
+      deathDate: json['deathDate'] as int?,
+      zeroStatStartDate: json['zeroStatStartDate'] as String?,
+      resurrectCount: json['resurrectCount'] as int? ?? 0,
+      goalStartDate: json['goalStartDate'] as String? ?? '',
+      goalStreakCount: json['goalStreakCount'] as int? ?? 0,
+      goalStartTotalSteps: json['goalStartTotalSteps'] as int? ?? 0,
+      goalStartTotalExerciseMinutes: json['goalStartTotalExerciseMinutes'] as int? ?? 0,
     );
   }
 
@@ -221,6 +277,14 @@ class PetModel extends Pet {
       'todayAlternativeSleepCount': todayAlternativeSleepCount,
       'todayAlternativeExerciseCount': todayAlternativeExerciseCount,
       'lastGoalResetDate': lastGoalResetDate,
+      'isDead': isDead,
+      'deathDate': deathDate,
+      'zeroStatStartDate': zeroStatStartDate,
+      'resurrectCount': resurrectCount,
+      'goalStartDate': goalStartDate,
+      'goalStreakCount': goalStreakCount,
+      'goalStartTotalSteps': goalStartTotalSteps,
+      'goalStartTotalExerciseMinutes': goalStartTotalExerciseMinutes,
     };
   }
 
@@ -254,10 +318,18 @@ class PetModel extends Pet {
       todayAlternativeSleepCount: pet.todayAlternativeSleepCount,
       todayAlternativeExerciseCount: pet.todayAlternativeExerciseCount,
       lastGoalResetDate: pet.lastGoalResetDate,
+      isDead: pet.isDead,
+      deathDate: pet.deathDate,
+      zeroStatStartDate: pet.zeroStatStartDate,
+      resurrectCount: pet.resurrectCount,
+      goalStartDate: pet.goalStartDate,
+      goalStreakCount: pet.goalStreakCount,
+      goalStartTotalSteps: pet.goalStartTotalSteps,
+      goalStartTotalExerciseMinutes: pet.goalStartTotalExerciseMinutes,
     );
   }
 
-  /// PetModel을 Domain Entity로 변환
+  /// PetModel�� Domain Entity로 변환
   ///
   /// 반환: Pet 엔티티
   Pet toEntity() {
@@ -285,6 +357,14 @@ class PetModel extends Pet {
       todayAlternativeSleepCount: todayAlternativeSleepCount,
       todayAlternativeExerciseCount: todayAlternativeExerciseCount,
       lastGoalResetDate: lastGoalResetDate,
+      isDead: isDead,
+      deathDate: deathDate,
+      zeroStatStartDate: zeroStatStartDate,
+      resurrectCount: resurrectCount,
+      goalStartDate: goalStartDate,
+      goalStreakCount: goalStreakCount,
+      goalStartTotalSteps: goalStartTotalSteps,
+      goalStartTotalExerciseMinutes: goalStartTotalExerciseMinutes,
     );
   }
 
@@ -316,6 +396,14 @@ class PetModel extends Pet {
     int? todayAlternativeSleepCount,
     int? todayAlternativeExerciseCount,
     String? lastGoalResetDate,
+    bool? isDead,
+    int? deathDate,
+    String? zeroStatStartDate,
+    int? resurrectCount,
+    String? goalStartDate,
+    int? goalStreakCount,
+    int? goalStartTotalSteps,
+    int? goalStartTotalExerciseMinutes,
   }) {
     return PetModel(
       id: id ?? this.id,
@@ -341,6 +429,14 @@ class PetModel extends Pet {
       todayAlternativeSleepCount: todayAlternativeSleepCount ?? this.todayAlternativeSleepCount,
       todayAlternativeExerciseCount: todayAlternativeExerciseCount ?? this.todayAlternativeExerciseCount,
       lastGoalResetDate: lastGoalResetDate ?? this.lastGoalResetDate,
+      isDead: isDead ?? this.isDead,
+      deathDate: deathDate ?? this.deathDate,
+      zeroStatStartDate: zeroStatStartDate ?? this.zeroStatStartDate,
+      resurrectCount: resurrectCount ?? this.resurrectCount,
+      goalStartDate: goalStartDate ?? this.goalStartDate,
+      goalStreakCount: goalStreakCount ?? this.goalStreakCount,
+      goalStartTotalSteps: goalStartTotalSteps ?? this.goalStartTotalSteps,
+      goalStartTotalExerciseMinutes: goalStartTotalExerciseMinutes ?? this.goalStartTotalExerciseMinutes,
     );
   }
 }

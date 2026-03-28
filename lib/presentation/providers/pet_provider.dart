@@ -37,6 +37,8 @@ import '../../domain/usecases/update_pet_name_usecase.dart';
 import '../../domain/usecases/alternative_feed_pet_usecase.dart';
 import '../../domain/usecases/alternative_sleep_pet_usecase.dart';
 import '../../domain/usecases/alternative_exercise_pet_usecase.dart';
+import '../../domain/usecases/check_pet_death_usecase.dart';
+import '../../domain/usecases/resurrect_pet_usecase.dart';
 import 'package:flutter/foundation.dart';
 
 /// PetLocalDataSource Provider
@@ -275,6 +277,20 @@ final alternativeExercisePetUseCaseProvider = Provider<AlternativeExercisePetUse
   return AlternativeExercisePetUseCase(repository);
 });
 
+/// CheckPetDeathUseCase Provider
+/// 펫 사망 체크 유스케이스 인스턴스를 제공
+final checkPetDeathUseCaseProvider = Provider<CheckPetDeathUseCase>((ref) {
+  final repository = ref.watch(petRepositoryProvider);
+  return CheckPetDeathUseCase(repository);
+});
+
+/// ResurrectPetUseCase Provider
+/// 펫 부활 유스케이스 인스턴스를 제공
+final resurrectPetUseCaseProvider = Provider<ResurrectPetUseCase>((ref) {
+  final repository = ref.watch(petRepositoryProvider);
+  return ResurrectPetUseCase(repository);
+});
+
 /// Pet Provider
 /// 특정 ID의 Pet을 조회하는 FutureProvider
 /// 
@@ -309,6 +325,8 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
   final AlternativeFeedPetUseCase alternativeFeedPetUseCase;
   final AlternativeSleepPetUseCase alternativeSleepPetUseCase;
   final AlternativeExercisePetUseCase alternativeExercisePetUseCase;
+  final CheckPetDeathUseCase checkPetDeathUseCase;
+  final ResurrectPetUseCase resurrectPetUseCase;
   final String petId;
   
   PetNotifier({
@@ -331,6 +349,8 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
     required this.alternativeFeedPetUseCase,
     required this.alternativeSleepPetUseCase,
     required this.alternativeExercisePetUseCase,
+    required this.checkPetDeathUseCase,
+    required this.resurrectPetUseCase,
     required this.petId,
   }) : super(const AsyncValue.loading()) {
     _loadPet();
@@ -446,22 +466,31 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
   /// [pet] 업데이트할 Pet 엔티티 (이 Pet의 상태가 위젯에 반영됨)
   Future<Pet> _updateAndEvolve(Pet pet) async {
     // 1. 전달받은 Pet을 먼저 저장하여 최신 상태 보장
-    // 이렇게 하면 위젯 업데이트 시 전달받은 Pet의 상태가 반영됨
     await repository.updatePet(pet);
-    
-    // 2. 일일 목표 점수 적용 (저장된 Pet을 기반으로)
+
+    // 2. 사망 체크 (수치 감소 후)
+    final checkedPet = await checkPetDeathUseCase(petId);
+    if (checkedPet.isDead) {
+      try {
+        await widgetService.updatePetWidget(checkedPet);
+      } catch (e) {
+        // 위젯 업데이트 실패 무시
+      }
+      return checkedPet;
+    }
+
+    // 3. 일일 목표 점수 적용 (저장된 Pet을 기반으로)
     await applyDailyGoalsScoreUseCase(petId);
-    
-    // 3. 진화 체크 및 실행 (저장된 Pet을 기반으로)
+
+    // 4. 진화 체크 및 실행 (저장된 Pet을 기반으로)
     final evolvedPet = await evolvePetUseCase(petId);
-    
-    // 4. 위젯 업데이트 (앱 내 펫 상태와 동기화)
-    // evolvedPet은 최신 상태를 반영하므로 항상 위젯에 반영
+
+    // 5. 위젯 업데이트 (앱 내 펫 상태와 동기화)
     await widgetService.updatePetWidget(evolvedPet);
-    
-    // 5. 알림 체크 (상태 변경 후)
+
+    // 6. 알림 체크 (상태 변경 후)
     _checkAndShowNotification();
-    
+
     return evolvedPet;
   }
   
@@ -488,7 +517,8 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
   /// 상태 변경 후 자동으로 진화 체크 수행
   Future<void> feed() async {
     if (state.isLoading || state.hasError) return;
-    
+    if (state.valueOrNull?.isDead == true) return;
+
     try {
       final updatedPet = await feedPetUseCase(petId);
       final evolvedPet = await _updateAndEvolve(updatedPet);
@@ -504,7 +534,8 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
   /// 상태 변경 후 자동으로 진화 체크 수행
   Future<void> play() async {
     if (state.isLoading || state.hasError) return;
-    
+    if (state.valueOrNull?.isDead == true) return;
+
     try {
       final updatedPet = await playPetUseCase(petId);
       final evolvedPet = await _updateAndEvolve(updatedPet);
@@ -520,7 +551,8 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
   /// 상태 변경 후 자동으로 진화 체크 수행
   Future<void> sleep() async {
     if (state.isLoading || state.hasError) return;
-    
+    if (state.valueOrNull?.isDead == true) return;
+
     try {
       final updatedPet = await sleepPetUseCase(petId);
       final evolvedPet = await _updateAndEvolve(updatedPet);
@@ -535,6 +567,7 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
   /// 실제 식사 시간대 Feed가 어려운 사용자를 위한 저효율 대체 액션
   Future<void> performAlternativeFeed() async {
     if (state.isLoading || state.hasError) return;
+    if (state.valueOrNull?.isDead == true) return;
 
     try {
       final updatedPet = await alternativeFeedPetUseCase(petId);
@@ -550,6 +583,7 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
   /// 실제 수면 연동이 어려운 사용자를 위한 저효율 대체 액션
   Future<void> performAlternativeSleep() async {
     if (state.isLoading || state.hasError) return;
+    if (state.valueOrNull?.isDead == true) return;
 
     try {
       final updatedPet = await alternativeSleepPetUseCase(petId);
@@ -565,6 +599,7 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
   /// 실내 운동 1분 완료 후 적용되는 저효율 대체 액션
   Future<void> performAlternativeExercise() async {
     if (state.isLoading || state.hasError) return;
+    if (state.valueOrNull?.isDead == true) return;
 
     try {
       final updatedPet = await alternativeExercisePetUseCase(petId);
@@ -642,6 +677,20 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
     }
   }
   
+  /// 펫 부활 (광고 시청 후 호출)
+  Future<void> resurrect() async {
+    if (state.isLoading || state.hasError) return;
+    if (state.valueOrNull?.isDead != true) return;
+
+    try {
+      final resurrectedPet = await resurrectPetUseCase(petId);
+      final evolvedPet = await _updateAndEvolve(resurrectedPet);
+      state = AsyncValue.data(evolvedPet);
+    } catch (e, stackTrace) {
+      state = AsyncValue.error(e, stackTrace);
+    }
+  }
+
   /// 펫 이름 변경
   /// 
   /// [newName] 새로운 이름
@@ -685,6 +734,8 @@ final petNotifierProvider = StateNotifierProvider.family<PetNotifier, AsyncValue
     alternativeFeedPetUseCase: ref.watch(alternativeFeedPetUseCaseProvider),
     alternativeSleepPetUseCase: ref.watch(alternativeSleepPetUseCaseProvider),
     alternativeExercisePetUseCase: ref.watch(alternativeExercisePetUseCaseProvider),
+    checkPetDeathUseCase: ref.watch(checkPetDeathUseCaseProvider),
+    resurrectPetUseCase: ref.watch(resurrectPetUseCaseProvider),
     petId: petId,
   );
 });

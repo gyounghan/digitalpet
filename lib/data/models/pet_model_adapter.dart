@@ -59,6 +59,14 @@ class PetModelAdapter extends TypeAdapter<PetModel> {
       todayAlternativeFeedCount: fields[19] as int? ?? 0,
       todayAlternativeSleepCount: fields[20] as int? ?? 0,
       todayAlternativeExerciseCount: fields[21] as int? ?? 0,
+      isDead: fields[23] as bool? ?? false,
+      deathDate: fields[24] as int?,
+      zeroStatStartDate: fields[25] as String?,
+      resurrectCount: fields[26] as int? ?? 0,
+      goalStartDate: fields[27] as String? ?? '',
+      goalStreakCount: fields[28] as int? ?? 0,
+      goalStartTotalSteps: fields[29] as int? ?? 0,
+      goalStartTotalExerciseMinutes: fields[30] as int? ?? 0,
     );
   }
 
@@ -67,7 +75,7 @@ class PetModelAdapter extends TypeAdapter<PetModel> {
     // Hive에 데이터 쓰기
     // 필드 개수와 각 필드를 순서대로 저장
     writer
-      ..writeByte(23) // 필드 개수 (id, name 포함)
+      ..writeByte(31) // 필드 개수 (HiveField 0-30)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -113,7 +121,23 @@ class PetModelAdapter extends TypeAdapter<PetModel> {
       ..writeByte(21)
       ..write(obj.todayAlternativeExerciseCount)
       ..writeByte(22)
-      ..write(obj.lastStatusDecayUpdated);
+      ..write(obj.lastStatusDecayUpdated)
+      ..writeByte(23)
+      ..write(obj.isDead)
+      ..writeByte(24)
+      ..write(obj.deathDate)
+      ..writeByte(25)
+      ..write(obj.zeroStatStartDate)
+      ..writeByte(26)
+      ..write(obj.resurrectCount)
+      ..writeByte(27)
+      ..write(obj.goalStartDate)
+      ..writeByte(28)
+      ..write(obj.goalStreakCount)
+      ..writeByte(29)
+      ..write(obj.goalStartTotalSteps)
+      ..writeByte(30)
+      ..write(obj.goalStartTotalExerciseMinutes);
   }
 
   @override

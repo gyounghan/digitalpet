@@ -11,6 +11,7 @@ import 'data/datasources/health_datasource.dart';
 import 'data/services/notification_service.dart';
 import 'data/services/widget_service.dart';
 import 'data/services/background_service.dart';
+import 'data/services/ad_service.dart';
 import 'presentation/screens/main_navigation_screen.dart';
 import 'core/theme/app_theme.dart';
 
@@ -34,6 +35,9 @@ void main() async {
 
   // 백그라운드 작업 초기화
   await _initBackgroundService();
+
+  // 광고 서비스 초기화
+  await _initAds();
   
   // 앱 실행
   runApp(
@@ -110,6 +114,16 @@ Future<void> _initHealth() async {
 /// 앱 시작 시 한 번만 호출하여 WorkManager를 초기화하고 백그라운드 작업을 등록
 Future<void> _initBackgroundService() async {
   await BackgroundService.initialize();
+}
+
+/// 광고 서비스 초기화
+Future<void> _initAds() async {
+  try {
+    final adService = AdService();
+    await adService.initialize();
+  } catch (e) {
+    debugPrint('main._initAds: Ads init failed: $e');
+  }
 }
 
 /// 메인 앱 위젯

@@ -138,6 +138,8 @@ class WidgetService {
         return AppStrings.moodAnxious;
       case PetMood.satisfied:
         return AppStrings.moodSatisfied;
+      case PetMood.dead:
+        return AppStrings.moodDead;
     }
   }
   

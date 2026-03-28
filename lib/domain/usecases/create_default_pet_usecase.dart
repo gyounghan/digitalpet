@@ -59,6 +59,12 @@ class CreateDefaultPetUseCase {
       todayAlternativeSleepCount: 0,
       todayAlternativeExerciseCount: 0,
       lastGoalResetDate: todayDate,
+      isDead: false,
+      resurrectCount: 0,
+      goalStartDate: todayDate,
+      goalStreakCount: 0,
+      goalStartTotalSteps: 0,
+      goalStartTotalExerciseMinutes: 0,
     );
     
     // Hive에 저장

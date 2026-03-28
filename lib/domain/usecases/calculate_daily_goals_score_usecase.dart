@@ -85,42 +85,58 @@ class CalculateDailyGoalsScoreUseCase {
     required this.activityRepository,
   });
   
-  /// 일일 목표 점수 계산
-  /// 
+  /// 목표 점수 계산 (기간제: 완료할 때까지 유지, 최대 7일)
+  ///
   /// [petId] 확인할 반려동물 ID
-  /// 
-  /// 반환: 일일 목표 달성 점수와 경험치
+  ///
+  /// 반환: 목표 달성 점수와 경험치
   Future<DailyGoalsScore> call(String petId) async {
     // 1. 현재 Pet 조회
     var pet = await petRepository.getPet(petId);
-    
-    // 2. 일일 목표 리셋 확인
+
+    // 2. 목표 기간 시작일 초기화 (첫 실행 시)
+    if (pet.goalStartDate.isEmpty) {
+      pet = pet.copyWith(
+        goalStartDate: pet.todayDateString,
+        goalStartTotalSteps: pet.totalSteps,
+        goalStartTotalExerciseMinutes: pet.totalExerciseMinutes,
+      );
+      await petRepository.updatePet(pet);
+    }
+
+    // 3. 일일 항목 리셋 확인 (식사 슬롯, 대체 액션 등)
     if (pet.needsGoalReset) {
       pet = pet.resetDailyGoals();
       await petRepository.updatePet(pet);
     }
-    
-    // 3. 오늘 날짜
+
+    // 4. 7일 초과 강제 리셋 체크
+    final goalDaysElapsed = pet.goalDaysElapsed;
+    final isExpired = pet.needsGoalPeriodReset;
+
+    // 5. 오늘 날짜
     final todayDate = pet.todayDateString;
-    
-    // 4. 레벨에 따른 목표 값 계산
+
+    // 6. 레벨에 따른 목표 값 계산
     final feedGoalCount = getFeedGoalCount(pet.level);
     final sleepGoalHours = getSleepGoalHours(pet.level);
     final exerciseGoalSteps = getExerciseGoalSteps(pet.level);
     final exerciseGoalMinutes = getExerciseGoalMinutes(pet.level);
-    
-    // 5. 포만감 목표 확인 (레벨에 따라 1~3회)
+
+    // 7. 포만감 목표 확인 (기간 누적)
     final feedGoalAchieved = pet.todayFeedCount >= feedGoalCount;
-    
-    // 6. 수면 목표 확인 (레벨에 따라 4~6시간)
+
+    // 8. 수면 목표 확인 (기간 누적)
     final sleepGoalAchieved = pet.todaySleepHours >= sleepGoalHours;
-    
-    // 7. 운동 목표 확인 (레벨에 따라 다름)
+
+    // 9. 운동 목표 확인 (기간 누적: totalSteps - goalStartTotalSteps + 오늘 활동)
     final todayActivity = await activityRepository.getTodayActivityData();
-    final exerciseGoalAchieved = todayActivity.steps >= exerciseGoalSteps ||
-        todayActivity.exerciseMinutes >= exerciseGoalMinutes;
-    
-    // 8. 일일 목표 엔티티 생성
+    final periodSteps = pet.periodExerciseSteps + todayActivity.steps;
+    final periodMinutes = pet.periodExerciseMinutes + todayActivity.exerciseMinutes;
+    final exerciseGoalAchieved = periodSteps >= exerciseGoalSteps ||
+        periodMinutes >= exerciseGoalMinutes;
+
+    // 10. 목표 엔티티 생성
     final dailyGoals = DailyGoals(
       date: todayDate,
       feedGoalAchieved: feedGoalAchieved,
@@ -128,14 +144,15 @@ class CalculateDailyGoalsScoreUseCase {
       exerciseGoalAchieved: exerciseGoalAchieved,
       feedProgress: pet.todayFeedCount,
       sleepHours: pet.todaySleepHours,
-      exerciseSteps: todayActivity.steps,
-      exerciseMinutes: todayActivity.exerciseMinutes,
+      exerciseSteps: periodSteps,
+      exerciseMinutes: periodMinutes,
     );
-    
-    // 9. 점수 계산
+
+    // 11. 점수 계산
     final score = dailyGoals.totalScore;
-    final expGain = score * expPerScore;
-    
+    final streakBonusExp = (pet.goalStreakCount * 5).clamp(0, 25);
+    final expGain = score * expPerScore + (score == 3 ? streakBonusExp : 0);
+
     return DailyGoalsScore(
       dailyGoals: dailyGoals,
       score: score,
@@ -144,6 +161,10 @@ class CalculateDailyGoalsScoreUseCase {
       sleepGoalHours: sleepGoalHours,
       exerciseGoalSteps: exerciseGoalSteps,
       exerciseGoalMinutes: exerciseGoalMinutes,
+      goalDaysElapsed: goalDaysElapsed,
+      goalStreakCount: pet.goalStreakCount,
+      streakBonusExp: score == 3 ? streakBonusExp : 0,
+      isExpired: isExpired,
     );
   }
 }
@@ -170,7 +191,19 @@ class DailyGoalsScore {
   
   /// 레벨에 따른 운동 목표 시간 (분)
   final int exerciseGoalMinutes;
-  
+
+  /// 목표 기간 경과 일수
+  final int goalDaysElapsed;
+
+  /// 연속 달성 횟수
+  final int goalStreakCount;
+
+  /// 연속 달성 보너스 경험치
+  final int streakBonusExp;
+
+  /// 목표 기간 만료 여부 (7일 초과)
+  final bool isExpired;
+
   DailyGoalsScore({
     required this.dailyGoals,
     required this.score,
@@ -179,5 +212,9 @@ class DailyGoalsScore {
     required this.sleepGoalHours,
     required this.exerciseGoalSteps,
     required this.exerciseGoalMinutes,
+    this.goalDaysElapsed = 0,
+    this.goalStreakCount = 0,
+    this.streakBonusExp = 0,
+    this.isExpired = false,
   });
 }

@@ -14,6 +14,7 @@ import '../../domain/usecases/alternative_sleep_pet_usecase.dart';
 import '../../domain/usecases/alternative_exercise_pet_usecase.dart';
 import '../../domain/usecases/calculate_daily_goals_score_usecase.dart';
 import '../../core/utils/pet_image_helper.dart';
+import '../widgets/gravestone_widget.dart';
 
 /// 홈 화면
 /// Pet의 상태를 표시하는 메인 화면
@@ -67,9 +68,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         return AppStrings.moodAnxious;
       case PetMood.satisfied:
         return AppStrings.moodSatisfied;
+      case PetMood.dead:
+        return AppStrings.moodDead;
     }
   }
-  
+
   /// 일일 목표 점수 조회
   ///
   /// [ref] WidgetRef
@@ -177,9 +180,39 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         return Colors.red.shade300;
       case PetMood.satisfied:
         return Colors.blue;
+      case PetMood.dead:
+        return Colors.grey;
     }
   }
-  
+
+  /// 사망 상태 비석 UI
+  Widget _buildDeadPetContent(BuildContext context, WidgetRef ref, Pet pet) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: GravestoneWidget(
+          pet: pet,
+          isAdLoaded: true,
+          onResurrectPressed: () async {
+            // 광고 시청 후 부활 처리
+            final notifier = ref.read(
+              petNotifierProvider(HomeScreen.defaultPetId).notifier,
+            );
+            await notifier.resurrect();
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text(AppStrings.resurrectSuccess),
+                  backgroundColor: AppColors.primary,
+                ),
+              );
+            }
+          },
+        ),
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _exerciseTimer?.cancel();
@@ -483,8 +516,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   /// Pet 정보와 상태바, 액션 버튼을 표시
   /// design 폴더의 Home.tsx 레이아웃을 정확히 매칭
   Widget _buildPetContent(BuildContext context, WidgetRef ref, pet) {
+    // 사망 상태면 비석 UI 표시
+    if (pet.isDead) {
+      return _buildDeadPetContent(context, ref, pet);
+    }
+
     final petName = pet.name;
-    
+
     return LayoutBuilder(
       builder: (context, constraints) {
         return Center(
@@ -722,13 +760,55 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text(
-                              '오늘의 목표',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.textPrimary,
-                              ),
+                            Row(
+                              children: [
+                                const Text(
+                                  '목표',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.textPrimary,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: scoreResult.isExpired
+                                        ? AppColors.danger.withValues(alpha: 0.2)
+                                        : AppColors.primary.withValues(alpha: 0.2),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    'D+${scoreResult.goalDaysElapsed}/7',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: scoreResult.isExpired
+                                          ? AppColors.danger
+                                          : AppColors.primary,
+                                    ),
+                                  ),
+                                ),
+                                if (scoreResult.goalStreakCount > 0) ...[
+                                  const SizedBox(width: 6),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.accentPink.withValues(alpha: 0.2),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      '${scoreResult.goalStreakCount}연속',
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppColors.accentPink,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
                             ),
                             Text(
                               '${scoreResult.score}/3',

@@ -36,6 +36,8 @@ PetImageType getPetImageTypeFromMood(PetMood mood) {
       return PetImageType.anxious;
     case PetMood.satisfied:
       return PetImageType.full;
+    case PetMood.dead:
+      return PetImageType.sad;
   }
 }
 

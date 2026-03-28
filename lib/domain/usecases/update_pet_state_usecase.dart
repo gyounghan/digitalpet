@@ -31,7 +31,10 @@ class UpdatePetStateUseCase {
   Future<Pet> call(String petId) async {
     // 1. 현재 Pet 조회
     final pet = await petRepository.getPet(petId);
-    
+
+    // 사망한 펫은 상태 업데이트 불필요
+    if (pet.isDead) return pet;
+
     // 2. 현재 시간과 lastStatusDecayUpdated 비교하여 경과 시간 계산 (분 단위)
     final currentTime = DateTime.now().millisecondsSinceEpoch;
     final elapsedMilliseconds = currentTime - pet.lastStatusDecayUpdated;
