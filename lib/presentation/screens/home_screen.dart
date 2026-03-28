@@ -36,6 +36,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   int _exerciseRemainingSeconds = 0;
   Timer? _napTimer;
   int _napRemainingSeconds = 0;
+
+  /// 하단 카드 탭 인덱스: 0=상태, 1=목표
+  int _bottomCardTabIndex = 0;
   
   // Feed 버튼: 조건부 표시 (배고픔 상태 + 식사 시간대)
   // Play: 걷기/운동량 기반 자동
@@ -96,6 +99,41 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   /// [goal] 목표값
   /// [achieved] 달성 여부
   /// [icon] 아이콘
+  /// 탭 버튼 빌드
+  Widget _buildTabButton(String label, int index) {
+    final isSelected = _bottomCardTabIndex == index;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() => _bottomCardTabIndex = index),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? AppColors.primary.withValues(alpha: 0.2)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: isSelected
+                  ? AppColors.primary.withValues(alpha: 0.4)
+                  : AppColors.textSecondary.withValues(alpha: 0.2),
+              width: 1,
+            ),
+          ),
+          child: Center(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: isSelected ? AppColors.primary : AppColors.textSecondary,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   ///
   /// 반환: 목표 항목 위젯
   Widget _buildGoalItem(
@@ -684,209 +722,170 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
             ),
             const SizedBox(height: 32),
-            // 상태 섹션
+            // 상태/목표 탭 카드
             GlassCard(
               gradient: true,
               padding: const EdgeInsets.all(24),
               child: Column(
                 children: [
-                  StatusBar(
-                    label: AppStrings.hunger,
-                    value: pet.hunger,
-                    color: StatusBarColor.hunger,
-                    icon: Icons.restaurant,
+                  // 탭 헤더
+                  Row(
+                    children: [
+                      _buildTabButton('상태', 0),
+                      const SizedBox(width: 8),
+                      _buildTabButton('목표', 1),
+                    ],
                   ),
                   const SizedBox(height: 16),
-                  StatusBar(
-                    label: AppStrings.stamina,
-                    value: pet.stamina,
-                    color: StatusBarColor.stamina,
-                    icon: Icons.bedtime,
-                  ),
-                  const SizedBox(height: 16),
-                  StatusBar(
-                    label: AppStrings.happiness,
-                    value: pet.happiness,
-                    color: StatusBarColor.happiness,
-                    icon: Icons.directions_run,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-            // 오늘의 목표
-            FutureBuilder<DailyGoalsScore>(
-              key: ValueKey('daily_goals_home_${pet.todayFeedCount}_${pet.todaySleepHours}_${pet.lastUpdated}_${pet.level}'),
-              future: _getDailyGoalsScore(ref, pet),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return GlassCard(
-                    gradient: true,
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                  // 탭 내용
+                  if (_bottomCardTabIndex == 0)
+                    // 상태 탭
+                    Column(
                       children: [
-                        const Text(
-                          '오늘의 목표',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.textPrimary,
-                          ),
+                        StatusBar(
+                          label: AppStrings.hunger,
+                          value: pet.hunger,
+                          color: StatusBarColor.hunger,
+                          icon: Icons.restaurant,
                         ),
                         const SizedBox(height: 16),
-                        const Center(
-                          child: CircularProgressIndicator(color: AppColors.primary),
+                        StatusBar(
+                          label: AppStrings.stamina,
+                          value: pet.stamina,
+                          color: StatusBarColor.stamina,
+                          icon: Icons.bedtime,
+                        ),
+                        const SizedBox(height: 16),
+                        StatusBar(
+                          label: AppStrings.happiness,
+                          value: pet.happiness,
+                          color: StatusBarColor.happiness,
+                          icon: Icons.directions_run,
                         ),
                       ],
-                    ),
-                  );
-                }
+                    )
+                  else
+                    // 목표 탭
+                    FutureBuilder<DailyGoalsScore>(
+                      key: ValueKey('daily_goals_home_${pet.todayFeedCount}_${pet.todaySleepHours}_${pet.lastUpdated}_${pet.level}'),
+                      future: _getDailyGoalsScore(ref, pet),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return const Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(16),
+                              child: CircularProgressIndicator(color: AppColors.primary),
+                            ),
+                          );
+                        }
+                        if (!snapshot.hasData) return const SizedBox.shrink();
 
-                if (snapshot.hasError) {
-                  return const SizedBox.shrink();
-                }
+                        final scoreResult = snapshot.data!;
+                        final dailyGoals = scoreResult.dailyGoals;
 
-                if (snapshot.hasData) {
-                  final scoreResult = snapshot.data!;
-                  final dailyGoals = scoreResult.dailyGoals;
-
-                  return GlassCard(
-                    gradient: true,
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            // 목표 상단 정보
                             Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                const Text(
-                                  '목표',
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: scoreResult.isExpired
+                                            ? AppColors.danger.withValues(alpha: 0.2)
+                                            : AppColors.primary.withValues(alpha: 0.2),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Text(
+                                        'D+${scoreResult.goalDaysElapsed}/7',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                          color: scoreResult.isExpired
+                                              ? AppColors.danger
+                                              : AppColors.primary,
+                                        ),
+                                      ),
+                                    ),
+                                    if (scoreResult.goalStreakCount > 0) ...[
+                                      const SizedBox(width: 6),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.accentPink.withValues(alpha: 0.2),
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: Text(
+                                          '${scoreResult.goalStreakCount}연속',
+                                          style: const TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w600,
+                                            color: AppColors.accentPink,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                                Text(
+                                  '${scoreResult.score}/3',
                                   style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w600,
-                                    color: AppColors.textPrimary,
+                                    color: scoreResult.score == 3
+                                        ? AppColors.accentPink
+                                        : AppColors.textPrimary,
                                   ),
                                 ),
-                                const SizedBox(width: 8),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: scoreResult.isExpired
-                                        ? AppColors.danger.withValues(alpha: 0.2)
-                                        : AppColors.primary.withValues(alpha: 0.2),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Text(
-                                    'D+${scoreResult.goalDaysElapsed}/7',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w600,
-                                      color: scoreResult.isExpired
-                                          ? AppColors.danger
-                                          : AppColors.primary,
-                                    ),
-                                  ),
-                                ),
-                                if (scoreResult.goalStreakCount > 0) ...[
-                                  const SizedBox(width: 6),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.accentPink.withValues(alpha: 0.2),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Text(
-                                      '${scoreResult.goalStreakCount}연속',
-                                      style: const TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w600,
-                                        color: AppColors.accentPink,
-                                      ),
-                                    ),
-                                  ),
-                                ],
                               ],
                             ),
-                            Text(
-                              '${scoreResult.score}/3',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: scoreResult.score == 3
-                                    ? AppColors.accentPink
-                                    : AppColors.textPrimary,
-                              ),
+                            const SizedBox(height: 16),
+                            _buildGoalItem(
+                              '포만감',
+                              dailyGoals.feedProgress,
+                              scoreResult.feedGoalCount,
+                              dailyGoals.feedGoalAchieved,
+                              Icons.restaurant,
+                            ),
+                            const SizedBox(height: 12),
+                            _buildGoalItem(
+                              '수면',
+                              dailyGoals.sleepHours,
+                              scoreResult.sleepGoalHours,
+                              dailyGoals.sleepGoalAchieved,
+                              Icons.bedtime,
+                            ),
+                            const SizedBox(height: 12),
+                            Builder(
+                              builder: (context) {
+                                final stepsProgress = dailyGoals.exerciseSteps;
+                                final stepsPercent =
+                                    (stepsProgress / scoreResult.exerciseGoalSteps * 100).clamp(0.0, 100.0);
+                                final minutesPercent =
+                                    (dailyGoals.exerciseMinutes / scoreResult.exerciseGoalMinutes * 100).clamp(0.0, 100.0);
+                                final exercisePercent = stepsPercent > minutesPercent ? stepsPercent : minutesPercent;
+                                final exerciseProgress = dailyGoals.exerciseGoalAchieved
+                                    ? scoreResult.exerciseGoalSteps
+                                    : (exercisePercent / 100 * scoreResult.exerciseGoalSteps).round();
+                                return _buildGoalItem(
+                                  '운동',
+                                  exerciseProgress,
+                                  scoreResult.exerciseGoalSteps,
+                                  dailyGoals.exerciseGoalAchieved,
+                                  Icons.directions_run,
+                                );
+                              },
                             ),
                           ],
-                        ),
-                        const SizedBox(height: 16),
-                        // 포만감 목표 (레벨에 따라 1~3회)
-                        _buildGoalItem(
-                          '포만감',
-                          dailyGoals.feedProgress,
-                          scoreResult.feedGoalCount,
-                          dailyGoals.feedGoalAchieved,
-                          Icons.restaurant,
-                        ),
-                        const SizedBox(height: 12),
-                        // 수면 목표 (레벨에 따라 4~6시간)
-                        _buildGoalItem(
-                          '수면',
-                          dailyGoals.sleepHours,
-                          scoreResult.sleepGoalHours,
-                          dailyGoals.sleepGoalAchieved,
-                          Icons.bedtime,
-                        ),
-                        const SizedBox(height: 12),
-                        // 운동 목표 (레벨에 따라 다름)
-                        Builder(
-                          builder: (context) {
-                            // 걸음 수 진행도
-                            final stepsProgress = dailyGoals.exerciseSteps;
-                            final stepsProgressPercent =
-                                (stepsProgress / scoreResult.exerciseGoalSteps * 100)
-                                    .clamp(0.0, 100.0);
-
-                            // 운동 시간 진행도 (걸음 수 기준으로 변환)
-                            final minutesProgressPercent =
-                                (dailyGoals.exerciseMinutes /
-                                        scoreResult.exerciseGoalMinutes *
-                                        100)
-                                    .clamp(0.0, 100.0);
-
-                            // 더 높은 진행도 사용
-                            final exerciseProgressPercent = stepsProgressPercent >
-                                    minutesProgressPercent
-                                ? stepsProgressPercent
-                                : minutesProgressPercent;
-
-                            // 목표 달성 여부에 따라 진행도 표시
-                            final exerciseProgress =
-                                dailyGoals.exerciseGoalAchieved
-                                    ? scoreResult.exerciseGoalSteps
-                                    : (exerciseProgressPercent / 100 *
-                                            scoreResult.exerciseGoalSteps)
-                                        .round();
-
-                            return _buildGoalItem(
-                              '운동',
-                              exerciseProgress,
-                              scoreResult.exerciseGoalSteps,
-                              dailyGoals.exerciseGoalAchieved,
-                              Icons.directions_run,
-                            );
-                          },
-                        ),
-                      ],
+                        );
+                      },
                     ),
-                  );
-                } else {
-                  return const SizedBox.shrink();
-                }
-              },
+                ],
+              ),
             ),
             // Feed 버튼 (조건부 표시: 배고픔 상태 + 식사 시간대)
             Consumer(
