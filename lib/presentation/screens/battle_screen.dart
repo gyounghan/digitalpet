@@ -8,6 +8,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/constants/app_strings.dart';
 import '../../domain/entities/battle_history.dart';
 import '../../domain/usecases/battle_with_activity_usecase.dart' show BattleTurn, BattleResult;
+import '../../data/datasources/battle_socket_datasource.dart';
 import 'home_screen.dart';
 
 /// 배틀 화면
@@ -23,7 +24,7 @@ class BattleScreen extends ConsumerStatefulWidget {
 class _BattleScreenState extends ConsumerState<BattleScreen>
     with TickerProviderStateMixin {
   // 배틀 상태
-  bool? battleResult; // true: 승리, false: 패배, null: 아직 대결 안 함
+  bool? battleResult;
   bool isLoading = false;
   int expGained = 0;
 
@@ -33,6 +34,13 @@ class _BattleScreenState extends ConsumerState<BattleScreen>
   int ourPetHp = 100;
   int opponentPetHp = 100;
   late AnimationController _attackAnimationController;
+
+  // 온라인 PvP 상태
+  bool isOnlineMode = false;
+  bool isMatchmaking = false;
+  String? opponentName;
+  int? opponentLevel;
+  BattleSocketDatasource? _socket;
 
   @override
   void initState() {
@@ -46,7 +54,110 @@ class _BattleScreenState extends ConsumerState<BattleScreen>
   @override
   void dispose() {
     _attackAnimationController.dispose();
+    _socket?.disconnect();
     super.dispose();
+  }
+
+  /// 온라인 매칭 시작
+  Future<void> _startOnlineBattle(dynamic pet) async {
+    setState(() {
+      isLoading = true;
+      isMatchmaking = true;
+      battleResult = null;
+      turns = [];
+      currentTurnIndex = -1;
+    });
+
+    _socket = BattleSocketDatasource();
+
+    _socket!.onQueued = () {
+      if (mounted) setState(() {});
+    };
+
+    _socket!.onMatched = (roomId, opponent) {
+      if (mounted) {
+        setState(() {
+          isMatchmaking = false;
+          opponentName = opponent['petName'] as String? ?? '???';
+          opponentLevel = opponent['level'] as int? ?? 1;
+          ourPetHp = 100;
+          opponentPetHp = 100;
+        });
+      }
+    };
+
+    _socket!.onTurn = (turn) {
+      if (mounted) {
+        setState(() {
+          turns.add(turn);
+          currentTurnIndex = turns.length - 1;
+          ourPetHp = turn.playerHpRemaining;
+          opponentPetHp = turn.opponentHpRemaining;
+        });
+      }
+    };
+
+    _socket!.onResult = (data) {
+      if (mounted) {
+        setState(() {
+          battleResult = data['isVictory'] as bool? ?? false;
+          expGained = data['expGained'] as int? ?? 0;
+          isLoading = false;
+        });
+        // 펫 상태 새로고침
+        ref.read(petNotifierProvider(HomeScreen.defaultPetId).notifier).refresh();
+      }
+    };
+
+    _socket!.onTimeout = () {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+          isMatchmaking = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('매칭 시간 초과. 다시 시도해주세요.')),
+        );
+      }
+    };
+
+    _socket!.onOpponentDisconnected = () {
+      if (mounted) {
+        setState(() {
+          battleResult = true;
+          expGained = 50;
+          isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('상대가 연결을 끊었습니다. 승리!')),
+        );
+      }
+    };
+
+    await _socket!.connect();
+
+    // 매칭 큐 입장
+    _socket!.joinQueue(
+      petName: pet.name ?? '펫',
+      level: pet.level ?? 1,
+      hunger: pet.hunger ?? 50,
+      happiness: pet.happiness ?? 50,
+      stamina: pet.stamina ?? 50,
+      evolutionStage: pet.evolutionStage ?? 1,
+      evolutionType: pet.evolutionType?.name,
+      todaySteps: 0,
+      todayExerciseMinutes: 0,
+    );
+  }
+
+  /// 온라인 매칭 취소
+  void _cancelOnlineMatch() {
+    _socket?.cancelQueue();
+    _socket?.disconnect();
+    setState(() {
+      isLoading = false;
+      isMatchmaking = false;
+    });
   }
   
   /// 스탯 기반 배틀 시뮬레이션
@@ -230,15 +341,74 @@ class _BattleScreenState extends ConsumerState<BattleScreen>
           
           // 배틀 진행 상황 또는 버튼
           if (battleResult == null) ...[
-            if (!isLoading)
-              PetButton(
-                variant: PetButtonVariant.primary,
-                icon: Icons.sports_martial_arts,
-                onPressed: _startBattle,
-                child: const Text('대결 시작'),
-              )
-            else
+            if (!isLoading) ...[
+              Row(
+                children: [
+                  Expanded(
+                    child: PetButton(
+                      variant: PetButtonVariant.primary,
+                      icon: Icons.smart_toy,
+                      onPressed: () {
+                        setState(() => isOnlineMode = false);
+                        _startBattle();
+                      },
+                      child: const Text('AI 대전'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: PetButton(
+                      variant: PetButtonVariant.secondary,
+                      icon: Icons.wifi,
+                      onPressed: () {
+                        setState(() => isOnlineMode = true);
+                        _startOnlineBattle(pet);
+                      },
+                      child: const Text('온라인 대전'),
+                    ),
+                  ),
+                ],
+              ),
+            ] else if (isMatchmaking) ...[
+              GlassCard(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  children: [
+                    const CircularProgressIndicator(color: AppColors.primary),
+                    const SizedBox(height: 16),
+                    const Text(
+                      '상대를 찾고 있습니다...',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    PetButton(
+                      variant: PetButtonVariant.secondary,
+                      onPressed: _cancelOnlineMatch,
+                      child: const Text('취소'),
+                    ),
+                  ],
+                ),
+              ),
+            ] else ...[
+              if (opponentName != null) ...[
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Text(
+                    'VS $opponentName (Lv.$opponentLevel)',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.accentPink,
+                    ),
+                  ),
+                ),
+              ],
               _buildBattleInProgress(pet),
+            ],
           ],
           
           if (battleResult != null) ...[
