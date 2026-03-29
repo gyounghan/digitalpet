@@ -60,12 +60,14 @@ class _EvolutionScreenState extends ConsumerState<EvolutionScreen>
   /// EvolutionType별 테마 색상 반환
   Color _getEvolutionThemeColor(EvolutionType? type) {
     switch (type) {
-      case EvolutionType.active:
-        return const Color(0xFFFF6B6B); // 활동형: 붉은색
-      case EvolutionType.restful:
-        return const Color(0xFF4ECDC4); // 휴식형: 청록색
-      case EvolutionType.balanced:
-        return AppColors.primary; // 균형형: 기본 핑크
+      case EvolutionType.bird:
+        return const Color(0xFFFF6B6B); // 새(주작): 붉은색
+      case EvolutionType.snake:
+        return const Color(0xFF4ECDC4); // 뱀(청룡): 청록색
+      case EvolutionType.tiger:
+        return const Color(0xFFFFD93D); // 호랑이(백호): 황금색
+      case EvolutionType.turtle:
+        return const Color(0xFF6C63FF); // 거북이(현무): 남색
       default:
         return AppColors.primary;
     }
@@ -74,9 +76,10 @@ class _EvolutionScreenState extends ConsumerState<EvolutionScreen>
   /// EvolutionType별 라벨 텍스트 반환
   String _getEvolutionTypeLabel(EvolutionType? type) {
     return switch (type) {
-      EvolutionType.active => '활동형 진화',
-      EvolutionType.restful => '휴식형 진화',
-      EvolutionType.balanced => '균형형 진화',
+      EvolutionType.bird => AppStrings.speciesBird,
+      EvolutionType.snake => AppStrings.speciesSnake,
+      EvolutionType.tiger => AppStrings.speciesTiger,
+      EvolutionType.turtle => AppStrings.speciesTurtle,
       null => '진화 타입 미결정',
     };
   }
@@ -84,31 +87,42 @@ class _EvolutionScreenState extends ConsumerState<EvolutionScreen>
   /// EvolutionType별 설명 반환
   String _getEvolutionTypeDescription(EvolutionType? type) {
     switch (type) {
-      case EvolutionType.active:
-        return '활동형 진화\n운동과 활동을 좋아하는 펫';
-      case EvolutionType.restful:
-        return '휴식형 진화\n편안함과 안정을 추구하는 펫';
-      case EvolutionType.balanced:
-        return '균형형 진화\n활동과 휴식이 조화로운 펫';
+      case EvolutionType.bird:
+        return '새 계열 진화\n활발하고 자유로운 패턴의 펫';
+      case EvolutionType.snake:
+        return '뱀 계열 진화\n차분하고 자유로운 패턴의 펫';
+      case EvolutionType.tiger:
+        return '호랑이 계열 진화\n활발하고 규칙적인 패턴의 펫';
+      case EvolutionType.turtle:
+        return '거북이 계열 진화\n차분하고 규칙적인 패턴의 펫';
       default:
         return '진화 타입 미결정\n더 활동하면서 진화 타입이 결정됩니다';
     }
   }
 
-  /// 진화 후 펫 이름 생성
-  String _getEvolvedPetName(String baseName, EvolutionType? type) {
-    const activeNames = {'Luna': '루나 아로우', '별': '불꽃별', '봄': '봄 엘프'};
-    const restfulNames = {'Luna': '루나 문라이트', '별': '은별', '봄': '봄 요정'};
-    const balancedNames = {'Luna': '루나 셀레스티아', '별': '빛별', '봄': '봄 수호자'};
+  /// 진화 후 펫 이름 생성 (진화 단계 + 등급 기반)
+  String _getEvolvedPetName(String baseName, EvolutionType? type, int evolutionStage, String evolutionGrade) {
+    if (type == null) return '$baseName+';
 
-    final nameMap = switch (type) {
-      EvolutionType.active => activeNames,
-      EvolutionType.restful => restfulNames,
-      EvolutionType.balanced => balancedNames,
-      null => {'default': '$baseName+'},
-    };
+    final typeName = type.name;
 
-    return nameMap[baseName] ?? '$baseName+';
+    // 4단계 신수
+    if (evolutionStage >= 4) {
+      return AppStrings.stage4Names[typeName] ?? '$baseName+';
+    }
+
+    // 3단계 normal/superior
+    if (evolutionStage >= 3) {
+      final grade = evolutionGrade.isNotEmpty ? evolutionGrade : 'normal';
+      return AppStrings.stage3Names[typeName]?[grade] ?? '$baseName+';
+    }
+
+    // 2단계 아기 종
+    if (evolutionStage >= 2) {
+      return AppStrings.stage2Names[typeName] ?? '$baseName+';
+    }
+
+    return '$baseName+';
   }
 
   @override
@@ -144,7 +158,7 @@ class _EvolutionScreenState extends ConsumerState<EvolutionScreen>
     final currentLevel = pet.level;
     final progress = (currentLevel / requiredLevel).clamp(0.0, 1.0);
     final themeColor = _getEvolutionThemeColor(pet.evolutionType);
-    final evolvedName = _getEvolvedPetName(pet.name, pet.evolutionType);
+    final evolvedName = _getEvolvedPetName(pet.name, pet.evolutionType, pet.evolutionStage, pet.evolutionGrade);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),

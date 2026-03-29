@@ -178,6 +178,9 @@ class Pet {
   /// 마지막 접속 시각 (밀리초, 4시간 간격 체크용)
   final int lastLoginTime;
 
+  /// 진화 등급 ('': 미결정, 'normal': 일반, 'superior': 상위, 'mythical': 신수)
+  final String evolutionGrade;
+
   /// 펫의 현재 기분 상태
   /// hunger, happiness, stamina + 현재 시간대에 따라 자동 계산
   ///
@@ -278,6 +281,7 @@ class Pet {
     this.todayBattleCount = 0,
     this.todayLoginCount = 0,
     this.lastLoginTime = 0,
+    this.evolutionGrade = '',
   });
 
   /// Pet 객체 복사본 생성
@@ -322,6 +326,7 @@ class Pet {
     int? todayBattleCount,
     int? todayLoginCount,
     int? lastLoginTime,
+    String? evolutionGrade,
   }) {
     return Pet(
       id: id ?? this.id,
@@ -363,6 +368,7 @@ class Pet {
       todayBattleCount: todayBattleCount ?? this.todayBattleCount,
       todayLoginCount: todayLoginCount ?? this.todayLoginCount,
       lastLoginTime: lastLoginTime ?? this.lastLoginTime,
+      evolutionGrade: evolutionGrade ?? this.evolutionGrade,
     );
   }
 
@@ -496,6 +502,7 @@ class Pet {
       todayBattleCount: todayBattleCount,
       todayLoginCount: todayLoginCount,
       lastLoginTime: lastLoginTime,
+      evolutionGrade: evolutionGrade,
     );
   }
 
@@ -553,6 +560,7 @@ class Pet {
       todayBattleCount: todayBattleCount,
       todayLoginCount: todayLoginCount,
       lastLoginTime: lastLoginTime,
+      evolutionGrade: evolutionGrade,
     );
   }
 
@@ -597,6 +605,7 @@ class Pet {
       todayBattleCount: todayBattleCount,
       todayLoginCount: todayLoginCount,
       lastLoginTime: lastLoginTime,
+      evolutionGrade: evolutionGrade,
     );
   }
 }

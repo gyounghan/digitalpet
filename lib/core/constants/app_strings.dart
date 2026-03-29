@@ -52,10 +52,25 @@ class AppStrings {
   static const String evolutionStage2 = '성장';
   static const String evolutionStage3 = '완성';
   
-  // 진화 방향
-  static const String evolutionTypeActive = '활동형';
-  static const String evolutionTypeRestful = '휴식형';
-  static const String evolutionTypeBalanced = '균형형';
+  // 진화 종
+  static const String speciesBird = '새 계열';
+  static const String speciesSnake = '뱀 계열';
+  static const String speciesTiger = '호랑이 계열';
+  static const String speciesTurtle = '거북이 계열';
+
+  // 진화 단계별 이름
+  static const Map<String, String> stage2Names = {
+    'bird': '아기새', 'snake': '아기뱀', 'tiger': '아기범', 'turtle': '아기거북',
+  };
+  static const Map<String, Map<String, String>> stage3Names = {
+    'bird': {'normal': '독수리', 'superior': '봉황'},
+    'snake': {'normal': '뱀', 'superior': '이무기'},
+    'tiger': {'normal': '호랑이', 'superior': '맹호'},
+    'turtle': {'normal': '바다거북', 'superior': '영귀'},
+  };
+  static const Map<String, String> stage4Names = {
+    'bird': '주작 \u{1F525}', 'snake': '청룡 \u{1F409}', 'tiger': '백호 \u{26A1}', 'turtle': '현무 \u{1F30A}',
+  };
   
   // 대결
   static const String battleArena = '대결 아레나';

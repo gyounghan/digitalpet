@@ -49,7 +49,7 @@ class PetModelAdapter extends TypeAdapter<PetModel> {
       evolutionType: fields[12] != null
           ? EvolutionType.values.firstWhere(
               (e) => e.name == fields[12],
-              orElse: () => EvolutionType.balanced,
+              orElse: () => EvolutionType.turtle,
             )
           : null,
       todayFeedCount: fields[13] as int? ?? 0,
@@ -75,6 +75,7 @@ class PetModelAdapter extends TypeAdapter<PetModel> {
       todayBattleCount: fields[36] as int? ?? 0,
       todayLoginCount: fields[37] as int? ?? 0,
       lastLoginTime: fields[38] as int? ?? 0,
+      evolutionGrade: fields[39] as String? ?? '',
     );
   }
 
@@ -83,7 +84,7 @@ class PetModelAdapter extends TypeAdapter<PetModel> {
     // Hive에 데이터 쓰기
     // 필드 개수와 각 필드를 순서대로 저장
     writer
-      ..writeByte(39) // 필드 개수 (HiveField 0-38)
+      ..writeByte(40) // 필드 개수 (HiveField 0-39)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -161,7 +162,9 @@ class PetModelAdapter extends TypeAdapter<PetModel> {
       ..writeByte(37)
       ..write(obj.todayLoginCount)
       ..writeByte(38)
-      ..write(obj.lastLoginTime);
+      ..write(obj.lastLoginTime)
+      ..writeByte(39)
+      ..write(obj.evolutionGrade);
   }
 
   @override

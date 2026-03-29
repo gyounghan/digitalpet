@@ -169,6 +169,10 @@ class PetModel extends Pet {
   @override
   final int lastLoginTime;
 
+  @HiveField(39)
+  @override
+  final String evolutionGrade;
+
   PetModel({
     required this.id,
     this.name = '펫',
@@ -209,6 +213,7 @@ class PetModel extends Pet {
     this.todayBattleCount = 0,
     this.todayLoginCount = 0,
     this.lastLoginTime = 0,
+    this.evolutionGrade = '',
   }) : super(
          id: id,
          name: name,
@@ -249,6 +254,7 @@ class PetModel extends Pet {
          todayBattleCount: todayBattleCount,
          todayLoginCount: todayLoginCount,
          lastLoginTime: lastLoginTime,
+         evolutionGrade: evolutionGrade,
        );
 
   /// JSON에서 PetModel 생성
@@ -276,7 +282,7 @@ class PetModel extends Pet {
       evolutionType: json['evolutionType'] != null
           ? EvolutionType.values.firstWhere(
               (e) => e.name == json['evolutionType'],
-              orElse: () => EvolutionType.balanced,
+              orElse: () => EvolutionType.turtle,
             )
           : null,
       todayFeedCount: json['todayFeedCount'] as int? ?? 0,
@@ -302,6 +308,7 @@ class PetModel extends Pet {
       todayBattleCount: json['todayBattleCount'] as int? ?? 0,
       todayLoginCount: json['todayLoginCount'] as int? ?? 0,
       lastLoginTime: json['lastLoginTime'] as int? ?? 0,
+      evolutionGrade: json['evolutionGrade'] as String? ?? '',
     );
   }
 
@@ -349,6 +356,7 @@ class PetModel extends Pet {
       'todayBattleCount': todayBattleCount,
       'todayLoginCount': todayLoginCount,
       'lastLoginTime': lastLoginTime,
+      'evolutionGrade': evolutionGrade,
     };
   }
 
@@ -398,6 +406,7 @@ class PetModel extends Pet {
       todayBattleCount: pet.todayBattleCount,
       todayLoginCount: pet.todayLoginCount,
       lastLoginTime: pet.lastLoginTime,
+      evolutionGrade: pet.evolutionGrade,
     );
   }
 
@@ -445,6 +454,7 @@ class PetModel extends Pet {
       todayBattleCount: todayBattleCount,
       todayLoginCount: todayLoginCount,
       lastLoginTime: lastLoginTime,
+      evolutionGrade: evolutionGrade,
     );
   }
 
@@ -492,6 +502,7 @@ class PetModel extends Pet {
     int? todayBattleCount,
     int? todayLoginCount,
     int? lastLoginTime,
+    String? evolutionGrade,
   }) {
     return PetModel(
       id: id ?? this.id,
@@ -533,6 +544,7 @@ class PetModel extends Pet {
       todayBattleCount: todayBattleCount ?? this.todayBattleCount,
       todayLoginCount: todayLoginCount ?? this.todayLoginCount,
       lastLoginTime: lastLoginTime ?? this.lastLoginTime,
+      evolutionGrade: evolutionGrade ?? this.evolutionGrade,
     );
   }
 }

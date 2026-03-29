@@ -203,14 +203,20 @@ class BattleWithActivityUseCase {
     int defenseDirectionBonus = 0;
     int hpDirectionBonus = 0;
     switch (pet.evolutionType) {
-      case EvolutionType.active:
+      case EvolutionType.bird:
         attackDirectionBonus = 3;
         break;
-      case EvolutionType.restful:
-        defenseDirectionBonus = 3;
+      case EvolutionType.snake:
+        hpDirectionBonus = 10;
+        defenseDirectionBonus = 2;
         break;
-      case EvolutionType.balanced:
-        hpDirectionBonus = 15;
+      case EvolutionType.tiger:
+        attackDirectionBonus = 2;
+        defenseDirectionBonus = 2;
+        break;
+      case EvolutionType.turtle:
+        defenseDirectionBonus = 3;
+        hpDirectionBonus = 10;
         break;
       default:
         break;

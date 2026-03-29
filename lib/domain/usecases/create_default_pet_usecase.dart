@@ -73,6 +73,7 @@ class CreateDefaultPetUseCase {
       todayBattleCount: 0,
       todayLoginCount: 0,
       lastLoginTime: 0,
+      evolutionGrade: '',
     );
     
     // Hive에 저장
