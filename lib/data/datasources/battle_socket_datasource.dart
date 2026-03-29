@@ -71,7 +71,9 @@ class BattleSocketDatasource {
       final map = data as Map<String, dynamic>;
       final turn = BattleTurn(
         turnNumber: map['turnNumber'] as int,
+        playerSkillName: map['playerSkillName'] as String? ?? '공격',
         playerDamage: map['playerDamage'] as int,
+        opponentSkillName: map['opponentSkillName'] as String? ?? '공격',
         opponentDamage: map['opponentDamage'] as int,
         playerHpRemaining: map['playerHpRemaining'] as int,
         opponentHpRemaining: map['opponentHpRemaining'] as int,

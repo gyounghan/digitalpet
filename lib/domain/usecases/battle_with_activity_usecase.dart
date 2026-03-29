@@ -6,35 +6,81 @@ import '../repositories/pet_repository.dart';
 import '../repositories/activity_repository.dart';
 import '../repositories/battle_history_repository.dart';
 
-/// 스탯 기반 배틀 유스케이스
-/// 펫 상태 + 활동량 + 진화 보너스로 배틀 능력치를 결정하고 5턴 자동 진행
-///
-/// 능력치 계산:
-/// - 공격력 = (happiness/10) + 활동보너스(max 5) + 진화보너스 + 방향보너스
-/// - 방어력 = (stamina/10) + 활동보너스(max 5) + 진화보너스 + 방향보너스
-/// - 체력 = 50 + (hunger/5) + (레벨*2) + 방향보너스
-///
-/// 하루 3회 제한 (1회차 100%, 2회차 70%, 3회차 50% 보상)
+/// 상성 테이블: bird→snake→turtle→tiger→bird
+const Map<EvolutionType, EvolutionType> _affinityAdvantage = {
+  EvolutionType.bird: EvolutionType.snake,
+  EvolutionType.snake: EvolutionType.turtle,
+  EvolutionType.turtle: EvolutionType.tiger,
+  EvolutionType.tiger: EvolutionType.bird,
+};
+
+/// 종별 스킬 정의
+enum SkillType { basicAttack, special }
+
+class BattleSkill {
+  final String name;
+  final SkillType type;
+  final double damageMultiplier;
+  final int defenseDebuff;
+  final int attackDebuff;
+  final int debuffDuration;
+  final double damageReduction;
+  final int reductionDuration;
+
+  const BattleSkill({
+    required this.name,
+    this.type = SkillType.basicAttack,
+    this.damageMultiplier = 1.0,
+    this.defenseDebuff = 0,
+    this.attackDebuff = 0,
+    this.debuffDuration = 0,
+    this.damageReduction = 0.0,
+    this.reductionDuration = 0,
+  });
+}
+
+/// 종별 스킬셋
+const Map<EvolutionType, List<BattleSkill>> _skillSets = {
+  EvolutionType.bird: [
+    BattleSkill(name: '쪼기'),
+    BattleSkill(name: '급강하', type: SkillType.special, damageMultiplier: 1.5),
+  ],
+  EvolutionType.snake: [
+    BattleSkill(name: '물기'),
+    BattleSkill(name: '조이기', type: SkillType.special, defenseDebuff: 3, debuffDuration: 2),
+  ],
+  EvolutionType.tiger: [
+    BattleSkill(name: '할퀴기'),
+    BattleSkill(name: '포효', type: SkillType.special, attackDebuff: 3, debuffDuration: 2),
+  ],
+  EvolutionType.turtle: [
+    BattleSkill(name: '박치기'),
+    BattleSkill(name: '방어자세', type: SkillType.special, damageReduction: 0.5, reductionDuration: 1),
+  ],
+};
+
+const List<BattleSkill> _defaultSkills = [
+  BattleSkill(name: '공격'),
+];
+
+/// 스탯 기반 + 상성 + 스킬 배틀 유스케이스
 class BattleWithActivityUseCase {
   final PetRepository petRepository;
   final ActivityRepository activityRepository;
   final BattleHistoryRepository battleHistoryRepository;
 
   static const int maxBattlesPerDay = 3;
-  static const int maxTurns = 5;
+  static const int maxTurns = 7;
+  static const double affinityAdvantageMultiplier = 1.3;
+  static const double affinityDisadvantageMultiplier = 0.7;
+  static const int specialCooldown = 2;
 
-  /// 보상 EXP (기본)
   static const int victoryExp = 50;
   static const int defeatExp = 15;
   static const int dominantVictoryExp = 70;
-
-  /// 보상 배율 (횟수별)
   static const List<double> rewardMultipliers = [1.0, 0.7, 0.5];
 
-  /// 진화 단계별 보너스
-  static const Map<int, int> evolutionStageBonus = {
-    1: 0, 2: 2, 3: 4, 4: 7,
-  };
+  static const Map<int, int> evolutionStageBonus = {1: 0, 2: 2, 3: 4, 4: 7};
 
   BattleWithActivityUseCase({
     required this.petRepository,
@@ -42,100 +88,147 @@ class BattleWithActivityUseCase {
     required this.battleHistoryRepository,
   });
 
-  /// 배틀 실행
   Future<BattleResult> call(String petId) async {
     var pet = await petRepository.getPet(petId);
 
     if (pet.isDead) {
-      return BattleResult(
-        isVictory: false,
-        isDominantVictory: false,
-        expGained: 0,
-        updatedPet: pet,
-        turns: [],
-        playerStats: _BattleStats.zero(),
-        opponentStats: _BattleStats.zero(),
-      );
+      return BattleResult.empty(pet);
     }
 
-    // 일일 리셋 체크
     if (pet.needsGoalReset) {
       pet = pet.resetDailyGoals();
       await petRepository.updatePet(pet);
     }
 
-    // 하루 3회 제한
     if (pet.todayBattleCount >= maxBattlesPerDay) {
-      return BattleResult(
-        isVictory: false,
-        isDominantVictory: false,
-        expGained: 0,
-        updatedPet: pet,
-        turns: [],
-        playerStats: _BattleStats.zero(),
-        opponentStats: _BattleStats.zero(),
-        limitReached: true,
-      );
+      return BattleResult.empty(pet, limitReached: true);
     }
 
     final todayActivity = await activityRepository.getTodayActivityData();
     final random = Random();
 
-    // 플레이어 스탯 계산
-    final playerStats = _calculatePlayerStats(pet, todayActivity.steps, todayActivity.exerciseMinutes);
+    final playerType = pet.evolutionType;
+    final playerStats = _calculateStats(pet, todayActivity.steps, todayActivity.exerciseMinutes);
 
-    // AI 상대 생성 (레벨 기반)
+    // AI 상대 생성 (종 랜덤)
     final opponentLevel = max(1, pet.level - 2 + random.nextInt(4));
-    final opponentStats = _generateOpponentStats(opponentLevel, random);
+    final opponentType = EvolutionType.values[random.nextInt(EvolutionType.values.length)];
+    final opponentStats = _generateOpponentStats(opponentLevel, opponentType, random);
 
-    // 5턴 배틀 시뮬레이션
+    // 상성 계산
+    final affinityMultiplier = _getAffinityMultiplier(playerType, opponentType);
+    final opponentAffinityMultiplier = _getAffinityMultiplier(opponentType, playerType);
+
+    // 스킬셋
+    final playerSkills = _skillSets[playerType] ?? _defaultSkills;
+    final opponentSkills = _skillSets[opponentType] ?? _defaultSkills;
+
+    // 배틀 시뮬레이션
     int playerHp = playerStats.hp;
     int opponentHp = opponentStats.hp;
+    int playerAtk = playerStats.attack;
+    int playerDef = playerStats.defense;
+    int opponentAtk = opponentStats.attack;
+    int opponentDef = opponentStats.defense;
+
+    // 디버프/버프 타이머
+    int playerDefDebuffTurns = 0;
+    int playerAtkDebuffTurns = 0;
+    int opponentDefDebuffTurns = 0;
+    int opponentAtkDebuffTurns = 0;
+    int playerDmgReductionTurns = 0;
+    int opponentDmgReductionTurns = 0;
+    double playerDmgReduction = 0.0;
+    double opponentDmgReduction = 0.0;
+
+    int playerSpecialCooldown = 0;
+    int opponentSpecialCooldown = 0;
+
     final turns = <BattleTurn>[];
 
     for (int turn = 1; turn <= maxTurns && playerHp > 0 && opponentHp > 0; turn++) {
+      // 디버프 만료 체크
+      if (playerDefDebuffTurns > 0) { playerDefDebuffTurns--; } else { playerDef = playerStats.defense; }
+      if (playerAtkDebuffTurns > 0) { playerAtkDebuffTurns--; } else { playerAtk = playerStats.attack; }
+      if (opponentDefDebuffTurns > 0) { opponentDefDebuffTurns--; } else { opponentDef = opponentStats.defense; }
+      if (opponentAtkDebuffTurns > 0) { opponentAtkDebuffTurns--; } else { opponentAtk = opponentStats.attack; }
+      if (playerDmgReductionTurns > 0) { playerDmgReductionTurns--; } else { playerDmgReduction = 0.0; }
+      if (opponentDmgReductionTurns > 0) { opponentDmgReductionTurns--; } else { opponentDmgReduction = 0.0; }
+
+      // 플레이어 스킬 선택 (AI: 쿨타임 끝나면 특수기 우선)
+      final playerSkill = _selectSkill(playerSkills, playerSpecialCooldown);
+      if (playerSkill.type == SkillType.special) playerSpecialCooldown = specialCooldown;
+      if (playerSpecialCooldown > 0) playerSpecialCooldown--;
+
       // 플레이어 공격
-      final playerDamage = max(1, playerStats.attack - (opponentStats.defense ~/ 2) + random.nextInt(5) - 2);
+      var rawDamage = (playerAtk * playerSkill.damageMultiplier - opponentDef ~/ 2 + random.nextInt(5) - 2).round();
+      rawDamage = (rawDamage * affinityMultiplier).round();
+      if (opponentDmgReduction > 0) rawDamage = (rawDamage * (1.0 - opponentDmgReduction)).round();
+      final playerDamage = max(1, rawDamage);
       opponentHp = max(0, opponentHp - playerDamage);
 
-      // 상대 공격 (상대가 아직 살아있으면)
+      // 플레이어 스킬 효과 적용 (상대에게)
+      if (playerSkill.defenseDebuff > 0) {
+        opponentDef = max(0, opponentStats.defense - playerSkill.defenseDebuff);
+        opponentDefDebuffTurns = playerSkill.debuffDuration;
+      }
+      if (playerSkill.attackDebuff > 0) {
+        opponentAtk = max(0, opponentStats.attack - playerSkill.attackDebuff);
+        opponentAtkDebuffTurns = playerSkill.debuffDuration;
+      }
+      if (playerSkill.damageReduction > 0) {
+        playerDmgReduction = playerSkill.damageReduction;
+        playerDmgReductionTurns = playerSkill.reductionDuration;
+      }
+
+      // 상대 스킬 선택
+      final opponentSkill = _selectSkill(opponentSkills, opponentSpecialCooldown);
+      if (opponentSkill.type == SkillType.special) opponentSpecialCooldown = specialCooldown;
+      if (opponentSpecialCooldown > 0) opponentSpecialCooldown--;
+
+      // 상대 공격
       int opponentDamage = 0;
       if (opponentHp > 0) {
-        opponentDamage = max(1, opponentStats.attack - (playerStats.defense ~/ 2) + random.nextInt(5) - 2);
+        var rawOppDmg = (opponentAtk * opponentSkill.damageMultiplier - playerDef ~/ 2 + random.nextInt(5) - 2).round();
+        rawOppDmg = (rawOppDmg * opponentAffinityMultiplier).round();
+        if (playerDmgReduction > 0) rawOppDmg = (rawOppDmg * (1.0 - playerDmgReduction)).round();
+        opponentDamage = max(1, rawOppDmg);
         playerHp = max(0, playerHp - opponentDamage);
+
+        if (opponentSkill.defenseDebuff > 0) {
+          playerDef = max(0, playerStats.defense - opponentSkill.defenseDebuff);
+          playerDefDebuffTurns = opponentSkill.debuffDuration;
+        }
+        if (opponentSkill.attackDebuff > 0) {
+          playerAtk = max(0, playerStats.attack - opponentSkill.attackDebuff);
+          playerAtkDebuffTurns = opponentSkill.debuffDuration;
+        }
+        if (opponentSkill.damageReduction > 0) {
+          opponentDmgReduction = opponentSkill.damageReduction;
+          opponentDmgReductionTurns = opponentSkill.reductionDuration;
+        }
       }
 
       turns.add(BattleTurn(
         turnNumber: turn,
+        playerSkillName: playerSkill.name,
         playerDamage: playerDamage,
+        opponentSkillName: opponentSkill.name,
         opponentDamage: opponentDamage,
         playerHpRemaining: playerHp,
         opponentHpRemaining: opponentHp,
       ));
     }
 
-    // 결과 판정
     final isVictory = playerHp > opponentHp;
     final isDominantVictory = isVictory && playerHp > (playerStats.hp ~/ 2);
 
-    // 보상 계산 (횟수별 배율)
     final multiplierIndex = pet.todayBattleCount.clamp(0, rewardMultipliers.length - 1);
     final multiplier = rewardMultipliers[multiplierIndex];
-
-    int baseExp;
-    if (isDominantVictory) {
-      baseExp = dominantVictoryExp;
-    } else if (isVictory) {
-      baseExp = victoryExp;
-    } else {
-      baseExp = defeatExp;
-    }
-
-    // 이벤트 보너스 (모험의 날)
+    int baseExp = isDominantVictory ? dominantVictoryExp : (isVictory ? victoryExp : defeatExp);
     final eventMultiplier = pet.todayEvent == 'adventure' ? 2.0 : 1.0;
     final expGain = (baseExp * multiplier * eventMultiplier).round();
 
-    // 레벨업 계산 (점진적)
     var currentExp = pet.exp + expGain;
     var currentLevel = pet.level;
     int levelUps = 0;
@@ -167,7 +260,6 @@ class BattleWithActivityUseCase {
 
     await petRepository.updatePet(updatedPet);
 
-    // 전적 저장
     final battleHistory = BattleHistory(
       id: '${petId}_$currentTime',
       date: currentTime,
@@ -184,87 +276,93 @@ class BattleWithActivityUseCase {
       expGained: expGain,
       updatedPet: updatedPet,
       turns: turns,
-      playerStats: playerStats,
-      opponentStats: opponentStats,
+      playerTypeName: playerType?.name ?? '',
+      opponentTypeName: opponentType.name,
+      affinityAdvantage: affinityMultiplier > 1.0,
+      affinityDisadvantage: affinityMultiplier < 1.0,
     );
   }
 
-  /// 플레이어 배틀 스탯 계산
-  _BattleStats _calculatePlayerStats(Pet pet, int todaySteps, int todayExerciseMinutes) {
-    final stageBonus = evolutionStageBonus[pet.evolutionStage] ?? 0;
+  double _getAffinityMultiplier(EvolutionType? attacker, EvolutionType? defender) {
+    if (attacker == null || defender == null) return 1.0;
+    if (_affinityAdvantage[attacker] == defender) return affinityAdvantageMultiplier;
+    if (_affinityAdvantage[defender] == attacker) return affinityDisadvantageMultiplier;
+    return 1.0;
+  }
 
-    // 활동 보너스 (최대 5)
+  BattleSkill _selectSkill(List<BattleSkill> skills, int currentCooldown) {
+    if (skills.length > 1 && currentCooldown <= 0) {
+      return skills[1]; // 특수기
+    }
+    return skills[0]; // 기본공격
+  }
+
+  BattleStats _calculateStats(Pet pet, int todaySteps, int todayExerciseMinutes) {
+    final stageBonus = evolutionStageBonus[pet.evolutionStage] ?? 0;
     final stepsBonus = min(todaySteps ~/ 2000, 5);
     final exerciseBonus = min(todayExerciseMinutes ~/ 6, 5);
     final activityBonus = max(stepsBonus, exerciseBonus);
 
-    // 진화 방향 보너스
-    int attackDirectionBonus = 0;
-    int defenseDirectionBonus = 0;
-    int hpDirectionBonus = 0;
+    int attackBonus = 0, defenseBonus = 0, hpBonus = 0;
     switch (pet.evolutionType) {
-      case EvolutionType.bird:
-        attackDirectionBonus = 3;
-        break;
-      case EvolutionType.snake:
-        hpDirectionBonus = 10;
-        defenseDirectionBonus = 2;
-        break;
-      case EvolutionType.tiger:
-        attackDirectionBonus = 2;
-        defenseDirectionBonus = 2;
-        break;
-      case EvolutionType.turtle:
-        defenseDirectionBonus = 3;
-        hpDirectionBonus = 10;
-        break;
-      default:
-        break;
+      case EvolutionType.bird: attackBonus = 3; break;
+      case EvolutionType.snake: hpBonus = 10; defenseBonus = 2; break;
+      case EvolutionType.tiger: attackBonus = 2; defenseBonus = 2; break;
+      case EvolutionType.turtle: defenseBonus = 3; hpBonus = 10; break;
+      default: break;
     }
 
-    return _BattleStats(
-      attack: (pet.happiness ~/ 10) + activityBonus + stageBonus + attackDirectionBonus,
-      defense: (pet.stamina ~/ 10) + activityBonus + stageBonus + defenseDirectionBonus,
-      hp: 50 + (pet.hunger ~/ 5) + (pet.level * 2) + hpDirectionBonus,
+    return BattleStats(
+      attack: (pet.happiness ~/ 10) + activityBonus + stageBonus + attackBonus,
+      defense: (pet.stamina ~/ 10) + activityBonus + stageBonus + defenseBonus,
+      hp: 50 + (pet.hunger ~/ 5) + (pet.level * 2) + hpBonus,
     );
   }
 
-  /// AI 상대 스탯 생성
-  _BattleStats _generateOpponentStats(int level, Random random) {
-    final baseStatMin = 40;
-    final baseStatMax = 80;
-    final statRange = baseStatMax - baseStatMin;
+  BattleStats _generateOpponentStats(int level, EvolutionType type, Random random) {
+    final baseMin = 40, baseMax = 80;
+    final range = baseMax - baseMin;
+    int attackBonus = 0, defenseBonus = 0, hpBonus = 0;
+    switch (type) {
+      case EvolutionType.bird: attackBonus = 3; break;
+      case EvolutionType.snake: hpBonus = 10; defenseBonus = 2; break;
+      case EvolutionType.tiger: attackBonus = 2; defenseBonus = 2; break;
+      case EvolutionType.turtle: defenseBonus = 3; hpBonus = 10; break;
+    }
 
-    return _BattleStats(
-      attack: (baseStatMin + random.nextInt(statRange)) ~/ 10 + level,
-      defense: (baseStatMin + random.nextInt(statRange)) ~/ 10 + level,
-      hp: 50 + (baseStatMin + random.nextInt(statRange)) ~/ 5 + (level * 2),
+    return BattleStats(
+      attack: (baseMin + random.nextInt(range)) ~/ 10 + level + attackBonus,
+      defense: (baseMin + random.nextInt(range)) ~/ 10 + level + defenseBonus,
+      hp: 50 + (baseMin + random.nextInt(range)) ~/ 5 + (level * 2) + hpBonus,
     );
   }
 }
 
-/// 배틀 스탯
-class _BattleStats {
+/// 배틀 스탯 (public)
+class BattleStats {
   final int attack;
   final int defense;
   final int hp;
 
-  _BattleStats({required this.attack, required this.defense, required this.hp});
-
-  factory _BattleStats.zero() => _BattleStats(attack: 0, defense: 0, hp: 0);
+  BattleStats({required this.attack, required this.defense, required this.hp});
+  factory BattleStats.zero() => BattleStats(attack: 0, defense: 0, hp: 0);
 }
 
 /// 배틀 턴 결과
 class BattleTurn {
   final int turnNumber;
+  final String playerSkillName;
   final int playerDamage;
+  final String opponentSkillName;
   final int opponentDamage;
   final int playerHpRemaining;
   final int opponentHpRemaining;
 
   BattleTurn({
     required this.turnNumber,
+    required this.playerSkillName,
     required this.playerDamage,
+    required this.opponentSkillName,
     required this.opponentDamage,
     required this.playerHpRemaining,
     required this.opponentHpRemaining,
@@ -278,8 +376,10 @@ class BattleResult {
   final int expGained;
   final Pet updatedPet;
   final List<BattleTurn> turns;
-  final _BattleStats playerStats;
-  final _BattleStats opponentStats;
+  final String playerTypeName;
+  final String opponentTypeName;
+  final bool affinityAdvantage;
+  final bool affinityDisadvantage;
   final bool limitReached;
 
   BattleResult({
@@ -288,8 +388,19 @@ class BattleResult {
     required this.expGained,
     required this.updatedPet,
     required this.turns,
-    required this.playerStats,
-    required this.opponentStats,
+    this.playerTypeName = '',
+    this.opponentTypeName = '',
+    this.affinityAdvantage = false,
+    this.affinityDisadvantage = false,
     this.limitReached = false,
   });
+
+  factory BattleResult.empty(Pet pet, {bool limitReached = false}) => BattleResult(
+    isVictory: false,
+    isDominantVictory: false,
+    expGained: 0,
+    updatedPet: pet,
+    turns: [],
+    limitReached: limitReached,
+  );
 }

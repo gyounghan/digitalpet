@@ -631,7 +631,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen>
               child: Column(
                 children: [
                   Text(
-                    '${pet.name}: 공격!',
+                    '${pet.name}: ${turns[currentTurnIndex].playerSkillName}!',
                     style: const TextStyle(
                       fontSize: 13,
                       color: AppColors.primary,
@@ -651,7 +651,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen>
                   ],
                   const SizedBox(height: 8),
                   Text(
-                    '상대: 공격!',
+                    '상대: ${turns[currentTurnIndex].opponentSkillName}!',
                     style: const TextStyle(
                       fontSize: 13,
                       color: AppColors.textSecondary,
