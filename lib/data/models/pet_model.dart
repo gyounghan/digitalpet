@@ -173,6 +173,54 @@ class PetModel extends Pet {
   @override
   final String evolutionGrade;
 
+  @HiveField(40)
+  @override
+  final int todaySleepMinutes;
+
+  @HiveField(41)
+  @override
+  final int feedAchievedCount;
+
+  @HiveField(42)
+  @override
+  final int sleepAchievedCount;
+
+  @HiveField(43)
+  @override
+  final int exerciseAchievedCount;
+
+  @HiveField(44)
+  @override
+  final String lastFeedAchievedDate;
+
+  @HiveField(45)
+  @override
+  final String lastSleepAchievedDate;
+
+  @HiveField(46)
+  @override
+  final String lastExerciseAchievedDate;
+
+  @HiveField(47)
+  @override
+  final int lastExerciseGoalSteps;
+
+  @HiveField(48)
+  @override
+  final int lastExerciseGoalMinutes;
+
+  @HiveField(49)
+  @override
+  final int lastActivitySyncTime;
+
+  @HiveField(50)
+  @override
+  final int todaySetExpClaimed;
+
+  @HiveField(51)
+  @override
+  final int totalSetsRewarded;
+
   PetModel({
     required this.id,
     this.name = '펫',
@@ -193,6 +241,7 @@ class PetModel extends Pet {
     this.todayFeedCount = 0,
     this.todayFedMealSlots = 0,
     this.todaySleepHours = 0,
+    this.todaySleepMinutes = 0,
     this.todayAlternativeFeedCount = 0,
     this.todayAlternativeSleepCount = 0,
     this.todayAlternativeExerciseCount = 0,
@@ -214,6 +263,17 @@ class PetModel extends Pet {
     this.todayLoginCount = 0,
     this.lastLoginTime = 0,
     this.evolutionGrade = '',
+    this.feedAchievedCount = 0,
+    this.sleepAchievedCount = 0,
+    this.exerciseAchievedCount = 0,
+    this.lastFeedAchievedDate = '',
+    this.lastSleepAchievedDate = '',
+    this.lastExerciseAchievedDate = '',
+    this.lastExerciseGoalSteps = 0,
+    this.lastExerciseGoalMinutes = 0,
+    this.lastActivitySyncTime = 0,
+    this.todaySetExpClaimed = 0,
+    this.totalSetsRewarded = 0,
   }) : super(
          id: id,
          name: name,
@@ -234,6 +294,7 @@ class PetModel extends Pet {
          todayFeedCount: todayFeedCount,
          todayFedMealSlots: todayFedMealSlots,
          todaySleepHours: todaySleepHours,
+         todaySleepMinutes: todaySleepMinutes,
          todayAlternativeFeedCount: todayAlternativeFeedCount,
          todayAlternativeSleepCount: todayAlternativeSleepCount,
          todayAlternativeExerciseCount: todayAlternativeExerciseCount,
@@ -255,6 +316,17 @@ class PetModel extends Pet {
          todayLoginCount: todayLoginCount,
          lastLoginTime: lastLoginTime,
          evolutionGrade: evolutionGrade,
+         feedAchievedCount: feedAchievedCount,
+         sleepAchievedCount: sleepAchievedCount,
+         exerciseAchievedCount: exerciseAchievedCount,
+         lastFeedAchievedDate: lastFeedAchievedDate,
+         lastSleepAchievedDate: lastSleepAchievedDate,
+         lastExerciseAchievedDate: lastExerciseAchievedDate,
+         lastExerciseGoalSteps: lastExerciseGoalSteps,
+         lastExerciseGoalMinutes: lastExerciseGoalMinutes,
+         lastActivitySyncTime: lastActivitySyncTime,
+         todaySetExpClaimed: todaySetExpClaimed,
+         totalSetsRewarded: totalSetsRewarded,
        );
 
   /// JSON에서 PetModel 생성
@@ -288,6 +360,7 @@ class PetModel extends Pet {
       todayFeedCount: json['todayFeedCount'] as int? ?? 0,
       todayFedMealSlots: json['todayFedMealSlots'] as int? ?? 0,
       todaySleepHours: json['todaySleepHours'] as int? ?? 0,
+      todaySleepMinutes: json['todaySleepMinutes'] as int? ?? 0,
       todayAlternativeFeedCount: json['todayAlternativeFeedCount'] as int? ?? 0,
       todayAlternativeSleepCount: json['todayAlternativeSleepCount'] as int? ?? 0,
       todayAlternativeExerciseCount: json['todayAlternativeExerciseCount'] as int? ?? 0,
@@ -309,6 +382,18 @@ class PetModel extends Pet {
       todayLoginCount: json['todayLoginCount'] as int? ?? 0,
       lastLoginTime: json['lastLoginTime'] as int? ?? 0,
       evolutionGrade: json['evolutionGrade'] as String? ?? '',
+      feedAchievedCount: json['feedAchievedCount'] as int? ?? 0,
+      sleepAchievedCount: json['sleepAchievedCount'] as int? ?? 0,
+      exerciseAchievedCount: json['exerciseAchievedCount'] as int? ?? 0,
+      lastFeedAchievedDate: json['lastFeedAchievedDate'] as String? ?? '',
+      lastSleepAchievedDate: json['lastSleepAchievedDate'] as String? ?? '',
+      lastExerciseAchievedDate:
+          json['lastExerciseAchievedDate'] as String? ?? '',
+      lastExerciseGoalSteps: json['lastExerciseGoalSteps'] as int? ?? 0,
+      lastExerciseGoalMinutes: json['lastExerciseGoalMinutes'] as int? ?? 0,
+      lastActivitySyncTime: json['lastActivitySyncTime'] as int? ?? 0,
+      todaySetExpClaimed: json['todaySetExpClaimed'] as int? ?? 0,
+      totalSetsRewarded: json['totalSetsRewarded'] as int? ?? 0,
     );
   }
 
@@ -336,6 +421,7 @@ class PetModel extends Pet {
       'todayFeedCount': todayFeedCount,
       'todayFedMealSlots': todayFedMealSlots,
       'todaySleepHours': todaySleepHours,
+      'todaySleepMinutes': todaySleepMinutes,
       'todayAlternativeFeedCount': todayAlternativeFeedCount,
       'todayAlternativeSleepCount': todayAlternativeSleepCount,
       'todayAlternativeExerciseCount': todayAlternativeExerciseCount,
@@ -357,6 +443,17 @@ class PetModel extends Pet {
       'todayLoginCount': todayLoginCount,
       'lastLoginTime': lastLoginTime,
       'evolutionGrade': evolutionGrade,
+      'feedAchievedCount': feedAchievedCount,
+      'sleepAchievedCount': sleepAchievedCount,
+      'exerciseAchievedCount': exerciseAchievedCount,
+      'lastFeedAchievedDate': lastFeedAchievedDate,
+      'lastSleepAchievedDate': lastSleepAchievedDate,
+      'lastExerciseAchievedDate': lastExerciseAchievedDate,
+      'lastExerciseGoalSteps': lastExerciseGoalSteps,
+      'lastExerciseGoalMinutes': lastExerciseGoalMinutes,
+      'lastActivitySyncTime': lastActivitySyncTime,
+      'todaySetExpClaimed': todaySetExpClaimed,
+      'totalSetsRewarded': totalSetsRewarded,
     };
   }
 
@@ -386,6 +483,7 @@ class PetModel extends Pet {
       todayFeedCount: pet.todayFeedCount,
       todayFedMealSlots: pet.todayFedMealSlots,
       todaySleepHours: pet.todaySleepHours,
+      todaySleepMinutes: pet.todaySleepMinutes,
       todayAlternativeFeedCount: pet.todayAlternativeFeedCount,
       todayAlternativeSleepCount: pet.todayAlternativeSleepCount,
       todayAlternativeExerciseCount: pet.todayAlternativeExerciseCount,
@@ -407,6 +505,17 @@ class PetModel extends Pet {
       todayLoginCount: pet.todayLoginCount,
       lastLoginTime: pet.lastLoginTime,
       evolutionGrade: pet.evolutionGrade,
+      feedAchievedCount: pet.feedAchievedCount,
+      sleepAchievedCount: pet.sleepAchievedCount,
+      exerciseAchievedCount: pet.exerciseAchievedCount,
+      lastFeedAchievedDate: pet.lastFeedAchievedDate,
+      lastSleepAchievedDate: pet.lastSleepAchievedDate,
+      lastExerciseAchievedDate: pet.lastExerciseAchievedDate,
+      lastExerciseGoalSteps: pet.lastExerciseGoalSteps,
+      lastExerciseGoalMinutes: pet.lastExerciseGoalMinutes,
+      lastActivitySyncTime: pet.lastActivitySyncTime,
+      todaySetExpClaimed: pet.todaySetExpClaimed,
+      totalSetsRewarded: pet.totalSetsRewarded,
     );
   }
 
@@ -434,6 +543,7 @@ class PetModel extends Pet {
       todayFeedCount: todayFeedCount,
       todayFedMealSlots: todayFedMealSlots,
       todaySleepHours: todaySleepHours,
+      todaySleepMinutes: todaySleepMinutes,
       todayAlternativeFeedCount: todayAlternativeFeedCount,
       todayAlternativeSleepCount: todayAlternativeSleepCount,
       todayAlternativeExerciseCount: todayAlternativeExerciseCount,
@@ -455,6 +565,17 @@ class PetModel extends Pet {
       todayLoginCount: todayLoginCount,
       lastLoginTime: lastLoginTime,
       evolutionGrade: evolutionGrade,
+      feedAchievedCount: feedAchievedCount,
+      sleepAchievedCount: sleepAchievedCount,
+      exerciseAchievedCount: exerciseAchievedCount,
+      lastFeedAchievedDate: lastFeedAchievedDate,
+      lastSleepAchievedDate: lastSleepAchievedDate,
+      lastExerciseAchievedDate: lastExerciseAchievedDate,
+      lastExerciseGoalSteps: lastExerciseGoalSteps,
+      lastExerciseGoalMinutes: lastExerciseGoalMinutes,
+      lastActivitySyncTime: lastActivitySyncTime,
+      todaySetExpClaimed: todaySetExpClaimed,
+      totalSetsRewarded: totalSetsRewarded,
     );
   }
 
@@ -482,6 +603,7 @@ class PetModel extends Pet {
     int? todayFeedCount,
     int? todayFedMealSlots,
     int? todaySleepHours,
+    int? todaySleepMinutes,
     int? todayAlternativeFeedCount,
     int? todayAlternativeSleepCount,
     int? todayAlternativeExerciseCount,
@@ -503,6 +625,17 @@ class PetModel extends Pet {
     int? todayLoginCount,
     int? lastLoginTime,
     String? evolutionGrade,
+    int? feedAchievedCount,
+    int? sleepAchievedCount,
+    int? exerciseAchievedCount,
+    String? lastFeedAchievedDate,
+    String? lastSleepAchievedDate,
+    String? lastExerciseAchievedDate,
+    int? lastExerciseGoalSteps,
+    int? lastExerciseGoalMinutes,
+    int? lastActivitySyncTime,
+    int? todaySetExpClaimed,
+    int? totalSetsRewarded,
   }) {
     return PetModel(
       id: id ?? this.id,
@@ -524,6 +657,7 @@ class PetModel extends Pet {
       todayFeedCount: todayFeedCount ?? this.todayFeedCount,
       todayFedMealSlots: todayFedMealSlots ?? this.todayFedMealSlots,
       todaySleepHours: todaySleepHours ?? this.todaySleepHours,
+      todaySleepMinutes: todaySleepMinutes ?? this.todaySleepMinutes,
       todayAlternativeFeedCount: todayAlternativeFeedCount ?? this.todayAlternativeFeedCount,
       todayAlternativeSleepCount: todayAlternativeSleepCount ?? this.todayAlternativeSleepCount,
       todayAlternativeExerciseCount: todayAlternativeExerciseCount ?? this.todayAlternativeExerciseCount,
@@ -545,6 +679,23 @@ class PetModel extends Pet {
       todayLoginCount: todayLoginCount ?? this.todayLoginCount,
       lastLoginTime: lastLoginTime ?? this.lastLoginTime,
       evolutionGrade: evolutionGrade ?? this.evolutionGrade,
+      feedAchievedCount: feedAchievedCount ?? this.feedAchievedCount,
+      sleepAchievedCount: sleepAchievedCount ?? this.sleepAchievedCount,
+      exerciseAchievedCount:
+          exerciseAchievedCount ?? this.exerciseAchievedCount,
+      lastFeedAchievedDate: lastFeedAchievedDate ?? this.lastFeedAchievedDate,
+      lastSleepAchievedDate:
+          lastSleepAchievedDate ?? this.lastSleepAchievedDate,
+      lastExerciseAchievedDate:
+          lastExerciseAchievedDate ?? this.lastExerciseAchievedDate,
+      lastExerciseGoalSteps:
+          lastExerciseGoalSteps ?? this.lastExerciseGoalSteps,
+      lastExerciseGoalMinutes:
+          lastExerciseGoalMinutes ?? this.lastExerciseGoalMinutes,
+      lastActivitySyncTime:
+          lastActivitySyncTime ?? this.lastActivitySyncTime,
+      todaySetExpClaimed: todaySetExpClaimed ?? this.todaySetExpClaimed,
+      totalSetsRewarded: totalSetsRewarded ?? this.totalSetsRewarded,
     );
   }
 }

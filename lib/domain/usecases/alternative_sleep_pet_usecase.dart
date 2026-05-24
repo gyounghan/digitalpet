@@ -1,5 +1,6 @@
 import '../entities/pet.dart';
 import '../repositories/pet_repository.dart';
+import '../constants/species_growth_config.dart';
 
 /// 대체 수면 유스케이스
 /// 실제 수면/미사용 연동이 어려운 사용자를 위한 저효율 보조 액션
@@ -34,7 +35,7 @@ class AlternativeSleepPetUseCase {
 
     final currentTime = DateTime.now().millisecondsSinceEpoch;
     final updatedPet = pet.copyWith(
-      stamina: (pet.stamina + staminaRecoveryAmount).clamp(0, 100),
+      stamina: (pet.stamina + (staminaRecoveryAmount * SpeciesGrowthConfig.getGainMultipliers(pet.evolutionType).stamina).round()).clamp(0, 100),
       todayAlternativeSleepCount: pet.todayAlternativeSleepCount + 1,
       lastUpdated: currentTime,
     );

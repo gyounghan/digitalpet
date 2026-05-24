@@ -112,7 +112,13 @@ class Pet {
 
   /// 오늘의 수면 시간 (시간, 일일 목표 추적)
   /// 오늘 0시부터 현재까지의 총 수면 시간
+  /// 내부적으로 todaySleepMinutes에서 파생되어 저장된다.
   final int todaySleepHours;
+
+  /// 오늘의 수면 시간 (분, 정밀 추적용)
+  /// 30분 단위 미사용 누적값. 60분 도달 시 todaySleepHours가 1 증가한다.
+  /// hours로 환산할 때의 정밀도 손실을 막기 위해 별도 누적 저장.
+  final int todaySleepMinutes;
 
   /// 오늘 대체 급식 사용 횟수
   /// 접근성 대체 액션(간편 급식) 일일 제한 추적
@@ -180,6 +186,52 @@ class Pet {
 
   /// 진화 등급 ('': 미결정, 'normal': 일반, 'superior': 상위, 'mythical': 신수)
   final String evolutionGrade;
+
+  /// 포만감 목표 누적 달성 횟수
+  /// 일일 포만감 목표를 달성한 날 수 (감소 없음)
+  final int feedAchievedCount;
+
+  /// 수면 목표 누적 달성 횟수
+  /// 일일 수면 목표를 달성한 날 수 (감소 없음)
+  final int sleepAchievedCount;
+
+  /// 운동 목표 누적 달성 횟수
+  /// 일일 운동 목표를 달성한 날 수 (감소 없음)
+  final int exerciseAchievedCount;
+
+  /// 포만감 목표 마지막 달성 날짜 (YYYY-MM-DD)
+  /// 오늘 이미 카운트됐는지 판정 (중복 증가 방지)
+  final String lastFeedAchievedDate;
+
+  /// 수면 목표 마지막 달성 날짜 (YYYY-MM-DD)
+  final String lastSleepAchievedDate;
+
+  /// 운동 목표 마지막 달성 날짜 (YYYY-MM-DD)
+  final String lastExerciseAchievedDate;
+
+  /// 운동 목표 마지막 달성 시점의 누적 걸음 수
+  /// 현재 운동 진행도 = totalSteps - lastExerciseGoalSteps
+  final int lastExerciseGoalSteps;
+
+  /// 운동 목표 마지막 달성 시점의 누적 운동 시간 (분)
+  /// 현재 운동 진행도 = totalExerciseMinutes - lastExerciseGoalMinutes
+  final int lastExerciseGoalMinutes;
+
+  /// 마지막 활동 데이터(걸음/운동) 동기화 시각 (밀리초)
+  /// retroactive 동기화 anchor — 이 시각 이후의 헬스 데이터를 추가로 fetch.
+  /// 백그라운드 동기화가 실패해도 앱을 열 때 그 사이 활동량을 catch-up 한다.
+  /// 0이면 최초 1회 동기화 (이후 currentTime으로 초기화).
+  final int lastActivitySyncTime;
+
+  /// 오늘 보상을 수령한 "세트" 개수 (포만감+수면+운동 모두 달성 = 1세트)
+  /// 세트 반감 EXP 계산용 — 오늘 N번째 세트는 setExpBase >> N 부여.
+  /// 자정에 resetDailyGoals로 0 리셋.
+  final int todaySetExpClaimed;
+
+  /// 누적 보상 지급이 완료된 세트 총 개수
+  /// 세트 완성 총량(min(달성 카운트 3종))과 비교해 신규 세트를 판정.
+  /// 자정에도 리셋하지 않는다(중복 지급 방지용 워터마크).
+  final int totalSetsRewarded;
 
   /// 펫의 현재 기분 상태
   /// hunger, happiness, stamina + 현재 시간대에 따라 자동 계산
@@ -261,6 +313,7 @@ class Pet {
     this.todayFeedCount = 0,
     this.todayFedMealSlots = 0,
     this.todaySleepHours = 0,
+    this.todaySleepMinutes = 0,
     this.todayAlternativeFeedCount = 0,
     this.todayAlternativeSleepCount = 0,
     this.todayAlternativeExerciseCount = 0,
@@ -282,6 +335,17 @@ class Pet {
     this.todayLoginCount = 0,
     this.lastLoginTime = 0,
     this.evolutionGrade = '',
+    this.feedAchievedCount = 0,
+    this.sleepAchievedCount = 0,
+    this.exerciseAchievedCount = 0,
+    this.lastFeedAchievedDate = '',
+    this.lastSleepAchievedDate = '',
+    this.lastExerciseAchievedDate = '',
+    this.lastExerciseGoalSteps = 0,
+    this.lastExerciseGoalMinutes = 0,
+    this.lastActivitySyncTime = 0,
+    this.todaySetExpClaimed = 0,
+    this.totalSetsRewarded = 0,
   });
 
   /// Pet 객체 복사본 생성
@@ -306,6 +370,7 @@ class Pet {
     int? todayFeedCount,
     int? todayFedMealSlots,
     int? todaySleepHours,
+    int? todaySleepMinutes,
     int? todayAlternativeFeedCount,
     int? todayAlternativeSleepCount,
     int? todayAlternativeExerciseCount,
@@ -327,6 +392,17 @@ class Pet {
     int? todayLoginCount,
     int? lastLoginTime,
     String? evolutionGrade,
+    int? feedAchievedCount,
+    int? sleepAchievedCount,
+    int? exerciseAchievedCount,
+    String? lastFeedAchievedDate,
+    String? lastSleepAchievedDate,
+    String? lastExerciseAchievedDate,
+    int? lastExerciseGoalSteps,
+    int? lastExerciseGoalMinutes,
+    int? lastActivitySyncTime,
+    int? todaySetExpClaimed,
+    int? totalSetsRewarded,
   }) {
     return Pet(
       id: id ?? this.id,
@@ -348,6 +424,7 @@ class Pet {
       todayFeedCount: todayFeedCount ?? this.todayFeedCount,
       todayFedMealSlots: todayFedMealSlots ?? this.todayFedMealSlots,
       todaySleepHours: todaySleepHours ?? this.todaySleepHours,
+      todaySleepMinutes: todaySleepMinutes ?? this.todaySleepMinutes,
       todayAlternativeFeedCount: todayAlternativeFeedCount ?? this.todayAlternativeFeedCount,
       todayAlternativeSleepCount: todayAlternativeSleepCount ?? this.todayAlternativeSleepCount,
       todayAlternativeExerciseCount: todayAlternativeExerciseCount ?? this.todayAlternativeExerciseCount,
@@ -369,17 +446,132 @@ class Pet {
       todayLoginCount: todayLoginCount ?? this.todayLoginCount,
       lastLoginTime: lastLoginTime ?? this.lastLoginTime,
       evolutionGrade: evolutionGrade ?? this.evolutionGrade,
+      feedAchievedCount: feedAchievedCount ?? this.feedAchievedCount,
+      sleepAchievedCount: sleepAchievedCount ?? this.sleepAchievedCount,
+      exerciseAchievedCount: exerciseAchievedCount ?? this.exerciseAchievedCount,
+      lastFeedAchievedDate: lastFeedAchievedDate ?? this.lastFeedAchievedDate,
+      lastSleepAchievedDate: lastSleepAchievedDate ?? this.lastSleepAchievedDate,
+      lastExerciseAchievedDate:
+          lastExerciseAchievedDate ?? this.lastExerciseAchievedDate,
+      lastExerciseGoalSteps:
+          lastExerciseGoalSteps ?? this.lastExerciseGoalSteps,
+      lastExerciseGoalMinutes:
+          lastExerciseGoalMinutes ?? this.lastExerciseGoalMinutes,
+      lastActivitySyncTime:
+          lastActivitySyncTime ?? this.lastActivitySyncTime,
+      todaySetExpClaimed: todaySetExpClaimed ?? this.todaySetExpClaimed,
+      totalSetsRewarded: totalSetsRewarded ?? this.totalSetsRewarded,
     );
   }
 
-  /// 레벨��에 필요한 경험치 (점진적 증가)
+  /// 현재 운동 목표 진행 중인 걸음 수 (마지막 달성 이후 증가분)
+  int get exerciseProgressSteps =>
+      (totalSteps - lastExerciseGoalSteps).clamp(0, 1 << 30);
+
+  /// 현재 운동 목표 진행 중인 운동 시간 (분)
+  int get exerciseProgressMinutes =>
+      (totalExerciseMinutes - lastExerciseGoalMinutes).clamp(0, 1 << 30);
+
+  // ── 전투 스탯 (영구 성장 골격 + 컨디션 보정) ─────────────────
+  // "잘 키운 질"이 전투력이 되도록: 레벨·누적 세트·누적 걸음이 영구 골격을
+  // 만들고(decay되지 않음), 현재 컨디션(happiness/stamina/hunger)은 그 위에
+  // ±20% 보정만 한다. 전투 유스케이스와 도감 표시가 이 getter를 공유한다.
+
+  /// 진화 단계 전투 보너스
+  static const Map<int, int> battleStageBonus = {1: 0, 2: 2, 3: 4, 4: 7};
+
+  /// 누적 세트 전투 보너스 (5세트당 +1, 최대 +15) — ATK·DEF 영구 성장
+  static const int setBattleBonusPer = 5;
+  static const int setBattleBonusCap = 15;
+
+  /// 누적 걸음 전투 보너스 (5000보당 +1, 최대 +20) — HP 영구 성장
+  static const int stepBattleBonusPer = 5000;
+  static const int stepBattleBonusCap = 20;
+
+  /// ATK·DEF 기본 상수 (상대 AI 베이스와 대등)
+  static const int battleFlatBase = 5;
+
+  /// 컨디션 보정 최대 폭 (±20%)
+  static const double conditionModRange = 0.2;
+
+  /// 종별 [ATK, DEF, HP] 보너스
+  List<int> get _speciesBattleBonus {
+    switch (evolutionType) {
+      case EvolutionType.bird:
+        return const [3, 0, 0];
+      case EvolutionType.snake:
+        return const [0, 2, 10];
+      case EvolutionType.tiger:
+        return const [2, 2, 0];
+      case EvolutionType.turtle:
+        return const [0, 3, 10];
+      case null:
+        return const [0, 0, 0];
+    }
+  }
+
+  int get _setBattleBonus =>
+      (totalSetsRewarded ~/ setBattleBonusPer).clamp(0, setBattleBonusCap);
+
+  int get _stepBattleBonus =>
+      (totalSteps ~/ stepBattleBonusPer).clamp(0, stepBattleBonusCap);
+
+  /// 컨디션(0~100, 50 중립) → ±conditionModRange 보정 계수
+  double _conditionMod(int stat) =>
+      ((stat - 50) / 50).clamp(-1.0, 1.0) * conditionModRange;
+
+  /// 공격력 = (5 + 레벨 + 누적세트 + 진화단계 + 종) × (1 ± 행복 보정)
+  int get battleAtk {
+    final stage = battleStageBonus[evolutionStage] ?? 0;
+    final base =
+        battleFlatBase + level + _setBattleBonus + stage + _speciesBattleBonus[0];
+    return (base * (1 + _conditionMod(happiness))).round().clamp(1, 1 << 30);
+  }
+
+  /// 방어력 = (5 + 레벨 + 누적세트 + 진화단계 + 종) × (1 ± 스태미나 보정)
+  int get battleDef {
+    final stage = battleStageBonus[evolutionStage] ?? 0;
+    final base =
+        battleFlatBase + level + _setBattleBonus + stage + _speciesBattleBonus[1];
+    return (base * (1 + _conditionMod(stamina))).round().clamp(1, 1 << 30);
+  }
+
+  /// 체력 = (50 + 레벨×2 + 누적걸음 + 종) × (1 ± 포만감 보정)
+  int get battleHp {
+    final base =
+        50 + level * 2 + _stepBattleBonus + _speciesBattleBonus[2];
+    return (base * (1 + _conditionMod(hunger))).round().clamp(1, 1 << 30);
+  }
+
+  /// 카테고리 목표 티어 (달성 10회마다 1단계)
+  int get feedTier => feedAchievedCount ~/ 10;
+  int get sleepTier => sleepAchievedCount ~/ 10;
+  int get exerciseTier => exerciseAchievedCount ~/ 10;
+
+  /// 다음 티어까지 남은 달성 횟수
+  int get feedRemainingToNextTier => 10 - (feedAchievedCount % 10);
+  int get sleepRemainingToNextTier => 10 - (sleepAchievedCount % 10);
+  int get exerciseRemainingToNextTier => 10 - (exerciseAchievedCount % 10);
+
+  /// 레벨에 필요한 경험치 (RPG 후반 가파른 곡선)
+  ///
+  /// 일일 캡(카테고리당 1회 EXP)을 기준으로 한 페이스 가이드:
+  ///   카테고리 3개 × 20 EXP = 60 EXP/일 (티어 보너스 없을 때)
+  /// - Lv  1 →  2 : 50 EXP   (1일)
+  /// - Lv  5 → 도달 ~ 4일
+  /// - Lv 10 → 도달 ~ 12일
+  /// - Lv 15 → 도달 ~ 28일 (1개월)
+  /// - Lv 20 → 도달 ~ 58일 (2개월)
+  /// - Lv 25 → 도달 ~ 100일
+  /// - Lv 30 → 도달 ~ 170일
   static int getRequiredExpForLevel(int level) {
-    if (level <= 5) return 80;
-    if (level <= 10) return 120;
-    if (level <= 15) return 160;
-    if (level <= 20) return 200;
-    if (level <= 25) return 250;
-    return 300;
+    if (level <= 3) return 50;
+    if (level <= 7) return 100;
+    if (level <= 12) return 200;
+    if (level <= 17) return 350;
+    if (level <= 22) return 550;
+    if (level <= 27) return 800;
+    return 1100;
   }
 
   /// 오늘 날짜 문자열 반환 (YYYY-MM-DD)
@@ -393,8 +585,11 @@ class Pet {
     return lastGoalResetDate != todayDateString;
   }
 
-  /// 일일 항목만 리셋 (기간 누적 카운터는 유지)
-  /// todayFeedCount, todaySleepHours는 기간 내 누적이므로 리셋하지 않음
+  /// 일일 항목 리셋 (자정 넘어간 경우 호출)
+  ///
+  /// 목표 진행도(todayFeedCount, todaySleepHours/Minutes)는 달성 시에만
+  /// 차감되므로 일일 리셋 대상이 아니다. 아래는 날짜가 바뀌어야 리셋되는
+  /// 보조 카운터들뿐이다.
   Pet resetDailyGoals() {
     return copyWith(
       todayFedMealSlots: 0,
@@ -403,20 +598,8 @@ class Pet {
       todayAlternativeExerciseCount: 0,
       todaySyncedSteps: 0,
       todaySyncedExerciseMinutes: 0,
+      todaySetExpClaimed: 0,
       lastGoalResetDate: todayDateString,
-    );
-  }
-
-  /// 목표 기간 전체 리셋
-  /// 모든 목표 달성 또는 7일 초과 시 호출
-  Pet resetGoalPeriod({bool completed = false}) {
-    return copyWith(
-      todayFeedCount: 0,
-      todaySleepHours: 0,
-      goalStartDate: todayDateString,
-      goalStartTotalSteps: totalSteps,
-      goalStartTotalExerciseMinutes: totalExerciseMinutes,
-      goalStreakCount: completed ? goalStreakCount + 1 : 0,
     );
   }
 
@@ -449,15 +632,13 @@ class Pet {
     }
   }
 
-  /// 목표 기간 강제 리셋 필요 여부 (7일 초과)
-  bool get needsGoalPeriodReset {
-    return goalDaysElapsed > 7;
-  }
+  /// 목표 기간 강제 리셋 필요 여부 (더 이상 주간 리셋을 사용하지 않음)
+  bool get needsGoalPeriodReset => false;
 
-  /// 기간 내 운동 걸음 수
+  /// 기간 내 운동 걸음 수 (deprecated, 호환용)
   int get periodExerciseSteps => totalSteps - goalStartTotalSteps;
 
-  /// 기간 내 운동 시간 (분)
+  /// 기간 내 운동 시간 (분, deprecated, 호환용)
   int get periodExerciseMinutes => totalExerciseMinutes - goalStartTotalExerciseMinutes;
 
   /// 사망 처리
@@ -482,6 +663,7 @@ class Pet {
       todayFeedCount: todayFeedCount,
       todayFedMealSlots: todayFedMealSlots,
       todaySleepHours: todaySleepHours,
+      todaySleepMinutes: todaySleepMinutes,
       todayAlternativeFeedCount: todayAlternativeFeedCount,
       todayAlternativeSleepCount: todayAlternativeSleepCount,
       todayAlternativeExerciseCount: todayAlternativeExerciseCount,
@@ -503,6 +685,17 @@ class Pet {
       todayLoginCount: todayLoginCount,
       lastLoginTime: lastLoginTime,
       evolutionGrade: evolutionGrade,
+      feedAchievedCount: feedAchievedCount,
+      sleepAchievedCount: sleepAchievedCount,
+      exerciseAchievedCount: exerciseAchievedCount,
+      lastFeedAchievedDate: lastFeedAchievedDate,
+      lastSleepAchievedDate: lastSleepAchievedDate,
+      lastExerciseAchievedDate: lastExerciseAchievedDate,
+      lastExerciseGoalSteps: lastExerciseGoalSteps,
+      lastExerciseGoalMinutes: lastExerciseGoalMinutes,
+      lastActivitySyncTime: lastActivitySyncTime,
+      todaySetExpClaimed: todaySetExpClaimed,
+      totalSetsRewarded: totalSetsRewarded,
     );
   }
 
@@ -542,6 +735,7 @@ class Pet {
       todayFeedCount: todayFeedCount,
       todayFedMealSlots: todayFedMealSlots,
       todaySleepHours: todaySleepHours,
+      todaySleepMinutes: todaySleepMinutes,
       todayAlternativeFeedCount: todayAlternativeFeedCount,
       todayAlternativeSleepCount: todayAlternativeSleepCount,
       todayAlternativeExerciseCount: todayAlternativeExerciseCount,
@@ -561,6 +755,17 @@ class Pet {
       todayLoginCount: todayLoginCount,
       lastLoginTime: lastLoginTime,
       evolutionGrade: evolutionGrade,
+      feedAchievedCount: feedAchievedCount,
+      sleepAchievedCount: sleepAchievedCount,
+      exerciseAchievedCount: exerciseAchievedCount,
+      lastFeedAchievedDate: lastFeedAchievedDate,
+      lastSleepAchievedDate: lastSleepAchievedDate,
+      lastExerciseAchievedDate: lastExerciseAchievedDate,
+      lastExerciseGoalSteps: lastExerciseGoalSteps,
+      lastExerciseGoalMinutes: lastExerciseGoalMinutes,
+      lastActivitySyncTime: lastActivitySyncTime,
+      todaySetExpClaimed: todaySetExpClaimed,
+      totalSetsRewarded: totalSetsRewarded,
     );
   }
 
@@ -586,6 +791,7 @@ class Pet {
       todayFeedCount: todayFeedCount,
       todayFedMealSlots: todayFedMealSlots,
       todaySleepHours: todaySleepHours,
+      todaySleepMinutes: todaySleepMinutes,
       todayAlternativeFeedCount: todayAlternativeFeedCount,
       todayAlternativeSleepCount: todayAlternativeSleepCount,
       todayAlternativeExerciseCount: todayAlternativeExerciseCount,
@@ -606,6 +812,17 @@ class Pet {
       todayLoginCount: todayLoginCount,
       lastLoginTime: lastLoginTime,
       evolutionGrade: evolutionGrade,
+      feedAchievedCount: feedAchievedCount,
+      sleepAchievedCount: sleepAchievedCount,
+      exerciseAchievedCount: exerciseAchievedCount,
+      lastFeedAchievedDate: lastFeedAchievedDate,
+      lastSleepAchievedDate: lastSleepAchievedDate,
+      lastExerciseAchievedDate: lastExerciseAchievedDate,
+      lastExerciseGoalSteps: lastExerciseGoalSteps,
+      lastExerciseGoalMinutes: lastExerciseGoalMinutes,
+      lastActivitySyncTime: lastActivitySyncTime,
+      todaySetExpClaimed: todaySetExpClaimed,
+      totalSetsRewarded: totalSetsRewarded,
     );
   }
 }

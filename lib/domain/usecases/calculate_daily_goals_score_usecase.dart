@@ -2,191 +2,202 @@ import '../entities/daily_goals.dart';
 import '../repositories/pet_repository.dart';
 import '../repositories/activity_repository.dart';
 
-/// 일일 목표 점수 계산 유스케이스
-/// 포만감, 수면, 운동 각각의 목표 달성 여부를 확인하고 점수를 계산
-/// 
-/// 목표 (레벨에 따라 다름):
-/// - 포만감: 레벨 1~5는 1회, 레벨 6~10은 2회, 레벨 11+는 3회
-/// - 수면: 레벨 1~5는 4시간, 레벨 6~10은 5시간, 레벨 11+는 6시간
-/// - 운동: 레벨 1~5는 5,000보/15분, 레벨 6~10은 7,500보/22분, 레벨 11+는 10,000보/30분
-/// 
-/// 점수:
-/// - 각 목표 달성 시 1점씩 부여 (최대 3점)
-/// - 점수에 따라 경험치 획득 (점수당 20 경험치)
+/// 카테고리별 목표 점수 계산 유스케이스
+///
+/// "오늘"의 누적이 아니라 **현재 진행 중인 목표**의 진행도를 계산한다.
+/// 포만감/수면/운동 각각 독립된 카운터를 가지며, 목표를 달성하면
+/// 즉시 다음 목표로 리셋된다(차감). 하루 리셋 개념은 없다.
+///
+/// 현실적 목표 (보건 권장량 + 평균 사용자 수치 기반):
+/// - 포만감: 1~5=1회, 6~15=2회, 16+=3회 (식사 횟수)
+/// - 수면:   1~10=5시간, 11~20=6시간, 21+=7시간 (권장 최저 ~ 권장량)
+/// - 운동:   1~5=3,000보(10분), 6~10=4,000보(15분), 11~15=5,000보(20분),
+///           16~20=6,000보(25분), 21+=8,000보(30분) — 10,000보 같은 비현실적 수치 제거
 class CalculateDailyGoalsScoreUseCase {
   final PetRepository petRepository;
   final ActivityRepository activityRepository;
-  
-  /// 점수당 경험치
-  static const int expPerScore = 20;
-  
-  /// 레벨에 따른 포만감 목표 횟수 반환
-  /// 
-  /// [level] 펫의 현재 레벨
-  /// 
-  /// 반환: 목표 식사 횟수 (1~3)
+
+  /// 카테고리 1회 달성 시 부여 경험치 (UI/하위호환 표시용)
+  static const int expPerCategory = 20;
+
+  /// "세트"(포만감+수면+운동 모두 달성) 1회 완성 시 기본 경험치
+  /// 오늘 N번째 세트는 setExpBase >> N 으로 반감 지급 → 60, 30, 15, 7, 3, 1, 0...
+  static const int setExpBase = 60;
+
+  /// 세트 마일스톤(10세트 누적 완성) 시 추가 보너스 경험치
+  /// 반감과 무관하게 누적 세트 워터마크 기반으로 부여 → RPG 마일스톤 보상
+  static const int tierUpBonusExp = 50;
+
+  /// 한 번의 계산 사이클에서 처리 가능한 최대 달성 횟수
+  /// (장기 백그라운드 후 폭발적 지급 방지)
+  /// 일일 캡이 카테고리당 1 EXP이므로 cap을 작게 둬도 손해 없음.
+  static const int maxAchievementsPerTick = 3;
+
   static int getFeedGoalCount(int level) {
-    if (level <= 3) return 1;
-    if (level <= 9) return 2;
+    if (level <= 5) return 1;
+    if (level <= 15) return 2;
     return 3;
   }
 
-  /// 레벨에 따른 수면 목표 시간 반환 (7단계 세분화)
   static int getSleepGoalHours(int level) {
-    if (level <= 3) return 3;
-    if (level <= 6) return 4;
-    if (level <= 9) return 5;
-    if (level <= 12) return 5;
-    if (level <= 15) return 6;
+    if (level <= 10) return 5;
     if (level <= 20) return 6;
     return 7;
   }
 
-  /// 레벨에 따른 운동 목표 걸음 수 반환 (7단계 세분화)
   static int getExerciseGoalSteps(int level) {
-    if (level <= 3) return 3000;
-    if (level <= 6) return 5000;
-    if (level <= 9) return 6000;
-    if (level <= 12) return 7000;
-    if (level <= 15) return 8000;
-    if (level <= 20) return 9000;
-    return 10000;
+    if (level <= 5) return 3000;
+    if (level <= 10) return 4000;
+    if (level <= 15) return 5000;
+    if (level <= 20) return 6000;
+    return 8000;
   }
 
-  /// 레벨에 따른 운동 목표 시간 반환 (7단계 세분화)
   static int getExerciseGoalMinutes(int level) {
-    if (level <= 3) return 10;
-    if (level <= 6) return 15;
-    if (level <= 9) return 20;
-    if (level <= 12) return 22;
-    if (level <= 15) return 25;
-    if (level <= 20) return 28;
+    if (level <= 5) return 10;
+    if (level <= 10) return 15;
+    if (level <= 15) return 20;
+    if (level <= 20) return 25;
     return 30;
   }
-  
+
   CalculateDailyGoalsScoreUseCase({
     required this.petRepository,
     required this.activityRepository,
   });
-  
-  /// 목표 점수 계산 (기간제: 완료할 때까지 유지, 최대 7일)
-  ///
-  /// [petId] 확인할 반려동물 ID
-  ///
-  /// 반환: 목표 달성 점수와 경험치
+
   Future<DailyGoalsScore> call(String petId) async {
-    // 1. 현재 Pet 조회
     var pet = await petRepository.getPet(petId);
 
-    // 2. 목표 기간 시작일 초기화 (첫 실행 시)
-    if (pet.goalStartDate.isEmpty) {
-      pet = pet.copyWith(
-        goalStartDate: pet.todayDateString,
-        goalStartTotalSteps: pet.totalSteps,
-        goalStartTotalExerciseMinutes: pet.totalExerciseMinutes,
-      );
-      await petRepository.updatePet(pet);
-    }
-
-    // 3. 일일 항목 리셋 확인 (식사 슬롯, 대체 액션 등)
+    // 자정 넘어간 경우 보조 카운터만 리셋 (목표 진행도는 유지)
     if (pet.needsGoalReset) {
       pet = pet.resetDailyGoals();
       await petRepository.updatePet(pet);
     }
 
-    // 4. 7일 초과 강제 리셋 체크
-    final goalDaysElapsed = pet.goalDaysElapsed;
-    final isExpired = pet.needsGoalPeriodReset;
-
-    // 5. 오늘 날짜
-    final todayDate = pet.todayDateString;
-
-    // 6. 레벨에 따른 목표 값 계산
     final feedGoalCount = getFeedGoalCount(pet.level);
     final sleepGoalHours = getSleepGoalHours(pet.level);
+    final sleepGoalMinutes = sleepGoalHours * 60;
     final exerciseGoalSteps = getExerciseGoalSteps(pet.level);
     final exerciseGoalMinutes = getExerciseGoalMinutes(pet.level);
 
-    // 7. 포만감 목표 확인 (기간 누적)
-    final feedGoalAchieved = pet.todayFeedCount >= feedGoalCount;
+    // 오늘 실시간 활동 데이터로 totalSteps/Minutes 반영 여부 판단
+    // (이미 updateFromActivityUseCase가 totalSteps를 갱신해두었음)
+    final currentExerciseSteps = pet.exerciseProgressSteps;
+    final currentExerciseMinutes = pet.exerciseProgressMinutes;
 
-    // 8. 수면 목표 확인 (기간 누적)
-    final sleepGoalAchieved = pet.todaySleepHours >= sleepGoalHours;
+    // 달성 가능 횟수 계산
+    final feedAchievements = feedGoalCount > 0
+        ? (pet.todayFeedCount ~/ feedGoalCount)
+            .clamp(0, maxAchievementsPerTick)
+        : 0;
+    final sleepAchievements = sleepGoalMinutes > 0
+        ? (pet.todaySleepMinutes ~/ sleepGoalMinutes)
+            .clamp(0, maxAchievementsPerTick)
+        : 0;
 
-    // 9. 운동 목표 확인 (기간 누적: totalSteps - goalStartTotalSteps + 오늘 활동)
-    final todayActivity = await activityRepository.getTodayActivityData();
-    final periodSteps = pet.periodExerciseSteps + todayActivity.steps;
-    final periodMinutes = pet.periodExerciseMinutes + todayActivity.exerciseMinutes;
-    final exerciseGoalAchieved = periodSteps >= exerciseGoalSteps ||
-        periodMinutes >= exerciseGoalMinutes;
+    // 운동은 steps 기준과 minutes 기준 중 높은 쪽을 취함
+    final stepsAchievements = exerciseGoalSteps > 0
+        ? (currentExerciseSteps ~/ exerciseGoalSteps)
+            .clamp(0, maxAchievementsPerTick)
+        : 0;
+    final minutesAchievements = exerciseGoalMinutes > 0
+        ? (currentExerciseMinutes ~/ exerciseGoalMinutes)
+            .clamp(0, maxAchievementsPerTick)
+        : 0;
+    final exerciseAchievements =
+        stepsAchievements > minutesAchievements
+            ? stepsAchievements
+            : minutesAchievements;
 
-    // 10. 목표 엔티티 생성
+    // UI용: "현재 진행 중인 목표"에 대한 표시값
+    final feedProgressDisplay = pet.todayFeedCount % feedGoalCount;
+    final sleepHoursDisplay =
+        (pet.todaySleepMinutes % sleepGoalMinutes) ~/ 60;
+    final exerciseStepsDisplay = currentExerciseSteps % exerciseGoalSteps;
+    final exerciseMinutesDisplay =
+        currentExerciseMinutes % exerciseGoalMinutes;
+
     final dailyGoals = DailyGoals(
-      date: todayDate,
-      feedGoalAchieved: feedGoalAchieved,
-      sleepGoalAchieved: sleepGoalAchieved,
-      exerciseGoalAchieved: exerciseGoalAchieved,
-      feedProgress: pet.todayFeedCount,
-      sleepHours: pet.todaySleepHours,
-      exerciseSteps: periodSteps,
-      exerciseMinutes: periodMinutes,
+      date: pet.todayDateString,
+      feedGoalAchieved: feedAchievements > 0,
+      sleepGoalAchieved: sleepAchievements > 0,
+      exerciseGoalAchieved: exerciseAchievements > 0,
+      feedProgress: feedProgressDisplay,
+      sleepHours: sleepHoursDisplay,
+      exerciseSteps: exerciseStepsDisplay,
+      exerciseMinutes: exerciseMinutesDisplay,
+      feedAchievedCount: pet.feedAchievedCount,
+      sleepAchievedCount: pet.sleepAchievedCount,
+      exerciseAchievedCount: pet.exerciseAchievedCount,
     );
 
-    // 11. 점수 계산
-    final score = dailyGoals.totalScore;
-    final streakBonusExp = (pet.goalStreakCount * 5).clamp(0, 25);
-    final expGain = score * expPerScore + (score == 3 ? streakBonusExp : 0);
+    // 티어 업 개수 = 각 카테고리 달성으로 (이전 카운트 + 달성)이 10의 배수를 넘는 횟수
+    final feedTierUps = _countTierUps(pet.feedAchievedCount, feedAchievements);
+    final sleepTierUps =
+        _countTierUps(pet.sleepAchievedCount, sleepAchievements);
+    final exerciseTierUps =
+        _countTierUps(pet.exerciseAchievedCount, exerciseAchievements);
+    final totalTierUps = feedTierUps + sleepTierUps + exerciseTierUps;
+
+    final expGain = (feedAchievements +
+                sleepAchievements +
+                exerciseAchievements) *
+            expPerCategory +
+        totalTierUps * tierUpBonusExp;
 
     return DailyGoalsScore(
       dailyGoals: dailyGoals,
-      score: score,
+      score: dailyGoals.totalScore,
       expGain: expGain,
       feedGoalCount: feedGoalCount,
       sleepGoalHours: sleepGoalHours,
       exerciseGoalSteps: exerciseGoalSteps,
       exerciseGoalMinutes: exerciseGoalMinutes,
-      goalDaysElapsed: goalDaysElapsed,
+      feedAchievements: feedAchievements,
+      sleepAchievements: sleepAchievements,
+      exerciseAchievements: exerciseAchievements,
+      tierUps: totalTierUps,
       goalStreakCount: pet.goalStreakCount,
-      streakBonusExp: score == 3 ? streakBonusExp : 0,
-      isExpired: isExpired,
+      isExpired: false,
     );
+  }
+
+  /// 이전 카운트에서 [gain]만큼 증가했을 때 10의 배수를 넘긴 횟수
+  int _countTierUps(int prevCount, int gain) {
+    if (gain <= 0) return 0;
+    final prevTier = prevCount ~/ 10;
+    final newTier = (prevCount + gain) ~/ 10;
+    return newTier - prevTier;
   }
 }
 
-/// 일일 목표 점수 결과
+/// 카테고리별 목표 점수 결과
 class DailyGoalsScore {
-  /// 일일 목표 달성 상태
   final DailyGoals dailyGoals;
-  
-  /// 총 점수 (0~3)
   final int score;
-  
-  /// 획득 경험치
   final int expGain;
-  
-  /// 레벨에 따른 포만감 목표 횟수
   final int feedGoalCount;
-  
-  /// 레벨에 따른 수면 목표 시간
   final int sleepGoalHours;
-  
-  /// 레벨에 따른 운동 목표 걸음 수
   final int exerciseGoalSteps;
-  
-  /// 레벨에 따른 운동 목표 시간 (분)
   final int exerciseGoalMinutes;
 
-  /// 목표 기간 경과 일수
-  final int goalDaysElapsed;
+  /// 이번 계산 사이클에서 달성된 횟수 (Apply에서 차감 처리)
+  final int feedAchievements;
+  final int sleepAchievements;
+  final int exerciseAchievements;
 
-  /// 연속 달성 횟수
+  /// 이번 달성으로 발생한 총 티어 업 개수
+  final int tierUps;
+
+  /// 과거 호환
   final int goalStreakCount;
-
-  /// 연속 달성 보너스 경험치
-  final int streakBonusExp;
-
-  /// 목표 기간 만료 여부 (7일 초과)
   final bool isExpired;
+
+  /// 오늘 처음 달성하여 EXP 대상인지 여부 (UI 호환용)
+  bool get feedNewlyAchieved => feedAchievements > 0;
+  bool get sleepNewlyAchieved => sleepAchievements > 0;
+  bool get exerciseNewlyAchieved => exerciseAchievements > 0;
 
   DailyGoalsScore({
     required this.dailyGoals,
@@ -196,9 +207,11 @@ class DailyGoalsScore {
     required this.sleepGoalHours,
     required this.exerciseGoalSteps,
     required this.exerciseGoalMinutes,
-    this.goalDaysElapsed = 0,
+    this.feedAchievements = 0,
+    this.sleepAchievements = 0,
+    this.exerciseAchievements = 0,
+    this.tierUps = 0,
     this.goalStreakCount = 0,
-    this.streakBonusExp = 0,
     this.isExpired = false,
   });
 }

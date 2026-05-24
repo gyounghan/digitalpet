@@ -76,6 +76,18 @@ class PetModelAdapter extends TypeAdapter<PetModel> {
       todayLoginCount: fields[37] as int? ?? 0,
       lastLoginTime: fields[38] as int? ?? 0,
       evolutionGrade: fields[39] as String? ?? '',
+      todaySleepMinutes: fields[40] as int? ?? 0,
+      feedAchievedCount: fields[41] as int? ?? 0,
+      sleepAchievedCount: fields[42] as int? ?? 0,
+      exerciseAchievedCount: fields[43] as int? ?? 0,
+      lastFeedAchievedDate: fields[44] as String? ?? '',
+      lastSleepAchievedDate: fields[45] as String? ?? '',
+      lastExerciseAchievedDate: fields[46] as String? ?? '',
+      lastExerciseGoalSteps: fields[47] as int? ?? 0,
+      lastExerciseGoalMinutes: fields[48] as int? ?? 0,
+      lastActivitySyncTime: fields[49] as int? ?? 0,
+      todaySetExpClaimed: fields[50] as int? ?? 0,
+      totalSetsRewarded: fields[51] as int? ?? 0,
     );
   }
 
@@ -84,7 +96,7 @@ class PetModelAdapter extends TypeAdapter<PetModel> {
     // Hive에 데이터 쓰기
     // 필드 개수와 각 필드를 순서대로 저장
     writer
-      ..writeByte(40) // 필드 개수 (HiveField 0-39)
+      ..writeByte(52) // 필드 개수 (HiveField 0-51)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -164,7 +176,31 @@ class PetModelAdapter extends TypeAdapter<PetModel> {
       ..writeByte(38)
       ..write(obj.lastLoginTime)
       ..writeByte(39)
-      ..write(obj.evolutionGrade);
+      ..write(obj.evolutionGrade)
+      ..writeByte(40)
+      ..write(obj.todaySleepMinutes)
+      ..writeByte(41)
+      ..write(obj.feedAchievedCount)
+      ..writeByte(42)
+      ..write(obj.sleepAchievedCount)
+      ..writeByte(43)
+      ..write(obj.exerciseAchievedCount)
+      ..writeByte(44)
+      ..write(obj.lastFeedAchievedDate)
+      ..writeByte(45)
+      ..write(obj.lastSleepAchievedDate)
+      ..writeByte(46)
+      ..write(obj.lastExerciseAchievedDate)
+      ..writeByte(47)
+      ..write(obj.lastExerciseGoalSteps)
+      ..writeByte(48)
+      ..write(obj.lastExerciseGoalMinutes)
+      ..writeByte(49)
+      ..write(obj.lastActivitySyncTime)
+      ..writeByte(50)
+      ..write(obj.todaySetExpClaimed)
+      ..writeByte(51)
+      ..write(obj.totalSetsRewarded);
   }
 
   @override

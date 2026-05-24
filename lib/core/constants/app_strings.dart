@@ -35,9 +35,13 @@ class AppStrings {
   static const String alternativeCareTitle = '대체 케어';
   static const String alternativeFeed = '간편 급식';
   static const String alternativeSleep = '낮잠 모드 15분';
-  static const String alternativeExercise = '실내 운동 1분';
+  static const String alternativeExercise = '폰 흔들기';
   static const String alternativeExerciseRunning = '운동 진행 중';
-  static const String snackTimeGuide = '간식 시간: 10-11시, 15-16시, 20-21시';
+  static const String snackTimeGuide = '간편 급식: 식사 시간대만 활성화';
+  static const String shakeBonusTitle = '폰 흔들기 보너스';
+  static const String shakeBonusInProgress = '폰을 흔드세요!';
+  static const String shakeBonusComplete = '흔들기 완료';
+  static const String shakeBonusCount = '흔든 횟수';
   static const String napModeRunning = '낮잠 모드 진행 중';
   
   // 알림 메시지
@@ -57,6 +61,14 @@ class AppStrings {
   static const String speciesSnake = '뱀 계열';
   static const String speciesTiger = '호랑이 계열';
   static const String speciesTurtle = '거북이 계열';
+
+  // 진화 단계 카테고리 라벨
+  static const Map<int, String> stageLabels = {
+    1: '털뭉치',
+    2: '아기',
+    3: '청소년기',
+    4: '어른',
+  };
 
   // 진화 단계별 이름
   static const Map<String, String> stage2Names = {

@@ -1,5 +1,6 @@
 import '../entities/pet.dart';
 import '../repositories/pet_repository.dart';
+import '../constants/species_growth_config.dart';
 
 /// 반려동물 재우기 유스케이스
 /// Sleep 버튼 클릭 시 stamina를 증가시키는 비즈니스 로직
@@ -28,7 +29,8 @@ class SleepPetUseCase {
     final pet = await petRepository.getPet(petId);
     
     // 2. stamina +10 (최대 100을 넘지 않도록 처리)
-    final newStamina = (pet.stamina + 10).clamp(0, 100);
+    final m = SpeciesGrowthConfig.getGainMultipliers(pet.evolutionType);
+    final newStamina = (pet.stamina + (10 * m.stamina).round()).clamp(0, 100);
     
     // 3. 현재 시간으로 업데이트
     final currentTime = DateTime.now().millisecondsSinceEpoch;

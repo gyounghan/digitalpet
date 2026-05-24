@@ -55,6 +55,7 @@ class CreateDefaultPetUseCase {
       todayFeedCount: 0,
       todayFedMealSlots: 0,
       todaySleepHours: 0,
+      todaySleepMinutes: 0,
       todayAlternativeFeedCount: 0,
       todayAlternativeSleepCount: 0,
       todayAlternativeExerciseCount: 0,

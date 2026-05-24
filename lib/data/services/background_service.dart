@@ -17,6 +17,7 @@ import '../../data/repositories/phone_usage_repository_impl.dart';
 import '../../data/datasources/phone_usage_datasource.dart';
 import '../../data/repositories/activity_repository_impl.dart';
 import '../../data/datasources/health_datasource.dart';
+import '../../data/datasources/step_sensor_datasource.dart';
 import '../../data/repository/notification_repository_impl.dart';
 import '../../data/datasource/notification_local_datasource.dart';
 import 'notification_service.dart';
@@ -39,12 +40,13 @@ class BackgroundService {
       isInDebugMode: false,
     );
     
-    // 주기적 백그라운드 작업 등록 (30분마다 실행)
-    // WorkManager 최소 단위는 15분이나, 배터리 소모를 줄이기 위해 30분 사용
+    // 주기적 백그라운드 작업 등록 (WorkManager 최소 단위인 15분마다 실행)
+    // 걸음수/운동 데이터를 최대한 자주 동기화하여 앱 미접속 시에도 누적되도록 한다.
     await Workmanager().registerPeriodicTask(
       taskName,
       taskName,
-      frequency: const Duration(minutes: 30),
+      frequency: const Duration(minutes: 15),
+      existingWorkPolicy: ExistingPeriodicWorkPolicy.keep,
       constraints: Constraints(
         requiresBatteryNotLow: false,
         requiresCharging: false,
@@ -156,8 +158,21 @@ void callbackDispatcher() {
       final phoneUsageRepository = PhoneUsageRepositoryImpl(phoneUsageDataSource);
       
       final healthDataSource = HealthDataSource();
-      await healthDataSource.init();
-      final activityRepository = ActivityRepositoryImpl(healthDataSource);
+      // 백그라운드 isolate에서는 권한 다이얼로그를 띄울 수 없으므로 skipRequest
+      // — 이미 grant되어 있으면 그대로 동작, 없으면 throw → catch에서 무시
+      try {
+        await healthDataSource.init(skipRequest: true);
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint('BackgroundService: health 초기화 스킵 (권한 미보유): $e');
+        }
+      }
+      final stepSensorDatasource = StepSensorDatasource();
+      await stepSensorDatasource.init();
+      final activityRepository = ActivityRepositoryImpl(
+        healthDataSource: healthDataSource,
+        stepSensorDatasource: stepSensorDatasource,
+      );
       
       final notificationDataSource = NotificationLocalDataSource();
       await notificationDataSource.init();
@@ -229,9 +244,17 @@ void callbackDispatcher() {
       
       // 5. 활동 데이터 기반 상태 업데이트 (걷기/운동량)
       try {
+        final beforeSteps = pet.totalSteps;
         pet = await updateFromActivityUseCase(petId);
+        if (kDebugMode) {
+          final delta = pet.totalSteps - beforeSteps;
+          debugPrint(
+            'BackgroundService: activity synced '
+            'totalSteps=${pet.totalSteps} (+$delta), '
+            'todaySyncedSteps=${pet.todaySyncedSteps}',
+          );
+        }
       } catch (e) {
-        // 헬스케어 권한이 없거나 에러 발생 시 무시
         if (kDebugMode) {
           debugPrint('BackgroundService: updateFromActivityUseCase failed: $e');
         }

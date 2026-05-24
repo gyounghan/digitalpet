@@ -2,63 +2,51 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/pet_provider.dart';
-import '../widgets/pet_button.dart';
-import '../widgets/glass_card.dart';
-import '../../core/theme/app_colors.dart';
+import '../widgets/app_design.dart';
+import '../../core/theme/species_theme.dart';
 import '../../core/constants/app_strings.dart';
+import '../../core/utils/pet_image_helper.dart';
 import '../../domain/entities/battle_history.dart';
-import '../../domain/usecases/battle_with_activity_usecase.dart' show BattleTurn, BattleResult;
+import '../../domain/entities/battle_style.dart';
+import '../../domain/usecases/battle_with_activity_usecase.dart'
+    show BattleTurn;
 import '../../data/datasources/battle_socket_datasource.dart';
 import 'home_screen.dart';
 
-/// 배틀 화면
-/// 활동 기반 대결 시스템
-/// 일일 목표 달성 여부로 승부를 결정
+/// 배틀 화면 — 프로토타입 디자인 적용
+/// 상단 내 펫 카드(deep gradient) + 전적/랭킹 카드 + 액션 버튼 + 최근 전적
 class BattleScreen extends ConsumerStatefulWidget {
   const BattleScreen({super.key});
-  
+
   @override
   ConsumerState<BattleScreen> createState() => _BattleScreenState();
 }
 
-class _BattleScreenState extends ConsumerState<BattleScreen>
-    with TickerProviderStateMixin {
-  // 배틀 상태
+class _BattleScreenState extends ConsumerState<BattleScreen> {
   bool? battleResult;
   bool isLoading = false;
   int expGained = 0;
 
-  // 턴 기반 배틀 상태
   List<BattleTurn> turns = [];
   int currentTurnIndex = -1;
   int ourPetHp = 100;
   int opponentPetHp = 100;
-  late AnimationController _attackAnimationController;
 
-  // 온라인 PvP 상태
   bool isOnlineMode = false;
   bool isMatchmaking = false;
   String? opponentName;
   int? opponentLevel;
   BattleSocketDatasource? _socket;
 
-  @override
-  void initState() {
-    super.initState();
-    _attackAnimationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 600),
-    );
-  }
+  /// 선택된 배틀 스타일 (기본 균형형)
+  BattleStyle _battleStyle = BattleStyle.balanced;
 
   @override
   void dispose() {
-    _attackAnimationController.dispose();
     _socket?.disconnect();
     super.dispose();
   }
 
-  /// 온라인 매칭 시작
   Future<void> _startOnlineBattle(dynamic pet) async {
     setState(() {
       isLoading = true;
@@ -69,11 +57,9 @@ class _BattleScreenState extends ConsumerState<BattleScreen>
     });
 
     _socket = BattleSocketDatasource();
-
     _socket!.onQueued = () {
       if (mounted) setState(() {});
     };
-
     _socket!.onMatched = (roomId, opponent) {
       if (mounted) {
         setState(() {
@@ -85,7 +71,6 @@ class _BattleScreenState extends ConsumerState<BattleScreen>
         });
       }
     };
-
     _socket!.onTurn = (turn) {
       if (mounted) {
         setState(() {
@@ -96,7 +81,6 @@ class _BattleScreenState extends ConsumerState<BattleScreen>
         });
       }
     };
-
     _socket!.onResult = (data) {
       if (mounted) {
         setState(() {
@@ -104,11 +88,11 @@ class _BattleScreenState extends ConsumerState<BattleScreen>
           expGained = data['expGained'] as int? ?? 0;
           isLoading = false;
         });
-        // 펫 상태 새로고침
-        ref.read(petNotifierProvider(HomeScreen.defaultPetId).notifier).refresh();
+        ref
+            .read(petNotifierProvider(HomeScreen.defaultPetId).notifier)
+            .refresh();
       }
     };
-
     _socket!.onTimeout = () {
       if (mounted) {
         setState(() {
@@ -120,7 +104,6 @@ class _BattleScreenState extends ConsumerState<BattleScreen>
         );
       }
     };
-
     _socket!.onOpponentDisconnected = () {
       if (mounted) {
         setState(() {
@@ -135,8 +118,6 @@ class _BattleScreenState extends ConsumerState<BattleScreen>
     };
 
     await _socket!.connect();
-
-    // 매칭 큐 입장
     _socket!.joinQueue(
       petName: pet.name ?? '펫',
       level: pet.level ?? 1,
@@ -150,7 +131,6 @@ class _BattleScreenState extends ConsumerState<BattleScreen>
     );
   }
 
-  /// 온라인 매칭 취소
   void _cancelOnlineMatch() {
     _socket?.cancelQueue();
     _socket?.disconnect();
@@ -159,8 +139,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen>
       isMatchmaking = false;
     });
   }
-  
-  /// 스탯 기반 배틀 시뮬레이션
+
   Future<void> _simulateTurns() async {
     setState(() {
       turns = [];
@@ -171,11 +150,13 @@ class _BattleScreenState extends ConsumerState<BattleScreen>
 
     try {
       final battleUseCase = ref.read(battleWithActivityUseCaseProvider);
-      final result = await battleUseCase(HomeScreen.defaultPetId);
+      final result =
+          await battleUseCase(HomeScreen.defaultPetId, style: _battleStyle);
 
-      // 배틀 횟수 제한
       if (result.limitReached) {
-        setState(() { isLoading = false; });
+        setState(() {
+          isLoading = false;
+        });
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('오늘 배틀 횟수를 모두 사용했습니다 (3/3)')),
@@ -184,17 +165,18 @@ class _BattleScreenState extends ConsumerState<BattleScreen>
         return;
       }
 
-      // 턴 결과를 애니메이션으로 표시
       if (result.turns.isNotEmpty) {
         final firstTurn = result.turns.first;
         setState(() {
           ourPetHp = firstTurn.playerHpRemaining + firstTurn.opponentDamage;
-          opponentPetHp = firstTurn.opponentHpRemaining + firstTurn.playerDamage;
+          opponentPetHp =
+              firstTurn.opponentHpRemaining + firstTurn.playerDamage;
         });
 
         for (int i = 0; i < result.turns.length; i++) {
           await Future.delayed(const Duration(milliseconds: 800));
           final turn = result.turns[i];
+          if (!mounted) return;
           setState(() {
             turns.add(turn);
             currentTurnIndex = i;
@@ -204,613 +186,812 @@ class _BattleScreenState extends ConsumerState<BattleScreen>
         }
       }
 
-      await ref.read(petNotifierProvider(HomeScreen.defaultPetId).notifier).refresh();
+      await ref
+          .read(petNotifierProvider(HomeScreen.defaultPetId).notifier)
+          .refresh();
 
       setState(() {
         battleResult = result.isVictory;
         expGained = result.expGained;
         isLoading = false;
       });
-    } catch (e) {
-      setState(() { isLoading = false; });
+    } catch (_) {
+      setState(() {
+        isLoading = false;
+      });
     }
   }
 
-  /// 배틀 시작 (턴 애니메이션 포함)
   Future<void> _startBattle() async {
     if (isLoading || battleResult != null) return;
-
     setState(() {
       isLoading = true;
     });
-
     await _simulateTurns();
   }
-  
-  /// 대결 초기화
+
   void _resetBattle() {
     setState(() {
       battleResult = null;
       expGained = 0;
     });
   }
-  
+
   @override
   Widget build(BuildContext context) {
     final petAsync = ref.watch(petNotifierProvider(HomeScreen.defaultPetId));
-    
+
     return Scaffold(
-      backgroundColor: AppColors.backgroundDark,
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: AppColors.backgroundGradient,
-        ),
-        child: SafeArea(
-          child: petAsync.when(
-            loading: () => const Center(
-              child: CircularProgressIndicator(color: AppColors.primary),
-            ),
-            error: (error, stackTrace) => Center(
-              child: Text(
-                'Error: $error',
-                style: const TextStyle(color: AppColors.danger),
-              ),
-            ),
-            data: (pet) => _buildBattleContent(context, pet),
+      backgroundColor: DesignTokens.bg,
+      body: SafeArea(
+        child: petAsync.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => Center(
+            child: Text('오류: $e',
+                style: const TextStyle(color: DesignTokens.bad)),
           ),
+          data: (pet) => _buildContent(pet),
         ),
       ),
     );
   }
-  
-  Widget _buildBattleContent(BuildContext context, pet) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const SizedBox(height: 16),
-          // 헤더
-          Text(
-            AppStrings.battleArena,
-            style: const TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 32),
-          
-          // 전적 통계 카드
-          FutureBuilder<BattleStats>(
-            future: _getBattleStats(),
-            builder: (context, snapshot) {
-              if (snapshot.hasData) {
-                final stats = snapshot.data!;
-                return GlassCard(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [
-                          _buildStatItem('총 대결', '${stats.total}', AppColors.textPrimary),
-                          Container(
-                            width: 1,
-                            height: 40,
-                            color: AppColors.glassBorder,
-                          ),
-                          _buildStatItem('승리', '${stats.victories}', AppColors.accentPink),
-                          Container(
-                            width: 1,
-                            height: 40,
-                            color: AppColors.glassBorder,
-                          ),
-                          _buildStatItem('패배', '${stats.defeats}', AppColors.textSecondary),
-                        ],
-                      ),
-                      if (stats.total > 0) ...[
-                        const SizedBox(height: 16),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            '승률: ${((stats.victories / stats.total) * 100).toStringAsFixed(1)}%',
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.primary,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                );
-              } else {
-                return const SizedBox.shrink();
-              }
-            },
-          ),
-          
-          const SizedBox(height: 24),
-          
-          // 배틀 진행 상황 또는 버튼
-          if (battleResult == null) ...[
-            if (!isLoading) ...[
-              Row(
-                children: [
-                  Expanded(
-                    child: PetButton(
-                      variant: PetButtonVariant.primary,
-                      icon: Icons.smart_toy,
-                      onPressed: () {
-                        setState(() => isOnlineMode = false);
-                        _startBattle();
-                      },
-                      child: const Text('AI 대전'),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: PetButton(
-                      variant: PetButtonVariant.secondary,
-                      icon: Icons.wifi,
-                      onPressed: () {
-                        setState(() => isOnlineMode = true);
-                        _startOnlineBattle(pet);
-                      },
-                      child: const Text('온라인 대전'),
-                    ),
-                  ),
-                ],
-              ),
-            ] else if (isMatchmaking) ...[
-              GlassCard(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  children: [
-                    const CircularProgressIndicator(color: AppColors.primary),
-                    const SizedBox(height: 16),
-                    const Text(
-                      '상대를 찾고 있습니다...',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    PetButton(
-                      variant: PetButtonVariant.secondary,
-                      onPressed: _cancelOnlineMatch,
-                      child: const Text('취소'),
-                    ),
-                  ],
-                ),
-              ),
-            ] else ...[
-              if (opponentName != null) ...[
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Text(
-                    'VS $opponentName (Lv.$opponentLevel)',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.accentPink,
-                    ),
-                  ),
-                ),
-              ],
-              _buildBattleInProgress(pet),
-            ],
-          ],
-          
-          if (battleResult != null) ...[
-            GlassCard(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                children: [
-                  Icon(
-                    battleResult! ? Icons.celebration : Icons.sentiment_dissatisfied,
-                    size: 80,
-                    color: battleResult! ? AppColors.accentPink : AppColors.textSecondary,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    battleResult! ? AppStrings.battleVictory : AppStrings.battleDefeat,
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.w600,
-                      color: battleResult! ? AppColors.accentPink : AppColors.textSecondary,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    battleResult!
-                        ? '축하합니다! 목표를 달성했습니다!'
-                        : '아쉽네요. 다음에는 목표를 달성해보세요!',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: AppColors.textSecondary,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 20),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: AppColors.accentPink.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      '획득 경험치: +$expGained',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.accentPink,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            PetButton(
-              variant: PetButtonVariant.secondary,
-              icon: Icons.refresh,
-              onPressed: _resetBattle,
-              child: const Text('다시 대결하기'),
-            ),
-          ],
-          
-          const SizedBox(height: 32),
-          
-          // 최근 전적 목록
-          FutureBuilder<List<BattleHistory>>(
-            future: _getRecentBattleHistory(),
-            builder: (context, snapshot) {
-              if (snapshot.hasData && snapshot.data!.isNotEmpty) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      '최근 전적',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    ...snapshot.data!.map((history) => _buildHistoryItem(history)),
-                  ],
-                );
-              } else {
-                return const SizedBox.shrink();
-              }
-            },
-          ),
-        ],
-      ),
-    );
-  }
-  
-  /// 배틀 진행 중 UI 빌드
-  Widget _buildBattleInProgress(dynamic pet) {
-    return GlassCard(
-      gradient: true,
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        children: [
-          // 턴 번호
-          if (currentTurnIndex >= 0)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 16),
-              child: Text(
-                '턴 ${currentTurnIndex + 1}',
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.primary,
-                ),
-              ),
-            ),
 
-          // 우리 펫
-          Padding(
-            padding: const EdgeInsets.only(bottom: 20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      '${pet.name} (우리)',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                    Text(
-                      'HP: $ourPetHp/100',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: AppColors.textTertiary,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                LinearProgressIndicator(
-                  value: ourPetHp / 100,
-                  backgroundColor: AppColors.glassBackground,
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    ourPetHp > 50
-                        ? Colors.green
-                        : ourPetHp > 25
-                            ? Colors.orange
-                            : Colors.red,
-                  ),
-                ),
-              ],
-            ),
-          ),
+  Widget _buildContent(dynamic pet) {
+    final theme = SpeciesTheme.forType(pet.evolutionType);
 
-          // VS
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 12),
-            child: Text(
-              '⚔️ VS ⚔️',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
-                color: AppColors.primary,
-              ),
-            ),
-          ),
-
-          // 상대 펫
-          Padding(
-            padding: const EdgeInsets.only(bottom: 20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      '상대 펫 (AI)',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                    Text(
-                      'HP: $opponentPetHp/100',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: AppColors.textTertiary,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                LinearProgressIndicator(
-                  value: opponentPetHp / 100,
-                  backgroundColor: AppColors.glassBackground,
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    opponentPetHp > 50
-                        ? Colors.green
-                        : opponentPetHp > 25
-                            ? Colors.orange
-                            : Colors.red,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // 현재 턴 액션 표시
-          if (currentTurnIndex >= 0 && currentTurnIndex < turns.length) ...[
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                children: [
-                  Text(
-                    '${pet.name}: ${turns[currentTurnIndex].playerSkillName}!',
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  if (turns[currentTurnIndex].playerDamage > 0) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      '→ -${turns[currentTurnIndex].playerDamage} 대미지!',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Colors.red,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: 8),
-                  Text(
-                    '상대: ${turns[currentTurnIndex].opponentSkillName}!',
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: AppColors.textSecondary,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  if (turns[currentTurnIndex].opponentDamage > 0) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      '→ -${turns[currentTurnIndex].opponentDamage} 대미지!',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Colors.red,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ],
-
-          const SizedBox(height: 16),
-          const Center(
-            child: CircularProgressIndicator(color: AppColors.primary),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// 통계 항목 빌드
-  Widget _buildStatItem(String label, String value, Color color) {
     return Column(
       children: [
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.w600,
-            color: color,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 12,
-            color: AppColors.textTertiary,
+        const ScreenTop(title: '배틀'),
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(18, 0, 18, 18),
+            children: [
+              _buildMyPetCard(pet, theme),
+              const SizedBox(height: 10),
+              _buildStatsAndRanking(pet, theme),
+              const SizedBox(height: 10),
+              if (battleResult == null) ...[
+                if (!isLoading) ...[
+                  _buildStyleSelector(theme),
+                  const SizedBox(height: 10),
+                  _buildModeButtons(pet, theme),
+                ] else if (isMatchmaking)
+                  _buildMatchingCard(theme)
+                else
+                  _buildArenaCard(pet, theme),
+              ] else
+                _buildResultCard(theme),
+              const SizedBox(height: 18),
+              const SectionTitle(title: '최근 전적'),
+              _buildHistorySection(theme),
+            ],
           ),
         ),
       ],
     );
   }
-  
-  /// 전적 항목 빌드
-  Widget _buildHistoryItem(BattleHistory history) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: GlassCard(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: history.isVictory
-                    ? AppColors.accentPink.withValues(alpha: 0.2)
-                    : AppColors.textSecondary.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(
-                history.isVictory ? Icons.check_circle : Icons.cancel,
-                color: history.isVictory ? AppColors.accentPink : AppColors.textSecondary,
-                size: 24,
-              ),
+
+  Widget _buildMyPetCard(dynamic pet, SpeciesTheme theme) {
+    final baseAtk = 28 + pet.level * 1.2;
+    final baseDef = 24 + pet.level * 1.0;
+    final myAtk = (baseAtk * _battleStyle.attackMultiplier).round();
+    final myDef = (baseDef * _battleStyle.defenseMultiplier).round();
+    final imagePath = getEvolutionImagePath(pet.evolutionType, pet.evolutionStage);
+
+    return AppCard(
+      theme: theme,
+      gradient: LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [theme.primary, theme.primaryDeep],
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '내 펫',
+            style: TextStyle(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w700,
+              color: Colors.white.withValues(alpha: 0.7),
+              letterSpacing: 0.8,
             ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    history.isVictory ? '승리' : '패배',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: history.isVictory ? AppColors.accentPink : AppColors.textSecondary,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${history.dateString} ${history.timeString}',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: AppColors.textTertiary,
-                    ),
-                  ),
-                ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                alignment: Alignment.center,
+                child: imagePath != null
+                    ? Image.asset(imagePath, width: 60, height: 60)
+                    : const Icon(Icons.pets, size: 40, color: Colors.white),
               ),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      pet.name,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                      ),
+                    ),
+                    Text(
+                      'Lv.${pet.level} · ${SpeciesTheme.labelFor(pet.evolutionType)}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white.withValues(alpha: 0.85),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        _statBadge('HP', pet.stamina),
+                        const SizedBox(width: 10),
+                        _statBadge('ATK', myAtk),
+                        const SizedBox(width: 10),
+                        _statBadge('DEF', myDef),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _statBadge(String label, int value) {
+    return Text(
+      '$label $value',
+      style: const TextStyle(
+        fontSize: 11,
+        fontWeight: FontWeight.w700,
+        color: Colors.white,
+      ),
+    );
+  }
+
+  Widget _buildStatsAndRanking(dynamic pet, SpeciesTheme theme) {
+    return Row(
+      children: [
+        Expanded(
+          child: FutureBuilder<_BattleStats>(
+            future: _getBattleStats(),
+            builder: (context, snapshot) {
+              final stats = snapshot.data;
+              return AppCard(
+                theme: theme,
+                variant: AppCardVariant.flat,
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      '전적',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: DesignTokens.ink3,
+                        letterSpacing: 0.6,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      stats == null
+                          ? '— —'
+                          : '${stats.victories}승 ${stats.defeats}패',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: DesignTokens.ink,
+                        fontFeatures: [FontFeature.tabularFigures()],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: AppCard(
+            theme: theme,
+            variant: AppCardVariant.flat,
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  '+${history.expGained} EXP',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.accentPink,
+                const Text(
+                  '랭킹',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: DesignTokens.ink3,
+                    letterSpacing: 0.6,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 2),
                 Text(
-                  '${history.steps}보',
+                  '#${(1000 - pet.level * 5 - pet.battleVictoryCount * 2).clamp(4, 999)}'
+                  ' · ${(pet.level * 100 + pet.battleVictoryCount * 30)}RP',
                   style: const TextStyle(
-                    fontSize: 12,
-                    color: AppColors.textTertiary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: DesignTokens.ink,
+                    fontFeatures: [FontFeature.tabularFigures()],
                   ),
                 ),
               ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// 공격형/균형형/방어형 선택 카드
+  Widget _buildStyleSelector(SpeciesTheme theme) {
+    return AppCard(
+      theme: theme,
+      variant: AppCardVariant.flat,
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.tune, size: 14, color: theme.primaryDeep),
+              const SizedBox(width: 6),
+              Text(
+                '배틀 스타일',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  color: theme.primaryDeep,
+                  letterSpacing: 0.4,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                _battleStyle.description,
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: DesignTokens.ink3,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              for (final s in BattleStyle.values) ...[
+                Expanded(child: _styleButton(s, theme)),
+                if (s != BattleStyle.values.last) const SizedBox(width: 6),
+              ],
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _styleButton(BattleStyle style, SpeciesTheme theme) {
+    final selected = _battleStyle == style;
+    final icon = switch (style) {
+      BattleStyle.attacker => Icons.flash_on,
+      BattleStyle.balanced => Icons.balance,
+      BattleStyle.defender => Icons.shield,
+    };
+    return GestureDetector(
+      onTap: () => setState(() => _battleStyle = style),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: selected ? theme.primarySoft : DesignTokens.surfaceSoft,
+          borderRadius: BorderRadius.circular(10),
+          border: selected
+              ? Border.all(color: theme.primary, width: 1.5)
+              : Border.all(color: DesignTokens.line, width: 1),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon,
+                size: 18,
+                color: selected ? theme.primaryDeep : DesignTokens.ink3),
+            const SizedBox(height: 4),
+            Text(
+              style.label,
+              style: TextStyle(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w800,
+                color: selected ? theme.primaryDeep : DesignTokens.ink2,
+              ),
             ),
           ],
         ),
       ),
     );
   }
-  
-  /// 전적 통계 조회
-  Future<BattleStats> _getBattleStats() async {
+
+  Widget _buildModeButtons(dynamic pet, SpeciesTheme theme) {
+    return Row(
+      children: [
+        Expanded(
+          child: _BigButton(
+            label: 'AI 대전',
+            icon: Icons.smart_toy,
+            theme: theme,
+            primary: true,
+            onTap: () {
+              setState(() => isOnlineMode = false);
+              _startBattle();
+            },
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _BigButton(
+            label: '온라인 대전',
+            icon: Icons.wifi,
+            theme: theme,
+            onTap: () {
+              setState(() => isOnlineMode = true);
+              _startOnlineBattle(pet);
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMatchingCard(SpeciesTheme theme) {
+    return AppCard(
+      theme: theme,
+      variant: AppCardVariant.tinted,
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        children: [
+          CircularProgressIndicator(color: theme.primary),
+          const SizedBox(height: 12),
+          Text(
+            '비슷한 레벨의 상대를 찾고 있어요...',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: theme.primaryDeep,
+            ),
+          ),
+          const SizedBox(height: 16),
+          _BigButton(
+            label: '취소',
+            theme: theme,
+            onTap: _cancelOnlineMatch,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildArenaCard(dynamic pet, SpeciesTheme theme) {
+    return AppCard(
+      theme: theme,
+      variant: AppCardVariant.flat,
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (currentTurnIndex >= 0)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: AppPill(
+                text: 'R${(currentTurnIndex + 1)}',
+                theme: theme,
+                variant: AppPillVariant.solid,
+              ),
+            ),
+          _FighterRow(
+            name: '${pet.name} (나)',
+            level: pet.level,
+            hp: ourPetHp,
+            imagePath:
+                getEvolutionImagePath(pet.evolutionType, pet.evolutionStage),
+            mine: true,
+            theme: theme,
+          ),
+          const SizedBox(height: 8),
+          _FighterRow(
+            name: opponentName ?? '상대',
+            level: opponentLevel ?? pet.level,
+            hp: opponentPetHp,
+            imagePath: null,
+            mine: false,
+            theme: theme,
+          ),
+          if (currentTurnIndex >= 0 && currentTurnIndex < turns.length) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: theme.primarySoft,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${pet.name}: ${turns[currentTurnIndex].playerSkillName}!',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: theme.primaryDeep,
+                    ),
+                  ),
+                  if (turns[currentTurnIndex].playerDamage > 0)
+                    Text(
+                      '→ -${turns[currentTurnIndex].playerDamage} 대미지!',
+                      style: const TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w700,
+                        color: DesignTokens.bad,
+                      ),
+                    ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '상대: ${turns[currentTurnIndex].opponentSkillName}!',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: DesignTokens.ink2,
+                    ),
+                  ),
+                  if (turns[currentTurnIndex].opponentDamage > 0)
+                    Text(
+                      '→ -${turns[currentTurnIndex].opponentDamage} 대미지!',
+                      style: const TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w700,
+                        color: DesignTokens.bad,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+          const SizedBox(height: 12),
+          Center(
+            child: CircularProgressIndicator(color: theme.primary),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildResultCard(SpeciesTheme theme) {
+    final win = battleResult == true;
+    return Column(
+      children: [
+        Center(
+          child: AppPill(
+            text: win ? '승리' : '패배',
+            theme: theme,
+            variant: win ? AppPillVariant.solid : AppPillVariant.dark,
+            fontSize: 14,
+            padding:
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          win ? '+$expGained EXP' : '경험치 없음',
+          style: TextStyle(
+            fontSize: 28,
+            fontWeight: FontWeight.w900,
+            color: win ? theme.primaryDeep : DesignTokens.ink,
+            fontFeatures: const [FontFeature.tabularFigures()],
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          win ? AppStrings.battleVictory : AppStrings.battleDefeat,
+          style: const TextStyle(
+            fontSize: 12.5,
+            fontWeight: FontWeight.w600,
+            color: DesignTokens.ink3,
+          ),
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(
+              child: _BigButton(
+                label: '홈으로',
+                theme: theme,
+                onTap: _resetBattle,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _BigButton(
+                label: '한번 더',
+                theme: theme,
+                primary: true,
+                onTap: () {
+                  _resetBattle();
+                  _startBattle();
+                },
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildHistorySection(SpeciesTheme theme) {
+    return FutureBuilder<List<BattleHistory>>(
+      future: _getRecentBattleHistory(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return AppCard(
+            theme: theme,
+            variant: AppCardVariant.flat,
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: const Center(
+              child: Text(
+                '아직 전적이 없어요',
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                  color: DesignTokens.ink3,
+                ),
+              ),
+            ),
+          );
+        }
+        return Column(
+          children: [
+            for (final h in snapshot.data!) ...[
+              _buildHistoryRow(h, theme),
+              const SizedBox(height: 6),
+            ],
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildHistoryRow(BattleHistory history, SpeciesTheme theme) {
+    return AppListRow(
+      theme: theme,
+      tinted: false,
+      leading: Container(
+        width: 38,
+        height: 38,
+        decoration: BoxDecoration(
+          color: history.isVictory
+              ? theme.primarySoft
+              : DesignTokens.surfaceSoft,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Icon(
+          history.isVictory ? Icons.check_circle : Icons.cancel,
+          size: 20,
+          color: history.isVictory ? theme.primaryDeep : DesignTokens.ink3,
+        ),
+      ),
+      title: history.isVictory ? '승리' : '패배',
+      subtitle: '${history.dateString} ${history.timeString} · ${history.steps}보',
+      trailing: Text(
+        '+${history.expGained} EXP',
+        style: TextStyle(
+          fontSize: 12.5,
+          fontWeight: FontWeight.w800,
+          color: history.isVictory ? theme.primaryDeep : DesignTokens.ink3,
+          fontFeatures: const [FontFeature.tabularFigures()],
+        ),
+      ),
+    );
+  }
+
+  Future<_BattleStats> _getBattleStats() async {
     final repository = ref.read(battleHistoryRepositoryProvider);
     final total = await repository.getTotalBattleCount();
     final victories = await repository.getVictoryCount();
     final defeats = await repository.getDefeatCount();
-    return BattleStats(
-      total: total,
-      victories: victories,
-      defeats: defeats,
-    );
+    return _BattleStats(
+        total: total, victories: victories, defeats: defeats);
   }
-  
-  /// 최근 전적 조회
+
   Future<List<BattleHistory>> _getRecentBattleHistory() async {
     final repository = ref.read(battleHistoryRepositoryProvider);
-    return await repository.getRecentBattleHistory(10);
+    return repository.getRecentBattleHistory(10);
   }
 }
 
-/// 전적 통계
-class BattleStats {
+class _BigButton extends StatelessWidget {
+  final String label;
+  final IconData? icon;
+  final SpeciesTheme theme;
+  final bool primary;
+  final VoidCallback? onTap;
+
+  const _BigButton({
+    required this.label,
+    required this.theme,
+    this.icon,
+    this.primary = false,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final bg = primary ? theme.primary : DesignTokens.surface;
+    final fg = primary ? Colors.white : DesignTokens.ink;
+    return Material(
+      color: bg,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: primary
+                ? null
+                : Border.all(color: DesignTokens.line2, width: 1),
+            boxShadow: primary
+                ? [
+                    BoxShadow(
+                      color: theme.primarySoft,
+                      blurRadius: 16,
+                      offset: const Offset(0, 6),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (icon != null) ...[
+                Icon(icon, size: 18, color: fg),
+                const SizedBox(width: 6),
+              ],
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: fg,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _FighterRow extends StatelessWidget {
+  final String name;
+  final int level;
+  final int hp;
+  final String? imagePath;
+  final bool mine;
+  final SpeciesTheme theme;
+
+  const _FighterRow({
+    required this.name,
+    required this.level,
+    required this.hp,
+    required this.theme,
+    required this.imagePath,
+    this.mine = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: DesignTokens.surfaceSoft,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(11),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: imagePath != null
+                  ? Image.asset(imagePath!, fit: BoxFit.contain)
+                  : Icon(Icons.pets, color: DesignTokens.ink3),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        name,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          color: DesignTokens.ink,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      'Lv.$level',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: DesignTokens.ink2,
+                        fontFeatures: [FontFeature.tabularFigures()],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 5),
+                AppMeter(
+                  value: hp.toDouble(),
+                  theme: theme,
+                  tone: mine ? AppMeterTone.themed : AppMeterTone.bad,
+                  height: 10,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'HP $hp/100',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: DesignTokens.ink3,
+                    fontFeatures: [FontFeature.tabularFigures()],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BattleStats {
   final int total;
   final int victories;
   final int defeats;
-
-  BattleStats({
+  _BattleStats({
     required this.total,
     required this.victories,
     required this.defeats,
   });
 }
-

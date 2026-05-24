@@ -239,45 +239,74 @@ void main() {
     });
   });
 
-  group('Pet.resetGoalPeriod', () {
-    test('목표 완료 시 goalStartDate 갱신, streakCount 증가', () {
-      final pet = _createPet(
-        goalStreakCount: 2,
-        totalSteps: 5000,
-        totalExerciseMinutes: 30,
-      );
-      final reset = pet.resetGoalPeriod(completed: true);
-      expect(reset.goalStreakCount, 3);
-      expect(reset.todayFeedCount, 0);
-      expect(reset.todaySleepHours, 0);
-      expect(reset.goalStartTotalSteps, 5000);
-      expect(reset.goalStartTotalExerciseMinutes, 30);
-    });
-
-    test('강제 리셋 시 streakCount 0으로 초기화', () {
-      final pet = _createPet(goalStreakCount: 5);
-      final reset = pet.resetGoalPeriod(completed: false);
-      expect(reset.goalStreakCount, 0);
-      expect(reset.todayFeedCount, 0);
-      expect(reset.todaySleepHours, 0);
-    });
-  });
-
   group('Pet.resetDailyGoals', () {
-    test('일일 항목만 리셋, 기간 누적은 유지', () {
+    test('보조 카운터만 리셋, 목표 진행도는 유지 (달성 시에만 차감)', () {
       final pet = _createPet().copyWith(
         todayFeedCount: 3,
         todaySleepHours: 5,
         todayFedMealSlots: 7,
         todayAlternativeFeedCount: 2,
+        feedAchievedCount: 12,
+        sleepAchievedCount: 8,
       );
       final reset = pet.resetDailyGoals();
-      // 기간 누적은 유지
+      // 목표 진행도는 유지 (달성 시에만 차감됨)
       expect(reset.todayFeedCount, 3);
       expect(reset.todaySleepHours, 5);
-      // 일일 항목은 리셋
+      // 보조 카운터는 일일 리셋
       expect(reset.todayFedMealSlots, 0);
       expect(reset.todayAlternativeFeedCount, 0);
+      // 누적 달성 카운트 유지
+      expect(reset.feedAchievedCount, 12);
+      expect(reset.sleepAchievedCount, 8);
+    });
+  });
+
+  group('Pet.exerciseProgress', () {
+    test('totalSteps - lastExerciseGoalSteps = 현재 운동 진행 걸음수', () {
+      final pet = _createPet().copyWith(
+        totalSteps: 12000,
+        lastExerciseGoalSteps: 5000,
+        totalExerciseMinutes: 45,
+        lastExerciseGoalMinutes: 20,
+      );
+      expect(pet.exerciseProgressSteps, 7000);
+      expect(pet.exerciseProgressMinutes, 25);
+    });
+
+    test('lastExerciseGoalSteps가 totalSteps보다 크면 0으로 클램프', () {
+      final pet = _createPet().copyWith(
+        totalSteps: 1000,
+        lastExerciseGoalSteps: 2000,
+      );
+      expect(pet.exerciseProgressSteps, 0);
+    });
+  });
+
+  group('Pet.categoryTiers', () {
+    test('feedAchievedCount 25 → feedTier 2, 다음 티어까지 5', () {
+      final pet = _createPet().copyWith(feedAchievedCount: 25);
+      expect(pet.feedTier, 2);
+      expect(pet.feedRemainingToNextTier, 5);
+    });
+
+    test('sleepAchievedCount 0 → sleepTier 0, 다음 티어까지 10', () {
+      final pet = _createPet();
+      expect(pet.sleepTier, 0);
+      expect(pet.sleepRemainingToNextTier, 10);
+    });
+
+    test('exerciseAchievedCount 10 → exerciseTier 1, 다음 티어까지 10', () {
+      final pet = _createPet().copyWith(exerciseAchievedCount: 10);
+      expect(pet.exerciseTier, 1);
+      expect(pet.exerciseRemainingToNextTier, 10);
+    });
+  });
+
+  group('Pet.needsGoalPeriodReset', () {
+    test('주간 리셋이 제거되어 항상 false', () {
+      final pet = _createPet().copyWith(goalStartDate: '2020-01-01');
+      expect(pet.needsGoalPeriodReset, false);
     });
   });
 }

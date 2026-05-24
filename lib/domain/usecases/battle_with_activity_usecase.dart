@@ -1,6 +1,7 @@
 import 'dart:math';
 import '../entities/pet.dart';
 import '../entities/battle_history.dart';
+import '../entities/battle_style.dart';
 import '../entities/evolution_type.dart';
 import '../repositories/pet_repository.dart';
 import '../repositories/activity_repository.dart';
@@ -80,15 +81,16 @@ class BattleWithActivityUseCase {
   static const int dominantVictoryExp = 70;
   static const List<double> rewardMultipliers = [1.0, 0.7, 0.5];
 
-  static const Map<int, int> evolutionStageBonus = {1: 0, 2: 2, 3: 4, 4: 7};
-
   BattleWithActivityUseCase({
     required this.petRepository,
     required this.activityRepository,
     required this.battleHistoryRepository,
   });
 
-  Future<BattleResult> call(String petId) async {
+  Future<BattleResult> call(
+    String petId, {
+    BattleStyle style = BattleStyle.balanced,
+  }) async {
     var pet = await petRepository.getPet(petId);
 
     if (pet.isDead) {
@@ -108,7 +110,13 @@ class BattleWithActivityUseCase {
     final random = Random();
 
     final playerType = pet.evolutionType;
-    final playerStats = _calculateStats(pet, todayActivity.steps, todayActivity.exerciseMinutes);
+    // 전투 스탯은 Pet 엔티티의 영구 성장 + 컨디션 보정 getter를 단일 소스로 사용
+    // (도감 표시와 실전 수치가 항상 일치). 배틀 스타일은 ATK/DEF에만 적용.
+    final playerStats = BattleStats(
+      attack: (pet.battleAtk * style.attackMultiplier).round(),
+      defense: (pet.battleDef * style.defenseMultiplier).round(),
+      hp: pet.battleHp,
+    );
 
     // AI 상대 생성 (종 랜덤)
     final opponentLevel = max(1, pet.level - 2 + random.nextInt(4));
@@ -297,31 +305,9 @@ class BattleWithActivityUseCase {
     return skills[0]; // 기본공격
   }
 
-  BattleStats _calculateStats(Pet pet, int todaySteps, int todayExerciseMinutes) {
-    final stageBonus = evolutionStageBonus[pet.evolutionStage] ?? 0;
-    final stepsBonus = min(todaySteps ~/ 2000, 5);
-    final exerciseBonus = min(todayExerciseMinutes ~/ 6, 5);
-    final activityBonus = max(stepsBonus, exerciseBonus);
-
-    int attackBonus = 0, defenseBonus = 0, hpBonus = 0;
-    switch (pet.evolutionType) {
-      case EvolutionType.bird: attackBonus = 3; break;
-      case EvolutionType.snake: hpBonus = 10; defenseBonus = 2; break;
-      case EvolutionType.tiger: attackBonus = 2; defenseBonus = 2; break;
-      case EvolutionType.turtle: defenseBonus = 3; hpBonus = 10; break;
-      default: break;
-    }
-
-    return BattleStats(
-      attack: (pet.happiness ~/ 10) + activityBonus + stageBonus + attackBonus,
-      defense: (pet.stamina ~/ 10) + activityBonus + stageBonus + defenseBonus,
-      hp: 50 + (pet.hunger ~/ 5) + (pet.level * 2) + hpBonus,
-    );
-  }
-
+  /// AI 상대 스탯 — 플레이어의 영구 성장 골격(레벨 + 누적보너스 범위)과
+  /// 대등하도록 생성. 누적 세트(0~15)/걸음(0~20) 보너스 폭을 랜덤으로 흉내낸다.
   BattleStats _generateOpponentStats(int level, EvolutionType type, Random random) {
-    final baseMin = 40, baseMax = 80;
-    final range = baseMax - baseMin;
     int attackBonus = 0, defenseBonus = 0, hpBonus = 0;
     switch (type) {
       case EvolutionType.bird: attackBonus = 3; break;
@@ -331,9 +317,9 @@ class BattleWithActivityUseCase {
     }
 
     return BattleStats(
-      attack: (baseMin + random.nextInt(range)) ~/ 10 + level + attackBonus,
-      defense: (baseMin + random.nextInt(range)) ~/ 10 + level + defenseBonus,
-      hp: 50 + (baseMin + random.nextInt(range)) ~/ 5 + (level * 2) + hpBonus,
+      attack: Pet.battleFlatBase + level + random.nextInt(13) + attackBonus,
+      defense: Pet.battleFlatBase + level + random.nextInt(13) + defenseBonus,
+      hp: 50 + (level * 2) + random.nextInt(21) + hpBonus,
     );
   }
 }

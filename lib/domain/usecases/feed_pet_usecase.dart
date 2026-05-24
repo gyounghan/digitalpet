@@ -1,5 +1,6 @@
 import '../entities/pet.dart';
 import '../repositories/pet_repository.dart';
+import '../constants/species_growth_config.dart';
 
 /// 반려동물에게 먹이 주기 유스케이스
 /// Feed 버튼 클릭 시 hunger를 증가시키는 비즈니스 로직
@@ -40,10 +41,11 @@ class FeedPetUseCase {
     if (currentMealSlot == 0) return pet;
     if (_hasFedInMealSlot(pet, currentMealSlot)) return pet;
 
-    final newHunger = (pet.hunger + hungerRecoveryAmount).clamp(0, 100);
+    final m = SpeciesGrowthConfig.getGainMultipliers(pet.evolutionType);
+    final newHunger = (pet.hunger + (hungerRecoveryAmount * m.hunger).round()).clamp(0, 100);
     final newFeedCount = (pet.todayFeedCount + 1).clamp(0, 3);
     final newFedMealSlots = pet.todayFedMealSlots | (1 << (currentMealSlot - 1));
-    final newExp = pet.exp + feedExpReward;
+    final newExp = pet.exp + (feedExpReward * m.exp).round();
     final currentTime = DateTime.now().millisecondsSinceEpoch;
 
     final updatedPet = pet.copyWith(

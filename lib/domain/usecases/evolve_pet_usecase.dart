@@ -76,25 +76,24 @@ class EvolvePetUseCase {
     return evolvedPet;
   }
 
-  /// 2단계 진화 종 결정 (활동량 × 규칙성 매트릭스)
+  /// 2단계 진화 종 결정 (활발 × 규칙/자유 매트릭스)
   ///
-  /// 활동 점수 = min(totalSteps/35000, 2.0) + min(totalExerciseMinutes/100, 1.0)
-  /// 규칙 점수 = min(goalStreakCount/3, 1.0) + min(consecutiveLoginDays/7, 1.0)
+  /// 활발 점수 = exerciseAchievedCount + min(totalSteps/10000, 5.0)
+  /// 규칙 점수 = sleepAchievedCount (수면을 잘 지키는가)
+  /// 자유 점수 = feedAchievedCount (먹는 것을 자유롭게 즐기는가)
   ///
-  /// 활동>=1.0 && 규칙>=1.0 → tiger (활발+규칙)
-  /// 활동>=1.0 && 규칙<1.0  → bird  (활발+자유)
-  /// 활동<1.0  && 규칙>=1.0 → turtle (차분+규칙)
-  /// 활동<1.0  && 규칙<1.0  → snake  (차분+자유)
+  /// 활발 && 규칙>자유 → tiger (활발+규칙, 전투형)
+  /// 활발 && 자유>=규칙 → bird  (활발+자유, 기동형)
+  /// 차분 && 규칙>자유 → turtle (차분+규칙, 방어형)
+  /// 차분 && 자유>=규칙 → snake  (차분+자유, 마법형)
   EvolutionType _determineEvolutionType(Pet pet) {
-    final activityScore =
-        min(pet.totalSteps / 35000.0, 2.0) +
-        min(pet.totalExerciseMinutes / 100.0, 1.0);
-    final regularityScore =
-        min(pet.goalStreakCount / 3.0, 1.0) +
-        min(pet.consecutiveLoginDays / 7.0, 1.0);
+    final activityScore = pet.exerciseAchievedCount.toDouble() +
+        min(pet.totalSteps / 10000.0, 5.0);
+    final regularityScore = pet.sleepAchievedCount.toDouble();
+    final freedomScore = pet.feedAchievedCount.toDouble();
 
-    final isActive = activityScore >= 1.0;
-    final isRegular = regularityScore >= 1.0;
+    final isActive = activityScore >= 3.0;
+    final isRegular = regularityScore > freedomScore;
 
     if (isActive && isRegular) return EvolutionType.tiger;
     if (isActive && !isRegular) return EvolutionType.bird;
@@ -104,10 +103,10 @@ class EvolvePetUseCase {
 
   /// 3단계 등급 결정 (종별 조건)
   ///
-  /// bird:   battleVictoryCount>=15 AND happiness>=70 → superior, else normal
-  /// snake:  goalStreakCount>=5 AND consecutiveLoginDays>=30 → superior, else normal
-  /// tiger:  battleVictoryCount>=15 AND (hunger+happiness+stamina)>=180 → superior, else normal
-  /// turtle: consecutiveLoginDays>=14 AND totalIdleHours>=100 → superior, else normal
+  /// bird:   battleVictoryCount>=15 AND happiness>=70 → superior
+  /// snake:  feedAchievedCount>=20 AND consecutiveLoginDays>=30 → superior
+  /// tiger:  battleVictoryCount>=15 AND (hunger+happiness+stamina)>=180 → superior
+  /// turtle: consecutiveLoginDays>=14 AND sleepAchievedCount>=20 → superior
   String _determineStage3Grade(Pet pet) {
     switch (pet.evolutionType) {
       case EvolutionType.bird:
@@ -116,7 +115,7 @@ class EvolvePetUseCase {
         }
         return 'normal';
       case EvolutionType.snake:
-        if (pet.goalStreakCount >= 5 && pet.consecutiveLoginDays >= 30) {
+        if (pet.feedAchievedCount >= 20 && pet.consecutiveLoginDays >= 30) {
           return 'superior';
         }
         return 'normal';
@@ -127,7 +126,7 @@ class EvolvePetUseCase {
         }
         return 'normal';
       case EvolutionType.turtle:
-        if (pet.consecutiveLoginDays >= 14 && pet.totalIdleHours >= 100) {
+        if (pet.consecutiveLoginDays >= 14 && pet.sleepAchievedCount >= 20) {
           return 'superior';
         }
         return 'normal';
@@ -139,23 +138,23 @@ class EvolvePetUseCase {
   /// 4단계 mythical 조건 충족 여부 (superior에서만 승격 가능)
   ///
   /// bird(봉황→주작):   totalSteps>=300000 AND battleVictoryCount>=30
-  /// snake(이무기→청룡): consecutiveLoginDays>=60 AND goalStreakCount>=15 AND resurrectCount==0
+  /// snake(이무기→청룡): consecutiveLoginDays>=60 AND feedAchievedCount>=50 AND resurrectCount==0
   /// tiger(맹호→백호):   battleVictoryCount>=50 AND (hunger+happiness+stamina)>=210
-  /// turtle(영귀→현무):  consecutiveLoginDays>=30 AND totalIdleHours>=300 AND resurrectCount==0
+  /// turtle(영귀→현무):  consecutiveLoginDays>=30 AND sleepAchievedCount>=50 AND resurrectCount==0
   bool _meetsStage4Condition(Pet pet) {
     switch (pet.evolutionType) {
       case EvolutionType.bird:
         return pet.totalSteps >= 300000 && pet.battleVictoryCount >= 30;
       case EvolutionType.snake:
         return pet.consecutiveLoginDays >= 60 &&
-            pet.goalStreakCount >= 15 &&
+            pet.feedAchievedCount >= 50 &&
             pet.resurrectCount == 0;
       case EvolutionType.tiger:
         final totalStats = pet.hunger + pet.happiness + pet.stamina;
         return pet.battleVictoryCount >= 50 && totalStats >= 210;
       case EvolutionType.turtle:
         return pet.consecutiveLoginDays >= 30 &&
-            pet.totalIdleHours >= 300 &&
+            pet.sleepAchievedCount >= 50 &&
             pet.resurrectCount == 0;
       default:
         return false;

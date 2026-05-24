@@ -26,6 +26,8 @@ class WidgetService {
   static const String _keyMoodText = 'moodText'; // 펫의 기분 상태 한국어 텍스트
   static const String _keyName = 'name'; // 펫의 이름
   static const String _keySyncTraceId = 'syncTraceId'; // 앱-위젯 동기화 추적 ID
+  static const String _keyEvolutionType = 'evolutionType'; // 진화 종 (bird/snake/tiger/turtle)
+  static const String _keyEvolutionImage = 'evolutionImage'; // 진화 이미지 리소스명 (bird1, dragon2 등)
   
   /// 펫 데이터를 위젯에 업데이트
   /// 
@@ -53,7 +55,30 @@ class WidgetService {
       await HomeWidget.saveWidgetData<String>(_keyEvolutionStage, pet.evolutionStage.toString());
       await HomeWidget.saveWidgetData<String>(_keyLastUpdated, pet.lastUpdated.toString());
       await HomeWidget.saveWidgetData<String>(_keyImageType, imageType);
-      
+
+      // 진화 이미지 정보 저장 (홈 화면과 동일한 이미지 표시를 위해)
+      // mood 이미지를 우선 사용하고, 없으면 기본 진화 이미지로 폴백
+      final evolutionImagePath =
+          getEvolutionMoodImagePath(pet.evolutionType, pet.evolutionStage, pet.mood)
+          ?? getEvolutionImagePath(pet.evolutionType, pet.evolutionStage);
+      if (evolutionImagePath != null) {
+        // 'assets/bird_smile1.png' → 'bird_smile1' (drawable 리소스명)
+        // '기본이미지' → 'default_pet' (Android drawable에서 한글 불가)
+        String resourceName = evolutionImagePath
+            .replaceFirst('assets/', '')
+            .replaceFirst('.png', '');
+        if (resourceName == '기본이미지') {
+          resourceName = 'default_pet';
+        }
+        await HomeWidget.saveWidgetData<String>(_keyEvolutionImage, resourceName);
+        await HomeWidget.saveWidgetData<String>(
+          _keyEvolutionType, pet.evolutionType?.name ?? '',
+        );
+      } else {
+        await HomeWidget.saveWidgetData<String>(_keyEvolutionImage, '');
+        await HomeWidget.saveWidgetData<String>(_keyEvolutionType, '');
+      }
+
       // 펫의 기분 상태 저장 (hunger, happiness, stamina 기반으로 계산)
       final mood = pet.mood.name; // PetMood enum의 name (happy, sleepy, hungry, bored, normal 등)
       await HomeWidget.saveWidgetData<String>(_keyMood, mood);

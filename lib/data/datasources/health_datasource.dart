@@ -15,32 +15,43 @@ import '../../domain/entities/activity_data.dart';
 /// 권한 요청이 중복 발생하지 않도록 보장한다.
 class HealthDataSource {
   /// Health 인스턴스
-  late final Health health;
+  ///
+  /// [주의] _initialized는 static이므로 다른 인스턴스에서 이미 true로
+  /// 설정되었을 수 있다. 그 경우에도 이 인스턴스의 health 필드는
+  /// 반드시 초기화되어야 하므로 init() 진입 시 항상 생성한다.
+  late Health health;
 
   /// 초기화 완료 여부 (모든 인스턴스 공유)
   static bool _initialized = false;
-  
+
   /// 권한 요청용 데이터 타입 목록
   /// 걸음 수 동기화를 우선 보장하기 위해 STEPS만 필수 요청
   static final List<HealthDataType> _requiredHealthDataTypes = [
     HealthDataType.STEPS,
   ];
-  
+
   /// Health 초기화
-  /// 
+  ///
   /// 앱 시작 시 한 번 호출하여 Health 인스턴스를 준비
-  Future<void> init() async {
+  /// 권한 요청은 static _initialized로 중복 방지하지만,
+  /// Health 인스턴스는 인스턴스별로 반드시 생성한다.
+  ///
+  /// [skipRequest]가 true면 권한 요청 다이얼로그를 띄우지 않는다 — 백그라운드
+  /// isolate에서 호출 시 사용. 이미 grant되어 있으면 그대로 동작, 없으면
+  /// throw하여 호출자가 graceful하게 처리.
+  Future<void> init({bool skipRequest = false}) async {
+    health = Health();
+
     if (_initialized) {
       return;
     }
 
-    health = Health();
-
-    if (Platform.isAndroid) {
+    if (Platform.isAndroid && !skipRequest) {
       // Android에서 걸음수 수집을 위해 ACTIVITY_RECOGNITION 런타임 권한이 필요하다.
       final activityPermission = await Permission.activityRecognition.status;
       if (!activityPermission.isGranted) {
-        final requestedPermission = await Permission.activityRecognition.request();
+        final requestedPermission =
+            await Permission.activityRecognition.request();
         if (kDebugMode) {
           debugPrint(
             'HealthDataSource: activityRecognition permission '
@@ -48,13 +59,42 @@ class HealthDataSource {
           );
         }
       } else if (kDebugMode) {
-        debugPrint('HealthDataSource: activityRecognition permission already granted');
+        debugPrint(
+            'HealthDataSource: activityRecognition permission already granted');
       }
     }
-    
-    // 권한 요청 및 초기화 (READ 권한만 요청)
-    // WRITE 권한까지 함께 요청하면 사용자 권한 거부 가능성이 커져
-    // 걸음 수 조회 자체가 실패할 수 있으므로 최소 권한으로 요청한다.
+
+    // 1) 이미 grant되어 있으면 request 다이얼로그 건너뜀 — 백그라운드 isolate
+    //    안전성을 위한 핵심 분기. hasPermissions가 true면 _initialized = true.
+    try {
+      final has = await health.hasPermissions(_requiredHealthDataTypes,
+          permissions: [HealthDataAccess.READ]);
+      if (has == true) {
+        if (kDebugMode) {
+          debugPrint(
+            'HealthDataSource: hasPermissions == true → skip request',
+          );
+        }
+        _initialized = true;
+        return;
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('HealthDataSource: hasPermissions 체크 실패 (무시): $e');
+      }
+    }
+
+    // 2) skipRequest이면 다이얼로그 띄우지 않고 실패 처리 (백그라운드용)
+    if (skipRequest) {
+      if (kDebugMode) {
+        debugPrint(
+          'HealthDataSource: skipRequest=true, 권한 미보유 상태 → fetch는 실패 가능',
+        );
+      }
+      throw Exception('Health permission not granted (background mode)');
+    }
+
+    // 3) 권한 요청 (포그라운드에서만)
     final requested = await health.requestAuthorization(
       _requiredHealthDataTypes,
       permissions: [HealthDataAccess.READ],
@@ -88,11 +128,13 @@ class HealthDataSource {
   Future<ActivityData> getActivityData({
     required DateTime startTime,
     required DateTime endTime,
+    bool skipRequest = false,
   }) async {
     try {
-      if (!_initialized) {
-        await init();
-      }
+      // init()을 항상 호출하여 인스턴스별 Health 초기화를 보장
+      // _initialized가 true이면 권한 요청은 건너뛰고 health 인스턴스만 생성
+      // 백그라운드 호출 경로는 skipRequest=true를 전파해 다이얼로그 회피
+      await init(skipRequest: skipRequest);
 
       // 걸음 수 조회
       // 1) total API를 우선 사용 (플랫폼 집계값)

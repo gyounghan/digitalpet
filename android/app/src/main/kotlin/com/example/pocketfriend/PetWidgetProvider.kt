@@ -121,7 +121,7 @@ class PetWidgetProvider : AppWidgetProvider() {
     }
     
     /// 위젯 업데이트
-    /// 
+    ///
     /// home_widget 패키지에서 저장한 데이터를 읽어서 위젯에 표시
     private fun updateAppWidget(
         context: Context,
@@ -140,62 +140,39 @@ class PetWidgetProvider : AppWidgetProvider() {
                 getWidgetString(context, "imageType", null),
                 resolvedMood
             )
-            // Flutter에서 저장한 상태 텍스트 읽기 (앱 내 상태와 동기화)
             val moodText = getWidgetString(context, "moodText", null)
-            
-            // 디버깅: moodText가 제대로 읽히는지 확인
+
+            // 진화 이미지 (Flutter에서 저장한 진화 drawable 리소스명)
+            val evolutionImage = getWidgetString(context, "evolutionImage", null)
+
             Log.d(
                 "PetWidgetProvider",
-                "Widget update - syncTraceId: $syncTraceId, level: $level, rawMood: $rawMood, resolvedMood: $resolvedMood, moodText: $moodText, imageType: $imageType, hunger: $hunger, happiness: $happiness, stamina: $stamina"
+                "Widget update - syncTraceId: $syncTraceId, level: $level, rawMood: $rawMood, resolvedMood: $resolvedMood, imageType: $imageType, evolutionImage: $evolutionImage"
             )
-            
-            // 현재 시간 기반으로 이미지 인덱스 계산 (애니메이션 효과)
-            // 이미지 타입에 따라 다른 개수 사용: feed는 4장, 그 외는 3장
-            val currentTime = System.currentTimeMillis()
-            val imageCount = getImageCountForImageType(imageType)
-            val cycleDuration = imageCount * ANIMATION_UPDATE_INTERVAL // 이미지 개수 * 800ms
-            val imageIndex = ((currentTime % cycleDuration) / ANIMATION_UPDATE_INTERVAL).toInt() % imageCount
-            
-            // 위젯 레이아웃 생성
+
             val views = RemoteViews(context.packageName, R.layout.pet_widget)
-            
-            // 펫 이미지 결정 (앱 홈 화면과 동일한 로직)
-            // 이미지 타입에 따라 다른 이미지 표시
-            // 주의: 이미지는 android/app/src/main/res/drawable/ 폴더에 있어야 함
-            val imageResourceName = resolveImageResourceName(imageType, imageIndex)
-            
-            // 리소스 ID 가져오기 (없으면 기본 아이콘 사용)
-            val imageResourceId = context.resources.getIdentifier(
-                imageResourceName,
-                "drawable",
-                context.packageName
-            )
-            
-            // 위젯에 데이터 설정
+
+            // 이미지 결정: 진화 이미지 우선, 없으면 mood 기반 애니메이션
+            val imageResourceId = resolveWidgetImageResourceId(context, evolutionImage, imageType)
+
             if (imageResourceId != 0) {
-                // 이미지 리소스가 있으면 ImageView 표시
                 views.setImageViewResource(R.id.pet_image, imageResourceId)
                 views.setViewVisibility(R.id.pet_image, android.view.View.VISIBLE)
                 views.setViewVisibility(R.id.pet_image_text, android.view.View.GONE)
             } else {
-                // 이미지가 없으면 이모지로 대체 (앱 홈 화면과 유사하게)
                 val petEmoji = resolveImageFallbackEmoji(imageType)
                 views.setTextViewText(R.id.pet_image_text, petEmoji)
                 views.setViewVisibility(R.id.pet_image, android.view.View.GONE)
                 views.setViewVisibility(R.id.pet_image_text, android.view.View.VISIBLE)
             }
-            
+
             views.setTextViewText(R.id.pet_level, "Lv.$level")
-            
-            // 상태 텍스트는 Flutter가 저장한 moodText를 최우선 사용한다.
-            // 없을 경우에는 mood 문자열만으로 하위 호환 처리한다.
+
             val displayMoodText = resolveMoodText(moodText, resolvedMood)
             views.setTextViewText(R.id.pet_mood, displayMoodText)
-            
-            // 디버깅: 실제로 표시되는 값 확인
-            Log.d("PetWidgetProvider", "Displaying - syncTraceId: $syncTraceId, level: $level, moodText: $displayMoodText (from moodText: $moodText)")
-            
-            // 위젯 클릭 시 앱 열기
+
+            Log.d("PetWidgetProvider", "Displaying - syncTraceId: $syncTraceId, level: $level, moodText: $displayMoodText")
+
             val intent = android.content.Intent(context, MainActivity::class.java)
             val pendingIntent = android.app.PendingIntent.getActivity(
                 context,
@@ -204,8 +181,7 @@ class PetWidgetProvider : AppWidgetProvider() {
                 android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
             )
             views.setOnClickPendingIntent(R.id.widget_container, pendingIntent)
-            
-            // 위젯 업데이트
+
             appWidgetManager.updateAppWidget(appWidgetId, views)
         } catch (e: Exception) {
             Log.e("PetWidgetProvider", "Error updating widget", e)
@@ -213,58 +189,33 @@ class PetWidgetProvider : AppWidgetProvider() {
     }
     
     /// 애니메이션을 위한 위젯 업데이트
-    /// 
-    /// 이미지 인덱스만 변경하여 애니메이션 효과 생성
-    /// 다른 데이터는 변경하지 않고 이미지만 순환
+    ///
+    /// 진화 이미지가 있으면 정적 표시 (애니메이션 없음)
+    /// 없으면 mood 기반 이미지 순환 애니메이션
     private fun updateAppWidgetForAnimation(
         context: Context,
         appWidgetManager: AppWidgetManager,
         appWidgetId: Int
     ) {
         try {
-            // 기존 데이터 읽기
             val level = getWidgetString(context, "level", "1")?.toIntOrNull() ?: 1
             val hunger = getWidgetString(context, "hunger", "100")?.toIntOrNull() ?: 100
             val happiness = getWidgetString(context, "happiness", "100")?.toIntOrNull() ?: 100
             val stamina = getWidgetString(context, "stamina", "100")?.toIntOrNull() ?: 100
-            val syncTraceId = getWidgetString(context, "syncTraceId", "unknown") ?: "unknown"
             val rawMood = getWidgetString(context, "mood", "normal") ?: "normal"
             val resolvedMood = resolveMood(rawMood, hunger, happiness, stamina)
             val imageType = resolveImageType(
                 getWidgetString(context, "imageType", null),
                 resolvedMood
             )
-            // Flutter에서 저장한 상태 텍스트 읽기 (앱 내 상태와 동기화)
             val moodText = getWidgetString(context, "moodText", null)
-            
-            // 디버깅: 애니메이션 업데이트 시에도 moodText 확인
-            Log.d(
-                "PetWidgetProvider",
-                "Animation update - syncTraceId: $syncTraceId, level: $level, rawMood: $rawMood, resolvedMood: $resolvedMood, moodText: $moodText, imageType: $imageType"
-            )
-            
-            // 현재 시간 기반으로 이미지 인덱스 계산 (애니메이션 효과)
-            // 시간 기반으로 순환하여 위젯이 업데이트될 때마다 다른 이미지 표시
-            val currentTime = System.currentTimeMillis()
-            // 이미지 타입에 따라 다른 개수 사용: feed는 4장, 그 외는 3장
-            val imageCount = getImageCountForImageType(imageType)
-            val cycleDuration = imageCount * ANIMATION_UPDATE_INTERVAL // 이미지 개수 * 800ms
-            val imageIndex = ((currentTime % cycleDuration) / ANIMATION_UPDATE_INTERVAL).toInt() % imageCount
-            
-            Log.d("PetWidgetProvider", "Animation update: imageType=$imageType, imageIndex=$imageIndex")
-            
+            val evolutionImage = getWidgetString(context, "evolutionImage", null)
+
             val views = RemoteViews(context.packageName, R.layout.pet_widget)
-            
-            // 펫 이미지 결정
-            val imageResourceName = resolveImageResourceName(imageType, imageIndex)
-            
-            val imageResourceId = context.resources.getIdentifier(
-                imageResourceName,
-                "drawable",
-                context.packageName
-            )
-            
-            // 이미지만 업데이트
+
+            // 이미지 결정: 진화 이미지 우선
+            val imageResourceId = resolveWidgetImageResourceId(context, evolutionImage, imageType)
+
             if (imageResourceId != 0) {
                 views.setImageViewResource(R.id.pet_image, imageResourceId)
                 views.setViewVisibility(R.id.pet_image, android.view.View.VISIBLE)
@@ -275,19 +226,12 @@ class PetWidgetProvider : AppWidgetProvider() {
                 views.setViewVisibility(R.id.pet_image, android.view.View.GONE)
                 views.setViewVisibility(R.id.pet_image_text, android.view.View.VISIBLE)
             }
-            
-            // 기존 데이터 유지
+
             views.setTextViewText(R.id.pet_level, "Lv.$level")
-            
-            // 상태 텍스트는 Flutter가 저장한 moodText를 최우선 사용한다.
-            // 없을 경우에는 mood 문자열만으로 하위 호환 처리한다.
+
             val displayMoodText = resolveMoodText(moodText, resolvedMood)
             views.setTextViewText(R.id.pet_mood, displayMoodText)
-            
-            // 디버깅: 애니메이션 업데이트 시에도 실제로 표시되는 값 확인
-            Log.d("PetWidgetProvider", "Animation displaying - syncTraceId: $syncTraceId, level: $level, moodText: $displayMoodText (from moodText: $moodText)")
-            
-            // 위젯 클릭 시 앱 열기
+
             val intent = android.content.Intent(context, MainActivity::class.java)
             val pendingIntent = android.app.PendingIntent.getActivity(
                 context,
@@ -296,7 +240,7 @@ class PetWidgetProvider : AppWidgetProvider() {
                 android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
             )
             views.setOnClickPendingIntent(R.id.widget_container, pendingIntent)
-            
+
             appWidgetManager.updateAppWidget(appWidgetId, views)
         } catch (e: Exception) {
             Log.e("PetWidgetProvider", "Error updating widget for animation", e)
@@ -420,6 +364,34 @@ class PetWidgetProvider : AppWidgetProvider() {
         if (maxDiff > 35) return "anxious"
 
         return "normal"
+    }
+
+    /// 위젯에 표시할 이미지 리소스 ID 결정
+    /// 진화 이미지가 있으면 우선 사용, 없으면 mood 기반 애니메이션 이미지 사용
+    /// 홈 화면과 동일한 이미지를 보장하기 위해 Flutter에서 전달한 evolutionImage를 우선 참조
+    private fun resolveWidgetImageResourceId(
+        context: Context,
+        evolutionImage: String?,
+        imageType: String
+    ): Int {
+        // 1. 진화 이미지가 있으면 우선 사용 (정적 이미지, 애니메이션 없음)
+        if (!evolutionImage.isNullOrBlank()) {
+            val evoResourceId = context.resources.getIdentifier(
+                evolutionImage, "drawable", context.packageName
+            )
+            if (evoResourceId != 0) {
+                return evoResourceId
+            }
+            Log.w("PetWidgetProvider", "Evolution image not found: $evolutionImage, falling back to mood")
+        }
+
+        // 2. 진화 이미지가 없으면 mood 기반 애니메이션 이미지
+        val currentTime = System.currentTimeMillis()
+        val imageCount = getImageCountForImageType(imageType)
+        val cycleDuration = imageCount * ANIMATION_UPDATE_INTERVAL
+        val imageIndex = ((currentTime % cycleDuration) / ANIMATION_UPDATE_INTERVAL).toInt() % imageCount
+        val imageResourceName = resolveImageResourceName(imageType, imageIndex)
+        return context.resources.getIdentifier(imageResourceName, "drawable", context.packageName)
     }
 
     /// 이미지 타입별 프레임 수 반환

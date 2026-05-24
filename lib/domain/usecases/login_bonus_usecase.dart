@@ -1,6 +1,7 @@
 import 'dart:math';
 import '../entities/pet.dart';
 import '../repositories/pet_repository.dart';
+import '../constants/species_growth_config.dart';
 
 /// 접속 보너스 및 일일 이벤트 유스케이스
 /// 앱 접속 시 보너스 지급, 연속 접속 추적, 일일 이벤트 생성
@@ -107,11 +108,12 @@ class LoginBonusUseCase {
       return LoginBonusResult(pet: pet);
     }
 
+    final gm = SpeciesGrowthConfig.getGainMultipliers(pet.evolutionType);
     final updatedPet = pet.copyWith(
-      happiness: (pet.happiness + happinessBonus + statBonus).clamp(0, 100),
-      hunger: (pet.hunger + statBonus).clamp(0, 100),
-      stamina: (pet.stamina + statBonus).clamp(0, 100),
-      exp: pet.exp + expBonus + consecutiveExpBonus,
+      happiness: (pet.happiness + (happinessBonus * gm.happiness).round() + (statBonus * gm.happiness).round()).clamp(0, 100),
+      hunger: (pet.hunger + (statBonus * gm.hunger).round()).clamp(0, 100),
+      stamina: (pet.stamina + (statBonus * gm.stamina).round()).clamp(0, 100),
+      exp: pet.exp + (expBonus * gm.exp).round() + (consecutiveExpBonus * gm.exp).round(),
       consecutiveLoginDays: newConsecutiveDays,
       lastLoginDate: todayStr,
       todayLoginCount: newLoginCount,

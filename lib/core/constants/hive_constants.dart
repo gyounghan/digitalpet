@@ -11,4 +11,7 @@ class HiveConstants {
   
   /// PhoneUsage 데이터 저장용 Hive Box 이름
   static const String phoneUsageBoxName = 'phone_usage';
+
+  /// 앱 설정/플래그 저장용 (onboarding 완료 여부 등)
+  static const String appSettingsBoxName = 'app_settings';
 }
