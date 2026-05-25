@@ -463,6 +463,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   );
                 }
               },
+              onAdFailed: () {
+                messenger.showSnackBar(
+                  const SnackBar(content: Text(AppStrings.adLoadFailed)),
+                );
+              },
             );
           },
         ),

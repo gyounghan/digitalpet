@@ -71,15 +71,23 @@ class AdService {
   /// 리워드 광고 표시
   ///
   /// [onRewarded] 보상 콜백 (광고 시청 완료 시 호출)
+  /// [onAdFailed] 광고 로드/표시 실패 콜백 (보상 없이 종료된 경우 호출)
   Future<void> showRewardedAd({
     required void Function() onRewarded,
+    void Function()? onAdFailed,
   }) async {
     // 첫 호출이면 여기서 SDK init 후 로드
     await _ensureInitialized();
 
     if (_rewardedAd == null) {
       await _loadRewardedAd();
-      if (_rewardedAd == null) return;
+      if (_rewardedAd == null) {
+        if (kDebugMode) {
+          debugPrint('AdService: 광고 로드 실패 - 표시할 광고 없음');
+        }
+        onAdFailed?.call();
+        return;
+      }
     }
 
     _rewardedAd!.fullScreenContentCallback = FullScreenContentCallback(
@@ -96,6 +104,7 @@ class AdService {
         if (kDebugMode) {
           debugPrint('AdService: 광고 표시 실패: ${error.message}');
         }
+        onAdFailed?.call();
       },
     );
 

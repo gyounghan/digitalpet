@@ -83,6 +83,11 @@ class _MeScreenState extends ConsumerState<MeScreen> {
           const SnackBar(content: Text(AppStrings.restartSuccess)),
         );
       },
+      onAdFailed: () {
+        messenger.showSnackBar(
+          const SnackBar(content: Text(AppStrings.adLoadFailed)),
+        );
+      },
     );
   }
 

@@ -118,7 +118,7 @@ class AppStrings {
   static const String gravestoneTitle = '여기 잠들다';
   static const String resurrectButton = '부활하기 (광고 시청)';
   static const String resurrectSuccess = '펫이 부활했어요!';
-  static const String resurrectAdFailed = '광고를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.';
+  static const String adLoadFailed = '광고를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.';
   static const String deathWarning = '수치가 모두 0이에요! 5일 안에 회복하지 않으면...';
   static const String deathNotification = '펫이 죽었어요... 부활시켜 주세요.';
 
