@@ -66,16 +66,16 @@ class SpeciesTheme {
     gradEnd: Color(0xFFFFD0A8),
   );
 
-  /// 현무 (turtle) - green
+  /// 현무 (turtle) - fresh jade/mint (칙칙한 포레스트그린 → 생기있는 제이드)
   static const SpeciesTheme turtle = SpeciesTheme(
-    primary: Color(0xFF3B8559),
-    primaryDeep: Color(0xFF205D3A),
-    primarySoft: Color(0xFFCAE5D4),
-    surfaceDeep: Color(0xFFD3E8DB),
-    accent: Color(0xFF62A07C),
-    glow: Color(0xFF9EC4AB),
-    gradStart: Color(0xFFF1F7F3),
-    gradEnd: Color(0xFFCDE2D3),
+    primary: Color(0xFF18B98A),
+    primaryDeep: Color(0xFF0E8E68),
+    primarySoft: Color(0xFFC4F1E2),
+    surfaceDeep: Color(0xFFCEF3E5),
+    accent: Color(0xFF45D6AC),
+    glow: Color(0xFF8FE9CE),
+    gradStart: Color(0xFFEFFDF8),
+    gradEnd: Color(0xFFC6F3E4),
   );
 
   /// 청룡 (snake/dragon) - blue
