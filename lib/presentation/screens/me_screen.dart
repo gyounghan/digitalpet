@@ -23,6 +23,7 @@ class MeScreen extends ConsumerStatefulWidget {
 
 class _MeScreenState extends ConsumerState<MeScreen> {
   bool _isEvolving = false;
+  bool _isAdLoading = false;
 
   Future<void> _handleEvolve() async {
     if (_isEvolving) return;
@@ -75,20 +76,26 @@ class _MeScreenState extends ConsumerState<MeScreen> {
     final notifier =
         ref.read(petNotifierProvider(HomeScreen.defaultPetId).notifier);
     final messenger = ScaffoldMessenger.of(context);
-    // 리워드 광고 시청 완료 시에만 초기화
-    AdService().showRewardedAd(
-      onRewarded: () async {
-        await notifier.restart();
-        messenger.showSnackBar(
-          const SnackBar(content: Text(AppStrings.restartSuccess)),
-        );
-      },
-      onAdFailed: () {
-        messenger.showSnackBar(
-          const SnackBar(content: Text(AppStrings.adLoadFailed)),
-        );
-      },
-    );
+
+    setState(() => _isAdLoading = true);
+    try {
+      // 리워드 광고 시청 완료 시에만 초기화
+      await AdService().showRewardedAd(
+        onRewarded: () async {
+          await notifier.restart();
+          messenger.showSnackBar(
+            const SnackBar(content: Text(AppStrings.restartSuccess)),
+          );
+        },
+        onAdFailed: () {
+          messenger.showSnackBar(
+            const SnackBar(content: Text(AppStrings.adLoadFailed)),
+          );
+        },
+      );
+    } finally {
+      if (mounted) setState(() => _isAdLoading = false);
+    }
   }
 
   String _stageLabel(int stage) =>
@@ -202,13 +209,23 @@ class _MeScreenState extends ConsumerState<MeScreen> {
   }
 
   /// 새로 키우기(초기화) 버튼 — 되돌릴 수 없는 동작이라 차분한 outlined 스타일
+  /// 광고 로딩 중에는 비활성화하고 스피너를 표시한다.
   Widget _buildRestartButton() {
     return SizedBox(
       width: double.infinity,
       child: OutlinedButton.icon(
-        onPressed: _handleRestart,
-        icon: const Icon(Icons.restart_alt, size: 18),
-        label: const Text(AppStrings.restartButton),
+        onPressed: _isAdLoading ? null : _handleRestart,
+        icon: _isAdLoading
+            ? const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: DesignTokens.ink3,
+                ),
+              )
+            : const Icon(Icons.restart_alt, size: 18),
+        label: Text(_isAdLoading ? '광고 로딩 중...' : AppStrings.restartButton),
         style: OutlinedButton.styleFrom(
           foregroundColor: DesignTokens.ink3,
           side: const BorderSide(color: DesignTokens.line),

@@ -445,14 +445,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         padding: const EdgeInsets.all(24),
         child: GravestoneWidget(
           pet: pet,
-          isAdLoaded: true,
-          onResurrectPressed: () {
+          onResurrectPressed: () async {
             final notifier = ref.read(
               petNotifierProvider(HomeScreen.defaultPetId).notifier,
             );
             final messenger = ScaffoldMessenger.of(context);
             // 리워드 광고 시청 완료 시에만 부활
-            AdService().showRewardedAd(
+            await AdService().showRewardedAd(
               onRewarded: () async {
                 await notifier.resurrect();
                 if (context.mounted) {
