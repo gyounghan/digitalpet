@@ -1,4 +1,3 @@
-import 'dart:math';
 import '../entities/pet.dart';
 import '../entities/evolution_type.dart';
 import '../repositories/pet_repository.dart';
@@ -78,22 +77,33 @@ class EvolvePetUseCase {
 
   /// 2단계 진화 종 결정 (활발 × 규칙/자유 매트릭스)
   ///
-  /// 활발 점수 = exerciseAchievedCount + min(totalSteps/10000, 5.0)
-  /// 규칙 점수 = sleepAchievedCount (수면을 잘 지키는가)
-  /// 자유 점수 = feedAchievedCount (먹는 것을 자유롭게 즐기는가)
+  /// 세트 클리어 방식에선 포만감/수면/운동 달성 카운트가 함께 오르므로,
+  /// 단순 카운트 비교는 종이 한쪽으로 쏠린다. 그래서 사용자가 실제로
+  /// 다르게 행동하는 "원천 지표"를 정규화해 두 축으로 판정한다.
   ///
-  /// 활발 && 규칙>자유 → tiger (활발+규칙, 전투형)
-  /// 활발 && 자유>=규칙 → bird  (활발+자유, 기동형)
-  /// 차분 && 규칙>자유 → turtle (차분+규칙, 방어형)
-  /// 차분 && 자유>=규칙 → snake  (차분+자유, 마법형)
+  /// 활발 ↔ 차분: 실제 움직임(걸음·운동) vs 정적 휴식(수면·idle)
+  ///   moveScore = totalSteps/2000 + totalExerciseMinutes/10
+  ///   restScore = sleepAchievedCount + totalIdleHours/6
+  /// 규칙 ↔ 자유: 규칙적 생활(수면 달성·연속 접속) vs 자유로운 식사(포만감·간편급식)
+  ///   regularScore = sleepAchievedCount + consecutiveLoginDays/2
+  ///   freeScore    = feedAchievedCount + todayAlternativeFeedCount
+  ///
+  /// 활발 && 규칙 → tiger (백호, 전투형)
+  /// 활발 && 자유 → bird  (주작, 기동형)
+  /// 차분 && 규칙 → turtle (현무, 방어형)
+  /// 차분 && 자유 → snake  (청룡, 마법형)
   EvolutionType _determineEvolutionType(Pet pet) {
-    final activityScore = pet.exerciseAchievedCount.toDouble() +
-        min(pet.totalSteps / 10000.0, 5.0);
-    final regularityScore = pet.sleepAchievedCount.toDouble();
-    final freedomScore = pet.feedAchievedCount.toDouble();
+    final moveScore =
+        pet.totalSteps / 2000.0 + pet.totalExerciseMinutes / 10.0;
+    final restScore =
+        pet.sleepAchievedCount.toDouble() + pet.totalIdleHours / 6.0;
+    final isActive = moveScore >= restScore;
 
-    final isActive = activityScore >= 3.0;
-    final isRegular = regularityScore > freedomScore;
+    final regularScore =
+        pet.sleepAchievedCount.toDouble() + pet.consecutiveLoginDays / 2.0;
+    final freeScore = pet.feedAchievedCount.toDouble() +
+        pet.todayAlternativeFeedCount.toDouble();
+    final isRegular = regularScore >= freeScore;
 
     if (isActive && isRegular) return EvolutionType.tiger;
     if (isActive && !isRegular) return EvolutionType.bird;

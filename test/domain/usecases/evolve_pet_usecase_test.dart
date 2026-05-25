@@ -43,6 +43,9 @@ Pet _createPet({
   int stamina = 80,
   int resurrectCount = 0,
   bool isDead = false,
+  int sleepAchievedCount = 0,
+  int feedAchievedCount = 0,
+  int todayAlternativeFeedCount = 0,
 }) {
   final now = DateTime.now().millisecondsSinceEpoch;
   return Pet(
@@ -65,6 +68,9 @@ Pet _createPet({
     battleVictoryCount: battleVictoryCount,
     resurrectCount: resurrectCount,
     isDead: isDead,
+    sleepAchievedCount: sleepAchievedCount,
+    feedAchievedCount: feedAchievedCount,
+    todayAlternativeFeedCount: todayAlternativeFeedCount,
   );
 }
 
@@ -87,14 +93,16 @@ void main() {
       expect(result.evolutionType, isNull);
     });
 
-    test('Lv5 + 활동높음 + 규칙높음 → tiger', () async {
+    // 새 공식: 활발↔차분 = 움직임(걸음·운동) vs 휴식(수면·idle)
+    //          규칙↔자유 = 규칙생활(수면·연속접속) vs 자유식사(포만감·간편급식)
+
+    test('Lv5 + 활발(많이 걸음) + 규칙(연속접속) → tiger', () async {
       final pet = _createPet(
         level: 5,
         evolutionStage: 1,
-        totalSteps: 50000, // activityScore = 50000/35000 + 0 > 1.0
-        totalExerciseMinutes: 0,
-        goalStreakCount: 3, // regularityScore = 3/3 + 0 = 1.0
-        consecutiveLoginDays: 0,
+        totalSteps: 50000, // move = 25
+        consecutiveLoginDays: 10, // regular = 5 > free 0
+        feedAchievedCount: 0,
       );
       repository.setPet(pet);
 
@@ -103,14 +111,13 @@ void main() {
       expect(result.evolutionType, EvolutionType.tiger);
     });
 
-    test('Lv5 + 활동높음 + 규칙낮음 → bird', () async {
+    test('Lv5 + 활발(많이 걸음) + 자유(자주 먹음) → bird', () async {
       final pet = _createPet(
         level: 5,
         evolutionStage: 1,
-        totalSteps: 50000,
-        totalExerciseMinutes: 0,
-        goalStreakCount: 0,
+        totalSteps: 50000, // move = 25, rest 0 → active
         consecutiveLoginDays: 0,
+        feedAchievedCount: 10, // free 10 > regular 0
       );
       repository.setPet(pet);
 
@@ -119,14 +126,15 @@ void main() {
       expect(result.evolutionType, EvolutionType.bird);
     });
 
-    test('Lv5 + 활동낮음 + 규칙높음 → turtle', () async {
+    test('Lv5 + 차분(잘 쉼) + 규칙(연속접속) → turtle', () async {
       final pet = _createPet(
         level: 5,
         evolutionStage: 1,
-        totalSteps: 0,
-        totalExerciseMinutes: 0,
-        goalStreakCount: 5,
-        consecutiveLoginDays: 10,
+        totalSteps: 0, // move 0
+        totalIdleHours: 30, // rest = 5 + sleep 2 = 7 → calm
+        sleepAchievedCount: 2,
+        consecutiveLoginDays: 10, // regular = 2 + 5 = 7 > free 0
+        feedAchievedCount: 0,
       );
       repository.setPet(pet);
 
@@ -135,14 +143,15 @@ void main() {
       expect(result.evolutionType, EvolutionType.turtle);
     });
 
-    test('Lv5 + 활동낮음 + 규칙낮음 → snake', () async {
+    test('Lv5 + 차분(잘 쉼) + 자유(자주 먹음) → snake', () async {
       final pet = _createPet(
         level: 5,
         evolutionStage: 1,
-        totalSteps: 0,
-        totalExerciseMinutes: 0,
-        goalStreakCount: 0,
-        consecutiveLoginDays: 0,
+        totalSteps: 0, // move 0
+        totalIdleHours: 30, // rest = 5 → calm
+        sleepAchievedCount: 0,
+        consecutiveLoginDays: 0, // regular 0
+        feedAchievedCount: 10, // free 10 → 자유
       );
       repository.setPet(pet);
 
@@ -151,14 +160,14 @@ void main() {
       expect(result.evolutionType, EvolutionType.snake);
     });
 
-    test('Lv5 + 운동시간으로 활동점수 충분 → bird (규칙 없음)', () async {
+    test('운동시간만으로도 활발 판정 → bird', () async {
       final pet = _createPet(
         level: 5,
         evolutionStage: 1,
         totalSteps: 0,
-        totalExerciseMinutes: 100, // activityScore = 0 + 100/100 = 1.0
-        goalStreakCount: 0,
+        totalExerciseMinutes: 100, // move = 10, rest 0 → active
         consecutiveLoginDays: 0,
+        feedAchievedCount: 5, // free > regular → 자유
       );
       repository.setPet(pet);
 
@@ -167,20 +176,39 @@ void main() {
       expect(result.evolutionType, EvolutionType.bird);
     });
 
-    test('Lv5 + 연속로그인으로 규칙점수 충분 → turtle (활동 없음)', () async {
-      final pet = _createPet(
-        level: 5,
-        evolutionStage: 1,
-        totalSteps: 0,
-        totalExerciseMinutes: 0,
-        goalStreakCount: 0,
-        consecutiveLoginDays: 7, // regularityScore = 0 + 7/7 = 1.0
-      );
-      repository.setPet(pet);
-
-      final result = await useCase('test-pet');
-      expect(result.evolutionStage, 2);
-      expect(result.evolutionType, EvolutionType.turtle);
+    test('4종 모두 도달 가능 (쏠림 없음)', () async {
+      final types = <EvolutionType>{};
+      final profiles = [
+        // tiger: 활발+규칙
+        _createPet(
+            level: 5,
+            totalSteps: 40000,
+            consecutiveLoginDays: 8,
+            feedAchievedCount: 0),
+        // bird: 활발+자유
+        _createPet(level: 5, totalSteps: 40000, feedAchievedCount: 12),
+        // turtle: 차분+규칙
+        _createPet(
+            level: 5,
+            totalIdleHours: 36,
+            sleepAchievedCount: 3,
+            consecutiveLoginDays: 12,
+            feedAchievedCount: 0),
+        // snake: 차분+자유
+        _createPet(
+            level: 5, totalIdleHours: 36, feedAchievedCount: 12),
+      ];
+      for (final p in profiles) {
+        repository.setPet(p);
+        final r = await useCase('test-pet');
+        types.add(r.evolutionType!);
+      }
+      expect(types, {
+        EvolutionType.tiger,
+        EvolutionType.bird,
+        EvolutionType.turtle,
+        EvolutionType.snake,
+      });
     });
   });
 
