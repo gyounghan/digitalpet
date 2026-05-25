@@ -31,6 +31,8 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
   int currentTurnIndex = -1;
   int ourPetHp = 100;
   int opponentPetHp = 100;
+  int ourMaxHp = 100;
+  int opponentMaxHp = 100;
 
   bool isOnlineMode = false;
   bool isMatchmaking = false;
@@ -78,6 +80,9 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
           currentTurnIndex = turns.length - 1;
           ourPetHp = turn.playerHpRemaining;
           opponentPetHp = turn.opponentHpRemaining;
+          // 온라인은 최대 HP를 모르므로 관측된 최대치로 분모 보정 (바 넘침 방지)
+          if (ourPetHp > ourMaxHp) ourMaxHp = ourPetHp;
+          if (opponentPetHp > opponentMaxHp) opponentMaxHp = opponentPetHp;
         });
       }
     };
@@ -166,11 +171,11 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
       }
 
       if (result.turns.isNotEmpty) {
-        final firstTurn = result.turns.first;
         setState(() {
-          ourPetHp = firstTurn.playerHpRemaining + firstTurn.opponentDamage;
-          opponentPetHp =
-              firstTurn.opponentHpRemaining + firstTurn.playerDamage;
+          ourMaxHp = result.playerMaxHp;
+          opponentMaxHp = result.opponentMaxHp;
+          ourPetHp = result.playerMaxHp;
+          opponentPetHp = result.opponentMaxHp;
         });
 
         for (int i = 0; i < result.turns.length; i++) {
@@ -272,18 +277,22 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
   }
 
   Widget _buildMyPetCard(dynamic pet, SpeciesTheme theme) {
-    final baseAtk = 28 + pet.level * 1.2;
-    final baseDef = 24 + pet.level * 1.0;
-    final myAtk = (baseAtk * _battleStyle.attackMultiplier).round();
-    final myDef = (baseDef * _battleStyle.defenseMultiplier).round();
+    // 도감/실제 전투와 동일한 Pet 전투 스탯 getter 사용 (배틀 스타일 반영)
+    final myAtk = (pet.battleAtk * _battleStyle.attackMultiplier).round();
+    final myDef = (pet.battleDef * _battleStyle.defenseMultiplier).round();
+    final myHp = pet.battleHp as int;
     final imagePath = getEvolutionImagePath(pet.evolutionType, pet.evolutionStage);
 
     return AppCard(
       theme: theme,
+      // 그라데이션 완화: primary→primaryDeep 강한 대비 대신 절반 톤까지만
       gradient: LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
-        colors: [theme.primary, theme.primaryDeep],
+        colors: [
+          theme.primary,
+          Color.lerp(theme.primary, theme.primaryDeep, 0.5)!,
+        ],
       ),
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -337,7 +346,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
                     const SizedBox(height: 6),
                     Row(
                       children: [
-                        _statBadge('HP', pet.stamina),
+                        _statBadge('HP', myHp),
                         const SizedBox(width: 10),
                         _statBadge('ATK', myAtk),
                         const SizedBox(width: 10),
@@ -610,6 +619,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
             name: '${pet.name} (나)',
             level: pet.level,
             hp: ourPetHp,
+            maxHp: ourMaxHp,
             imagePath:
                 getEvolutionImagePath(pet.evolutionType, pet.evolutionStage),
             mine: true,
@@ -620,6 +630,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
             name: opponentName ?? '상대',
             level: opponentLevel ?? pet.level,
             hp: opponentPetHp,
+            maxHp: opponentMaxHp,
             imagePath: null,
             mine: false,
             theme: theme,
@@ -894,6 +905,7 @@ class _FighterRow extends StatelessWidget {
   final String name;
   final int level;
   final int hp;
+  final int maxHp;
   final String? imagePath;
   final bool mine;
   final SpeciesTheme theme;
@@ -902,6 +914,7 @@ class _FighterRow extends StatelessWidget {
     required this.name,
     required this.level,
     required this.hp,
+    required this.maxHp,
     required this.theme,
     required this.imagePath,
     this.mine = false,
@@ -961,14 +974,16 @@ class _FighterRow extends StatelessWidget {
                 ),
                 const SizedBox(height: 5),
                 AppMeter(
-                  value: hp.toDouble(),
+                  value: maxHp > 0
+                      ? (hp / maxHp * 100).clamp(0.0, 100.0)
+                      : 0.0,
                   theme: theme,
                   tone: mine ? AppMeterTone.themed : AppMeterTone.bad,
                   height: 10,
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'HP $hp/100',
+                  'HP $hp/$maxHp',
                   style: const TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
