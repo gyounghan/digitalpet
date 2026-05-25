@@ -10,16 +10,12 @@ class AppStrings {
   static const String level = '레벨';
   
   // 펫 상태
-  static const String moodHappy = '기쁨';
-  static const String moodSleepy = '졸림';
-  static const String moodHungry = '배고픔';
-  static const String moodBored = '지루함';
+  static const String moodHappy = '행복';
   static const String moodNormal = '보통';
-  static const String moodEnergetic = '활기참';
-  static const String moodTired = '피곤함';
-  static const String moodFull = '배부름';
-  static const String moodAnxious = '불안함';
-  static const String moodSatisfied = '만족함';
+  static const String moodHungry = '배고픔';
+  static const String moodSleepy = '졸림';
+  static const String moodTired = '지침';
+  static const String moodSad = '시무룩';
   static const String moodDead = '사망';
   
   // 화면 제목

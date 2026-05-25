@@ -145,24 +145,16 @@ class WidgetService {
     switch (mood) {
       case PetMood.happy:
         return AppStrings.moodHappy;
-      case PetMood.sleepy:
-        return AppStrings.moodSleepy;
-      case PetMood.hungry:
-        return AppStrings.moodHungry;
-      case PetMood.bored:
-        return AppStrings.moodBored;
       case PetMood.normal:
         return AppStrings.moodNormal;
-      case PetMood.energetic:
-        return AppStrings.moodEnergetic;
+      case PetMood.hungry:
+        return AppStrings.moodHungry;
+      case PetMood.sleepy:
+        return AppStrings.moodSleepy;
       case PetMood.tired:
         return AppStrings.moodTired;
-      case PetMood.full:
-        return AppStrings.moodFull;
-      case PetMood.anxious:
-        return AppStrings.moodAnxious;
-      case PetMood.satisfied:
-        return AppStrings.moodSatisfied;
+      case PetMood.sad:
+        return AppStrings.moodSad;
       case PetMood.dead:
         return AppStrings.moodDead;
     }

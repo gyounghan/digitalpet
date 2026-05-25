@@ -42,14 +42,13 @@ String? getEvolutionImagePath(EvolutionType? type, int evolutionStage) {
 ///
 /// stage 1에서는 null을 반환하여 기본 mood 애니메이션으로 폴백한다.
 ///
-/// 매핑 규칙:
-/// - happy/satisfied → smile
+/// 매핑 규칙 (mood 6종):
+/// - happy → smile
+/// - normal → exercise
 /// - hungry → hungry
 /// - sleepy → sleepy
 /// - tired → sleep
-/// - bored/anxious/dead → sad
-/// - normal/energetic → exercise
-/// - full → full
+/// - sad/dead → sad
 String? getEvolutionMoodImagePath(
   EvolutionType? type,
   int evolutionStage,
@@ -73,24 +72,16 @@ String _getMoodImageSuffix(PetMood mood) {
   switch (mood) {
     case PetMood.happy:
       return 'smile';
-    case PetMood.satisfied:
-      return 'smile';
-    case PetMood.full:
-      return 'full';
+    case PetMood.normal:
+      return 'exercise';
     case PetMood.hungry:
       return 'hungry';
     case PetMood.sleepy:
       return 'sleepy';
     case PetMood.tired:
       return 'sleep';
-    case PetMood.bored:
+    case PetMood.sad:
       return 'sad';
-    case PetMood.anxious:
-      return 'sad';
-    case PetMood.normal:
-      return 'exercise';
-    case PetMood.energetic:
-      return 'exercise';
     case PetMood.dead:
       return 'sad';
   }
@@ -100,37 +91,26 @@ String _getMoodImageSuffix(PetMood mood) {
 ///
 /// 펫의 기분 상태에 따라 적절한 이미지 타입을 반환
 ///
-/// 매핑 규칙:
+/// 매핑 규칙 (mood 6종):
+/// - happy → happy
+/// - normal → exercise
 /// - hungry → feed
 /// - sleepy/tired → sleep
-/// - bored → bored
-/// - anxious → anxious
-/// - full/satisfied → full
-/// - happy → happy
-/// - energetic → exercise
-/// - normal → exercise
+/// - sad/dead → sad
 PetImageType getPetImageTypeFromMood(PetMood mood) {
   switch (mood) {
     case PetMood.happy:
       return PetImageType.happy;
-    case PetMood.sleepy:
-      return PetImageType.sleep;
-    case PetMood.hungry:
-      return PetImageType.feed;
-    case PetMood.bored:
-      return PetImageType.bored;
     case PetMood.normal:
       return PetImageType.exercise;
-    case PetMood.energetic:
-      return PetImageType.exercise;
+    case PetMood.hungry:
+      return PetImageType.feed;
+    case PetMood.sleepy:
+      return PetImageType.sleep;
     case PetMood.tired:
       return PetImageType.sleep;
-    case PetMood.full:
-      return PetImageType.full;
-    case PetMood.anxious:
-      return PetImageType.anxious;
-    case PetMood.satisfied:
-      return PetImageType.full;
+    case PetMood.sad:
+      return PetImageType.sad;
     case PetMood.dead:
       return PetImageType.sad;
   }

@@ -286,11 +286,9 @@ class PetWidgetProvider : AppWidgetProvider() {
         return when (mood.trim()) {
             "hungry" -> "feed"
             "sleepy", "tired" -> "sleep"
-            "bored" -> "bored"
-            "anxious" -> "anxious"
+            "sad" -> "sad"
             "happy" -> "happy"
-            "full", "satisfied" -> "full"
-            "energetic", "normal" -> "exercise"
+            "normal" -> "exercise"
             else -> null
         }
     }
@@ -309,15 +307,11 @@ class PetWidgetProvider : AppWidgetProvider() {
     /// 유효한 mood 문자열인지 확인
     private fun isKnownMood(mood: String): Boolean {
         return mood == "happy" ||
-            mood == "sleepy" ||
-            mood == "hungry" ||
-            mood == "bored" ||
             mood == "normal" ||
-            mood == "energetic" ||
+            mood == "hungry" ||
+            mood == "sleepy" ||
             mood == "tired" ||
-            mood == "full" ||
-            mood == "anxious" ||
-            mood == "satisfied"
+            mood == "sad"
     }
 
     /// Flutter Pet.mood 로직과 동일한 상태 판정
@@ -326,43 +320,19 @@ class PetWidgetProvider : AppWidgetProvider() {
         val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
         val isNightTime = hour >= 22 || hour < 6
 
-        // 1단계: 위기 상태 (10 이하)
-        if (hunger <= 10) return "hungry"
-        if (stamina <= 10) return "tired"
-
-        // 2단계: 경고 상태 (25 이하)
+        // pet.dart의 mood getter와 동일한 우선순위·임계값 (6종)
+        // 1) 배고픔
         if (hunger <= 25) return "hungry"
+        // 2) 지침
         if (stamina <= 25) return "tired"
-
-        // 3단계: 수면 신호 (시간대 반영)
+        // 3) 졸림 (밤에는 더 민감)
         if (isNightTime && stamina <= 60) return "sleepy"
-        if (stamina <= 35) return "sleepy"
-
-        // 4단계: 감정 위기
-        if (happiness <= 20) return "anxious"
-        if (happiness <= 35) return "bored"
-
-        // 5단계: 최상 긍정 상태
-        if (hunger >= 90 && happiness >= 90 && stamina >= 90) return "energetic"
-        if (hunger >= 80 && happiness >= 85 && stamina >= 80) return "happy"
-
-        // 6단계: 부분 긍정 상태
-        if (hunger >= 85 && happiness >= 60 && stamina >= 55) return "full"
-        if (happiness >= 75 && stamina >= 45 && hunger >= 55) return "satisfied"
-        if ((hunger >= 70 && happiness >= 70) ||
-            (hunger >= 70 && stamina >= 65) ||
-            (happiness >= 70 && stamina >= 65)
-        ) return "satisfied"
-
-        // 7단계: 불균형 감지 (35 기준 — flutter와 동일)
-        val avg = (hunger + happiness + stamina) / 3.0
-        val maxDiff = maxOf(
-            kotlin.math.abs(hunger - avg),
-            kotlin.math.abs(happiness - avg),
-            kotlin.math.abs(stamina - avg)
-        )
-        if (maxDiff > 35) return "anxious"
-
+        if (stamina <= 40) return "sleepy"
+        // 4) 시무룩
+        if (happiness <= 35) return "sad"
+        // 5) 행복
+        if (hunger >= 75 && happiness >= 70 && stamina >= 60) return "happy"
+        // 6) 보통
         return "normal"
     }
 
@@ -443,16 +413,12 @@ class PetWidgetProvider : AppWidgetProvider() {
     /// mood를 한국어 상태 텍스트로 변환
     private fun mapMoodToKoreanText(mood: String): String? {
         return when (mood.trim()) {
-            "hungry" -> "배고픔"
-            "tired" -> "피곤함"
-            "sleepy" -> "졸림"
-            "anxious" -> "불안함"
-            "bored" -> "지루함"
-            "energetic" -> "활기참"
-            "happy" -> "기쁨"
-            "full" -> "배부름"
-            "satisfied" -> "만족함"
+            "happy" -> "행복"
             "normal" -> "보통"
+            "hungry" -> "배고픔"
+            "sleepy" -> "졸림"
+            "tired" -> "지침"
+            "sad" -> "시무룩"
             else -> null
         }
     }

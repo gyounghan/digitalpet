@@ -68,32 +68,16 @@ void main() {
       expect(getPetImageTypeFromMood(PetMood.hungry), PetImageType.feed);
     });
 
-    test('bored → bored', () {
-      expect(getPetImageTypeFromMood(PetMood.bored), PetImageType.bored);
-    });
-
     test('normal → exercise', () {
       expect(getPetImageTypeFromMood(PetMood.normal), PetImageType.exercise);
-    });
-
-    test('energetic → exercise', () {
-      expect(getPetImageTypeFromMood(PetMood.energetic), PetImageType.exercise);
     });
 
     test('tired → sleep', () {
       expect(getPetImageTypeFromMood(PetMood.tired), PetImageType.sleep);
     });
 
-    test('full → full', () {
-      expect(getPetImageTypeFromMood(PetMood.full), PetImageType.full);
-    });
-
-    test('anxious → anxious', () {
-      expect(getPetImageTypeFromMood(PetMood.anxious), PetImageType.anxious);
-    });
-
-    test('satisfied → full', () {
-      expect(getPetImageTypeFromMood(PetMood.satisfied), PetImageType.full);
+    test('sad → sad', () {
+      expect(getPetImageTypeFromMood(PetMood.sad), PetImageType.sad);
     });
 
     test('dead → sad', () {
@@ -175,9 +159,9 @@ void main() {
       );
     });
 
-    test('bored → sad suffix', () {
+    test('sad → sad suffix', () {
       expect(
-        getEvolutionMoodImagePath(EvolutionType.tiger, 3, PetMood.bored),
+        getEvolutionMoodImagePath(EvolutionType.tiger, 3, PetMood.sad),
         'assets/tiger_sad2.png',
       );
     });
