@@ -5,6 +5,7 @@ import '../widgets/app_design.dart';
 import '../../core/theme/species_theme.dart';
 import '../../core/constants/app_strings.dart';
 import '../../core/utils/pet_image_helper.dart';
+import '../../data/services/ad_service.dart';
 import '../../domain/entities/pet.dart';
 import '../../domain/entities/evolution_type.dart';
 import 'home_screen.dart';
@@ -36,6 +37,53 @@ class _MeScreenState extends ConsumerState<MeScreen> {
         const SnackBar(content: Text('진화 성공!')),
       );
     }
+  }
+
+  /// 새로 키우기 — 확인 다이얼로그 → 리워드 광고 → 초기화
+  Future<void> _handleRestart() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: DesignTokens.surface,
+        title: const Text(
+          AppStrings.restartConfirmTitle,
+          style: TextStyle(
+              color: DesignTokens.ink, fontWeight: FontWeight.w800),
+        ),
+        content: const Text(
+          AppStrings.restartConfirmBody,
+          style: TextStyle(color: DesignTokens.ink2, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text(AppStrings.restartCancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text(
+              AppStrings.restartConfirm,
+              style: TextStyle(fontWeight: FontWeight.w800),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    final notifier =
+        ref.read(petNotifierProvider(HomeScreen.defaultPetId).notifier);
+    final messenger = ScaffoldMessenger.of(context);
+    // 리워드 광고 시청 완료 시에만 초기화
+    AdService().showRewardedAd(
+      onRewarded: () async {
+        await notifier.restart();
+        messenger.showSnackBar(
+          const SnackBar(content: Text(AppStrings.restartSuccess)),
+        );
+      },
+    );
   }
 
   String _stageLabel(int stage) =>
@@ -139,10 +187,32 @@ class _MeScreenState extends ConsumerState<MeScreen> {
                     ),
                   ),
                 ),
+              const SizedBox(height: 18),
+              _buildRestartButton(),
             ],
           ),
         ),
       ],
+    );
+  }
+
+  /// 새로 키우기(초기화) 버튼 — 되돌릴 수 없는 동작이라 차분한 outlined 스타일
+  Widget _buildRestartButton() {
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: _handleRestart,
+        icon: const Icon(Icons.restart_alt, size: 18),
+        label: const Text(AppStrings.restartButton),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: DesignTokens.ink3,
+          side: const BorderSide(color: DesignTokens.line),
+          padding: const EdgeInsets.symmetric(vertical: 13),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+        ),
+      ),
     );
   }
 

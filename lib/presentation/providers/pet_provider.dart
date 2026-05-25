@@ -39,6 +39,7 @@ import '../../domain/usecases/alternative_sleep_pet_usecase.dart';
 import '../../domain/usecases/shake_step_bonus_usecase.dart';
 import '../../domain/usecases/check_pet_death_usecase.dart';
 import '../../domain/usecases/resurrect_pet_usecase.dart';
+import '../../domain/usecases/reset_pet_usecase.dart';
 import '../../domain/usecases/login_bonus_usecase.dart';
 import '../../domain/usecases/sync_pet_usecase.dart';
 import '../../domain/repositories/pet_remote_repository.dart';
@@ -343,6 +344,13 @@ final resurrectPetUseCaseProvider = Provider<ResurrectPetUseCase>((ref) {
   return ResurrectPetUseCase(repository);
 });
 
+/// ResetPetUseCase Provider
+/// 펫 초기화(새로 키우기) 유스케이스 인스턴스를 제공
+final resetPetUseCaseProvider = Provider<ResetPetUseCase>((ref) {
+  final createDefaultPetUseCase = ref.watch(createDefaultPetUseCaseProvider);
+  return ResetPetUseCase(createDefaultPetUseCase);
+});
+
 /// Pet Provider
 /// 특정 ID의 Pet을 조회하는 FutureProvider
 /// 
@@ -378,6 +386,7 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
   final ShakeStepBonusUseCase shakeStepBonusUseCase;
   final CheckPetDeathUseCase checkPetDeathUseCase;
   final ResurrectPetUseCase resurrectPetUseCase;
+  final ResetPetUseCase resetPetUseCase;
   final LoginBonusUseCase loginBonusUseCase;
   final SyncPetUseCase syncPetUseCase;
   final String petId;
@@ -403,6 +412,7 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
     required this.shakeStepBonusUseCase,
     required this.checkPetDeathUseCase,
     required this.resurrectPetUseCase,
+    required this.resetPetUseCase,
     required this.loginBonusUseCase,
     required this.syncPetUseCase,
     required this.petId,
@@ -779,6 +789,28 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
     }
   }
 
+  /// 펫 초기화 — 처음부터 새로 키우기 (광고 시청 후 호출)
+  ///
+  /// 기존 펫(레벨/진화/누적 기록 포함)을 버리고 기본 펫으로 교체한다.
+  /// 사망 여부와 무관하게 동작한다.
+  Future<void> restart() async {
+    if (state.isLoading) return;
+
+    try {
+      final freshPet = await resetPetUseCase(petId);
+      // 위젯 동기화 (설치 안 됐을 수 있으므로 실패는 무시)
+      try {
+        await widgetService.updatePetWidget(freshPet);
+      } catch (e) {
+        // 위젯 업데이트 실패 무시
+      }
+      state = AsyncValue.data(freshPet);
+      _syncToServer(freshPet);
+    } catch (e, stackTrace) {
+      state = AsyncValue.error(e, stackTrace);
+    }
+  }
+
   /// 수동 진화 실행
   ///
   /// MeScreen 진화 버튼 클릭 시 호출
@@ -850,6 +882,7 @@ final petNotifierProvider = StateNotifierProvider.family<PetNotifier, AsyncValue
     shakeStepBonusUseCase: ref.watch(shakeStepBonusUseCaseProvider),
     checkPetDeathUseCase: ref.watch(checkPetDeathUseCaseProvider),
     resurrectPetUseCase: ref.watch(resurrectPetUseCaseProvider),
+    resetPetUseCase: ref.watch(resetPetUseCaseProvider),
     loginBonusUseCase: ref.watch(loginBonusUseCaseProvider),
     syncPetUseCase: ref.watch(syncPetUseCaseProvider),
     petId: petId,

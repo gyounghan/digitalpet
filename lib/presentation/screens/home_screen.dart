@@ -8,6 +8,7 @@ import '../../core/constants/app_strings.dart';
 import '../../domain/entities/pet.dart';
 import '../../domain/usecases/calculate_daily_goals_score_usecase.dart';
 import '../../core/utils/pet_image_helper.dart';
+import '../../data/services/ad_service.dart';
 import '../widgets/gravestone_widget.dart';
 import '../widgets/sync_permission_banner.dart';
 
@@ -445,18 +446,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         child: GravestoneWidget(
           pet: pet,
           isAdLoaded: true,
-          onResurrectPressed: () async {
+          onResurrectPressed: () {
             final notifier = ref.read(
               petNotifierProvider(HomeScreen.defaultPetId).notifier,
             );
-            await notifier.resurrect();
-            if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text(AppStrings.resurrectSuccess),
-                ),
-              );
-            }
+            final messenger = ScaffoldMessenger.of(context);
+            // 리워드 광고 시청 완료 시에만 부활
+            AdService().showRewardedAd(
+              onRewarded: () async {
+                await notifier.resurrect();
+                if (context.mounted) {
+                  messenger.showSnackBar(
+                    const SnackBar(
+                      content: Text(AppStrings.resurrectSuccess),
+                    ),
+                  );
+                }
+              },
+            );
           },
         ),
       ),

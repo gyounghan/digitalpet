@@ -118,8 +118,18 @@ class AppStrings {
   static const String gravestoneTitle = '여기 잠들다';
   static const String resurrectButton = '부활하기 (광고 시청)';
   static const String resurrectSuccess = '펫이 부활했어요!';
-  static const String deathWarning = '수치가 모두 0이에요! 3일 안에 회복하지 않으면...';
+  static const String resurrectAdFailed = '광고를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.';
+  static const String deathWarning = '수치가 모두 0이에요! 5일 안에 회복하지 않으면...';
   static const String deathNotification = '펫이 죽었어요... 부활시켜 주세요.';
+
+  // 새로 키우기(초기화)
+  static const String restartButton = '처음부터 새로 키우기';
+  static const String restartConfirmTitle = '새로 키우기';
+  static const String restartConfirmBody =
+      '지금까지 키운 펫은 사라지고 처음부터 다시 시작해요.\n광고를 본 뒤 새 펫으로 시작할까요?';
+  static const String restartConfirm = '광고 보고 시작';
+  static const String restartCancel = '취소';
+  static const String restartSuccess = '새로운 펫과 함께 시작해요!';
 
   // 일일 이벤트
   static const Map<String, String> eventNames = {
