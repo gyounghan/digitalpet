@@ -62,6 +62,37 @@ class PixelPetImage extends StatelessWidget {
         child: fallback ?? const Icon(Icons.pets),
       );
     }
+    return PixelSpriteView(
+      sprite: sprite,
+      width: width,
+      height: height,
+      dotColor: dotColor,
+      darkColor: darkColor,
+    );
+  }
+}
+
+/// [PixelSprite]를 직접 받아 도트로 그리는 뷰
+///
+/// 에셋 경로 없이 스프라이트 객체를 그릴 때 사용 (모션 프레임 등).
+class PixelSpriteView extends StatelessWidget {
+  final PixelSprite sprite;
+  final double? width;
+  final double? height;
+  final Color dotColor;
+  final Color darkColor;
+
+  const PixelSpriteView({
+    super.key,
+    required this.sprite,
+    this.width,
+    this.height,
+    required this.dotColor,
+    this.darkColor = const Color(0xFF33383F),
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return SizedBox(
       width: width,
       height: height,

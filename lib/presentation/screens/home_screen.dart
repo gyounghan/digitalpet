@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/pet_provider.dart';
 import '../widgets/pet_image_animation.dart';
+import '../widgets/pixel_motion_animation.dart';
 import '../widgets/app_design.dart';
 import '../../core/theme/species_theme.dart';
 import '../../core/constants/app_strings.dart';
@@ -29,6 +31,28 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
+  /// 액션 직후 잠깐 재생하는 모션 (밥먹기 등). null이면 mood 기반 대기 모션.
+  PixelMotion? _transientMotion;
+  Timer? _transientTimer;
+
+  @override
+  void dispose() {
+    _transientTimer?.cancel();
+    super.dispose();
+  }
+
+  /// 일시 모션 재생 — [duration] 후 mood 기반 대기 모션으로 복귀
+  void _playTransientMotion(
+    PixelMotion motion, {
+    Duration duration = const Duration(milliseconds: 2700),
+  }) {
+    _transientTimer?.cancel();
+    setState(() => _transientMotion = motion);
+    _transientTimer = Timer(duration, () {
+      if (mounted) setState(() => _transientMotion = null);
+    });
+  }
+
   String _getMoodText(PetMood mood) {
     switch (mood) {
       case PetMood.happy:
@@ -284,25 +308,49 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ],
               ),
             ),
-            Center(
-              child: PetImageAnimation(
-                type: getPetImageTypeFromMood(pet.mood),
-                duration: const Duration(milliseconds: 800),
-                dotColor: theme.primary,
-                evolutionImagePath: getEvolutionMoodImagePath(
-                      pet.evolutionType,
-                      pet.evolutionStage,
-                      pet.mood,
-                    ) ??
-                    getEvolutionImagePath(
-                      pet.evolutionType,
-                      pet.evolutionStage,
-                    ),
-              ),
-            ),
+            Center(child: _buildPetSprite(pet, theme)),
           ],
         ),
       ),
+    );
+  }
+
+  /// 펫 스테이지 스프라이트
+  ///
+  /// - 베이비(stage 2): mood 기반 도트 모션 루프 + 액션 시 일시 모션(밥먹기)
+  /// - 그 외 단계: 기존 mood 정적/프레임 도트 렌더
+  Widget _buildPetSprite(Pet pet, SpeciesTheme theme) {
+    final species = evolutionSpeciesImagePrefix(pet.evolutionType);
+    if (pet.evolutionStage == 2 && species != null) {
+      final motion = _transientMotion ?? motionForMood(pet.mood);
+      return SizedBox(
+        width: 300,
+        height: 300,
+        child: Align(
+          alignment: Alignment.bottomCenter,
+          child: PixelMotionAnimation(
+            species: species,
+            motion: motion,
+            width: 270,
+            height: 270,
+            dotColor: theme.primary,
+          ),
+        ),
+      );
+    }
+    return PetImageAnimation(
+      type: getPetImageTypeFromMood(pet.mood),
+      duration: const Duration(milliseconds: 800),
+      dotColor: theme.primary,
+      evolutionImagePath: getEvolutionMoodImagePath(
+            pet.evolutionType,
+            pet.evolutionStage,
+            pet.mood,
+          ) ??
+          getEvolutionImagePath(
+            pet.evolutionType,
+            pet.evolutionStage,
+          ),
     );
   }
 
@@ -319,6 +367,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ref
                 .read(petNotifierProvider(HomeScreen.defaultPetId).notifier)
                 .feed();
+            // 베이비 단계면 밥먹는 모션을 잠깐 재생
+            if (pet.evolutionStage == 2) {
+              _playTransientMotion(PixelMotion.eat);
+            }
           },
           icon: const Icon(Icons.restaurant, size: 18),
           label: Text(AppStrings.feed),

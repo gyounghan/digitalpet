@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/pet_provider.dart';
 import '../widgets/app_design.dart';
 import '../widgets/pixel_pet_image.dart';
+import '../widgets/pixel_motion_animation.dart';
 import '../../core/theme/species_theme.dart';
 import '../../core/constants/app_strings.dart';
 import '../../core/utils/pet_image_helper.dart';
@@ -221,6 +222,19 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
       battleResult = null;
       expGained = 0;
     });
+  }
+
+  /// 현재 턴 상황에 따른 내 펫 도트 모션
+  ///
+  /// - 상대 공격을 피함(피해 0) → dodge
+  /// - 주고받은 피해가 크거나 같음 → attack
+  /// - 더 큰 피해를 입음 → hurt
+  PixelMotion? _myTurnMotion() {
+    if (currentTurnIndex < 0 || currentTurnIndex >= turns.length) return null;
+    final turn = turns[currentTurnIndex];
+    if (turn.opponentDamage == 0) return PixelMotion.dodge;
+    if (turn.playerDamage >= turn.opponentDamage) return PixelMotion.attack;
+    return PixelMotion.hurt;
   }
 
   @override
@@ -631,6 +645,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
                 getEvolutionImagePath(pet.evolutionType, pet.evolutionStage),
             mine: true,
             theme: theme,
+            motion: _myTurnMotion(),
           ),
           const SizedBox(height: 8),
           _FighterRow(
@@ -917,6 +932,9 @@ class _FighterRow extends StatelessWidget {
   final bool mine;
   final SpeciesTheme theme;
 
+  /// 턴 진행 중 재생할 도트 모션 (베이비 스프라이트일 때만 적용)
+  final PixelMotion? motion;
+
   const _FighterRow({
     required this.name,
     required this.level,
@@ -925,7 +943,35 @@ class _FighterRow extends StatelessWidget {
     required this.theme,
     required this.imagePath,
     this.mine = false,
+    this.motion,
   });
+
+  /// 파이터 아이콘 — 베이비 스프라이트 + 모션이면 도트 모션, 아니면 정적 도트
+  Widget _buildSprite() {
+    final path = imagePath;
+    if (path == null) {
+      return const Icon(Icons.pets, color: DesignTokens.ink3);
+    }
+    final babySpecies = babySpeciesFromAssetPath(path);
+    if (babySpecies != null && motion != null) {
+      return Padding(
+        padding: const EdgeInsets.all(3),
+        child: PixelMotionAnimation(
+          species: babySpecies,
+          motion: motion!,
+          duration: const Duration(milliseconds: 600),
+          dotColor: theme.primary,
+        ),
+      );
+    }
+    return Padding(
+      padding: const EdgeInsets.all(3),
+      child: PixelPetImage(
+        assetPath: path,
+        dotColor: theme.primary,
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -946,15 +992,7 @@ class _FighterRow extends StatelessWidget {
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(10),
-              child: imagePath != null
-                  ? Padding(
-                      padding: const EdgeInsets.all(3),
-                      child: PixelPetImage(
-                        assetPath: imagePath!,
-                        dotColor: theme.primary,
-                      ),
-                    )
-                  : Icon(Icons.pets, color: DesignTokens.ink3),
+              child: _buildSprite(),
             ),
           ),
           const SizedBox(width: 10),

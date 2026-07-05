@@ -11,6 +11,15 @@ const Map<EvolutionType, String> _evolutionImagePrefix = {
   EvolutionType.turtle: 'turtle',
 };
 
+/// EvolutionType의 이미지 파일 접두어(종 키) 반환
+///
+/// 도트 모션 데이터([babyMotionFrames])의 종 키와 동일하다.
+/// snake → 'dragon' (뱀→이무기→청룡 이미지 공유)
+String? evolutionSpeciesImagePrefix(EvolutionType? type) {
+  if (type == null) return null;
+  return _evolutionImagePrefix[type];
+}
+
 /// 진화 타입과 단계에 따른 정적 대표 이미지 경로 반환
 ///
 /// stage 1 → 기본이미지.png (털뭉치)
