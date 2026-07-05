@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/pet_provider.dart';
 import '../widgets/app_design.dart';
+import '../widgets/pixel_pet_image.dart';
 import '../../core/theme/species_theme.dart';
 import '../../core/constants/app_strings.dart';
 import '../../core/utils/pet_image_helper.dart';
@@ -319,7 +320,13 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
                 ),
                 alignment: Alignment.center,
                 child: imagePath != null
-                    ? Image.asset(imagePath, width: 60, height: 60)
+                    // 컬러 그라데이션 배경 위라 흰 몸통 도트가 잘 보인다
+                    ? PixelPetImage(
+                        assetPath: imagePath,
+                        width: 60,
+                        height: 60,
+                        dotColor: Colors.white.withValues(alpha: 0.95),
+                      )
                     : const Icon(Icons.pets, size: 40, color: Colors.white),
               ),
               const SizedBox(width: 14),
@@ -940,7 +947,13 @@ class _FighterRow extends StatelessWidget {
             child: ClipRRect(
               borderRadius: BorderRadius.circular(10),
               child: imagePath != null
-                  ? Image.asset(imagePath!, fit: BoxFit.contain)
+                  ? Padding(
+                      padding: const EdgeInsets.all(3),
+                      child: PixelPetImage(
+                        assetPath: imagePath!,
+                        dotColor: theme.primary,
+                      ),
+                    )
                   : Icon(Icons.pets, color: DesignTokens.ink3),
             ),
           ),

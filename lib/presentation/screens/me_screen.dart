@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/pet_provider.dart';
 import '../widgets/app_design.dart';
+import '../widgets/pixel_pet_image.dart';
 import '../../core/theme/species_theme.dart';
 import '../../core/constants/app_strings.dart';
 import '../../core/utils/pet_image_helper.dart';
@@ -273,8 +274,13 @@ class _MeScreenState extends ConsumerState<MeScreen> {
                 ),
                 alignment: Alignment.center,
                 child: imagePath != null
-                    ? Image.asset(imagePath,
-                        width: 78, height: 78, fit: BoxFit.contain)
+                    // 컬러 그라데이션 배경 위라 흰 몸통 도트가 잘 보인다
+                    ? PixelPetImage(
+                        assetPath: imagePath,
+                        width: 78,
+                        height: 78,
+                        dotColor: Colors.white.withValues(alpha: 0.95),
+                      )
                     : const Icon(Icons.pets, size: 44, color: Colors.white),
               ),
               const SizedBox(width: 14),
@@ -663,8 +669,12 @@ class _MeScreenState extends ConsumerState<MeScreen> {
             ),
             alignment: Alignment.center,
             child: imagePath != null
-                ? Image.asset(imagePath,
-                    width: 40, height: 40, fit: BoxFit.contain)
+                ? PixelPetImage(
+                    assetPath: imagePath,
+                    width: 40,
+                    height: 40,
+                    dotColor: theme.primary,
+                  )
                 : const Text('?',
                     style: TextStyle(
                         fontSize: 20, fontWeight: FontWeight.w800)),

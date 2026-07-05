@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/pet_provider.dart';
 import '../widgets/app_design.dart';
+import '../widgets/pixel_pet_image.dart';
 import '../../core/theme/species_theme.dart';
 import '../../core/utils/pet_image_helper.dart';
 import '../../data/datasources/ranking_remote_datasource.dart';
@@ -562,13 +563,13 @@ Widget _buildPetThumb(_RowEntry entry, double size) {
   if (path == null) {
     return Icon(Icons.pets, size: size, color: DesignTokens.ink3);
   }
-  return Image.asset(
-    path,
+  // 각 엔트리의 종별 테마색 도트로 렌더링
+  return PixelPetImage(
+    assetPath: path,
     width: size,
     height: size,
-    fit: BoxFit.contain,
-    errorBuilder: (_, __, ___) =>
-        Icon(Icons.pets, size: size, color: DesignTokens.ink3),
+    dotColor: SpeciesTheme.forType(entry.type).primary,
+    fallback: Icon(Icons.pets, size: size, color: DesignTokens.ink3),
   );
 }
 

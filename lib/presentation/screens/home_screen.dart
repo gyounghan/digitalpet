@@ -288,6 +288,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               child: PetImageAnimation(
                 type: getPetImageTypeFromMood(pet.mood),
                 duration: const Duration(milliseconds: 800),
+                dotColor: theme.primary,
                 evolutionImagePath: getEvolutionMoodImagePath(
                       pet.evolutionType,
                       pet.evolutionStage,

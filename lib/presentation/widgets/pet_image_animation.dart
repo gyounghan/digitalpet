@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import 'pixel_pet_image.dart';
 
-/// 펫 이미지 애니메이션 위젯
+/// 펫 도트 애니메이션 위젯
 ///
-/// 펫의 상태(급식, 수면, 운동, 행복, 슬픔)에 따라 다른 이미지를 표시.
-/// evolutionImagePath가 주어지면 정적 이미지 (사신수 mood) 표시.
+/// 펫의 상태(급식, 수면, 운동, 행복, 슬픔)에 따라 다른 프레임을 표시.
+/// evolutionImagePath가 주어지면 정적 도트 스프라이트 (사신수 mood) 표시.
+///
+/// 렌더링은 이미지 디코딩 없이 좌표 데이터([PixelPetImage]) 기반 도트로
+/// 그린다 — 다마고치 LCD 스타일.
 ///
 /// 성능:
 /// - AnimationController(vsync)를 사용해 TickerMode로 자동 정지 가능
@@ -15,11 +19,15 @@ class PetImageAnimation extends StatefulWidget {
   final Duration duration;
   final String? evolutionImagePath;
 
+  /// 몸통 도트 색 (종별 테마색)
+  final Color dotColor;
+
   const PetImageAnimation({
     super.key,
     required this.type,
     this.duration = const Duration(milliseconds: 800),
     this.evolutionImagePath,
+    this.dotColor = const Color(0xFF7BAA6E),
   });
 
   @override
@@ -42,19 +50,14 @@ class _PetImageAnimationState extends State<PetImageAnimation>
   late AnimationController _controller;
   int _currentIndex = 0;
   late List<String> _images;
-  final Map<String, Size> _imageSizes = {};
 
-  /// 최대 이미지 크기 (픽셀) - 하단 overflow 방지
+  /// 도트 캔버스 크기 (픽셀) - 하단 overflow 방지
   static const double maxImageSize = 300.0;
-
-  Size? _evolutionImageSize;
 
   @override
   void initState() {
     super.initState();
     _updateImages();
-    _loadAllImageSizes();
-    _loadEvolutionImageSize();
 
     _controller = AnimationController(vsync: this, duration: widget.duration);
     _controller.addListener(_handleTick);
@@ -88,42 +91,6 @@ class _PetImageAnimationState extends State<PetImageAnimation>
     return idx >= n ? n - 1 : idx;
   }
 
-  void _loadAllImageSizes() {
-    if (_images.isEmpty) return;
-    for (final imagePath in _images) {
-      if (_imageSizes.containsKey(imagePath)) continue;
-      _resolveImageSize(imagePath, (size) {
-        if (!mounted) return;
-        setState(() => _imageSizes[imagePath] = size);
-      });
-    }
-  }
-
-  void _loadEvolutionImageSize() {
-    final path = widget.evolutionImagePath;
-    if (path == null) return;
-    _resolveImageSize(path, (size) {
-      if (!mounted) return;
-      setState(() => _evolutionImageSize = size);
-    });
-  }
-
-  /// 비동기 이미지 실제 크기 해석 (리스너 즉시 해제로 메모리 누수 방지)
-  void _resolveImageSize(String path, void Function(Size) onSize) {
-    try {
-      final imageProvider = AssetImage(path);
-      final stream = imageProvider.resolve(const ImageConfiguration());
-      late final ImageStreamListener listener;
-      listener = ImageStreamListener((info, _) {
-        onSize(Size(info.image.width.toDouble(), info.image.height.toDouble()));
-        stream.removeListener(listener);
-      });
-      stream.addListener(listener);
-    } catch (_) {
-      // 무시
-    }
-  }
-
   @override
   void didUpdateWidget(PetImageAnimation oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -133,13 +100,10 @@ class _PetImageAnimationState extends State<PetImageAnimation>
     var restart = false;
     if (oldWidget.type != widget.type) {
       _updateImages();
-      _loadAllImageSizes();
       _currentIndex = 0;
       restart = true;
     }
     if (oldWidget.evolutionImagePath != widget.evolutionImagePath) {
-      _evolutionImageSize = null;
-      _loadEvolutionImageSize();
       restart = true;
     }
     if (restart) _maybeStart();
@@ -206,48 +170,21 @@ class _PetImageAnimationState extends State<PetImageAnimation>
     }
   }
 
-  Widget _buildEvolutionImage() {
-    final path = widget.evolutionImagePath!;
-    return _buildScaledImage(path, _evolutionImageSize);
-  }
-
-  Widget _buildScaledImage(String path, Size? imageSize) {
-    Widget content;
-    if (imageSize == null) {
-      content = Image.asset(
-        path,
-        errorBuilder: (_, __, ___) => _fallbackIcon(),
-      );
-    } else {
-      double scale = 1.0;
-      if (imageSize.width > maxImageSize) {
-        scale = maxImageSize / imageSize.width;
-      }
-      if (imageSize.height * scale > maxImageSize) {
-        scale = maxImageSize / imageSize.height;
-      }
-      final w = imageSize.width * scale;
-      final h = imageSize.height * scale;
-
-      content = FittedBox(
-        fit: BoxFit.contain,
-        child: SizedBox(
-          width: w,
-          height: h,
-          child: Image.asset(
-            path,
-            width: w,
-            height: h,
-            fit: BoxFit.contain,
-            errorBuilder: (_, __, ___) => _fallbackIcon(),
-          ),
-        ),
-      );
-    }
+  /// 도트 스프라이트 한 프레임 (하단 정렬, 정사각 캔버스)
+  Widget _buildSprite(String path) {
     return SizedBox(
       width: maxImageSize,
       height: maxImageSize,
-      child: Align(alignment: Alignment.bottomCenter, child: content),
+      child: Align(
+        alignment: Alignment.bottomCenter,
+        child: PixelPetImage(
+          assetPath: path,
+          width: maxImageSize * 0.9,
+          height: maxImageSize * 0.9,
+          dotColor: widget.dotColor,
+          fallback: _fallbackIcon(),
+        ),
+      ),
     );
   }
 
@@ -276,10 +213,9 @@ class _PetImageAnimationState extends State<PetImageAnimation>
   @override
   Widget build(BuildContext context) {
     if (widget.evolutionImagePath != null) {
-      return _buildEvolutionImage();
+      return _buildSprite(widget.evolutionImagePath!);
     }
     if (_images.isEmpty) return const SizedBox.shrink();
-    final imagePath = _images[_currentIndex];
-    return _buildScaledImage(imagePath, _imageSizes[imagePath]);
+    return _buildSprite(_images[_currentIndex]);
   }
 }
