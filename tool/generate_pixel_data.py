@@ -1,13 +1,16 @@
 # -*- coding: utf-8 -*-
-"""assets/*.png -> 32x32 도트 좌표 데이터(Dart) 생성 스크립트.
+"""assets/*.png -> 64x64 도트 좌표 데이터(Dart) 생성 스크립트.
 
-각 이미지를 투명 영역 기준으로 크롭 -> 정사각 패딩 -> 32x32 다운샘플한 뒤
+각 이미지를 투명 영역 기준으로 크롭 -> 정사각 패딩 -> 64x64 다운샘플한 뒤
 셀을 2계조로 분류한다:
   - dark: 불투명 + 어두움 (아웃라인/눈 등) -> 진한 도트
   - body: 불투명 + dark 아님 (몸통/밝은 부분) -> 테마색 도트
 
-행별 32비트 비트마스크(List<int>)로 저장해 런타임에는 이미지 디코딩 없이
+행별 GRID비트 비트마스크(List<int>)로 저장해 런타임에는 이미지 디코딩 없이
 CustomPainter로 도트만 찍는다 (다마고치 LCD 스타일).
+
+주의: GRID=64면 행 마스크가 64비트 전체를 쓰므로 최상위 비트(x=63)가 켜진
+행은 Dart에서 음수 리터럴로 해석된다. 비트 연산(&, |)만 쓰므로 무해하다.
 
 사용법:
     python tool/generate_pixel_data.py
@@ -22,9 +25,11 @@ import glob
 
 from PIL import Image
 
-GRID = 32
+GRID = 64
 ALPHA_THRESHOLD = 0.5  # 셀 평균 알파가 이 값보다 크면 도트 on
 DARK_LUMINANCE = 0.45  # 이 값보다 어두우면 dark 도트
+HEX_WIDTH = GRID // 4  # 행 마스크 hex 자릿수 (64그리드 → 16자리)
+VALUES_PER_LINE = 8 if GRID <= 32 else 4
 ASSETS_DIR = "assets"
 OUTPUT_PATH = os.path.join("lib", "core", "pixel", "pet_pixel_data.dart")
 
@@ -77,10 +82,12 @@ def extract_sprite(path: str):
 
 def format_rows(rows) -> str:
     """비트마스크 리스트를 Dart 리터럴 문자열로 (hex, 줄바꿈 포함)."""
-    parts = ["0x%08X" % v for v in rows]
+    parts = ["0x%0*X" % (HEX_WIDTH, v) for v in rows]
     lines = []
-    for i in range(0, len(parts), 8):
-        lines.append("      " + ", ".join(parts[i : i + 8]) + ",")
+    for i in range(0, len(parts), VALUES_PER_LINE):
+        lines.append(
+            "      " + ", ".join(parts[i : i + VALUES_PER_LINE]) + ","
+        )
     return "[\n" + "\n".join(lines) + "\n    ]"
 
 

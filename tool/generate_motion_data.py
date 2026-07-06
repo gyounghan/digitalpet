@@ -23,6 +23,27 @@ from generate_pixel_data import GRID, extract_sprite, format_rows
 OUTPUT_PATH = os.path.join("lib", "core", "pixel", "pet_motion_data.dart")
 FULL_MASK = (1 << GRID) - 1
 
+# 모션 정의(이동량·글리프 좌표)는 32그리드 기준으로 작성되어 있다.
+# GRID가 커지면 같은 비율로 확대해 시각적 진폭을 유지한다.
+SCALE = GRID // 32
+
+
+def sc(v):
+    """32그리드 기준 좌표/이동량을 현재 GRID로 스케일."""
+    return v * SCALE
+
+
+def scale_glyph(glyph):
+    """글리프의 각 도트를 SCALE x SCALE 블록으로 확대."""
+    if SCALE == 1:
+        return glyph
+    out = []
+    for x, y in glyph:
+        for dy in range(SCALE):
+            for dx in range(SCALE):
+                out.append((x * SCALE + dx, y * SCALE + dy))
+    return out
+
 SPECIES_SOURCES = {
     "tiger": os.path.join("assets", "tiger1.png"),
     "bird": os.path.join("assets", "bird1.png"),
@@ -137,7 +158,18 @@ GLYPH_FOOD_EMPTY = (
     + [(0, 1), (6, 1)]  # 부스러기
 )
 
-FOOD_POS = (1, 26)
+# 32그리드 기준 글리프를 현재 GRID 배율로 확대
+GLYPH_Z = scale_glyph(GLYPH_Z)
+GLYPH_SPARKLE = scale_glyph(GLYPH_SPARKLE)
+GLYPH_ANGER = scale_glyph(GLYPH_ANGER)
+GLYPH_SWEAT = scale_glyph(GLYPH_SWEAT)
+GLYPH_SLASH = scale_glyph(GLYPH_SLASH)
+GLYPH_SPEED = scale_glyph(GLYPH_SPEED)
+GLYPH_FOOD_FULL = scale_glyph(GLYPH_FOOD_FULL)
+GLYPH_FOOD_HALF = scale_glyph(GLYPH_FOOD_HALF)
+GLYPH_FOOD_EMPTY = scale_glyph(GLYPH_FOOD_EMPTY)
+
+FOOD_POS = (sc(1), sc(26))
 
 # ---------------------------------------------------------------------------
 # 모션 정의 — 각 함수는 3프레임 리스트 반환
@@ -145,64 +177,64 @@ FOOD_POS = (1, 26)
 
 
 def motion_walk(s):
-    return [shift(s, -1, 0), shift(s, 0, -1), shift(s, 1, 0)]
+    return [shift(s, sc(-1), 0), shift(s, 0, sc(-1)), shift(s, sc(1), 0)]
 
 
 def motion_eat(s):
     fx, fy = FOOD_POS
     return [
         overlay(s, GLYPH_FOOD_FULL, fx, fy),
-        overlay(shift(s, 0, 1), GLYPH_FOOD_HALF, fx, fy),
+        overlay(shift(s, 0, sc(1)), GLYPH_FOOD_HALF, fx, fy),
         overlay(s, GLYPH_FOOD_EMPTY, fx, fy),
     ]
 
 
 def motion_sleep(s):
     lying = squash(s, 0.7)
-    f1 = overlay(lying, GLYPH_Z, 22, 7)
-    f2 = overlay(f1, GLYPH_Z, 25, 4)
-    f3 = overlay(f2, GLYPH_Z, 28, 1)
+    f1 = overlay(lying, GLYPH_Z, sc(22), sc(7))
+    f2 = overlay(f1, GLYPH_Z, sc(25), sc(4))
+    f3 = overlay(f2, GLYPH_Z, sc(28), sc(1))
     return [f1, f2, f3]
 
 
 def motion_attack(s):
     return [
         s,
-        shift(s, -2, 0),
-        overlay(shift(s, -4, 0), GLYPH_SLASH, 0, 8),
+        shift(s, sc(-2), 0),
+        overlay(shift(s, sc(-4), 0), GLYPH_SLASH, 0, sc(8)),
     ]
 
 
 def motion_dodge(s):
     return [
         s,
-        overlay(shift(s, 3, 0), GLYPH_SPEED, 0, 10),
-        shift(s, 1, 0),
+        overlay(shift(s, sc(3), 0), GLYPH_SPEED, 0, sc(10)),
+        shift(s, sc(1), 0),
     ]
 
 
 def motion_hurt(s):
     return [
-        overlay(s, GLYPH_SWEAT, 26, 3),
-        blink(shift(s, 1, 0)),
-        overlay(shift(s, -1, 0), GLYPH_SWEAT, 27, 6),
+        overlay(s, GLYPH_SWEAT, sc(26), sc(3)),
+        blink(shift(s, sc(1), 0)),
+        overlay(shift(s, sc(-1), 0), GLYPH_SWEAT, sc(27), sc(6)),
     ]
 
 
 def motion_angry(s):
     return [
-        overlay(s, GLYPH_ANGER, 24, 2),
-        overlay(shift(s, 1, 0), GLYPH_ANGER, 23, 1),
-        overlay(s, GLYPH_ANGER, 25, 3),
+        overlay(s, GLYPH_ANGER, sc(24), sc(2)),
+        overlay(shift(s, sc(1), 0), GLYPH_ANGER, sc(23), sc(1)),
+        overlay(s, GLYPH_ANGER, sc(25), sc(3)),
     ]
 
 
 def motion_joy(s):
-    f2 = shift(s, 0, -3)
-    f2 = overlay(f2, GLYPH_SPARKLE, 2, 8)
-    f2 = overlay(f2, GLYPH_SPARKLE, 27, 8)
-    f3 = overlay(s, GLYPH_SPARKLE, 1, 13)
-    f3 = overlay(f3, GLYPH_SPARKLE, 28, 13)
+    f2 = shift(s, 0, sc(-3))
+    f2 = overlay(f2, GLYPH_SPARKLE, sc(2), sc(8))
+    f2 = overlay(f2, GLYPH_SPARKLE, sc(27), sc(8))
+    f3 = overlay(s, GLYPH_SPARKLE, sc(1), sc(13))
+    f3 = overlay(f3, GLYPH_SPARKLE, sc(28), sc(13))
     return [s, f2, f3]
 
 

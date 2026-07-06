@@ -32,15 +32,18 @@ def load_frames(species, motion):
 
 
 def render(dark, body):
-    for y in range(32):
+    n = len(dark)
+    # 32그리드는 가로 2배 폭으로(정사각 비율 보정), 64그리드는 1문자 폭으로
+    wide = n <= 32
+    for y in range(n):
         line = ""
-        for x in range(32):
+        for x in range(n):
             if dark[y] >> x & 1:
-                line += "@@"
+                line += "@@" if wide else "@"
             elif body[y] >> x & 1:
-                line += ".."
+                line += ".." if wide else "."
             else:
-                line += "  "
+                line += "  " if wide else " "
         print(line.rstrip())
 
 

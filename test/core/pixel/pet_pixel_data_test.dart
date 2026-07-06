@@ -25,32 +25,22 @@ void main() {
       expect(petPixelSprites, isNotEmpty);
     });
 
-    test('모든 스프라이트는 32x32 그리드', () {
+    test('모든 스프라이트는 64x64 그리드', () {
       for (final entry in petPixelSprites.entries) {
         final sprite = entry.value;
-        expect(sprite.size, 32, reason: '${entry.key}: size');
-        expect(sprite.dark.length, 32, reason: '${entry.key}: dark rows');
-        expect(sprite.body.length, 32, reason: '${entry.key}: body rows');
+        expect(sprite.size, 64, reason: '${entry.key}: size');
+        expect(sprite.dark.length, 64, reason: '${entry.key}: dark rows');
+        expect(sprite.body.length, 64, reason: '${entry.key}: body rows');
       }
     });
 
-    test('비트마스크는 32비트 범위 내', () {
-      const maxMask = 0xFFFFFFFF;
-      for (final entry in petPixelSprites.entries) {
-        for (final row in entry.value.dark) {
-          expect(row >= 0 && row <= maxMask, isTrue,
-              reason: '${entry.key}: dark mask 범위');
-        }
-        for (final row in entry.value.body) {
-          expect(row >= 0 && row <= maxMask, isTrue,
-              reason: '${entry.key}: body mask 범위');
-        }
-      }
-    });
+    // 참고: 64그리드는 행 마스크가 64비트 전체를 쓰므로 최상위 비트(x=63)가
+    // 켜진 행은 Dart에서 음수로 해석된다. 비트 연산(&, |)만 쓰므로 무해하며
+    // 수치 범위 검사는 하지 않는다.
 
     test('dark와 body 도트는 겹치지 않는다', () {
       for (final entry in petPixelSprites.entries) {
-        for (var y = 0; y < 32; y++) {
+        for (var y = 0; y < entry.value.size; y++) {
           expect(entry.value.dark[y] & entry.value.body[y], 0,
               reason: '${entry.key}: row $y 겹침');
         }
