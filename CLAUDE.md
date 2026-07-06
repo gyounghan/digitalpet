@@ -18,7 +18,9 @@ flutter analyze
 flutter build apk --debug
 
 # Run tests
-flutter test
+# 주의: 이 PC는 TEMP 경로에 한글 사용자명이 있어 그냥 flutter test를 돌리면
+# 전 스위트가 "Connection closed"로 실패한다. ASCII TEMP로 우회할 것:
+TMP='C:\pf_tmp' TEMP='C:\pf_tmp' flutter test
 ```
 
 **Always run `flutter analyze` after making code changes.** If modifying entities/models, also verify `flutter build apk --debug` succeeds.
@@ -40,6 +42,11 @@ See **[GIT_WORKFLOW.md](./GIT_WORKFLOW.md)** for:
 ## Architecture
 
 PocketFriend is a Flutter Tamagotchi-style pet app using **Clean Architecture** with Riverpod state management. The app tracks user health activity (steps, exercise, phone idle time) and uses it to affect a virtual pet's state.
+
+**펫 렌더링(도트 파이프라인)**: 펫은 이미지 파일이 아니라 오프라인 생성된
+도트 좌표 데이터(`lib/core/pixel/`)를 CustomPainter로 찍어 그린다.
+정적 스프라이트·베이비 모션 생성/수정/확장(성장기 추가 등) 절차는
+**[docs/pixel_pipeline.md](./docs/pixel_pipeline.md)** 참조 — 도트 작업 전 필독.
 
 ### Layer Structure
 
