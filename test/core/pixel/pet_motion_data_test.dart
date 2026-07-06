@@ -28,16 +28,16 @@ void main() {
       }
     });
 
-    test('모든 프레임은 64x64이고 dark/body가 겹치지 않는다', () {
+    test('모든 프레임은 16x16(수제 도트)이고 dark/body가 겹치지 않는다', () {
       for (final s in species) {
         for (final m in motions) {
           final frames = babyMotionFrames[s]![m]!;
           for (var i = 0; i < frames.length; i++) {
             final frame = frames[i];
-            expect(frame.size, 64, reason: '$s/$m[$i]: size');
-            expect(frame.dark.length, 64, reason: '$s/$m[$i]: dark rows');
-            expect(frame.body.length, 64, reason: '$s/$m[$i]: body rows');
-            for (var y = 0; y < 64; y++) {
+            expect(frame.size, 16, reason: '$s/$m[$i]: size');
+            expect(frame.dark.length, 16, reason: '$s/$m[$i]: dark rows');
+            expect(frame.body.length, 16, reason: '$s/$m[$i]: body rows');
+            for (var y = 0; y < 16; y++) {
               expect(frame.dark[y] & frame.body[y], 0,
                   reason: '$s/$m[$i]: row $y 겹침');
             }
@@ -64,7 +64,7 @@ void main() {
         for (final m in motions) {
           final frames = babyMotionFrames[s]![m]!;
           bool sameFrames(int a, int b) {
-            for (var y = 0; y < 64; y++) {
+            for (var y = 0; y < 16; y++) {
               if (frames[a].dark[y] != frames[b].dark[y]) return false;
               if (frames[a].body[y] != frames[b].body[y]) return false;
             }
