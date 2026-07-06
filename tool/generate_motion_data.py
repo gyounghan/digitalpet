@@ -230,13 +230,22 @@ def draw_mouth(g, mx, my, style):
 
 # 브레스(내뿜기) — 입 앞(-x)으로 퍼지는 콘. 'o'는 테마색, '#'은 진한 끝점
 BREATH_PUFF = [
-    (-2, -1, "o"), (-3, 0, "o"), (-2, 1, "o"), (-2, 0, "#"),
+    (-2, -1, "o"), (-3, -1, "o"),
+    (-2, 0, "o"), (-3, 0, "o"), (-4, 0, "#"),
+    (-2, 1, "o"), (-3, 1, "o"),
 ]
 BREATH_CONE = [
-    (-2, -1, "o"), (-3, -1, "o"), (-4, -2, "#"),
-    (-2, 0, "o"), (-3, 0, "o"), (-4, 0, "o"), (-5, 0, "#"),
-    (-2, 1, "o"), (-3, 1, "o"), (-4, 2, "#"),
-    (-3, -2, "o"), (-3, 2, "o"),
+    # 중심선 (가장 길게)
+    (-2, 0, "o"), (-3, 0, "o"), (-4, 0, "o"), (-5, 0, "o"),
+    (-6, 0, "o"), (-7, 0, "#"),
+    # 위/아래 1단
+    (-2, -1, "o"), (-3, -1, "o"), (-4, -1, "o"), (-5, -1, "o"),
+    (-6, -1, "#"),
+    (-2, 1, "o"), (-3, 1, "o"), (-4, 1, "o"), (-5, 1, "o"),
+    (-6, 1, "#"),
+    # 위/아래 2단 (부채꼴로 벌어짐)
+    (-3, -2, "o"), (-4, -2, "o"), (-5, -3, "#"),
+    (-3, 2, "o"), (-4, 2, "o"), (-5, 3, "#"),
 ]
 
 
@@ -542,11 +551,11 @@ def motion_attack(sp):
     브레스가 나갈 공간을 만들기 위해 몸을 오른쪽으로 물렸다가 내뿜는다.
     브레스의 'o' 도트는 테마색으로 렌더링 → 종별 속성 브레스처럼 보임.
     """
-    windup = pose(sp, eye="angry", mouth="none", dx=3, lean=1)
-    puff = pose(sp, eye="angry", mouth="open", step="front", dx=1, lean=-1)
-    puff = draw_breath(puff, sp, 1, BREATH_PUFF)
-    blast = pose(sp, eye="angry", mouth="open", step="back", dx=1, lean=-1)
-    blast = draw_breath(blast, sp, 1, BREATH_CONE)
+    windup = pose(sp, eye="angry", mouth="none", dx=5, lean=1)
+    puff = pose(sp, eye="angry", mouth="open", step="front", dx=4, lean=-1)
+    puff = draw_breath(puff, sp, 4, BREATH_PUFF)
+    blast = pose(sp, eye="angry", mouth="open", step="back", dx=4, lean=-1)
+    blast = draw_breath(blast, sp, 4, BREATH_CONE)
     return [windup, puff, blast]
 
 
@@ -567,12 +576,14 @@ def motion_hurt(sp):
     이전의 '아웃라인만 남는 피격 플래시'는 흰 배경에서 캐릭터가
     하얗게 사라져 보여서 실제 휘청이는 포즈로 교체했다.
     """
+    # 땀방울은 몸이 닿지 않는 머리 위 상단(0~3행)에 배치 — 잘림/겹침 방지
     f1 = pose(sp, eye="pain", mouth="open", lean=1)
-    f1 = with_glyph(f1, GLYPH_SWEAT, 20, 4)
-    f2 = pose(sp, eye="pain", mouth="open", dx=2, lean=2)
-    f2 = with_glyph(f2, GLYPH_SWEAT, 21, 3)
+    f1 = with_glyph(f1, GLYPH_SWEAT, 19, 1)
+    f2 = pose(sp, eye="pain", mouth="open", dx=1, lean=2)
+    f2 = with_glyph(f2, GLYPH_SWEAT, 21, 2)
+    f2 = with_glyph(f2, GLYPH_SWEAT, 18, 0)
     f3 = pose(sp, eye="pain", dx=-1)
-    f3 = with_glyph(f3, GLYPH_SWEAT, 21, 7)
+    f3 = with_glyph(f3, GLYPH_SWEAT, 17, 1)
     return [f1, f2, f3]
 
 
