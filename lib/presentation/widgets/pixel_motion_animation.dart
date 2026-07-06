@@ -80,6 +80,9 @@ class PixelMotionAnimation extends StatefulWidget {
   /// 아웃라인 도트 색
   final Color darkColor;
 
+  /// 보조색 도트 색 (배/부리/등딱지 — null이면 dotColor)
+  final Color? accentColor;
+
   const PixelMotionAnimation({
     super.key,
     required this.species,
@@ -89,6 +92,7 @@ class PixelMotionAnimation extends StatefulWidget {
     this.height,
     required this.dotColor,
     this.darkColor = const Color(0xFF33383F),
+    this.accentColor,
   });
 
   @override
@@ -164,6 +168,7 @@ class _PixelMotionAnimationState extends State<PixelMotionAnimation>
         height: widget.height,
         dotColor: widget.dotColor,
         darkColor: widget.darkColor,
+        accentColor: widget.accentColor,
       );
     }
     final idx = _currentIndex < frames.length ? _currentIndex : 0;
@@ -173,6 +178,7 @@ class _PixelMotionAnimationState extends State<PixelMotionAnimation>
       height: widget.height,
       dotColor: widget.dotColor,
       darkColor: widget.darkColor,
+      accentColor: widget.accentColor,
     );
   }
 }

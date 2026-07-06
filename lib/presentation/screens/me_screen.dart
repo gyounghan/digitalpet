@@ -696,6 +696,7 @@ class _MeScreenState extends ConsumerState<MeScreen> {
                     width: 40,
                     height: 40,
                     dotColor: theme.primary,
+                    accentColor: theme.spriteAccent,
                   )
                 : const Text('?',
                     style: TextStyle(

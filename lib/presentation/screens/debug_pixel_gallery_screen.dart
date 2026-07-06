@@ -22,14 +22,24 @@ class _DebugPixelGalleryScreenState extends State<DebugPixelGalleryScreen> {
   /// 어두운 배경(그라데이션 카드 위 흰 도트 상황) 대비 확인용 토글
   bool _darkBackground = false;
 
-  /// 키 접두어로 종 테마색 추정 (도감 실제 표시색과 동일한 규칙)
+  /// 키 접두어로 종 테마 추정 (도감 실제 표시색과 동일한 규칙)
+  SpeciesTheme _themeForKey(String key) {
+    if (key.startsWith('tiger')) return SpeciesTheme.tiger;
+    if (key.startsWith('bird')) return SpeciesTheme.bird;
+    if (key.startsWith('turtle')) return SpeciesTheme.turtle;
+    if (key.startsWith('dragon')) return SpeciesTheme.snake;
+    return SpeciesTheme.defaultTheme;
+  }
+
   Color _dotColorForKey(String key) {
     if (_darkBackground) return Colors.white.withValues(alpha: 0.95);
-    if (key.startsWith('tiger')) return SpeciesTheme.tiger.primary;
-    if (key.startsWith('bird')) return SpeciesTheme.bird.primary;
-    if (key.startsWith('turtle')) return SpeciesTheme.turtle.primary;
-    if (key.startsWith('dragon')) return SpeciesTheme.snake.primary;
-    return SpeciesTheme.defaultTheme.primary;
+    return _themeForKey(key).primary;
+  }
+
+  /// 보조색 — 어두운 배경에서는 대비를 위해 반투명 흰색
+  Color _accentColorForKey(String key) {
+    if (_darkBackground) return Colors.white.withValues(alpha: 0.6);
+    return _themeForKey(key).spriteAccent;
   }
 
   Color get _tileColor =>
@@ -98,6 +108,7 @@ class _DebugPixelGalleryScreenState extends State<DebugPixelGalleryScreen> {
                 child: PixelSpriteView(
                   sprite: sprite,
                   dotColor: _dotColorForKey(key),
+                  accentColor: _accentColorForKey(key),
                 ),
               ),
             ),
@@ -173,6 +184,7 @@ class _DebugPixelGalleryScreenState extends State<DebugPixelGalleryScreen> {
             species: species,
             motion: motion,
             dotColor: _dotColorForKey(species),
+            accentColor: _accentColorForKey(species),
           ),
         ),
         const SizedBox(height: 3),

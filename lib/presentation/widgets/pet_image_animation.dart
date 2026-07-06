@@ -22,12 +22,16 @@ class PetImageAnimation extends StatefulWidget {
   /// 몸통 도트 색 (종별 테마색)
   final Color dotColor;
 
+  /// 보조색 도트 색 (배/부리 등 — null이면 dotColor)
+  final Color? accentColor;
+
   const PetImageAnimation({
     super.key,
     required this.type,
     this.duration = const Duration(milliseconds: 800),
     this.evolutionImagePath,
     this.dotColor = const Color(0xFF7BAA6E),
+    this.accentColor,
   });
 
   @override
@@ -182,6 +186,7 @@ class _PetImageAnimationState extends State<PetImageAnimation>
           width: maxImageSize * 0.9,
           height: maxImageSize * 0.9,
           dotColor: widget.dotColor,
+          accentColor: widget.accentColor,
           fallback: _fallbackIcon(),
         ),
       ),

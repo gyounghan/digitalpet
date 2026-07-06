@@ -961,6 +961,7 @@ class _FighterRow extends StatelessWidget {
           motion: motion!,
           duration: const Duration(milliseconds: 600),
           dotColor: theme.primary,
+          accentColor: theme.spriteAccent,
         ),
       );
     }
@@ -969,6 +970,7 @@ class _FighterRow extends StatelessWidget {
       child: PixelPetImage(
         assetPath: path,
         dotColor: theme.primary,
+        accentColor: theme.spriteAccent,
       ),
     );
   }

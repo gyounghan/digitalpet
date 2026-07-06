@@ -37,9 +37,14 @@ void main() {
             expect(frame.size, 24, reason: '$s/$m[$i]: size');
             expect(frame.dark.length, 24, reason: '$s/$m[$i]: dark rows');
             expect(frame.body.length, 24, reason: '$s/$m[$i]: body rows');
+            expect(frame.accent.length, 24, reason: '$s/$m[$i]: accent rows');
             for (var y = 0; y < 24; y++) {
               expect(frame.dark[y] & frame.body[y], 0,
-                  reason: '$s/$m[$i]: row $y 겹침');
+                  reason: '$s/$m[$i]: row $y dark∩body');
+              expect(frame.dark[y] & frame.accent[y], 0,
+                  reason: '$s/$m[$i]: row $y dark∩accent');
+              expect(frame.body[y] & frame.accent[y], 0,
+                  reason: '$s/$m[$i]: row $y body∩accent');
             }
           }
         }

@@ -19,6 +19,10 @@ class SpeciesTheme {
   final Color gradStart;
   final Color gradEnd;
 
+  /// 도트 스프라이트 보조색 — 원본 캐릭터의 2번째 색
+  /// (청룡 크림 배, 백호 설백 몸, 주작 노란 부리/가슴, 현무 갈색 등딱지)
+  final Color spriteAccent;
+
   const SpeciesTheme({
     required this.primary,
     required this.primaryDeep,
@@ -28,6 +32,7 @@ class SpeciesTheme {
     required this.glow,
     required this.gradStart,
     required this.gradEnd,
+    this.spriteAccent = const Color(0xFFDDE3EC),
   });
 
   /// 기본 (진화 미결정)
@@ -52,6 +57,7 @@ class SpeciesTheme {
     glow: Color(0xFFB8C4D8),
     gradStart: Color(0xFFF5F8FC),
     gradEnd: Color(0xFFDBE3F0),
+    spriteAccent: Color(0xFFF0F3F8),
   );
 
   /// 주작 (bird/phoenix) - red-orange
@@ -64,6 +70,7 @@ class SpeciesTheme {
     glow: Color(0xFFFFB074),
     gradStart: Color(0xFFFFF6EF),
     gradEnd: Color(0xFFFFD0A8),
+    spriteAccent: Color(0xFFFFC94D),
   );
 
   /// 현무 (turtle) - fresh jade/mint (칙칙한 포레스트그린 → 생기있는 제이드)
@@ -76,6 +83,7 @@ class SpeciesTheme {
     glow: Color(0xFF8FE9CE),
     gradStart: Color(0xFFEFFDF8),
     gradEnd: Color(0xFFC6F3E4),
+    spriteAccent: Color(0xFF9C7A4C),
   );
 
   /// 청룡 (snake/dragon) - blue
@@ -88,6 +96,7 @@ class SpeciesTheme {
     glow: Color(0xFFA7C8EC),
     gradStart: Color(0xFFEEF5FD),
     gradEnd: Color(0xFFC8DEFA),
+    spriteAccent: Color(0xFFF2E3C2),
   );
 
   /// 진화 타입으로 테마 조회

@@ -334,6 +334,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             width: 270,
             height: 270,
             dotColor: theme.primary,
+            accentColor: theme.spriteAccent,
           ),
         ),
       );
@@ -342,6 +343,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       type: getPetImageTypeFromMood(pet.mood),
       duration: const Duration(milliseconds: 800),
       dotColor: theme.primary,
+      accentColor: theme.spriteAccent,
       evolutionImagePath: getEvolutionMoodImagePath(
             pet.evolutionType,
             pet.evolutionStage,

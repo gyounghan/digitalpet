@@ -2,9 +2,10 @@
 """assets/*.png -> 64x64 도트 좌표 데이터(Dart) 생성 스크립트.
 
 각 이미지를 투명 영역 기준으로 크롭 -> 정사각 패딩 -> 64x64 다운샘플한 뒤
-셀을 2계조로 분류한다:
-  - dark: 불투명 + 어두움 (아웃라인/눈 등) -> 진한 도트
-  - body: 불투명 + dark 아님 (몸통/밝은 부분) -> 테마색 도트
+셀을 3계조로 분류한다:
+  - dark:   불투명 + 어두움 (아웃라인/눈 등) -> 진한 도트
+  - accent: 불투명 + 매우 밝음 (배/부리 등 보조색 영역) -> 보조색 도트
+  - body:   그 외 불투명 -> 테마색 도트
 
 행별 GRID비트 비트마스크(List<int>)로 저장해 런타임에는 이미지 디코딩 없이
 CustomPainter로 도트만 찍는다 (다마고치 LCD 스타일).
@@ -28,6 +29,7 @@ from PIL import Image
 GRID = 64
 ALPHA_THRESHOLD = 0.5  # 셀 평균 알파가 이 값보다 크면 도트 on
 DARK_LUMINANCE = 0.45  # 이 값보다 어두우면 dark 도트
+ACCENT_LUMINANCE = 0.78  # 이 값보다 밝으면 accent(보조색) 도트
 HEX_WIDTH = GRID // 4  # 행 마스크 hex 자릿수 (64그리드 → 16자리)
 VALUES_PER_LINE = 8 if GRID <= 32 else 4
 ASSETS_DIR = "assets"
@@ -40,7 +42,7 @@ def luminance(r: int, g: int, b: int) -> float:
 
 
 def extract_sprite(path: str):
-    """이미지 하나를 (darkRows, bodyRows) 비트마스크 튜플로 변환.
+    """이미지 하나를 (darkRows, bodyRows, accentRows) 비트마스크 튜플로 변환.
 
     완전 투명 이미지는 None 반환.
     """
@@ -61,23 +63,29 @@ def extract_sprite(path: str):
 
     dark_rows = []
     body_rows = []
+    accent_rows = []
     for y in range(GRID):
         dark_mask = 0
         body_mask = 0
+        accent_mask = 0
         for x in range(GRID):
             r, g, b, a = pixels[x, y]
             if a / 255.0 <= ALPHA_THRESHOLD:
                 continue
-            if luminance(r, g, b) < DARK_LUMINANCE:
+            lum = luminance(r, g, b)
+            if lum < DARK_LUMINANCE:
                 dark_mask |= 1 << x
+            elif lum > ACCENT_LUMINANCE:
+                accent_mask |= 1 << x
             else:
                 body_mask |= 1 << x
         dark_rows.append(dark_mask)
         body_rows.append(body_mask)
+        accent_rows.append(accent_mask)
 
-    if not any(dark_rows) and not any(body_rows):
+    if not any(dark_rows) and not any(body_rows) and not any(accent_rows):
         return None
-    return dark_rows, body_rows
+    return dark_rows, body_rows, accent_rows
 
 
 def format_rows(rows) -> str:
@@ -105,8 +113,7 @@ def main() -> int:
         if result is None:
             skipped.append(key)
             continue
-        dark_rows, body_rows = result
-        entries.append((key, dark_rows, body_rows))
+        entries.append((key,) + result)
 
     os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)
     with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
@@ -116,7 +123,8 @@ def main() -> int:
             "//   python tool/generate_pixel_data.py\n"
             "//\n"
             "// assets/*.png 를 %dx%d 도트 그리드로 변환한 좌표 데이터.\n"
-            "// dark = 아웃라인(어두운 픽셀), body = 몸통(밝은 픽셀).\n"
+            "// dark = 아웃라인(어두운 픽셀), body = 몸통(중간 밝기),\n"
+            "// accent = 보조색(매우 밝은 픽셀 — 배/부리/불꽃 등).\n"
             "// 각 리스트는 행(y)별 비트마스크 — bit x가 1이면 (x, y)에 도트.\n"
             "\n"
             "/// 도트 스프라이트 한 장 — 이미지 디코딩 없이 좌표로만 렌더링\n"
@@ -127,26 +135,39 @@ def main() -> int:
             "  /// 어두운(아웃라인) 도트 — 행별 비트마스크\n"
             "  final List<int> dark;\n"
             "\n"
-            "  /// 밝은(몸통) 도트 — 행별 비트마스크\n"
+            "  /// 몸통 도트 — 행별 비트마스크 (테마색)\n"
             "  final List<int> body;\n"
+            "\n"
+            "  /// 보조색 도트 — 행별 비트마스크 (배/부리/등딱지 등,\n"
+            "  /// accentColor 미지정 시 body와 같은 색으로 렌더링)\n"
+            "  final List<int> accent;\n"
             "\n"
             "  const PixelSprite({\n"
             "    required this.size,\n"
             "    required this.dark,\n"
             "    required this.body,\n"
+            "    this.accent = const [],\n"
             "  });\n"
             "}\n"
             "\n"
             "/// 에셋 파일명(확장자 제외) -> 도트 스프라이트\n"
             "const Map<String, PixelSprite> petPixelSprites = {\n" % (GRID, GRID)
         )
-        for key, dark_rows, body_rows in entries:
+        for key, dark_rows, body_rows, accent_rows in entries:
             f.write(
                 "  '%s': PixelSprite(\n"
                 "    size: %d,\n"
                 "    dark: %s,\n"
                 "    body: %s,\n"
-                "  ),\n" % (key, GRID, format_rows(dark_rows), format_rows(body_rows))
+                "    accent: %s,\n"
+                "  ),\n"
+                % (
+                    key,
+                    GRID,
+                    format_rows(dark_rows),
+                    format_rows(body_rows),
+                    format_rows(accent_rows),
+                )
             )
         f.write("};\n")
 

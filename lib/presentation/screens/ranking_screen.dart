@@ -564,11 +564,13 @@ Widget _buildPetThumb(_RowEntry entry, double size) {
     return Icon(Icons.pets, size: size, color: DesignTokens.ink3);
   }
   // 각 엔트리의 종별 테마색 도트로 렌더링
+  final theme = SpeciesTheme.forType(entry.type);
   return PixelPetImage(
     assetPath: path,
     width: size,
     height: size,
-    dotColor: SpeciesTheme.forType(entry.type).primary,
+    dotColor: theme.primary,
+    accentColor: theme.spriteAccent,
     fallback: Icon(Icons.pets, size: size, color: DesignTokens.ink3),
   );
 }

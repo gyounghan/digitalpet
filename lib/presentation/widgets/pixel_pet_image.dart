@@ -23,9 +23,10 @@ PixelSprite? pixelSpriteForAsset(String assetPath) {
 /// 이미지를 디코딩하지 않고, 오프라인 생성된 좌표 데이터
 /// ([petPixelSprites])의 위치에 사각 도트만 찍어 펫을 표현한다.
 ///
-/// 2계조:
+/// 3계조:
 /// - dark 도트(아웃라인/눈): [darkColor]
 /// - body 도트(몸통): [dotColor] — 종별 테마색을 넣는 용도
+/// - accent 도트(배/부리/등딱지 등): [accentColor] — 미지정 시 [dotColor]
 ///
 /// 스프라이트 데이터가 없는 에셋이면 [fallback] 위젯을 표시한다.
 class PixelPetImage extends StatelessWidget {
@@ -39,6 +40,9 @@ class PixelPetImage extends StatelessWidget {
   /// 아웃라인 도트 색
   final Color darkColor;
 
+  /// 보조색 도트 색 (null이면 [dotColor]로 그려 기존 2계조와 동일)
+  final Color? accentColor;
+
   /// 스프라이트 데이터가 없을 때 표시할 위젯
   final Widget? fallback;
 
@@ -49,6 +53,7 @@ class PixelPetImage extends StatelessWidget {
     this.height,
     required this.dotColor,
     this.darkColor = const Color(0xFF33383F),
+    this.accentColor,
     this.fallback,
   });
 
@@ -68,6 +73,7 @@ class PixelPetImage extends StatelessWidget {
       height: height,
       dotColor: dotColor,
       darkColor: darkColor,
+      accentColor: accentColor,
     );
   }
 }
@@ -81,6 +87,7 @@ class PixelSpriteView extends StatelessWidget {
   final double? height;
   final Color dotColor;
   final Color darkColor;
+  final Color? accentColor;
 
   const PixelSpriteView({
     super.key,
@@ -89,6 +96,7 @@ class PixelSpriteView extends StatelessWidget {
     this.height,
     required this.dotColor,
     this.darkColor = const Color(0xFF33383F),
+    this.accentColor,
   });
 
   @override
@@ -103,6 +111,7 @@ class PixelSpriteView extends StatelessWidget {
             sprite: sprite,
             dotColor: dotColor,
             darkColor: darkColor,
+            accentColor: accentColor ?? dotColor,
           ),
         ),
       ),
@@ -115,6 +124,7 @@ class _PixelSpritePainter extends CustomPainter {
   final PixelSprite sprite;
   final Color dotColor;
   final Color darkColor;
+  final Color accentColor;
 
   /// 도트 사이 간격 비율 (도트 매트릭스 느낌)
   static const double gapRatio = 0.12;
@@ -123,6 +133,7 @@ class _PixelSpritePainter extends CustomPainter {
     required this.sprite,
     required this.dotColor,
     required this.darkColor,
+    required this.accentColor,
   });
 
   @override
@@ -134,27 +145,31 @@ class _PixelSpritePainter extends CustomPainter {
     // 색상별 Path로 모아 한 번에 그린다 (drawRect 반복보다 빠름)
     final bodyPath = Path();
     final darkPath = Path();
+    final accentPath = Path();
 
     for (var y = 0; y < n; y++) {
       final darkMask = sprite.dark[y];
       final bodyMask = sprite.body[y];
-      if (darkMask == 0 && bodyMask == 0) continue;
+      final accentMask = y < sprite.accent.length ? sprite.accent[y] : 0;
+      if (darkMask == 0 && bodyMask == 0 && accentMask == 0) continue;
       for (var x = 0; x < n; x++) {
         final bit = 1 << x;
         final isDark = (darkMask & bit) != 0;
         final isBody = (bodyMask & bit) != 0;
-        if (!isDark && !isBody) continue;
+        final isAccent = (accentMask & bit) != 0;
+        if (!isDark && !isBody && !isAccent) continue;
         final rect = Rect.fromLTWH(
           x * cell + inset,
           y * cell + inset,
           cell - inset * 2,
           cell - inset * 2,
         );
-        (isDark ? darkPath : bodyPath).addRect(rect);
+        (isDark ? darkPath : (isAccent ? accentPath : bodyPath)).addRect(rect);
       }
     }
 
     canvas.drawPath(bodyPath, Paint()..color = dotColor);
+    canvas.drawPath(accentPath, Paint()..color = accentColor);
     canvas.drawPath(darkPath, Paint()..color = darkColor);
   }
 
@@ -162,6 +177,7 @@ class _PixelSpritePainter extends CustomPainter {
   bool shouldRepaint(_PixelSpritePainter oldDelegate) {
     return oldDelegate.sprite != sprite ||
         oldDelegate.dotColor != dotColor ||
-        oldDelegate.darkColor != darkColor;
+        oldDelegate.darkColor != darkColor ||
+        oldDelegate.accentColor != accentColor;
   }
 }

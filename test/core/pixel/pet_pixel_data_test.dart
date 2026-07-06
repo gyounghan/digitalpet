@@ -25,12 +25,13 @@ void main() {
       expect(petPixelSprites, isNotEmpty);
     });
 
-    test('모든 스프라이트는 64x64 그리드', () {
+    test('모든 스프라이트는 64x64 그리드 (dark/body/accent)', () {
       for (final entry in petPixelSprites.entries) {
         final sprite = entry.value;
         expect(sprite.size, 64, reason: '${entry.key}: size');
         expect(sprite.dark.length, 64, reason: '${entry.key}: dark rows');
         expect(sprite.body.length, 64, reason: '${entry.key}: body rows');
+        expect(sprite.accent.length, 64, reason: '${entry.key}: accent rows');
       }
     });
 
@@ -38,11 +39,16 @@ void main() {
     // 켜진 행은 Dart에서 음수로 해석된다. 비트 연산(&, |)만 쓰므로 무해하며
     // 수치 범위 검사는 하지 않는다.
 
-    test('dark와 body 도트는 겹치지 않는다', () {
+    test('dark/body/accent 도트는 서로 겹치지 않는다', () {
       for (final entry in petPixelSprites.entries) {
-        for (var y = 0; y < entry.value.size; y++) {
-          expect(entry.value.dark[y] & entry.value.body[y], 0,
-              reason: '${entry.key}: row $y 겹침');
+        final s = entry.value;
+        for (var y = 0; y < s.size; y++) {
+          expect(s.dark[y] & s.body[y], 0,
+              reason: '${entry.key}: row $y dark∩body');
+          expect(s.dark[y] & s.accent[y], 0,
+              reason: '${entry.key}: row $y dark∩accent');
+          expect(s.body[y] & s.accent[y], 0,
+              reason: '${entry.key}: row $y body∩accent');
         }
       }
     });

@@ -22,25 +22,31 @@ def load_frames(species, motion):
     )
     motion_block = motion_match.group(1)
     sprites = re.findall(
-        r"dark: \[(.*?)\],\s*body: \[(.*?)\],", motion_block, re.S
+        r"dark: \[(.*?)\],\s*body: \[(.*?)\],\s*accent: \[(.*?)\],",
+        motion_block,
+        re.S,
     )
     result = []
-    for dark_src, body_src in sprites:
+    for dark_src, body_src, accent_src in sprites:
         dark = [int(x, 16) for x in re.findall(r"0x[0-9A-F]+", dark_src)]
         body = [int(x, 16) for x in re.findall(r"0x[0-9A-F]+", body_src)]
-        result.append((dark, body))
+        accent = [int(x, 16) for x in re.findall(r"0x[0-9A-F]+", accent_src)]
+        result.append((dark, body, accent))
     return result
 
 
-def render(dark, body):
+def render(dark, body, accent=None):
     n = len(dark)
-    # 32그리드는 가로 2배 폭으로(정사각 비율 보정), 64그리드는 1문자 폭으로
+    accent = accent or [0] * n
+    # 32그리드 이하는 가로 2배 폭으로(정사각 비율 보정)
     wide = n <= 32
     for y in range(n):
         line = ""
         for x in range(n):
             if dark[y] >> x & 1:
                 line += "@@" if wide else "@"
+            elif accent[y] >> x & 1:
+                line += "++" if wide else "+"
             elif body[y] >> x & 1:
                 line += ".." if wide else "."
             else:

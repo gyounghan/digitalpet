@@ -11,6 +11,7 @@ assets/{dragon,tiger,bird,turtle}1.png 원본 픽셀아트를 24x24 도트 아�
   - 이펙트 글리프 (Z, 반짝이, 화남, 땀, 속도선, 밥그릇)
 
 아트 문법: '.' 빈칸 / '#' 진한 도트(아웃라인·눈) / 'o' 몸통 도트(테마색)
+          / '+' 보조색 도트(배·부리·등딱지 등 — 원본 색에서 자동 태깅)
 모든 스프라이트는 왼쪽을 본다 → 공격 -x, 음식은 왼쪽 아래.
 
 사용법:
@@ -25,8 +26,23 @@ assets/{dragon,tiger,bird,turtle}1.png 원본 픽셀아트를 24x24 도트 아�
 import os
 import sys
 
+from PIL import Image
+
 GRID = 24
 OUTPUT_PATH = os.path.join("lib", "core", "pixel", "pet_motion_data.dart")
+
+# 아트를 덤프할 때 사용한 원본/크롭/배치 파라미터 — accent 자동 태깅에 재사용
+# (경로, 크롭 비율 (fx0,fy0,fx1,fy1) 또는 None, 리사이즈 (w,h), 그리드 y오프셋,
+#  밝음 임계값 또는 None, 갈색 중간톤을 '+'로 볼지)
+SPECIES_SRC = {
+    "dragon": ("assets/dragon1.png", (0.13, 0.15, 0.86, 0.95), (24, 20), 3,
+               0.75, False),
+    "tiger": ("assets/tiger1.png", None, (24, 21), 2, 0.80, False),
+    "bird": ("assets/bird1.png", (0.0, 0.0, 1.0, 0.95), (24, 20), 3,
+             0.68, False),
+    "turtle": ("assets/turtle1.png", (0.0, 0.0, 1.0, 0.93), (24, 20), 3,
+               None, True),
+}
 
 # ---------------------------------------------------------------------------
 # 아트 그리드 기본 연산 ('.'/'#'/'o' 문자 그리드, 24x24)
@@ -39,7 +55,9 @@ def validate(art, name):
     assert len(art) == GRID, "%s: %d행 (24행이어야 함)" % (name, len(art))
     for i, row in enumerate(art):
         assert len(row) == GRID, "%s row %d: %d칸" % (name, i, len(row))
-        assert set(row) <= {".", "#", "o"}, "%s row %d: 잘못된 문자" % (name, i)
+        assert set(row) <= {".", "#", "o", "+"}, (
+            "%s row %d: 잘못된 문자" % (name, i)
+        )
 
 
 def grid(art):
@@ -104,6 +122,55 @@ def top_margin(g):
 def lift_art(g, dy_up):
     """위로 이동하되 머리가 잘리지 않는 만큼만."""
     return shift_art(g, 0, -min(dy_up, top_margin(g)))
+
+
+def apply_accent(art, species):
+    """원본 PNG 색을 다시 샘플링해 'o'/'#' 셀 일부를 '+'(보조색)로 승격.
+
+    - 밝은 영역(크림 배·흰 몸·노란 부리): luminance > light 임계값인 'o'
+    - 갈색 중간톤(거북 등딱지): 0.18 <= luminance < 0.45인 '#'
+    아웃라인(아주 어두움)과 눈은 dark로 유지된다.
+    """
+    path, frac, (w, h), y_off, light, darkmid = SPECIES_SRC[species]
+    im = Image.open(path).convert("RGBA")
+    im = im.crop(im.getbbox())
+    if frac is not None:
+        width, height = im.size
+        im = im.crop((
+            int(width * frac[0]),
+            int(height * frac[1]),
+            int(width * frac[2]),
+            int(height * frac[3]),
+        ))
+        im = im.crop(im.getbbox() or (0, 0, im.width, im.height))
+    small = im.resize((w, h), Image.BOX)
+    px = small.load()
+
+    out = []
+    for y, row in enumerate(art):
+        sy = y - y_off
+        if not 0 <= sy < h:
+            out.append(row)
+            continue
+        new_row = []
+        for x, ch in enumerate(row):
+            if ch in (".",) or x >= w:
+                new_row.append(ch)
+                continue
+            r, g, b, a = px[x, sy]
+            if a / 255.0 <= 0.5:
+                new_row.append(ch)
+                continue
+            lum = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255.0
+            if ch == "o" and light is not None and lum > light:
+                new_row.append("+")
+            elif ch == "#" and darkmid and 0.18 <= lum < 0.45 and r > g:
+                # 갈색(붉은 계열) 중간톤만 — 어두운 초록 아웃라인은 제외
+                new_row.append("+")
+            else:
+                new_row.append(ch)
+        out.append("".join(new_row))
+    return out
 
 
 def squash_art(g, factor):
@@ -504,21 +571,26 @@ MOTIONS = {
 
 
 def art_to_masks(g, blink=False):
-    """아트 그리드 → (dark_rows, body_rows). blink면 몸통 도트 제거."""
+    """아트 그리드 → (dark, body, accent) 행 마스크. blink면 아웃라인만."""
     dark_rows = []
     body_rows = []
+    accent_rows = []
     for y in range(GRID):
         dark = 0
         body = 0
+        accent = 0
         for x in range(GRID):
             ch = g[y][x]
             if ch == "#":
                 dark |= 1 << x
             elif ch == "o" and not blink:
                 body |= 1 << x
+            elif ch == "+" and not blink:
+                accent |= 1 << x
         dark_rows.append(dark)
         body_rows.append(body)
-    return dark_rows, body_rows
+        accent_rows.append(accent)
+    return dark_rows, body_rows, accent_rows
 
 
 def format_rows(rows):
@@ -532,17 +604,19 @@ def format_rows(rows):
 def main() -> int:
     for name, meta in SPECIES_ART.items():
         validate(meta["body"], "%s.body" % name)
+        # 원본 PNG 색 재샘플링으로 보조색('+') 자동 태깅
+        meta["body"] = apply_accent(meta["body"], name)
 
     species_frames = {}
     for species in SPECIES_ART:
         motions = {}
         for motion_name, build in MOTIONS.items():
             frames = []
-            for f in build(species):
-                if isinstance(f, tuple) and f[0] == "blink":
-                    frames.append(art_to_masks(f[1], blink=True))
+            for built in build(species):
+                if isinstance(built, tuple) and built[0] == "blink":
+                    frames.append(art_to_masks(built[1], blink=True))
                 else:
-                    frames.append(art_to_masks(f))
+                    frames.append(art_to_masks(built))
             motions[motion_name] = frames
         species_frames[species] = motions
 
@@ -566,13 +640,20 @@ def main() -> int:
             f.write("  '%s': {\n" % species)
             for motion_name, frames in motions.items():
                 f.write("    '%s': [\n" % motion_name)
-                for dark, body in frames:
+                for dark, body, accent in frames:
                     f.write(
                         "      PixelSprite(\n"
                         "        size: %d,\n"
                         "        dark: %s,\n"
                         "        body: %s,\n"
-                        "      ),\n" % (GRID, format_rows(dark), format_rows(body))
+                        "        accent: %s,\n"
+                        "      ),\n"
+                        % (
+                            GRID,
+                            format_rows(dark),
+                            format_rows(body),
+                            format_rows(accent),
+                        )
                     )
                 f.write("    ],\n")
             f.write("  },\n")
