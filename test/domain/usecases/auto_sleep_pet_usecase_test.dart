@@ -87,13 +87,13 @@ Pet _createPet({
 
 void main() {
   group('AutoSleepPetUseCase', () {
-    test('30분 미만 idle → 변경 없음', () async {
+    test('10분 미만 idle → 변경 없음', () async {
       final petRepo = FakePetRepository();
       final phoneRepo = FakePhoneUsageRepository(
         PhoneUsage(
-          // 10분 전
+          // 5분 전 (임계 10분 미만)
           lastForegroundTime:
-              DateTime.now().millisecondsSinceEpoch - 10 * 60 * 1000,
+              DateTime.now().millisecondsSinceEpoch - 5 * 60 * 1000,
           totalIdleHours: 0,
         ),
       );
@@ -110,9 +110,9 @@ void main() {
       expect(result.todaySleepHours, 0);
     });
 
-    test('정확히 30분 idle → stamina +3, sleepMinutes +30, sleepHours 0', () async {
+    test('31분 idle → 10분 단위 3회: stamina +3, sleepMinutes +30', () async {
       final petRepo = FakePetRepository();
-      // 31분 전(slack 1분)으로 설정해 정확한 30분 단위 처리 검증
+      // 31분 전(slack 1분)으로 설정 → 10분 단위 3회 credit
       final foregroundMillis =
           DateTime.now().millisecondsSinceEpoch - 31 * 60 * 1000;
       final phoneRepo = FakePhoneUsageRepository(
@@ -211,7 +211,7 @@ void main() {
 
       await useCase('test-pet', isInBackground: true);
 
-      // 65분 idle → increments=2 → creditedMinutes=60 → 60분 전진
+      // 65분 idle → increments=6 → creditedMinutes=60 → 60분 전진
       final expectedAdvanced = initial + 60 * 60 * 1000;
       expect(phoneRepo.current.lastForegroundTime, expectedAdvanced);
     });

@@ -90,18 +90,18 @@ void main() {
       );
       final result = await useCase('p', isInBackground: true);
 
-      // 480분 / 30 = 16 increments × 3 = 48 stamina (배율 1.0 가정)
-      expect(result.stamina, greaterThan(20));
+      // 480분 / 10 = 48 increments × 1 = 48 stamina (배율 1.0 가정)
+      expect(result.stamina, 68);
       // todaySleepMinutes 누적
       expect(result.todaySleepMinutes, 480);
       expect(result.todaySleepHours, 8);
     });
 
-    test('29분 미사용 → 임계치 미만이라 변동 없음', () async {
+    test('9분 미사용 → 임계치(10분) 미만이라 변동 없음', () async {
       final pet = _pet(stamina: 50);
       final petRepo = _FakePetRepository()..setPet(pet);
       final lastForeground = DateTime.now()
-          .subtract(const Duration(minutes: 29))
+          .subtract(const Duration(minutes: 9))
           .millisecondsSinceEpoch;
       final phoneRepo = _FakePhoneUsageRepository(PhoneUsage(
         lastForegroundTime: lastForeground,
@@ -114,17 +114,39 @@ void main() {
       );
       final result = await useCase('p', isInBackground: true);
 
-      expect(result.stamina, 50, reason: '30분 미만이면 변동 없음');
+      expect(result.stamina, 50, reason: '10분 미만이면 변동 없음');
       expect(result.todaySleepMinutes, 0);
+    });
+
+    test('25분 미사용 → 10분 단위 2회 credit (기존 30분 임계에서는 0이던 구간)',
+        () async {
+      final pet = _pet(stamina: 50);
+      final petRepo = _FakePetRepository()..setPet(pet);
+      final lastForeground = DateTime.now()
+          .subtract(const Duration(minutes: 25))
+          .millisecondsSinceEpoch;
+      final phoneRepo = _FakePhoneUsageRepository(PhoneUsage(
+        lastForegroundTime: lastForeground,
+        totalIdleHours: 0,
+      ));
+
+      final useCase = AutoSleepPetUseCase(
+        petRepository: petRepo,
+        phoneUsageRepository: phoneRepo,
+      );
+      final result = await useCase('p', isInBackground: true);
+
+      expect(result.stamina, 52);
+      expect(result.todaySleepMinutes, 20);
     });
 
     test('credit 후 lastForegroundTime이 정확히 creditedMinutes 만큼 앞당겨짐',
         () async {
-      // 90분 미사용 → 60분만 credit, 30분 잔여
+      // 95분 미사용 → 90분만 credit, 5분 잔여
       final pet = _pet(stamina: 50);
       final petRepo = _FakePetRepository()..setPet(pet);
       final lastForeground = DateTime.now()
-          .subtract(const Duration(minutes: 90))
+          .subtract(const Duration(minutes: 95))
           .millisecondsSinceEpoch;
       final phoneRepo = _FakePhoneUsageRepository(PhoneUsage(
         lastForegroundTime: lastForeground,
@@ -137,18 +159,18 @@ void main() {
       );
       await useCase('p', isInBackground: true);
 
-      // 새 lastForegroundTime = 원래 + 60분
+      // 새 lastForegroundTime = 원래 + 90분
       final expected =
-          lastForeground + 60 * 60 * 1000;
+          lastForeground + 90 * 60 * 1000;
       expect(phoneRepo.current.lastForegroundTime, expected);
     });
 
     test('연속 호출 시 잔여 분이 보존되어 누적', () async {
       final pet = _pet(stamina: 50);
       final petRepo = _FakePetRepository()..setPet(pet);
-      // 110분 미사용
+      // 105분 미사용
       final lastForeground = DateTime.now()
-          .subtract(const Duration(minutes: 110))
+          .subtract(const Duration(minutes: 105))
           .millisecondsSinceEpoch;
       final phoneRepo = _FakePhoneUsageRepository(PhoneUsage(
         lastForegroundTime: lastForeground,
@@ -159,13 +181,13 @@ void main() {
         petRepository: petRepo,
         phoneUsageRepository: phoneRepo,
       );
-      // 1차 호출 → 90분 credit, 잔여 20분
+      // 1차 호출 → 100분 credit, 잔여 5분
       final first = await useCase('p', isInBackground: true);
-      expect(first.todaySleepMinutes, 90);
+      expect(first.todaySleepMinutes, 100);
 
-      // 즉시 한 번 더 호출 → 잔여 20분이라 임계치 미달로 변동 없음
+      // 즉시 한 번 더 호출 → 잔여 5분이라 임계치 미달로 변동 없음
       final second = await useCase('p', isInBackground: true);
-      expect(second.todaySleepMinutes, 90, reason: '잔여 20분은 임계치 미만');
+      expect(second.todaySleepMinutes, 100, reason: '잔여 5분은 임계치 미만');
     });
   });
 }

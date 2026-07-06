@@ -7,8 +7,11 @@ import '../constants/species_growth_config.dart';
 /// 폰 미사용 시간에 따라 자동으로 stamina와 수면 시간을 누적시키는 비즈니스 로직
 ///
 /// 규칙:
-/// - 30분당 stamina +3 (최대 100)
-/// - 미사용 시간이 30분 이상일 때만 적용
+/// - 10분당 stamina +1 (최대 100) — 총 회복률은 기존 30분당 +3과 동일
+/// - 미사용 시간이 10분 이상일 때만 적용
+///   (30분이었을 때는 앱을 자주 여는 사용자가 임계에 영영 못 미쳐
+///    수면이 0에 머무는 문제가 있었다. 앱을 열 때마다 anchor가 리셋되므로
+///    임계값 = "앱을 안 여는 최소 연속 시간"으로 작동한다.)
 /// - todaySleepMinutes에 분 단위로 정확히 누적
 /// - todaySleepHours = todaySleepMinutes ~/ 60 으로 파생 계산
 ///
@@ -16,16 +19,18 @@ import '../constants/species_growth_config.dart';
 /// - 시간 기준은 phoneUsage.lastForegroundTime만 사용 (pet.lastUpdated는 다른 작업이
 ///   덮어쓰므로 sleep 추적에 부적합)
 /// - 크레딧 후 lastForegroundTime을 크레딧된 분만큼 앞으로 이동시켜
-///   다음 호출에서 중복 계산을 방지하면서 30분 미만 잔여 시간은 보존
+///   다음 호출에서 중복 계산을 방지하면서 10분 미만 잔여 시간은 보존
+///   (포그라운드 전환 시 onForeground()가 anchor를 덮어써 잔여분이 버려질 수
+///    있으나, 10분 단위라 손실 상한도 10분 미만으로 작다)
 class AutoSleepPetUseCase {
   final PetRepository petRepository;
   final PhoneUsageRepository phoneUsageRepository;
 
-  /// 30분당 stamina 증가량
-  static const int staminaIncreasePer30Minutes = 3;
+  /// 크레딧 단위당 stamina 증가량
+  static const int staminaIncreasePerUnit = 1;
 
-  /// 미사용으로 간주할 최소 시간 (분)
-  static const int idleThresholdMinutes = 30;
+  /// 크레딧 단위이자 미사용으로 간주할 최소 시간 (분)
+  static const int idleThresholdMinutes = 10;
 
   AutoSleepPetUseCase({
     required this.petRepository,
@@ -56,16 +61,17 @@ class AutoSleepPetUseCase {
     final effectiveIdleMillis = currentTimeMillis - phoneUsage.lastForegroundTime;
     final effectiveIdleMinutes = effectiveIdleMillis ~/ (1000 * 60);
 
-    // 5. 30분 미만이면 업데이트하지 않음
+    // 5. 임계(10분) 미만이면 업데이트하지 않음
     if (effectiveIdleMinutes < idleThresholdMinutes) {
       return pet;
     }
 
-    // 6. 30분 단위로 stamina 증가 계산
+    // 6. 10분 단위로 stamina 증가 계산
     final increments = effectiveIdleMinutes ~/ idleThresholdMinutes;
     final creditedMinutes = increments * idleThresholdMinutes;
     final m = SpeciesGrowthConfig.getGainMultipliers(pet.evolutionType);
-    final staminaIncrease = (increments * staminaIncreasePer30Minutes * m.stamina).round();
+    final staminaIncrease =
+        (increments * staminaIncreasePerUnit * m.stamina).round();
     final newStamina = (pet.stamina + staminaIncrease).clamp(0, 100);
 
     // 7. 분 단위 정확 누적 → 시간 파생
@@ -89,7 +95,7 @@ class AutoSleepPetUseCase {
     await petRepository.updatePet(updatedPet);
 
     // 11. phoneUsage.lastForegroundTime을 creditedMinutes만큼 앞으로 이동
-    //     (다음 호출에서 중복 계산 방지, 30분 미만 잔여 시간은 보존)
+    //     (다음 호출에서 중복 계산 방지, 10분 미만 잔여 시간은 보존)
     final advancedForegroundTime =
         phoneUsage.lastForegroundTime + creditedMinutes * 60 * 1000;
     final updatedPhoneUsage = phoneUsage.copyWith(

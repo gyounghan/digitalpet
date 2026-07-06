@@ -5,12 +5,12 @@ import '../repositories/phone_usage_repository.dart';
 /// 
 /// 미사용 기준:
 /// - 앱이 백그라운드에 있고
-/// - 30분 이상 경과했을 때
+/// - 10분 이상 경과했을 때 (AutoSleepPetUseCase의 수면 임계값과 동일)
 class DetectPhoneIdleUseCase {
   final PhoneUsageRepository phoneUsageRepository;
-  
+
   /// 미사용으로 간주할 최소 시간 (분)
-  static const int idleThresholdMinutes = 30;
+  static const int idleThresholdMinutes = 10;
   
   DetectPhoneIdleUseCase(this.phoneUsageRepository);
   
