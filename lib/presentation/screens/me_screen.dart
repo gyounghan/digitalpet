@@ -9,6 +9,7 @@ import '../../core/utils/pet_image_helper.dart';
 import '../../data/services/ad_service.dart';
 import '../../domain/entities/pet.dart';
 import '../../domain/entities/evolution_type.dart';
+import 'debug_pixel_gallery_screen.dart';
 import 'home_screen.dart';
 
 /// 도감 화면 — 펫 프로필 + 전투 스탯 + 진화율 + 누적 통계 + 진화 트리
@@ -202,6 +203,8 @@ class _MeScreenState extends ConsumerState<MeScreen> {
                 ),
               const SizedBox(height: 18),
               _buildRestartButton(),
+              const SizedBox(height: 8),
+              _buildDebugGalleryButton(),
             ],
           ),
         ),
@@ -235,6 +238,25 @@ class _MeScreenState extends ConsumerState<MeScreen> {
             borderRadius: BorderRadius.circular(14),
           ),
         ),
+      ),
+    );
+  }
+
+  /// [디버그 전용] 픽셀 갤러리 진입 버튼 — 릴리스 전 화면과 함께 삭제
+  Widget _buildDebugGalleryButton() {
+    return SizedBox(
+      width: double.infinity,
+      child: TextButton.icon(
+        onPressed: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => const DebugPixelGalleryScreen(),
+            ),
+          );
+        },
+        icon: const Icon(Icons.grid_on, size: 16),
+        label: const Text('픽셀 갤러리 (디버그)'),
+        style: TextButton.styleFrom(foregroundColor: DesignTokens.ink3),
       ),
     );
   }
