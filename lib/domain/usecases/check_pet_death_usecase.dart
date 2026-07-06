@@ -2,12 +2,13 @@ import '../entities/pet.dart';
 import '../repositories/pet_repository.dart';
 
 /// 펫 사망 조건 체크 유스케이스
-/// hunger, happiness, stamina 모두 0인 상태가 3일 이상 지속되면 사망 처리
+/// hunger, happiness, stamina 모두 0인 상태가 [deathThresholdDays]일 이상
+/// 지속되면 사망 처리
 ///
 /// 동작:
 /// 1. 이미 사망한 펫은 그대로 반환
 /// 2. 모든 수치가 0이면 zeroStatStartDate 기록 시작
-/// 3. 3일 경과 시 사망 처리
+/// 3. 임계 일수(5일) 경과 시 사망 처리
 /// 4. 수치가 하나라도 0이 아니면 zeroStatStartDate 초기화
 class CheckPetDeathUseCase {
   final PetRepository petRepository;
@@ -33,7 +34,7 @@ class CheckPetDeathUseCase {
         pet = pet.copyWith(zeroStatStartDate: pet.todayDateString);
         await petRepository.updatePet(pet);
       } else if (pet.shouldDie) {
-        // 3일 경과 - 사망 처리
+        // 임계 일수(5일) 경과 - 사망 처리
         pet = pet.die();
         await petRepository.updatePet(pet);
       }

@@ -10,9 +10,20 @@
 
 ## 2) 감소 주기 및 감소량
 
-- 감소 주기: **30분**
-- 감소량: **각 수치당 1**
-- 즉, 30분 경과마다 `hunger/happiness/stamina` 각각 `-1`
+(`UpdatePetStateUseCase` 기준 — 코드가 원본, 이 표는 요약)
+
+| 수치 | 감소 간격 | 낮(06~22시) | 밤(22~06시) |
+|------|----------|-------------|-------------|
+| `hunger` (포만감) | 60분 | -2 | -1 (절반, 최소 1) |
+| `happiness` (운동) | 60분 | -1 | 감소 정지 |
+| `stamina` (수면) | 40분 | -1 | 감소 정지 |
+
+추가 배율:
+
+- **위기 가속**: 세 수치 중 2개 이상이 10 이하면 ×2.0, 20 이하면 ×1.5
+- **종별 감소 배율**: `SpeciesGrowthConfig`의 decay 배율이 곱해짐
+  (진화 전 `evolutionType == null`이면 전부 ×1.0)
+- 최소 갱신 간격: 10분 (그 미만 경과 시 계산 생략)
 
 ## 3) 계산 기준 시간
 
@@ -27,15 +38,14 @@
 
 ## 4) 감소 계산 방식
 
-1. `elapsedMinutes = now - lastStatusDecayUpdated`(분 단위)
-2. `elapsedIntervals = elapsedMinutes ~/ 30`
-3. `elapsedIntervals < 1`이면 감소 없음
-4. 감소 적용:
-   - `hunger -= elapsedIntervals`
-   - `happiness -= elapsedIntervals`
-   - `stamina -= elapsedIntervals`
-5. 각 값은 `0..100` 범위로 clamp
-6. 감소가 실제로 적용되면 `lastStatusDecayUpdated = now`로 갱신
+1. `elapsedMinutes = now - lastStatusDecayUpdated`(분 단위), 10분 미만이면 생략
+2. 경과 구간을 낮/밤(22~06시)으로 분 단위 분리 (`calculateDaytimeMinutes`)
+3. 수치별 감소:
+   - `hunger -= (낮분 ~/ 60) * 2 + (밤분 ~/ 60) * 1` (밤은 절반, 최소 1)
+   - `happiness -= 낮분 ~/ 60` (밤 정지)
+   - `stamina -= 낮분 ~/ 40` (밤 정지)
+4. 위기 가속·종별 감소 배율을 곱한 뒤 `0..100` 범위로 clamp
+5. 감소가 실제로 적용되면 `lastStatusDecayUpdated = now`로 갱신
 
 ## 5) 다른 액션과의 관계
 
