@@ -15,9 +15,10 @@ def load_frames(species, motion):
     )
     block = species_match.group(1)
     # 주의: 행 비트마스크 리스트도 "\n    ]," 로 닫히므로 (같은 들여쓰기),
-    # 모션 리스트의 끝은 뒤에 다음 모션 키(')나 종 블록 닫힘(})이 오는 지점.
+    # 모션 리스트의 끝은 뒤에 다음 모션 키(')가 오거나 종 블록이 끝나는 지점.
+    # (마지막 모션은 species 블록 그룹의 끝(\Z)에서 닫힌다)
     motion_match = re.search(
-        r"'%s': \[(.*?)\n    \],\n(?=    '|  \})" % motion, block, re.S
+        r"'%s': \[(.*?)\n    \],?\n?(?=    '|\Z)" % motion, block, re.S
     )
     motion_block = motion_match.group(1)
     sprites = re.findall(
