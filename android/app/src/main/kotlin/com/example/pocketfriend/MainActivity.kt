@@ -1,11 +1,14 @@
 package com.example.pocketfriend
 
+import android.Manifest
 import android.content.Context
 import android.content.SharedPreferences
+import android.content.pm.PackageManager
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -24,6 +27,10 @@ import io.flutter.plugin.common.MethodChannel
  *   있어 단발성 read는 자주 -1로 끝난다.
  * - 대신 onCreate에서 항상 리스너를 등록해두고 최신값을 캐시(SharedPreferences)
  *   에 유지한다. getStepCount 호출 시 캐시값이 있으면 즉시 반환.
+ * - Android 10(Q)+에서는 ACTIVITY_RECOGNITION 런타임 권한이 없으면 등록된
+ *   리스너에 이벤트가 오지 않는다. 권한 요청은 Flutter 쪽에서 onCreate 이후에
+ *   일어나므로, onResume마다 권한을 재확인해 아직 미등록이면 등록한다
+ *   (권한을 나중에 허용한 세션에서도 재시작 없이 걸음이 잡히도록).
  */
 class MainActivity : FlutterActivity(), SensorEventListener {
 
@@ -39,6 +46,7 @@ class MainActivity : FlutterActivity(), SensorEventListener {
     private var sensorManager: SensorManager? = null
     private var stepSensor: Sensor? = null
     private var latestSteps: Long = -1L
+    private var isListenerRegistered = false
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -68,21 +76,56 @@ class MainActivity : FlutterActivity(), SensorEventListener {
             return
         }
 
-        // 앱이 살아있는 동안 지속적으로 리스너 등록 → 캐시 유지
-        sensorManager?.registerListener(
-            this,
-            stepSensor,
-            SensorManager.SENSOR_DELAY_NORMAL,
-        )
-
         // 마지막 캐시값 복원
         val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         latestSteps = prefs.getLong(KEY_LATEST_STEPS, -1L)
+
+        // 권한이 이미 있으면 즉시 등록, 없으면 onResume에서 재시도
+        registerStepListenerIfPossible()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Flutter 쪽 권한 요청 다이얼로그가 닫히면 onResume이 호출되므로
+        // 권한 허용 직후 같은 세션에서 리스너가 살아난다
+        registerStepListenerIfPossible()
     }
 
     override fun onDestroy() {
         sensorManager?.unregisterListener(this)
+        isListenerRegistered = false
         super.onDestroy()
+    }
+
+    /** Android 10+ 걸음 센서 필수 권한 보유 여부 */
+    private fun hasActivityRecognitionPermission(): Boolean =
+        Build.VERSION.SDK_INT < Build.VERSION_CODES.Q ||
+            checkSelfPermission(Manifest.permission.ACTIVITY_RECOGNITION) ==
+            PackageManager.PERMISSION_GRANTED
+
+    /**
+     * 권한이 있고 아직 미등록이면 걸음 센서 리스너 등록
+     *
+     * 권한 없이 등록된 리스너는 이벤트를 받지 못하므로 반드시 권한 확인 후
+     * 등록한다. onCreate와 onResume 양쪽에서 호출해도 중복 등록되지 않는다.
+     */
+    private fun registerStepListenerIfPossible() {
+        if (isListenerRegistered) return
+        val manager = sensorManager ?: return
+        val sensor = stepSensor ?: return
+
+        if (!hasActivityRecognitionPermission()) {
+            Log.w(TAG, "ACTIVITY_RECOGNITION 권한 없음 → 리스너 등록 보류")
+            return
+        }
+
+        manager.registerListener(
+            this,
+            sensor,
+            SensorManager.SENSOR_DELAY_NORMAL,
+        )
+        isListenerRegistered = true
+        Log.d(TAG, "걸음 센서 리스너 등록 완료")
     }
 
     override fun onSensorChanged(event: SensorEvent?) {
@@ -120,6 +163,13 @@ class MainActivity : FlutterActivity(), SensorEventListener {
         // 1) 이미 받아둔 값이 있으면 즉시 반환
         if (latestSteps >= 0) {
             result.success(latestSteps)
+            return
+        }
+
+        // 권한이 없으면 일회성 리스너도 이벤트를 못 받으므로 대기 없이 캐시 반환
+        if (!hasActivityRecognitionPermission()) {
+            Log.w(TAG, "ACTIVITY_RECOGNITION 권한 없음 → 영속 캐시 반환")
+            result.success(loadCachedSteps())
             return
         }
 
