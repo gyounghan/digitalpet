@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Android 내장 걸음수 센서(TYPE_STEP_COUNTER) 직접 읽기
 ///
@@ -10,11 +11,21 @@ import 'package:hive_flutter/hive_flutter.dart';
 ///
 /// 기준값은 Hive에 저장하여 앱 재시작 후에도 유지된다.
 /// 재부팅 감지: 현재 누적값이 기준값보다 작으면 재부팅으로 판단, 기준값 초기화.
+///
+/// 백그라운드 폴백: MethodChannel은 MainActivity에서만 등록되므로
+/// WorkManager 백그라운드 isolate에서는 사용할 수 없다. 대신 네이티브
+/// (센서 이벤트 + 15분 주기 StepCacheWorker)가 SharedPreferences에 캐시해 둔
+/// 누적값([_prefsKeyCumulative])을 읽는다. 누적값은 단조 증가하므로
+/// 캐시가 다소 오래됐어도 과대 계산 없이 안전하다 (다음 동기화에서 따라잡음).
 class StepSensorDatasource {
   static const _channel = MethodChannel('com.example.pocketfriend/step_counter');
   static const _boxName = 'step_sensor';
   static const _keyBaseline = 'baseline_steps';
   static const _keyBaselineDate = 'baseline_date';
+
+  /// 네이티브 StepCacheStore가 기록하는 누적 걸음수 캐시 키
+  /// (Kotlin 쪽 'flutter.step_sensor_cumulative'와 접두어 제외 동일해야 함)
+  static const _prefsKeyCumulative = 'step_sensor_cumulative';
 
   Box? _box;
 
@@ -89,15 +100,38 @@ class StepSensorDatasource {
     }
   }
 
-  /// 네이티브 채널에서 현재 누적 걸음수 읽기
-  /// Kotlin에서 Long 타입으로 반환되므로 num으로 받아 int 변환
+  /// 현재 누적 걸음수 읽기 — 채널 우선, 실패 시 네이티브 캐시 폴백
+  ///
+  /// 1) MethodChannel (포그라운드, MainActivity 살아있을 때)
+  /// 2) SharedPreferences 캐시 (백그라운드 isolate — MissingPluginException,
+  ///    또는 채널이 -1을 반환한 경우)
   Future<int> _getCumulativeSteps() async {
     try {
       final result = await _channel.invokeMethod<num>('getStepCount');
-      return result?.toInt() ?? -1;
+      final steps = result?.toInt() ?? -1;
+      if (steps >= 0) return steps;
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('StepSensorDatasource._getCumulativeSteps failed: $e');
+        debugPrint(
+          'StepSensorDatasource: 채널 실패, 캐시 폴백 시도: $e',
+        );
+      }
+    }
+    return _getCachedCumulativeSteps();
+  }
+
+  /// 네이티브가 SharedPreferences에 캐시해 둔 누적 걸음수 읽기
+  Future<int> _getCachedCumulativeSteps() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final cached = prefs.getInt(_prefsKeyCumulative) ?? -1;
+      if (kDebugMode) {
+        debugPrint('StepSensorDatasource: 캐시된 누적 걸음수=$cached');
+      }
+      return cached;
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('StepSensorDatasource._getCachedCumulativeSteps 실패: $e');
       }
       return -1;
     }

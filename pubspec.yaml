@@ -41,6 +41,9 @@ dependencies:
   # 로컬 저장소
   hive: ^2.2.3
   hive_flutter: ^1.1.0
+
+  # 네이티브(Kotlin)가 캐시한 걸음 센서 값을 백그라운드 isolate에서 읽기 위한 브리지
+  shared_preferences: ^2.3.0
   
   # 알림
   flutter_local_notifications: ^17.0.0

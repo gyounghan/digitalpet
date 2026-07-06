@@ -2,7 +2,6 @@ package com.example.pocketfriend
 
 import android.Manifest
 import android.content.Context
-import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.hardware.Sensor
 import android.hardware.SensorEvent
@@ -37,9 +36,6 @@ class MainActivity : FlutterActivity(), SensorEventListener {
     companion object {
         private const val CHANNEL = "com.example.pocketfriend/step_counter"
         private const val TAG = "StepCounter"
-        private const val PREFS_NAME = "step_sensor_cache"
-        private const val KEY_LATEST_STEPS = "latest_cumulative_steps"
-        private const val KEY_LATEST_TIME = "latest_step_time"
         private const val READ_TIMEOUT_MS = 4000L
     }
 
@@ -77,8 +73,7 @@ class MainActivity : FlutterActivity(), SensorEventListener {
         }
 
         // 마지막 캐시값 복원
-        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        latestSteps = prefs.getLong(KEY_LATEST_STEPS, -1L)
+        latestSteps = StepCacheStore.loadLatestSteps(this)
 
         // 권한이 이미 있으면 즉시 등록, 없으면 onResume에서 재시도
         registerStepListenerIfPossible()
@@ -126,17 +121,17 @@ class MainActivity : FlutterActivity(), SensorEventListener {
         )
         isListenerRegistered = true
         Log.d(TAG, "걸음 센서 리스너 등록 완료")
+
+        // 앱이 죽어 있어도 걸음 캐시가 갱신되도록 15분 주기 워커 등록
+        // (권한이 확인된 시점에만 스케줄)
+        StepCacheWorker.schedule(applicationContext)
     }
 
     override fun onSensorChanged(event: SensorEvent?) {
         val value = event?.values?.firstOrNull()?.toLong() ?: return
         latestSteps = value
-        // 캐시 영속화 — 앱 죽었다가 살아도 마지막 값을 즉시 사용 가능
-        getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .edit()
-            .putLong(KEY_LATEST_STEPS, value)
-            .putLong(KEY_LATEST_TIME, System.currentTimeMillis())
-            .apply()
+        // 캐시 영속화 — 앱 재시작 후 즉시 사용 + 백그라운드 isolate 폴백용
+        StepCacheStore.write(applicationContext, value)
     }
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
@@ -184,11 +179,7 @@ class MainActivity : FlutterActivity(), SensorEventListener {
                 latestSteps = steps
                 manager.unregisterListener(this)
                 if (steps >= 0) {
-                    getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-                        .edit()
-                        .putLong(KEY_LATEST_STEPS, steps)
-                        .putLong(KEY_LATEST_TIME, System.currentTimeMillis())
-                        .apply()
+                    StepCacheStore.write(applicationContext, steps)
                 }
                 result.success(steps)
             }
@@ -216,9 +207,5 @@ class MainActivity : FlutterActivity(), SensorEventListener {
         }, READ_TIMEOUT_MS)
     }
 
-    private fun loadCachedSteps(): Long {
-        val prefs: SharedPreferences =
-            getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        return prefs.getLong(KEY_LATEST_STEPS, -1L)
-    }
+    private fun loadCachedSteps(): Long = StepCacheStore.loadLatestSteps(this)
 }
