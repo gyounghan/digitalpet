@@ -188,28 +188,8 @@ void main() {
     });
   });
 
-  group('Pet.needsGoalPeriodReset', () {
-    test('goalStartDate로부터 7일 초과면 true', () {
-      final eightDaysAgo = DateTime.now().subtract(const Duration(days: 8));
-      final dateStr =
-          '${eightDaysAgo.year}-${eightDaysAgo.month.toString().padLeft(2, '0')}-${eightDaysAgo.day.toString().padLeft(2, '0')}';
-      final pet = _createPet(goalStartDate: dateStr);
-      expect(pet.needsGoalPeriodReset, true);
-    });
-
-    test('goalStartDate로부터 7일 이내면 false', () {
-      final sixDaysAgo = DateTime.now().subtract(const Duration(days: 6));
-      final dateStr =
-          '${sixDaysAgo.year}-${sixDaysAgo.month.toString().padLeft(2, '0')}-${sixDaysAgo.day.toString().padLeft(2, '0')}';
-      final pet = _createPet(goalStartDate: dateStr);
-      expect(pet.needsGoalPeriodReset, false);
-    });
-
-    test('goalStartDate 비어있으면 false', () {
-      final pet = _createPet(goalStartDate: '');
-      expect(pet.needsGoalPeriodReset, false);
-    });
-  });
+  // 참고: needsGoalPeriodReset(주간 리셋)은 폐기되어 항상 false를 반환한다.
+  // 관련 테스트는 파일 하단의 'Pet.needsGoalPeriodReset' 그룹 참조.
 
   group('Pet.goalDaysElapsed', () {
     test('오늘 시작이면 0일', () {
