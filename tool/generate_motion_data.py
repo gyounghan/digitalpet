@@ -228,6 +228,26 @@ def draw_mouth(g, mx, my, style):
         put(g, mx + 1, my, "#")
 
 
+# 브레스(내뿜기) — 입 앞(-x)으로 퍼지는 콘. 'o'는 테마색, '#'은 진한 끝점
+BREATH_PUFF = [
+    (-2, -1, "o"), (-3, 0, "o"), (-2, 1, "o"), (-2, 0, "#"),
+]
+BREATH_CONE = [
+    (-2, -1, "o"), (-3, -1, "o"), (-4, -2, "#"),
+    (-2, 0, "o"), (-3, 0, "o"), (-4, 0, "o"), (-5, 0, "#"),
+    (-2, 1, "o"), (-3, 1, "o"), (-4, 2, "#"),
+    (-3, -2, "o"), (-3, 2, "o"),
+]
+
+
+def draw_breath(g, species, dx, dots):
+    """현재 프레임의 입 위치(원본 입 + 몸 이동량) 기준으로 브레스를 찍음."""
+    mx, my = SPECIES_ART[species]["mouth"]
+    for ox, oy, ch in dots:
+        put(g, mx + dx + ox, my + oy, ch)
+    return g
+
+
 # ---------------------------------------------------------------------------
 # 종별 도트 아트 (24x24) — 원본 PNG를 옮긴 뒤 수작업 정리
 # meta: eyes(rect 목록), mouth, 원본 유지를 위해 다리는 하단 영역 분리로 표현
@@ -503,11 +523,17 @@ def motion_sleep(sp):
 
 
 def motion_attack(sp):
-    """부릅뜬 눈으로 뒤로 젖혀 준비 → 앞으로 기울며 돌진 → 입 벌려 풀 런지."""
-    windup = pose(sp, eye="angry", lean=1)
-    lunge = pose(sp, eye="angry", step="front", dx=-2, lean=-1)
-    strike = pose(sp, eye="angry", mouth="open", step="back", dx=-3, lean=-1)
-    return [windup, lunge, strike]
+    """뒤로 움츠려 모았다가 → 앞으로 기울며 브레스 분출 → 최대 분사.
+
+    브레스가 나갈 공간을 만들기 위해 몸을 오른쪽으로 물렸다가 내뿜는다.
+    브레스의 'o' 도트는 테마색으로 렌더링 → 종별 속성 브레스처럼 보임.
+    """
+    windup = pose(sp, eye="angry", mouth="none", dx=3, lean=1)
+    puff = pose(sp, eye="angry", mouth="open", step="front", dx=1, lean=-1)
+    puff = draw_breath(puff, sp, 1, BREATH_PUFF)
+    blast = pose(sp, eye="angry", mouth="open", step="back", dx=1, lean=-1)
+    blast = draw_breath(blast, sp, 1, BREATH_CONE)
+    return [windup, puff, blast]
 
 
 def motion_dodge(sp):
@@ -522,13 +548,18 @@ def motion_dodge(sp):
 
 
 def motion_hurt(sp):
-    """>< 눈으로 움찔 + 땀 → 피격 플래시 → 휘청."""
+    """>< 눈으로 움찔 → 뒤로 크게 휘청 → 비틀대며 복귀 (땀방울).
+
+    이전의 '아웃라인만 남는 피격 플래시'는 흰 배경에서 캐릭터가
+    하얗게 사라져 보여서 실제 휘청이는 포즈로 교체했다.
+    """
     f1 = pose(sp, eye="pain", mouth="open", lean=1)
     f1 = with_glyph(f1, GLYPH_SWEAT, 20, 4)
-    flash = pose(sp, eye="pain", dx=1)  # blink는 마스크 단계에서 처리
-    f3 = pose(sp, eye="pain", mouth="open", dx=-1)
+    f2 = pose(sp, eye="pain", mouth="open", dx=2, lean=2)
+    f2 = with_glyph(f2, GLYPH_SWEAT, 21, 3)
+    f3 = pose(sp, eye="pain", dx=-1)
     f3 = with_glyph(f3, GLYPH_SWEAT, 21, 7)
-    return [f1, ("blink", flash), f3]
+    return [f1, f2, f3]
 
 
 def motion_angry(sp):
@@ -570,8 +601,8 @@ MOTIONS = {
 # ---------------------------------------------------------------------------
 
 
-def art_to_masks(g, blink=False):
-    """아트 그리드 → (dark, body, accent) 행 마스크. blink면 아웃라인만."""
+def art_to_masks(g):
+    """아트 그리드 → (dark, body, accent) 행 마스크."""
     dark_rows = []
     body_rows = []
     accent_rows = []
@@ -583,9 +614,9 @@ def art_to_masks(g, blink=False):
             ch = g[y][x]
             if ch == "#":
                 dark |= 1 << x
-            elif ch == "o" and not blink:
+            elif ch == "o":
                 body |= 1 << x
-            elif ch == "+" and not blink:
+            elif ch == "+":
                 accent |= 1 << x
         dark_rows.append(dark)
         body_rows.append(body)
@@ -611,12 +642,7 @@ def main() -> int:
     for species in SPECIES_ART:
         motions = {}
         for motion_name, build in MOTIONS.items():
-            frames = []
-            for built in build(species):
-                if isinstance(built, tuple) and built[0] == "blink":
-                    frames.append(art_to_masks(built[1], blink=True))
-                else:
-                    frames.append(art_to_masks(built))
+            frames = [art_to_masks(built) for built in build(species)]
             motions[motion_name] = frames
         species_frames[species] = motions
 
