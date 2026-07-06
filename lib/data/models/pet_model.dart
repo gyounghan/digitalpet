@@ -221,6 +221,10 @@ class PetModel extends Pet {
   @override
   final int totalSetsRewarded;
 
+  @HiveField(52)
+  @override
+  final int todaySleepCount;
+
   PetModel({
     required this.id,
     this.name = '펫',
@@ -274,6 +278,7 @@ class PetModel extends Pet {
     this.lastActivitySyncTime = 0,
     this.todaySetExpClaimed = 0,
     this.totalSetsRewarded = 0,
+    this.todaySleepCount = 0,
   }) : super(
          id: id,
          name: name,
@@ -327,6 +332,7 @@ class PetModel extends Pet {
          lastActivitySyncTime: lastActivitySyncTime,
          todaySetExpClaimed: todaySetExpClaimed,
          totalSetsRewarded: totalSetsRewarded,
+         todaySleepCount: todaySleepCount,
        );
 
   /// JSON에서 PetModel 생성
@@ -394,6 +400,7 @@ class PetModel extends Pet {
       lastActivitySyncTime: json['lastActivitySyncTime'] as int? ?? 0,
       todaySetExpClaimed: json['todaySetExpClaimed'] as int? ?? 0,
       totalSetsRewarded: json['totalSetsRewarded'] as int? ?? 0,
+      todaySleepCount: json['todaySleepCount'] as int? ?? 0,
     );
   }
 
@@ -454,6 +461,7 @@ class PetModel extends Pet {
       'lastActivitySyncTime': lastActivitySyncTime,
       'todaySetExpClaimed': todaySetExpClaimed,
       'totalSetsRewarded': totalSetsRewarded,
+      'todaySleepCount': todaySleepCount,
     };
   }
 
@@ -516,6 +524,7 @@ class PetModel extends Pet {
       lastActivitySyncTime: pet.lastActivitySyncTime,
       todaySetExpClaimed: pet.todaySetExpClaimed,
       totalSetsRewarded: pet.totalSetsRewarded,
+      todaySleepCount: pet.todaySleepCount,
     );
   }
 
@@ -576,6 +585,7 @@ class PetModel extends Pet {
       lastActivitySyncTime: lastActivitySyncTime,
       todaySetExpClaimed: todaySetExpClaimed,
       totalSetsRewarded: totalSetsRewarded,
+      todaySleepCount: todaySleepCount,
     );
   }
 
@@ -636,6 +646,7 @@ class PetModel extends Pet {
     int? lastActivitySyncTime,
     int? todaySetExpClaimed,
     int? totalSetsRewarded,
+    int? todaySleepCount,
   }) {
     return PetModel(
       id: id ?? this.id,
@@ -696,6 +707,7 @@ class PetModel extends Pet {
           lastActivitySyncTime ?? this.lastActivitySyncTime,
       todaySetExpClaimed: todaySetExpClaimed ?? this.todaySetExpClaimed,
       totalSetsRewarded: totalSetsRewarded ?? this.totalSetsRewarded,
+      todaySleepCount: todaySleepCount ?? this.todaySleepCount,
     );
   }
 }

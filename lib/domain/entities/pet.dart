@@ -109,6 +109,10 @@ class Pet {
   /// hours로 환산할 때의 정밀도 손실을 막기 위해 별도 누적 저장.
   final int todaySleepMinutes;
 
+  /// 오늘 수동 재우기(Sleep 버튼) 사용 횟수
+  /// 일일 제한 추적 (자동 수면·대체 수면과 별개)
+  final int todaySleepCount;
+
   /// 오늘 대체 급식 사용 횟수
   /// 접근성 대체 액션(간편 급식) 일일 제한 추적
   final int todayAlternativeFeedCount;
@@ -271,6 +275,7 @@ class Pet {
     this.todayFedMealSlots = 0,
     this.todaySleepHours = 0,
     this.todaySleepMinutes = 0,
+    this.todaySleepCount = 0,
     this.todayAlternativeFeedCount = 0,
     this.todayAlternativeSleepCount = 0,
     this.todayAlternativeExerciseCount = 0,
@@ -328,6 +333,7 @@ class Pet {
     int? todayFedMealSlots,
     int? todaySleepHours,
     int? todaySleepMinutes,
+    int? todaySleepCount,
     int? todayAlternativeFeedCount,
     int? todayAlternativeSleepCount,
     int? todayAlternativeExerciseCount,
@@ -382,6 +388,7 @@ class Pet {
       todayFedMealSlots: todayFedMealSlots ?? this.todayFedMealSlots,
       todaySleepHours: todaySleepHours ?? this.todaySleepHours,
       todaySleepMinutes: todaySleepMinutes ?? this.todaySleepMinutes,
+      todaySleepCount: todaySleepCount ?? this.todaySleepCount,
       todayAlternativeFeedCount: todayAlternativeFeedCount ?? this.todayAlternativeFeedCount,
       todayAlternativeSleepCount: todayAlternativeSleepCount ?? this.todayAlternativeSleepCount,
       todayAlternativeExerciseCount: todayAlternativeExerciseCount ?? this.todayAlternativeExerciseCount,
@@ -550,6 +557,7 @@ class Pet {
   Pet resetDailyGoals() {
     return copyWith(
       todayFedMealSlots: 0,
+      todaySleepCount: 0,
       todayAlternativeFeedCount: 0,
       todayAlternativeSleepCount: 0,
       todayAlternativeExerciseCount: 0,
@@ -563,7 +571,8 @@ class Pet {
   /// 모든 수치가 0인지 확인
   bool get isAllStatsZero => hunger == 0 && happiness == 0 && stamina == 0;
 
-  /// 사망 조건 충족 여부 (모든 수치 0이 3일 이상 지속)
+  /// 사망 조건 충족 여부 (모든 수치 0이 5일 이상 지속)
+  /// CheckPetDeathUseCase.deathThresholdDays와 동일해야 한다
   bool get shouldDie {
     if (isDead) return false;
     if (!isAllStatsZero) return false;
@@ -621,6 +630,7 @@ class Pet {
       todayFedMealSlots: todayFedMealSlots,
       todaySleepHours: todaySleepHours,
       todaySleepMinutes: todaySleepMinutes,
+      todaySleepCount: todaySleepCount,
       todayAlternativeFeedCount: todayAlternativeFeedCount,
       todayAlternativeSleepCount: todayAlternativeSleepCount,
       todayAlternativeExerciseCount: todayAlternativeExerciseCount,
@@ -693,6 +703,7 @@ class Pet {
       todayFedMealSlots: todayFedMealSlots,
       todaySleepHours: todaySleepHours,
       todaySleepMinutes: todaySleepMinutes,
+      todaySleepCount: todaySleepCount,
       todayAlternativeFeedCount: todayAlternativeFeedCount,
       todayAlternativeSleepCount: todayAlternativeSleepCount,
       todayAlternativeExerciseCount: todayAlternativeExerciseCount,
@@ -749,6 +760,7 @@ class Pet {
       todayFedMealSlots: todayFedMealSlots,
       todaySleepHours: todaySleepHours,
       todaySleepMinutes: todaySleepMinutes,
+      todaySleepCount: todaySleepCount,
       todayAlternativeFeedCount: todayAlternativeFeedCount,
       todayAlternativeSleepCount: todayAlternativeSleepCount,
       todayAlternativeExerciseCount: todayAlternativeExerciseCount,

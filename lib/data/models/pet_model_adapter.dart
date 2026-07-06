@@ -88,6 +88,7 @@ class PetModelAdapter extends TypeAdapter<PetModel> {
       lastActivitySyncTime: fields[49] as int? ?? 0,
       todaySetExpClaimed: fields[50] as int? ?? 0,
       totalSetsRewarded: fields[51] as int? ?? 0,
+      todaySleepCount: fields[52] as int? ?? 0,
     );
   }
 
@@ -96,7 +97,7 @@ class PetModelAdapter extends TypeAdapter<PetModel> {
     // Hive에 데이터 쓰기
     // 필드 개수와 각 필드를 순서대로 저장
     writer
-      ..writeByte(52) // 필드 개수 (HiveField 0-51)
+      ..writeByte(53) // 필드 개수 (HiveField 0-52)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -200,7 +201,9 @@ class PetModelAdapter extends TypeAdapter<PetModel> {
       ..writeByte(50)
       ..write(obj.todaySetExpClaimed)
       ..writeByte(51)
-      ..write(obj.totalSetsRewarded);
+      ..write(obj.totalSetsRewarded)
+      ..writeByte(52)
+      ..write(obj.todaySleepCount);
   }
 
   @override
