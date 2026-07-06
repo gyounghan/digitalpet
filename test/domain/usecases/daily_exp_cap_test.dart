@@ -6,12 +6,14 @@ import 'package:pocketfriend/domain/repositories/pet_repository.dart';
 import 'package:pocketfriend/domain/usecases/apply_daily_goals_score_usecase.dart';
 import 'package:pocketfriend/domain/usecases/calculate_daily_goals_score_usecase.dart';
 
-/// 세트 클리어 EXP + EXP 곡선 + 현실적 목표 곡선 회귀 테스트.
+/// 일일목표 EXP(카테고리 독립 + 세트 보너스) + EXP 곡선 + 목표 곡선 회귀 테스트.
 ///
 /// 핵심 보증:
-///  1. 세트 = 포만감+수면+운동 "모두" 달성해야 1세트 (하나라도 빠지면 0 EXP)
-///  2. 오늘 N번째 세트마다 EXP 반감 (60→30→15→...)
-///  3. 세트 마일스톤(10세트 누적)마다 +50 보너스
+///  1. 카테고리 1개 달성만으로도 +20 EXP (한 카테고리만 꾸준히 해도 성장 가능)
+///  2. 세트(포만감+수면+운동 모두 달성)는 추가 보너스 — 오늘 N번째 세트마다
+///     반감 (60→30→15→...)
+///  3. 세트 마일스톤(10세트 누적)마다 +50 보너스,
+///     카테고리 티어업(카테고리별 10회 누적)마다 +50 보너스
 ///  4. 자정 리셋: todaySetExpClaimed=0, totalSetsRewarded는 보존
 ///  5. RPG EXP 곡선 / 현실적 목표 곡선 정확
 
@@ -168,8 +170,8 @@ void main() {
     });
   });
 
-  group('세트 클리어 EXP — 셋 다 채워야 보상', () {
-    test('포만감만 달성 → 세트 미완성, EXP 0', () async {
+  group('일일목표 EXP — 카테고리 독립 + 세트 보너스', () {
+    test('포만감만 달성 → 카테고리 EXP +20 (세트 보너스는 없음)', () async {
       // Lv1: feed 목표 1회만 채우고 수면/운동은 0
       final petRepo = _FakePetRepository()
         ..setPet(_pet(level: 1, exp: 0, todayFeedCount: 1));
@@ -177,12 +179,13 @@ void main() {
 
       final result = await apply('p');
 
-      expect(result.exp, 0, reason: '세트 미완성이면 EXP 없음');
+      expect(result.exp, 20, reason: '카테고리 1개 달성 = +20');
+      expect(result.level, 1);
       expect(result.feedAchievedCount, 1, reason: '달성 카운트는 누적');
-      expect(result.totalSetsRewarded, 0);
+      expect(result.totalSetsRewarded, 0, reason: '세트는 미완성');
     });
 
-    test('포만감+수면+운동 모두 첫 달성 → 1세트 +60 → 레벨업', () async {
+    test('포만감+수면+운동 모두 첫 달성 → 카테고리 60 + 세트 60 = 120', () async {
       // Lv1 목표: feed 1회, sleep 5h(300분), 운동 3000보
       final petRepo = _FakePetRepository()
         ..setPet(_pet(
@@ -196,14 +199,14 @@ void main() {
 
       final result = await apply('p');
 
-      // 60 EXP, Lv1 필요 50 → Lv2, 남은 10
-      expect(result.level, 2);
-      expect(result.exp, 10);
+      // 3카테고리 × 20 + 세트 60 = 120 → Lv1(50)→Lv2(50)→Lv3, 남은 20
+      expect(result.level, 3);
+      expect(result.exp, 20);
       expect(result.todaySetExpClaimed, 1);
       expect(result.totalSetsRewarded, 1);
     });
 
-    test('같은 날 2번째 세트 → 반감 +30', () async {
+    test('같은 날 2번째 세트 → 카테고리 60 + 반감 30 = 90', () async {
       // 이미 1세트 보상받은 상태에서 각 카테고리 1회씩 더 달성
       final petRepo = _FakePetRepository()
         ..setPet(_pet(
@@ -222,14 +225,14 @@ void main() {
 
       final result = await apply('p');
 
-      // 60 >> 1 = 30. 30 < 50 → 레벨 유지
-      expect(result.exp, 30);
-      expect(result.level, 1);
+      // 3 × 20 + (60 >> 1 = 30) = 90 → Lv1(50)→Lv2, 남은 40
+      expect(result.level, 2);
+      expect(result.exp, 40);
       expect(result.todaySetExpClaimed, 2);
       expect(result.totalSetsRewarded, 2);
     });
 
-    test('한 사이클에 3세트 동시 완성 → 60+30+15 = 105', () async {
+    test('한 사이클에 3세트 동시 완성 → 카테고리 180 + 세트 105 = 285', () async {
       // Lv1 목표 ×3씩: feed 3회, sleep 900분(3×5h), 운동 9000보(3×3000)
       final petRepo = _FakePetRepository()
         ..setPet(_pet(
@@ -243,14 +246,16 @@ void main() {
 
       final result = await apply('p');
 
-      // 105 → Lv1(50)→Lv2, Lv2(50)→Lv3, 남은 5
-      expect(result.level, 3);
-      expect(result.exp, 5);
+      // 9카테고리 달성 × 20 + (60+30+15) = 285
+      // → Lv1(50)→Lv2(50)→Lv3(50)→Lv4(100)→Lv5, 남은 35
+      expect(result.level, 5);
+      expect(result.exp, 35);
       expect(result.todaySetExpClaimed, 3);
       expect(result.totalSetsRewarded, 3);
     });
 
-    test('세트 마일스톤(10세트) → +50 보너스 (반감 0이어도 발동)', () async {
+    test('세트 마일스톤(10세트)+카테고리 티어업 → 보너스 (반감 0이어도 발동)',
+        () async {
       // 누적 9세트 + 오늘 6세트 받아 반감 0인 상태에서 10번째 세트 완성
       final petRepo = _FakePetRepository()
         ..setPet(_pet(
@@ -269,10 +274,12 @@ void main() {
 
       final result = await apply('p');
 
-      // 세트 반감 0 + 마일스톤 50 = 50 → Lv1(50) 레벨업
+      // 카테고리 3×20 + 카테고리 티어업(9→10) 3×50 + 세트 반감 0
+      //   + 세트 마일스톤 50 = 260
+      // → Lv1(50)→Lv2(50)→Lv3(50)→Lv4(100)→Lv5, 남은 10
       expect(result.totalSetsRewarded, 10);
-      expect(result.level, 2);
-      expect(result.exp, 0);
+      expect(result.level, 5);
+      expect(result.exp, 10);
     });
 
     test('자정 리셋: todaySetExpClaimed=0, totalSetsRewarded 보존', () {

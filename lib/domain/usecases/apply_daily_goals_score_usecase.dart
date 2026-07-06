@@ -7,7 +7,9 @@ import 'calculate_daily_goals_score_usecase.dart';
 /// 달성이 감지된 카테고리별로:
 ///  - 해당 진행도에서 목표치만큼 차감 (다음 목표로 이어짐)
 ///  - 카테고리 달성 카운트를 증가시키고 경험치를 부여
-///  - 티어 업 시 추가 보너스 EXP 부여
+///    (카테고리당 expPerCategory — 한 카테고리만 해도 성장 가능)
+///  - 3종 모두 달성한 "세트"에는 반감 보너스 EXP 추가 지급
+///  - 티어 업/세트 마일스톤 시 추가 보너스 EXP 부여
 ///
 /// 하루 리셋/페널티 로직은 없다.
 class ApplyDailyGoalsScoreUseCase {
@@ -91,6 +93,11 @@ class ApplyDailyGoalsScoreUseCase {
       }
     }
 
+    // 카테고리 독립 EXP: 달성한 카테고리마다 expPerCategory(+티어업 보너스)
+    // 부여 — 한 카테고리만 꾸준히 해도 성장 가능 (좌식/부분참여 사용자 경로).
+    // scoreResult.expGain = (달성 횟수 합) × expPerCategory + 티어업 × 보너스
+    final categoryExpGain = scoreResult.expGain;
+
     // 세트 클리어 EXP 적용 (포만감+수면+운동 모두 달성 = 1세트)
     // - 완성 세트 총량 = min(달성 카운트 3종) — 셋을 다 채워야 한 세트
     // - 신규 세트 = 완성 세트 총량 - 누적 보상 세트(totalSetsRewarded)
@@ -111,7 +118,7 @@ class ApplyDailyGoalsScoreUseCase {
     final milestoneBonusExp =
         setMilestones * CalculateDailyGoalsScoreUseCase.tierUpBonusExp;
 
-    final totalExpGain = setExpGain + milestoneBonusExp;
+    final totalExpGain = categoryExpGain + setExpGain + milestoneBonusExp;
 
     // 세트 보상 카운터 갱신 (오늘 받은 세트 + 누적 워터마크)
     pet = pet.copyWith(

@@ -17,7 +17,8 @@ class CalculateDailyGoalsScoreUseCase {
   final PetRepository petRepository;
   final ActivityRepository activityRepository;
 
-  /// 카테고리 1회 달성 시 부여 경험치 (UI/하위호환 표시용)
+  /// 카테고리 1회 달성 시 부여 경험치
+  /// (ApplyDailyGoalsScoreUseCase가 expGain을 통해 실제 지급)
   static const int expPerCategory = 20;
 
   /// "세트"(포만감+수면+운동 모두 달성) 1회 완성 시 기본 경험치
