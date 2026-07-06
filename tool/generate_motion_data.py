@@ -210,10 +210,16 @@ def draw_eye(g, rect, style):
             dy = int(round(abs(dx - mid) * (h - 1) / max(mid, 1)))
             put(g, x + dx, y + dy, "#")
     elif style == "pain":  # >< 찡그림 (X자)
-        for dx in range(w):
-            dy = int(round(dx * (h - 1) / max(w - 1, 1)))
+        # 2x2처럼 작은 눈은 X를 그리면 전부 채워져 뜬 눈과 같아 보이므로
+        # 최소 3x3로 키워서 그린다 (tiger)
+        pw, ph = max(w, 3), max(h, 3)
+        for dy in range(ph):
+            for dx in range(pw):
+                put(g, x + dx, y + dy, "o")
+        for dx in range(pw):
+            dy = int(round(dx * (ph - 1) / max(pw - 1, 1)))
             put(g, x + dx, y + dy, "#")
-            put(g, x + dx, y + (h - 1) - dy, "#")
+            put(g, x + dx, y + (ph - 1) - dy, "#")
     elif style == "angry":  # 부릅뜬 눈 + 치켜올린 눈썹
         for dy in range(h):
             for dx in range(w):
@@ -228,32 +234,54 @@ def draw_mouth(g, mx, my, style):
         put(g, mx + 1, my, "#")
 
 
-# 브레스(내뿜기) — 입 앞(-x)으로 퍼지는 콘. 'o'는 테마색, '#'은 진한 끝점
+# 브레스(내뿜기) — 몸에서 분리되어 날아가는 투사체. 'o' 테마색, '#' 진한 점
+# 발사 직후의 작은 덩어리 (몸 앞에서 1~2칸 떨어짐)
 BREATH_PUFF = [
-    (-2, -1, "o"), (-3, -1, "o"),
-    (-2, 0, "o"), (-3, 0, "o"), (-4, 0, "#"),
-    (-2, 1, "o"), (-3, 1, "o"),
+    (-3, -1, "o"), (-4, -1, "o"),
+    (-3, 0, "o"), (-4, 0, "o"), (-5, 0, "#"),
+    (-3, 1, "o"), (-4, 1, "o"),
 ]
-BREATH_CONE = [
-    # 중심선 (가장 길게)
-    (-2, 0, "o"), (-3, 0, "o"), (-4, 0, "o"), (-5, 0, "o"),
-    (-6, 0, "o"), (-7, 0, "#"),
-    # 위/아래 1단
-    (-2, -1, "o"), (-3, -1, "o"), (-4, -1, "o"), (-5, -1, "o"),
-    (-6, -1, "#"),
-    (-2, 1, "o"), (-3, 1, "o"), (-4, 1, "o"), (-5, 1, "o"),
-    (-6, 1, "#"),
-    # 위/아래 2단 (부채꼴로 벌어짐)
-    (-3, -2, "o"), (-4, -2, "o"), (-5, -3, "#"),
-    (-3, 2, "o"), (-4, 2, "o"), (-5, 3, "#"),
+# 멀리 날아간 파이어볼 (그리드 왼쪽 끝에 절대 배치, 앞끝·튀김은 진한 점)
+BREATH_BALL = [
+    (1, -1, "o"), (2, -1, "o"), (3, -1, "o"),
+    (0, 0, "#"), (1, 0, "o"), (2, 0, "o"), (3, 0, "o"), (4, 0, "o"),
+    (1, 1, "o"), (2, 1, "o"), (3, 1, "o"),
+    (1, -2, "#"), (1, 2, "#"),
 ]
 
 
-def draw_breath(g, species, dx, dots):
-    """현재 프레임의 입 위치(원본 입 + 몸 이동량) 기준으로 브레스를 찍음."""
-    mx, my = SPECIES_ART[species]["mouth"]
-    for ox, oy, ch in dots:
-        put(g, mx + dx + ox, my + oy, ch)
+def _breath_origin(g, my):
+    """입 높이(±1행)에서 몸의 왼쪽 가장자리 x — 브레스 시작 기준점.
+
+    tiger처럼 입이 몸 안쪽(정면 얼굴)에 있는 종도 몸 밖으로 분사되게 한다.
+    """
+    for y in (my, my - 1, my + 1):
+        if not 0 <= y < GRID:
+            continue
+        for x in range(GRID):
+            if g[y][x] != ".":
+                return x
+    return GRID // 2
+
+
+def draw_breath_puff(g, species):
+    """발사 직후 — 몸 앞에 갓 떨어져 나온 작은 덩어리."""
+    my = SPECIES_ART[species]["mouth"][1]
+    origin = _breath_origin(g, my)
+    for ox, oy, ch in BREATH_PUFF:
+        put(g, origin + ox, my + oy, ch)
+    return g
+
+
+def draw_breath_ball(g, species):
+    """멀리 날아간 투사체 — 왼쪽 끝에 파이어볼 + 몸과의 사이에 궤적 잔상."""
+    my = SPECIES_ART[species]["mouth"][1]
+    origin = _breath_origin(g, my)
+    for ox, oy, ch in BREATH_BALL:
+        put(g, ox, my + oy, ch)
+    # 궤적 잔상 (몸과 파이어볼 사이 — 간격을 두고 점점이)
+    put(g, origin - 2, my, "o")
+    put(g, origin - 4, my - 1, "o")
     return g
 
 
@@ -553,9 +581,9 @@ def motion_attack(sp):
     """
     windup = pose(sp, eye="angry", mouth="none", dx=5, lean=1)
     puff = pose(sp, eye="angry", mouth="open", step="front", dx=4, lean=-1)
-    puff = draw_breath(puff, sp, 4, BREATH_PUFF)
+    puff = draw_breath_puff(puff, sp)
     blast = pose(sp, eye="angry", mouth="open", step="back", dx=4, lean=-1)
-    blast = draw_breath(blast, sp, 4, BREATH_CONE)
+    blast = draw_breath_ball(blast, sp)
     return [windup, puff, blast]
 
 
