@@ -216,41 +216,73 @@ def squash_art(g, factor):
 # ---------------------------------------------------------------------------
 
 
+def _clear_eye_box(g, ex, ey, pw, ph):
+    """표정을 그릴 자리를 몸통색으로 비운다.
+
+    눈 박스 내부는 무조건 'o'로 채우고, 바로 주변 1px의 어두운 줄무늬/
+    음영('#')만 'o'로 눌러 표정(어두운 ^/X)이 배경 줄무늬와 섞이지 않게 한다.
+    실루엣 밖(빈칸 '.')·보조색('+')은 건드리지 않아 몸 형태는 유지된다.
+    (tiger처럼 눈이 얼굴 줄무늬에 파묻힌 종의 X·^ 가시성 확보용)
+    """
+    n = len(g)
+    for dy in range(-1, ph + 1):
+        for dx in range(-1, pw + 1):
+            xx, yy = ex + dx, ey + dy
+            if not (0 <= xx < n and 0 <= yy < n):
+                continue
+            inside = 0 <= dx < pw and 0 <= dy < ph
+            if inside:
+                g[yy][xx] = "o"
+            elif g[yy][xx] == "#":  # 주변 줄무늬만 정리 (빈칸/보조색 유지)
+                g[yy][xx] = "o"
+
+
 def draw_eye(g, rect, style):
-    """rect=(x, y, w, h) 영역에 눈 스타일을 그림."""
+    """rect=(x, y, w, h) 영역에 눈 스타일을 그림.
+
+    happy/pain/angry는 획이 성글어 작은 눈(2x2)에선 안 보이므로 최소 3x3로
+    키우고(중앙 정렬) 주변 줄무늬를 정리한 뒤 획을 굵게 그린다.
+    open/closed는 면을 채워 작아도 보이므로 원본 크기 그대로 둔다.
+    """
     x, y, w, h = rect
-    for dy in range(h):
-        for dx in range(w):
-            put(g, x + dx, y + dy, "o")
-    if style == "open":
-        for dy in range(h):
-            for dx in range(w):
-                put(g, x + dx, y + dy, "#")
-    elif style == "closed":  # 감은 눈 — 아래쪽 가로선
-        for dx in range(w):
-            put(g, x + dx, y + h - 1, "#")
-    elif style == "happy":  # ^ 웃는 눈
-        mid = (w - 1) / 2.0
-        for dx in range(w):
-            dy = int(round(abs(dx - mid) * (h - 1) / max(mid, 1)))
-            put(g, x + dx, y + dy, "#")
-    elif style == "pain":  # >< 찡그림 (X자)
-        # 2x2처럼 작은 눈은 X를 그리면 전부 채워져 뜬 눈과 같아 보이므로
-        # 최소 3x3로 키워서 그린다 (tiger)
+    if style in ("happy", "pain", "angry"):
         pw, ph = max(w, 3), max(h, 3)
+        ex = x - (pw - w) // 2
+        ey = y - (ph - h) // 2
+        _clear_eye_box(g, ex, ey, pw, ph)
+    else:
+        pw, ph, ex, ey = w, h, x, y
         for dy in range(ph):
             for dx in range(pw):
-                put(g, x + dx, y + dy, "o")
+                put(g, ex + dx, ey + dy, "o")
+
+    if style == "open":
+        for dy in range(ph):
+            for dx in range(pw):
+                put(g, ex + dx, ey + dy, "#")
+    elif style == "closed":  # 감은 눈 — 아래쪽 가로선
+        for dx in range(pw):
+            put(g, ex + dx, ey + ph - 1, "#")
+    elif style == "happy":  # ^ 웃는 눈 (위로 볼록, 굵게)
+        mid = (pw - 1) / 2.0
+        for dx in range(pw):
+            dy = min(int(round(abs(dx - mid))), ph - 1)
+            put(g, ex + dx, ey + dy, "#")
+            if dy + 1 < ph:  # 한 칸 아래도 찍어 획을 굵게
+                put(g, ex + dx, ey + dy + 1, "#")
+    elif style == "pain":  # >< 찡그림 (X자)
+        # 박스를 몸통색으로 비우고 halo로 주변 줄무늬를 정리했으므로
+        # 가는 X 두 대각선이면 배경과 구분돼 보인다.
         for dx in range(pw):
             dy = int(round(dx * (ph - 1) / max(pw - 1, 1)))
-            put(g, x + dx, y + dy, "#")
-            put(g, x + dx, y + (ph - 1) - dy, "#")
+            put(g, ex + dx, ey + dy, "#")
+            put(g, ex + dx, ey + (ph - 1) - dy, "#")
     elif style == "angry":  # 부릅뜬 눈 + 치켜올린 눈썹
-        for dy in range(h):
-            for dx in range(w):
-                put(g, x + dx, y + dy, "#")
-        put(g, x + w - 1, y - 1, "#")
-        put(g, x + w - 2, y - 1, "#")
+        for dy in range(ph):
+            for dx in range(pw):
+                put(g, ex + dx, ey + dy, "#")
+        put(g, ex + pw - 1, ey - 1, "#")
+        put(g, ex + pw - 2, ey - 1, "#")
 
 
 def draw_mouth(g, mx, my, style):
