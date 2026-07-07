@@ -4,7 +4,6 @@ import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.Context
 import android.content.Intent
-import android.graphics.BitmapFactory
 import android.widget.RemoteViews
 import android.util.Log
 import android.os.Handler
@@ -26,6 +25,9 @@ class PetWidgetProvider : AppWidgetProvider() {
         /// 애니메이션 업데이트 간격 (밀리초)
         /// 800ms마다 이미지를 변경하여 애니메이션 효과 생성
         private const val ANIMATION_UPDATE_INTERVAL = 800L
+
+        /// 위젯 도트 렌더 비트맵 한 변 크기 (px) — 선명도용 업스케일
+        private const val DOT_RENDER_SIZE_PX = 240
         
         /// 애니메이션 업데이트를 위한 Intent Action
         private const val ACTION_ANIMATION_UPDATE = "com.example.pocketfriend.ACTION_ANIMATION_UPDATE"
@@ -341,20 +343,45 @@ class PetWidgetProvider : AppWidgetProvider() {
         return "normal"
     }
 
-    /// 앱과 동일한 도트 픽셀 PNG(Flutter renderFlutterWidget 결과)를 우선 표시
+    /// 앱과 동일한 도트 픽셀을 위젯에서 **직접 렌더**해 표시
     ///
-    /// Flutter가 'petImagePath' 키로 저장한 PNG 파일을 디코딩해 pet_image에
-    /// 비트맵으로 세팅한다. 파일이 없거나(헤드리스 렌더 실패) 디코딩 실패 시
-    /// false를 반환해 호출부가 기존 drawable 리소스로 폴백하게 한다.
+    /// Flutter가 저장한 스프라이트 키(pixelKey)로 `pet_pixel_data.json`에서
+    /// 좌표를 찾아, 종별 색(evolutionType/stage)으로 Bitmap을 그린다.
+    /// 키/좌표가 없으면 false를 반환해 기존 drawable 리소스로 폴백한다.
+    /// (앱과 100% 동일한 도트 데이터·렌더 규칙 — 좌표는 스크립트가 자동 동기화)
     private fun tryApplyDotImage(context: Context, views: RemoteViews): Boolean {
-        val path = getWidgetString(context, "petImagePath", null)
-        if (path.isNullOrBlank()) return false
-        val bitmap = runCatching { BitmapFactory.decodeFile(path) }.getOrNull()
-            ?: return false
+        val pixelKey = getWidgetString(context, "pixelKey", null)
+        if (pixelKey.isNullOrBlank()) return false
+        val sprite = WidgetPixelData.sprite(context, pixelKey) ?: return false
+
+        val evolutionType = getWidgetString(context, "evolutionType", null)
+        val stage = getWidgetString(context, "evolutionStage", "1")?.toIntOrNull() ?: 1
+        val (dotColor, accentColor) = resolveDotColors(evolutionType, stage)
+
+        val bitmap = runCatching {
+            WidgetPixelRenderer.render(sprite, dotColor, accentColor, DOT_RENDER_SIZE_PX)
+        }.getOrNull() ?: return false
+
         views.setImageViewBitmap(R.id.pet_image, bitmap)
         views.setViewVisibility(R.id.pet_image, android.view.View.VISIBLE)
         views.setViewVisibility(R.id.pet_image_text, android.view.View.GONE)
         return true
+    }
+
+    /// 종별 도트 색 (앱 SpeciesTheme와 동일 값 — 색은 거의 불변이라 수동 유지)
+    /// 반환: (몸통색, 보조색). 털뭉치(종 미결정/stage1)는 밝은 베이지 단색.
+    private fun resolveDotColors(evolutionType: String?, stage: Int): Pair<Int, Int> {
+        if (stage <= 1 || evolutionType.isNullOrBlank()) {
+            val fluff = 0xFFEAD7A8.toInt() // SpeciesTheme.fluffBody
+            return fluff to fluff
+        }
+        return when (evolutionType) {
+            "tiger" -> 0xFF4A5A78.toInt() to 0xFFF0F3F8.toInt()
+            "bird" -> 0xFFDC4828.toInt() to 0xFFFFC94D.toInt()
+            "turtle" -> 0xFF9CCC65.toInt() to 0xFF9C7A4C.toInt()
+            "snake" -> 0xFF2B7AD6.toInt() to 0xFFF2E3C2.toInt()
+            else -> 0xFF4A5A78.toInt() to 0xFFDDE3EC.toInt() // defaultTheme
+        }
     }
 
     /// 위젯에 표시할 이미지 리소스 ID 결정

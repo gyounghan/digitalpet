@@ -20,6 +20,7 @@ CustomPainter로 도트만 찍는다 (다마고치 LCD 스타일).
     lib/core/pixel/pet_pixel_data.dart
 """
 
+import json
 import os
 import sys
 import glob
@@ -34,6 +35,11 @@ HEX_WIDTH = GRID // 4  # 행 마스크 hex 자릿수 (64그리드 → 16자리)
 VALUES_PER_LINE = 8 if GRID <= 32 else 4
 ASSETS_DIR = "assets"
 OUTPUT_PATH = os.path.join("lib", "core", "pixel", "pet_pixel_data.dart")
+# 안드로이드 홈 위젯이 앱과 동일한 도트를 직접 렌더하기 위해 읽는 JSON.
+# (네이티브 Kotlin이 파싱 — Dart 데이터와 이 스크립트로 함께 동기화된다)
+JSON_OUTPUT_PATH = os.path.join(
+    "android", "app", "src", "main", "assets", "pet_pixel_data.json"
+)
 
 
 def luminance(r: int, g: int, b: int) -> float:
@@ -171,7 +177,21 @@ def main() -> int:
             )
         f.write("};\n")
 
+    # 안드로이드 위젯용 JSON — 행 마스크를 16자리 부호없는 hex 문자열로
+    # (Kotlin java.lang.Long.parseUnsignedLong(s, 16)로 복원)
+    sprites_json = {}
+    for key, dark_rows, body_rows, accent_rows in entries:
+        sprites_json[key] = {
+            "d": ["%0*X" % (HEX_WIDTH, v) for v in dark_rows],
+            "b": ["%0*X" % (HEX_WIDTH, v) for v in body_rows],
+            "a": ["%0*X" % (HEX_WIDTH, v) for v in accent_rows],
+        }
+    os.makedirs(os.path.dirname(JSON_OUTPUT_PATH), exist_ok=True)
+    with open(JSON_OUTPUT_PATH, "w", encoding="utf-8") as jf:
+        json.dump(sprites_json, jf, separators=(",", ":"), ensure_ascii=False)
+
     print("생성 완료: %s (%d개 스프라이트)" % (OUTPUT_PATH, len(entries)))
+    print("생성 완료: %s (위젯용 JSON)" % JSON_OUTPUT_PATH)
     if skipped:
         print("건너뜀 (빈 이미지): %s" % ", ".join(skipped))
     return 0

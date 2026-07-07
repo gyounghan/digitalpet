@@ -66,6 +66,12 @@ python tool/generate_pixel_data.py
 키는 파일명 stem (`'dragon2'`, `'tiger_smile1'`, `'기본이미지'` 등).
 런타임 조회: `pixelSpriteForAsset('assets/dragon2.png')`.
 
+**위젯용 JSON도 동시 출력**: 이 스크립트는 Dart와 함께
+`android/app/src/main/assets/pet_pixel_data.json`(행 마스크를 16자리 부호없는
+hex 문자열로)을 굽는다. 안드로이드 홈 위젯이 이 JSON을 파싱해 앱과 동일한
+도트를 **네이티브에서 직접 렌더**한다 (§4.1). 도트를 수정하면 스크립트
+한 번으로 앱·위젯이 함께 갱신되므로 좌표 테이블을 Kotlin에 복제하지 않는다.
+
 ---
 
 ## 3. 모션 파이프라인 (9스프라이트×9모션×3프레임 — 털뭉치·유아기 24, 성장기 28)
@@ -219,6 +225,23 @@ lib/presentation/widgets/
   회피(상대 피해 0)→dodge / 우세→attack / 열세→hurt, 600ms 사이클.
 - **색 주입**: 밝은 배경에서는 `theme.primary`+`theme.spriteAccent`,
   어두운 그라데이션 카드 위에서는 흰색 도트(accent 미지정).
+  털뭉치(stage 1)는 `SpeciesTheme.fluffBody`(밝은 베이지) 단색.
+
+### 4.1 안드로이드 홈 위젯 (네이티브 도트 렌더)
+
+위젯은 앱과 **동일한 도트를 네이티브 Kotlin에서 직접 그린다** (이전엔 drawable
+PNG였음). Flutter 엔진이 없어도(백그라운드) 항상 최신 도트를 표시한다.
+
+- **Flutter → 위젯** (`widget_service.dart`): 현재 mood/stage로 고른 스프라이트
+  키를 `pixelKey`로, 종·단계를 `evolutionType`/`evolutionStage`로 저장
+  (`saveWidgetData`). 이미지 파일/PNG는 넘기지 않는다.
+- **네이티브 렌더** (`WidgetPixelRenderer.kt`): `WidgetPixelData`가
+  `assets/pet_pixel_data.json`(§2에서 생성)을 파싱해 `pixelKey`로 스프라이트를
+  찾고, `resolveDotColors`(종별 색, 앱 `SpeciesTheme`와 동일 값)로 Bitmap을
+  그려 `setImageViewBitmap`. `PetWidgetProvider.tryApplyDotImage`가 진입점.
+- **폴백**: `pixelKey`/좌표가 없으면 기존 drawable 리소스(`evolutionImage`)로.
+- **좌표 자동 동기화**: 도트 데이터는 JSON으로만 공유 — Kotlin에 복제 없음.
+  단, **색(5종)은 `SpeciesTheme`와 `resolveDotColors`에 이중 유지**(거의 불변).
 
 ---
 
@@ -262,5 +285,6 @@ lib/presentation/widgets/
   수정하지 말 것 — 스크립트 수정 후 재생성.
 - 아트 수정 후에는 반드시 `preview_motion.py`로 눈 확인 → 재생성 →
   analyze/test/build 순서.
-- Android 홈 위젯은 아직 PNG 렌더링(네이티브 RemoteViews) — 도트 미적용.
+- Android 홈 위젯은 네이티브에서 도트를 직접 렌더한다 (§4.1). 도트 수정 후엔
+  `generate_pixel_data.py`를 돌려 `pet_pixel_data.json`도 갱신할 것.
 - AdMob은 테스트 유닛 ID 상태 — 릴리스 전 교체 필요.
