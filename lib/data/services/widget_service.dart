@@ -1,8 +1,13 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:home_widget/home_widget.dart';
 import '../../domain/entities/pet.dart';
 import '../../core/utils/pet_image_helper.dart';
 import '../../core/constants/app_strings.dart';
+import '../../core/theme/species_theme.dart';
+// 위젯을 앱과 동일한 도트 픽셀로 렌더하기 위해 presentation 위젯을 재사용한다.
+// (홈 화면 렌더러와 100% 동일한 결과 보장 — 도트 좌표/색 로직 중복 방지)
+import '../../presentation/widgets/pixel_pet_image.dart';
 
 /// 홈 화면 위젯 서비스
 /// 펫 데이터를 홈 화면 위젯에 업데이트하는 서비스
@@ -28,7 +33,53 @@ class WidgetService {
   static const String _keySyncTraceId = 'syncTraceId'; // 앱-위젯 동기화 추적 ID
   static const String _keyEvolutionType = 'evolutionType'; // 진화 종 (bird/snake/tiger/turtle)
   static const String _keyEvolutionImage = 'evolutionImage'; // 진화 이미지 리소스명 (bird1, dragon2 등)
-  
+  static const String _keyPetImagePath = 'petImagePath'; // 앱과 동일한 도트 렌더 PNG 파일 경로
+
+  /// 위젯 도트 PNG 렌더 캔버스 크기 (정사각)
+  static const Size _dotRenderSize = Size(160, 160);
+
+  /// 현재 펫을 앱과 동일한 도트 픽셀로 렌더해 PNG 파일로 저장한다.
+  ///
+  /// [renderFlutterWidget]이 [key]로 파일 경로를 SharedPreferences에 저장하고,
+  /// 네이티브 위젯이 그 경로를 [setImageViewUri]로 표시한다. 실패(헤드리스
+  /// 백그라운드 등 엔진 미가용) 시 무시 — 네이티브가 기존 drawable로 폴백한다.
+  Future<void> _renderPetDot(Pet pet) async {
+    try {
+      final assetPath = getEvolutionMoodImagePath(
+              pet.evolutionType, pet.evolutionStage, pet.mood) ??
+          getEvolutionImagePath(pet.evolutionType, pet.evolutionStage);
+      if (assetPath == null) return;
+      final sprite = pixelSpriteForAsset(assetPath);
+      if (sprite == null) return;
+
+      // 색: 홈 화면과 동일 규칙 (털뭉치=밝은 베이지, 그 외=종 테마색)
+      final theme = SpeciesTheme.forType(pet.evolutionType);
+      final isFluff = pet.evolutionStage <= 1;
+      final dotColor = isFluff ? SpeciesTheme.fluffBody : theme.primary;
+      final accentColor =
+          isFluff ? SpeciesTheme.fluffBody : theme.spriteAccent;
+
+      await HomeWidget.renderFlutterWidget(
+        SizedBox(
+          width: _dotRenderSize.width,
+          height: _dotRenderSize.height,
+          child: PixelSpriteView(
+            sprite: sprite,
+            dotColor: dotColor,
+            accentColor: accentColor,
+          ),
+        ),
+        key: _keyPetImagePath,
+        logicalSize: _dotRenderSize,
+      );
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('WidgetService._renderPetDot failed: $e');
+      }
+    }
+  }
+
+
   /// 펫 데이터를 위젯에 업데이트
   /// 
   /// [pet] 업데이트할 펫 엔티티 (앱 내 현재 상태와 동일해야 함)
@@ -78,6 +129,9 @@ class WidgetService {
         await HomeWidget.saveWidgetData<String>(_keyEvolutionImage, '');
         await HomeWidget.saveWidgetData<String>(_keyEvolutionType, '');
       }
+
+      // 앱과 동일한 도트 픽셀을 PNG로 렌더해 파일 경로 저장 (네이티브가 우선 표시)
+      await _renderPetDot(pet);
 
       // 펫의 기분 상태 저장 (hunger, happiness, stamina 기반으로 계산)
       final mood = pet.mood.name; // PetMood enum의 name (happy, sleepy, hungry, bored, normal 등)

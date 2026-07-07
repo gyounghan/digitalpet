@@ -4,6 +4,7 @@ import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.Context
 import android.content.Intent
+import android.graphics.BitmapFactory
 import android.widget.RemoteViews
 import android.util.Log
 import android.os.Handler
@@ -152,18 +153,20 @@ class PetWidgetProvider : AppWidgetProvider() {
 
             val views = RemoteViews(context.packageName, R.layout.pet_widget)
 
-            // 이미지 결정: 진화 이미지 우선, 없으면 mood 기반 애니메이션
-            val imageResourceId = resolveWidgetImageResourceId(context, evolutionImage, imageType)
-
-            if (imageResourceId != 0) {
-                views.setImageViewResource(R.id.pet_image, imageResourceId)
-                views.setViewVisibility(R.id.pet_image, android.view.View.VISIBLE)
-                views.setViewVisibility(R.id.pet_image_text, android.view.View.GONE)
-            } else {
-                val petEmoji = resolveImageFallbackEmoji(imageType)
-                views.setTextViewText(R.id.pet_image_text, petEmoji)
-                views.setViewVisibility(R.id.pet_image, android.view.View.GONE)
-                views.setViewVisibility(R.id.pet_image_text, android.view.View.VISIBLE)
+            // 이미지 결정: 앱과 동일한 도트 PNG 우선, 없으면 drawable(진화/mood)
+            if (!tryApplyDotImage(context, views)) {
+                val imageResourceId =
+                    resolveWidgetImageResourceId(context, evolutionImage, imageType)
+                if (imageResourceId != 0) {
+                    views.setImageViewResource(R.id.pet_image, imageResourceId)
+                    views.setViewVisibility(R.id.pet_image, android.view.View.VISIBLE)
+                    views.setViewVisibility(R.id.pet_image_text, android.view.View.GONE)
+                } else {
+                    val petEmoji = resolveImageFallbackEmoji(imageType)
+                    views.setTextViewText(R.id.pet_image_text, petEmoji)
+                    views.setViewVisibility(R.id.pet_image, android.view.View.GONE)
+                    views.setViewVisibility(R.id.pet_image_text, android.view.View.VISIBLE)
+                }
             }
 
             views.setTextViewText(R.id.pet_level, "Lv.$level")
@@ -213,18 +216,20 @@ class PetWidgetProvider : AppWidgetProvider() {
 
             val views = RemoteViews(context.packageName, R.layout.pet_widget)
 
-            // 이미지 결정: 진화 이미지 우선
-            val imageResourceId = resolveWidgetImageResourceId(context, evolutionImage, imageType)
-
-            if (imageResourceId != 0) {
-                views.setImageViewResource(R.id.pet_image, imageResourceId)
-                views.setViewVisibility(R.id.pet_image, android.view.View.VISIBLE)
-                views.setViewVisibility(R.id.pet_image_text, android.view.View.GONE)
-            } else {
-                val petEmoji = resolveImageFallbackEmoji(imageType)
-                views.setTextViewText(R.id.pet_image_text, petEmoji)
-                views.setViewVisibility(R.id.pet_image, android.view.View.GONE)
-                views.setViewVisibility(R.id.pet_image_text, android.view.View.VISIBLE)
+            // 이미지 결정: 앱과 동일한 도트 PNG 우선(정적), 없으면 drawable
+            if (!tryApplyDotImage(context, views)) {
+                val imageResourceId =
+                    resolveWidgetImageResourceId(context, evolutionImage, imageType)
+                if (imageResourceId != 0) {
+                    views.setImageViewResource(R.id.pet_image, imageResourceId)
+                    views.setViewVisibility(R.id.pet_image, android.view.View.VISIBLE)
+                    views.setViewVisibility(R.id.pet_image_text, android.view.View.GONE)
+                } else {
+                    val petEmoji = resolveImageFallbackEmoji(imageType)
+                    views.setTextViewText(R.id.pet_image_text, petEmoji)
+                    views.setViewVisibility(R.id.pet_image, android.view.View.GONE)
+                    views.setViewVisibility(R.id.pet_image_text, android.view.View.VISIBLE)
+                }
             }
 
             views.setTextViewText(R.id.pet_level, "Lv.$level")
@@ -334,6 +339,22 @@ class PetWidgetProvider : AppWidgetProvider() {
         if (hunger >= 75 && happiness >= 70 && stamina >= 60) return "happy"
         // 6) 보통
         return "normal"
+    }
+
+    /// 앱과 동일한 도트 픽셀 PNG(Flutter renderFlutterWidget 결과)를 우선 표시
+    ///
+    /// Flutter가 'petImagePath' 키로 저장한 PNG 파일을 디코딩해 pet_image에
+    /// 비트맵으로 세팅한다. 파일이 없거나(헤드리스 렌더 실패) 디코딩 실패 시
+    /// false를 반환해 호출부가 기존 drawable 리소스로 폴백하게 한다.
+    private fun tryApplyDotImage(context: Context, views: RemoteViews): Boolean {
+        val path = getWidgetString(context, "petImagePath", null)
+        if (path.isNullOrBlank()) return false
+        val bitmap = runCatching { BitmapFactory.decodeFile(path) }.getOrNull()
+            ?: return false
+        views.setImageViewBitmap(R.id.pet_image, bitmap)
+        views.setViewVisibility(R.id.pet_image, android.view.View.VISIBLE)
+        views.setViewVisibility(R.id.pet_image_text, android.view.View.GONE)
+        return true
     }
 
     /// 위젯에 표시할 이미지 리소스 ID 결정
