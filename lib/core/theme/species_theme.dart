@@ -73,9 +73,9 @@ class SpeciesTheme {
     spriteAccent: Color(0xFFFFC94D),
   );
 
-  /// 현무 (turtle) - fresh jade/mint (칙칙한 포레스트그린 → 생기있는 제이드)
+  /// 현무 (turtle) - fresh jade/mint (더 연한 파스텔 제이드)
   static const SpeciesTheme turtle = SpeciesTheme(
-    primary: Color(0xFF18B98A),
+    primary: Color(0xFF52CFA3),
     primaryDeep: Color(0xFF0E8E68),
     primarySoft: Color(0xFFC4F1E2),
     surfaceDeep: Color(0xFFCEF3E5),
@@ -98,6 +98,9 @@ class SpeciesTheme {
     gradEnd: Color(0xFFC8DEFA),
     spriteAccent: Color(0xFFF2E3C2),
   );
+
+  /// 털뭉치(stage 1) 도트 몸통색 — 밝은 베이지 (종 미결정 상태)
+  static const Color fluffBody = Color(0xFFEAD7A8);
 
   /// 진화 타입으로 테마 조회
   static SpeciesTheme forType(EvolutionType? type) {

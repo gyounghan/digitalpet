@@ -954,14 +954,15 @@ class _FighterRow extends StatelessWidget {
     }
     final spriteKey = motionSpriteKeyFromAssetPath(path);
     if (spriteKey != null && motion != null) {
+      final isFluff = spriteKey == 'fluff';
       return Padding(
         padding: const EdgeInsets.all(3),
         child: PixelMotionAnimation(
           spriteKey: spriteKey,
           motion: motion!,
           duration: const Duration(milliseconds: 600),
-          dotColor: theme.primary,
-          accentColor: theme.spriteAccent,
+          dotColor: isFluff ? SpeciesTheme.fluffBody : theme.primary,
+          accentColor: isFluff ? SpeciesTheme.fluffBody : theme.spriteAccent,
         ),
       );
     }

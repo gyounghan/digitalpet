@@ -643,36 +643,36 @@ SPECIES_ART = {
         "eyes": [(6, 15, 2, 2), (18, 9, 2, 2)],
         "mouth": (2, 17),
     },
-    # 털뭉치(stage 1) — 둥근 크림 뭉치 + 두 귀 + 큰 두 눈 + 작은 입 (정면)
+    # 털뭉치(stage 1) — 아기 같은 동글동글 크림 뭉치 + 둥근 귀 + 큰 두 눈 + 작은 입
     "fluff": {
         "body": [
             "........................",
-            "........................",
-            "....oooo........oooo....",
-            "....oooo........oooo....",
-            "...oooooooooooooooooo...",
+            "......o..........o......",
+            ".....ooo........ooo.....",
+            "....ooooo.oooo.ooooo....",
             "....oooooooooooooooo....",
-            "....oooooooooooooooo....",
+            ".....oooooooooooooo.....",
             "....oooooooooooooooo....",
             "...oooooooooooooooooo...",
             "...oooooooooooooooooo...",
             "..oooooooooooooooooooo..",
             "..oooooooooooooooooooo..",
             "..oooooooooooooooooooo..",
-            "..oooooooooooooooooooo..",
+            ".oooooooooooooooooooooo.",
+            ".oooooooooooooooooooooo.",
+            ".oooooooooooooooooooooo.",
             "..oooooooooooooooooooo..",
             "..oooooooo#oo#oooooooo..",
             "..ooooooooo##ooooooooo..",
-            "..oooooooooooooooooooo..",
             "...oooooooooooooooooo...",
             "...oooooooooooooooooo...",
             "....oooooooooooooooo....",
             ".....oooooooooooooo.....",
-            ".......oooooooooo.......",
-            ".........oooooo.........",
+            "......oooooooooooo......",
+            "........oooooooo........",
         ],
-        "eyes": [(6, 10, 4, 4), (14, 10, 4, 4)],
-        "mouth": (11, 15),
+        "eyes": [(6, 11, 4, 4), (14, 11, 4, 4)],
+        "mouth": (11, 16),
     },
 }
 
@@ -812,7 +812,16 @@ def with_chars(g, dots, ox, oy):
 
 
 def motion_walk(sp):
-    """걷기: 앞다리 내딛기 → 양발 서기 → 뒷다리 내딛기."""
+    """걷기: 앞다리 내딛기 → 양발 서기 → 뒷다리 내딛기.
+
+    털뭉치(fluff)는 다리가 없으므로 다리 스텝 대신 통통 튀며 이동한다:
+    웅크림 → 눈웃음으로 폴짝(위로) → 착지하며 살짝 납작(squash).
+    """
+    if sp == "fluff":
+        crouch = squash_art(pose(sp, eye="open"), 0.92)
+        hop = pose(sp, eye="happy", mouth="open", dy=-2)
+        land = squash_art(pose(sp, eye="open"), 0.84)
+        return [crouch, hop, land]
     return [
         pose(sp, step="front"),
         pose(sp),

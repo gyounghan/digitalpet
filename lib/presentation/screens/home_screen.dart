@@ -340,6 +340,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final spriteKey = _motionSpriteKey(pet);
     if (spriteKey != null) {
       final motion = _transientMotion ?? motionForMood(pet.mood);
+      // 털뭉치는 종 미결정 → 밝은 베이지 단색
+      final isFluff = spriteKey == 'fluff';
       return SizedBox(
         width: 300,
         height: 300,
@@ -350,8 +352,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             motion: motion,
             width: 270,
             height: 270,
-            dotColor: theme.primary,
-            accentColor: theme.spriteAccent,
+            dotColor: isFluff ? SpeciesTheme.fluffBody : theme.primary,
+            accentColor:
+                isFluff ? SpeciesTheme.fluffBody : theme.spriteAccent,
           ),
         ),
       );
