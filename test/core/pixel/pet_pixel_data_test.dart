@@ -97,6 +97,7 @@ void main() {
         'anxious': 3,
         'full': 3,
         'sad': 3,
+        'hungry': 4,
       };
       frameSets.forEach((name, count) {
         for (var i = 1; i <= count; i++) {

@@ -68,14 +68,14 @@ python tool/generate_pixel_data.py
 
 ---
 
-## 3. 모션 파이프라인 (8스프라이트×8모션×3프레임 — 유아기 24, 성장기 28)
+## 3. 모션 파이프라인 (8스프라이트×9모션×3프레임 — 유아기 24, 성장기 28)
 
 **스크립트**: `tool/generate_motion_data.py` → `lib/core/pixel/pet_motion_data.dart`
 (출력: `motionFrames` — `Map<String 스프라이트키, Map<String모션, List<PixelSprite>>>`,
 키는 `'{종}{스테이지}'` — `'dragon1'`(유아기 24×24), `'dragon2'`(성장기 28×28))
 
 핵심 아이디어: 원본 `assets/{종}{1|2}.png` 픽셀아트를 **도트 아트 문자열**로
-옮긴 뒤(수작업 정리), 부위별 변형으로 모션을 합성한다. 프레임을 손으로 192장
+옮긴 뒤(수작업 정리), 부위별 변형으로 모션을 합성한다. 프레임을 손으로 216장
 그리는 게 아니라, 스프라이트당 몸체 아트 1장 + 조립 규칙으로 만든다.
 
 그리드 크기는 아트마다 달라도 된다 — 모든 연산 함수는 `len(g)`에서 크기를
@@ -148,7 +148,7 @@ python tool/generate_pixel_data.py
   얼굴 안쪽인 종도 몸 밖으로 분사된다. ball은 그리드 왼쪽 끝(절대 좌표)에
   찍혀 몸에서 분리된 투사체로 보인다.
 
-### 3.5 모션 정의 (8종 — 모두 3프레임)
+### 3.5 모션 정의 (9종 — 모두 3프레임)
 
 | 모션 | 구성 |
 |---|---|
@@ -160,8 +160,9 @@ python tool/generate_pixel_data.py
 | hurt | ><눈+땀(머리 위 상단 0~3행 — 몸과 안 겹침) → 크게 휘청(땀 2방울) → 복귀 |
 | angry | 부릅눈+💢 + 발 구르기(front/back 스텝 교차) |
 | joy | ^^눈 숙임 → 다리 웅크려 점프+반짝이 → 착지 |
+| hungry | 입 벌려 침(몸 앞 `_breath_origin`으로 빼 뚝뚝)+들썩 조르기, eat과 달리 밥그릇 없음·angry와 달리 처량한 눈 |
 
-이펙트 글리프(Z, 반짝이, 💢, 땀, 속도선)는 dark 도트 좌표 목록,
+이펙트 글리프(Z, 반짝이, 💢, 땀, 속도선, 침)는 dark 도트 좌표 목록,
 밥그릇/브레스는 `(dx, dy, 문자)` 목록(다색)이다.
 
 ### 3.6 재생성·검증
@@ -181,7 +182,7 @@ TMP/TEMP를 지정할 것.
 테스트 파일:
 - `test/core/pixel/pet_pixel_data_test.dart` — 정적 146장 무결성
   (64그리드, 3레이어 비겹침, 핵심 에셋 키 존재)
-- `test/core/pixel/pet_motion_data_test.dart` — 모션 192프레임 무결성
+- `test/core/pixel/pet_motion_data_test.dart` — 모션 216프레임 무결성
   (size-행수 일치, 유아기 24/성장기 28, 3레이어 비겹침, 프레임 간 차이,
   mood 매핑, 에셋 경로→스프라이트 키 추출)
 
@@ -195,10 +196,10 @@ lib/presentation/widgets/
 │   ├── pixelKeyFromAssetPath()   'assets/dragon2.png' → 'dragon2'
 │   ├── PixelPetImage             에셋 경로로 정적 도트 렌더 (fallback 지원)
 │   ├── PixelSpriteView           PixelSprite 객체 직접 렌더 (모션 프레임용)
-│   └── _PixelSpritePainter       3색 Path 일괄 드로잉, gapRatio 0.12
+│   └── _PixelSpritePainter       3색 Path 일괄 드로잉, gapRatio 0(도트 밀착)
 ├── pixel_motion_animation.dart
-│   ├── PixelMotion enum          walk/eat/sleep/attack/dodge/hurt/angry/joy
-│   ├── motionForMood()           happy→joy, normal→walk, hungry→angry,
+│   ├── PixelMotion enum          walk/eat/sleep/attack/dodge/hurt/angry/joy/hungry
+│   ├── motionForMood()           happy→joy, normal→walk, hungry→hungry,
 │   │                             sleepy·tired→sleep, sad·dead→hurt
 │   ├── motionSpriteKeyFromAssetPath  모션 데이터가 있는 에셋이면
 │   │                             '{종}{1|2}' 키 반환 (stage 2·3 게이트)
@@ -228,7 +229,7 @@ lib/presentation/widgets/
   (`me_screen.dart`의 `_buildDebugGalleryButton` — 삭제 시 이 버튼과 화면
   파일, import 한 줄만 지우면 됨)
 - 탭 1 "스프라이트": `petPixelSprites` 146장 그리드 (키 접두어로 종 테마색 적용)
-- 탭 2 "도트 모션": `motionFrames` 8스프라이트×8모션 애니메이션
+- 탭 2 "도트 모션": `motionFrames` 8스프라이트×9모션 애니메이션
 - 우상단 🌙: 어두운 배경 토글 (흰 도트 대비 확인)
 
 ---

@@ -103,7 +103,7 @@ String _getMoodImageSuffix(PetMood mood) {
 /// 매핑 규칙 (mood 6종):
 /// - happy → happy
 /// - normal → exercise
-/// - hungry → feed
+/// - hungry → hungry (배고파하는 전용 프레임)
 /// - sleepy/tired → sleep
 /// - sad/dead → sad
 PetImageType getPetImageTypeFromMood(PetMood mood) {
@@ -113,7 +113,7 @@ PetImageType getPetImageTypeFromMood(PetMood mood) {
     case PetMood.normal:
       return PetImageType.exercise;
     case PetMood.hungry:
-      return PetImageType.feed;
+      return PetImageType.hungry;
     case PetMood.sleepy:
       return PetImageType.sleep;
     case PetMood.tired:
@@ -146,6 +146,8 @@ String getImageTypeString(PetImageType imageType) {
       return 'full';
     case PetImageType.sad:
       return 'sad';
+    case PetImageType.hungry:
+      return 'hungry';
   }
 }
 

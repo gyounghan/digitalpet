@@ -652,6 +652,8 @@ GLYPH_SPARKLE = [(1, 0), (0, 1), (2, 1), (1, 2)]
 GLYPH_ANGER = [(0, 0), (2, 0), (1, 1), (0, 2), (2, 2)]
 GLYPH_SWEAT = [(0, 0), (0, 1)]
 GLYPH_SPEED = [(0, 0), (1, 0), (0, 4), (1, 4), (0, 8), (1, 8)]
+GLYPH_DROOL = [(0, 0), (0, 1)]  # 입 아래로 흘리는 침 (짧게)
+GLYPH_DROOL_LONG = [(0, 0), (0, 1), (0, 2)]  # 길게 늘어진 침
 
 # 밥그릇 — (dx, dy, 문자) 목록. '#' 그릇/김, '+' 밥(보조색 쌀 무더기)
 _FOOD_BOWL = [
@@ -876,6 +878,26 @@ def motion_joy(sp):
     return [crouch, f2, f3]
 
 
+def motion_hungry(sp):
+    """배고픔: 입 벌려 침 흘리며 밥 달라고 조름 (밥그릇 없음 → eat과 구분).
+
+    축 처져 조르다(숙임) → 더 처지며 침 길게(눈 반쯤 감음) → 고개 들어
+    두리번(먹을 것 찾기). 침은 몸 앞(왼쪽)으로 빼 뚝뚝 떨어지게 하고,
+    angry(부릅뜬 눈)와 달리 처량한 눈으로 배고픔을 표현한다.
+    """
+    my = SPECIES_ART[sp]["mouth"][1]
+
+    def drool(g, long):
+        ox = _breath_origin(g, my) - 1  # 몸 왼쪽(입 앞) 바로 바깥
+        return with_glyph(g, GLYPH_DROOL_LONG if long else GLYPH_DROOL,
+                          ox, my + 1)
+
+    f1 = drool(pose(sp, eye="open", mouth="open", lean=-1, dy=1), False)
+    f2 = drool(pose(sp, eye="closed", mouth="open", dy=2), True)
+    f3 = drool(pose(sp, eye="open", mouth="open", lean=1, dy=1), False)
+    return [f1, f2, f3]
+
+
 MOTIONS = {
     "walk": motion_walk,
     "eat": motion_eat,
@@ -885,6 +907,7 @@ MOTIONS = {
     "hurt": motion_hurt,
     "angry": motion_angry,
     "joy": motion_joy,
+    "hungry": motion_hungry,
 }
 
 # ---------------------------------------------------------------------------

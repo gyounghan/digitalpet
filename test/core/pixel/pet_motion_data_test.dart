@@ -15,6 +15,7 @@ void main() {
     'hurt',
     'angry',
     'joy',
+    'hungry',
   ];
 
   group('motionFrames 데이터 무결성', () {
@@ -110,7 +111,7 @@ void main() {
     test('mood 6종 + dead → 모션 매핑', () {
       expect(motionForMood(PetMood.happy), PixelMotion.joy);
       expect(motionForMood(PetMood.normal), PixelMotion.walk);
-      expect(motionForMood(PetMood.hungry), PixelMotion.angry);
+      expect(motionForMood(PetMood.hungry), PixelMotion.hungry);
       expect(motionForMood(PetMood.sleepy), PixelMotion.sleep);
       expect(motionForMood(PetMood.tired), PixelMotion.sleep);
       expect(motionForMood(PetMood.sad), PixelMotion.hurt);

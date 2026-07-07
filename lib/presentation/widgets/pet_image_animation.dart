@@ -47,6 +47,7 @@ enum PetImageType {
   anxious,
   full,
   sad,
+  hungry,
 }
 
 class _PetImageAnimationState extends State<PetImageAnimation>
@@ -170,6 +171,13 @@ class _PetImageAnimationState extends State<PetImageAnimation>
           'assets/sad_1.png',
           'assets/sad_2.png',
           'assets/sad_3.png',
+        ];
+      case PetImageType.hungry:
+        _images = const [
+          'assets/hungry_1.png',
+          'assets/hungry_2.png',
+          'assets/hungry_3.png',
+          'assets/hungry_4.png',
         ];
     }
   }

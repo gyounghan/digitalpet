@@ -64,8 +64,8 @@ void main() {
       expect(getPetImageTypeFromMood(PetMood.sleepy), PetImageType.sleep);
     });
 
-    test('hungry → feed', () {
-      expect(getPetImageTypeFromMood(PetMood.hungry), PetImageType.feed);
+    test('hungry → hungry', () {
+      expect(getPetImageTypeFromMood(PetMood.hungry), PetImageType.hungry);
     });
 
     test('normal → exercise', () {

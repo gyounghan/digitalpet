@@ -14,13 +14,14 @@ enum PixelMotion {
   hurt,
   angry,
   joy,
+  hungry,
 }
 
 /// mood → 홈 화면 대기 모션 매핑
 ///
 /// - happy → joy (점프+반짝이)
 /// - normal → walk (뒤뚱뒤뚱)
-/// - hungry → angry (배고파서 화남)
+/// - hungry → hungry (침 흘리며 조름)
 /// - sleepy/tired → sleep (엎드려 ZZZ)
 /// - sad/dead → hurt (시무룩)
 PixelMotion motionForMood(PetMood mood) {
@@ -30,7 +31,7 @@ PixelMotion motionForMood(PetMood mood) {
     case PetMood.normal:
       return PixelMotion.walk;
     case PetMood.hungry:
-      return PixelMotion.angry;
+      return PixelMotion.hungry;
     case PetMood.sleepy:
       return PixelMotion.sleep;
     case PetMood.tired:
