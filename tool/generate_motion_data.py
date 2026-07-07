@@ -197,6 +197,30 @@ def apply_accent(art, key):
     return out
 
 
+def add_outline(art):
+    """실루엣 바깥 한 겹을 검은 테두리('#')로 감싼다.
+
+    원본을 도트로 줄이면 가장자리가 몸통색('o')으로 끝나 테두리가 빠진
+    행이 생긴다(특히 성장기). 몸통/보조색/기존 테두리에 상하좌우로 접한
+    빈칸을 '#'로 채워 전체 실루엣을 균일한 검은 테두리로 두른다.
+    (대각선만 접한 칸은 제외 — 모서리가 뭉툭해지지 않게 4방향만)
+    """
+    n = len(art)
+    g = [list(r) for r in art]
+    out = [row[:] for row in g]
+    solid = ("o", "+", "#")
+    for y in range(n):
+        for x in range(n):
+            if g[y][x] != ".":
+                continue
+            for dy, dx in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+                ny, nx = y + dy, x + dx
+                if 0 <= nx < n and 0 <= ny < n and g[ny][nx] in solid:
+                    out[y][x] = "#"
+                    break
+    return ["".join(r) for r in out]
+
+
 def squash_art(g, factor):
     """바닥 고정 세로 눌림 (역매핑이라 구멍 없음). factor < 1.0"""
     n = len(g)
@@ -216,17 +240,17 @@ def squash_art(g, factor):
 # ---------------------------------------------------------------------------
 
 
-def _clear_eye_box(g, ex, ey, pw, ph):
+def _clear_eye_box(g, ex, ey, pw, ph, halo=1):
     """표정을 그릴 자리를 몸통색으로 비운다.
 
-    눈 박스 내부는 무조건 'o'로 채우고, 바로 주변 1px의 어두운 줄무늬/
+    눈 박스 내부는 무조건 'o'로 채우고, 주변 halo px의 어두운 줄무늬/
     음영('#')만 'o'로 눌러 표정(어두운 ^/X)이 배경 줄무늬와 섞이지 않게 한다.
     실루엣 밖(빈칸 '.')·보조색('+')은 건드리지 않아 몸 형태는 유지된다.
-    (tiger처럼 눈이 얼굴 줄무늬에 파묻힌 종의 X·^ 가시성 확보용)
+    (tiger처럼 눈이 얼굴 줄무늬에 파묻힌 종은 halo=2로 넓게 정리해야 함)
     """
     n = len(g)
-    for dy in range(-1, ph + 1):
-        for dx in range(-1, pw + 1):
+    for dy in range(-halo, ph + halo):
+        for dx in range(-halo, pw + halo):
             xx, yy = ex + dx, ey + dy
             if not (0 <= xx < n and 0 <= yy < n):
                 continue
@@ -249,7 +273,9 @@ def draw_eye(g, rect, style):
         pw, ph = max(w, 3), max(h, 3)
         ex = x - (pw - w) // 2
         ey = y - (ph - h) // 2
-        _clear_eye_box(g, ex, ey, pw, ph)
+        # 작은 눈(2x2)은 얼굴 줄무늬에 파묻히므로 주변을 2px까지 넓게 정리
+        halo = 2 if min(w, h) <= 2 else 1
+        _clear_eye_box(g, ex, ey, pw, ph, halo=halo)
     else:
         pw, ph, ex, ey = w, h, x, y
         for dy in range(ph):
@@ -903,6 +929,10 @@ def main() -> int:
         validate(meta["body"], "%s.body" % key)
         # 원본 PNG 색 재샘플링으로 보조색('+') 자동 태깅
         meta["body"] = apply_accent(meta["body"], key)
+        # 성장기(28px)는 가장자리가 몸통색으로 끝나 테두리가 빠진 곳이 많아
+        # 실루엣을 검은 테두리로 감싼다 (유아기는 원본 테두리가 살아있음)
+        if key.endswith("2"):
+            meta["body"] = add_outline(meta["body"])
 
     sprite_frames = {}
     for key in SPECIES_ART:

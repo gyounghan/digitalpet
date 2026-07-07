@@ -126,8 +126,12 @@ class _PixelSpritePainter extends CustomPainter {
   final Color darkColor;
   final Color accentColor;
 
-  /// 도트 사이 간격 비율 (도트 매트릭스 느낌)
-  static const double gapRatio = 0.12;
+  /// 도트 사이 간격 비율 (0이면 도트가 붙어 통짜 실루엣으로 보임)
+  static const double gapRatio = 0.0;
+
+  /// 인접 도트 경계에 생기는 안티에일리어싱 흰 실선(seam)을 없애기 위한
+  /// 미세 오버랩 (px) — 각 도트를 오른쪽·아래로 살짝 키워 맞물리게 한다.
+  static const double _seamOverlap = 0.5;
 
   _PixelSpritePainter({
     required this.sprite,
@@ -161,8 +165,8 @@ class _PixelSpritePainter extends CustomPainter {
         final rect = Rect.fromLTWH(
           x * cell + inset,
           y * cell + inset,
-          cell - inset * 2,
-          cell - inset * 2,
+          cell - inset * 2 + _seamOverlap,
+          cell - inset * 2 + _seamOverlap,
         );
         (isDark ? darkPath : (isAccent ? accentPath : bodyPath)).addRect(rect);
       }
