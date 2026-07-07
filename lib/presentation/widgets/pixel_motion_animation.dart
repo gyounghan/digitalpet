@@ -48,13 +48,15 @@ List<PixelSprite>? motionFramesFor(String spriteKey, PixelMotion motion) {
   return motionFrames[spriteKey]?[motion.name];
 }
 
-/// 에셋 경로에 모션 데이터가 있으면 스프라이트 키('{종}{1|2}') 반환
+/// 에셋 경로에 모션 데이터가 있으면 스프라이트 키 반환
 ///
+/// 'assets/기본이미지.png' → 'fluff' (털뭉치),
 /// 'assets/dragon1.png' → 'dragon1', 'assets/dragon2.png' → 'dragon2',
 /// 'assets/dragon3.png' → null (mythical은 모션 미지원)
 String? motionSpriteKeyFromAssetPath(String assetPath) {
   final key = pixelKeyFromAssetPath(assetPath);
-  return motionFrames.containsKey(key) ? key : null;
+  final spriteKey = key == '기본이미지' ? 'fluff' : key;
+  return motionFrames.containsKey(spriteKey) ? spriteKey : null;
 }
 
 /// 펫 도트 모션 애니메이션 — 3프레임 루프

@@ -68,14 +68,14 @@ python tool/generate_pixel_data.py
 
 ---
 
-## 3. 모션 파이프라인 (8스프라이트×9모션×3프레임 — 유아기 24, 성장기 28)
+## 3. 모션 파이프라인 (9스프라이트×9모션×3프레임 — 털뭉치·유아기 24, 성장기 28)
 
 **스크립트**: `tool/generate_motion_data.py` → `lib/core/pixel/pet_motion_data.dart`
 (출력: `motionFrames` — `Map<String 스프라이트키, Map<String모션, List<PixelSprite>>>`,
 키는 `'{종}{스테이지}'` — `'dragon1'`(유아기 24×24), `'dragon2'`(성장기 28×28))
 
 핵심 아이디어: 원본 `assets/{종}{1|2}.png` 픽셀아트를 **도트 아트 문자열**로
-옮긴 뒤(수작업 정리), 부위별 변형으로 모션을 합성한다. 프레임을 손으로 216장
+옮긴 뒤(수작업 정리), 부위별 변형으로 모션을 합성한다. 프레임을 손으로 243장
 그리는 게 아니라, 스프라이트당 몸체 아트 1장 + 조립 규칙으로 만든다.
 
 그리드 크기는 아트마다 달라도 된다 — 모든 연산 함수는 `len(g)`에서 크기를
@@ -182,7 +182,7 @@ TMP/TEMP를 지정할 것.
 테스트 파일:
 - `test/core/pixel/pet_pixel_data_test.dart` — 정적 146장 무결성
   (64그리드, 3레이어 비겹침, 핵심 에셋 키 존재)
-- `test/core/pixel/pet_motion_data_test.dart` — 모션 216프레임 무결성
+- `test/core/pixel/pet_motion_data_test.dart` — 모션 243프레임 무결성
   (size-행수 일치, 유아기 24/성장기 28, 3레이어 비겹침, 프레임 간 차이,
   mood 매핑, 에셋 경로→스프라이트 키 추출)
 
@@ -202,18 +202,19 @@ lib/presentation/widgets/
 │   ├── motionForMood()           happy→joy, normal→walk, hungry→hungry,
 │   │                             sleepy·tired→sleep, sad·dead→hurt
 │   ├── motionSpriteKeyFromAssetPath  모션 데이터가 있는 에셋이면
-│   │                             '{종}{1|2}' 키 반환 (stage 2·3 게이트)
+│   │                             '기본이미지'→'fluff', '{종}{1|2}' 키 반환 (stage 1·2·3)
 │   └── PixelMotionAnimation      spriteKey 기반 3프레임 루프 (기본 900ms/
 │                                 사이클, 인덱스 변경 시에만 setState)
-└── pet_image_animation.dart      stage 1(털뭉치) mood 프레임 애니메이션
+└── pet_image_animation.dart      stage 4(사신수) mood 정적 프레임 렌더
 ```
 
 ### 화면 연결
 
-- **홈** (`home_screen.dart` `_buildPetSprite`): stage 2·3 + 종 결정 시
-  `PixelMotionAnimation(spriteKey: '{종}{stage-1}', mood 기반 모션)`.
-  급식 버튼 → `_playTransientMotion(PixelMotion.eat)` 2.7초.
-  그 외 스테이지는 `PetImageAnimation`(정적 도트).
+- **홈** (`home_screen.dart` `_buildPetSprite`): `_motionSpriteKey(pet)`가
+  키를 주면(stage 1 'fluff' / stage 2·3 '{종}{stage-1}')
+  `PixelMotionAnimation(mood 기반 모션)`. 급식 버튼 →
+  `_playTransientMotion(PixelMotion.eat)` 2.7초.
+  사신수(stage 4)만 `PetImageAnimation`(정적 mood 도트).
 - **배틀** (`battle_screen.dart` `_myTurnMotion`): 턴 중 내 펫이
   회피(상대 피해 0)→dodge / 우세→attack / 열세→hurt, 600ms 사이클.
 - **색 주입**: 밝은 배경에서는 `theme.primary`+`theme.spriteAccent`,
@@ -229,7 +230,7 @@ lib/presentation/widgets/
   (`me_screen.dart`의 `_buildDebugGalleryButton` — 삭제 시 이 버튼과 화면
   파일, import 한 줄만 지우면 됨)
 - 탭 1 "스프라이트": `petPixelSprites` 146장 그리드 (키 접두어로 종 테마색 적용)
-- 탭 2 "도트 모션": `motionFrames` 8스프라이트×9모션 애니메이션
+- 탭 2 "도트 모션": `motionFrames` 9스프라이트×9모션 애니메이션
 - 우상단 🌙: 어두운 배경 토글 (흰 도트 대비 확인)
 
 ---

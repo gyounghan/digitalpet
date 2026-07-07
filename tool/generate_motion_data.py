@@ -58,6 +58,9 @@ SPECIES_SRC = {
                   size=(22, 26), off=(3, 1), light=0.68, darkmid=False),
     "turtle2": dict(path="assets/turtle2.png", crop=(0.0, 0.0, 1.0, 0.94),
                     size=(28, 20), off=(0, 7), light=None, darkmid=True),
+    # 털뭉치(stage 1) — 단색 크림이라 보조색 태깅 없이 몸통색 단색으로
+    "fluff": dict(path="assets/기본이미지.png", crop=None, size=(24, 24),
+                  off=(0, 0), light=None, darkmid=False),
 }
 
 # ---------------------------------------------------------------------------
@@ -640,6 +643,37 @@ SPECIES_ART = {
         "eyes": [(6, 15, 2, 2), (18, 9, 2, 2)],
         "mouth": (2, 17),
     },
+    # 털뭉치(stage 1) — 둥근 크림 뭉치 + 두 귀 + 큰 두 눈 + 작은 입 (정면)
+    "fluff": {
+        "body": [
+            "........................",
+            "........................",
+            "....oooo........oooo....",
+            "....oooo........oooo....",
+            "...oooooooooooooooooo...",
+            "....oooooooooooooooo....",
+            "....oooooooooooooooo....",
+            "....oooooooooooooooo....",
+            "...oooooooooooooooooo...",
+            "...oooooooooooooooooo...",
+            "..oooooooooooooooooooo..",
+            "..oooooooooooooooooooo..",
+            "..oooooooooooooooooooo..",
+            "..oooooooooooooooooooo..",
+            "..oooooooooooooooooooo..",
+            "..oooooooo#oo#oooooooo..",
+            "..ooooooooo##ooooooooo..",
+            "..oooooooooooooooooooo..",
+            "...oooooooooooooooooo...",
+            "...oooooooooooooooooo...",
+            "....oooooooooooooooo....",
+            ".....oooooooooooooo.....",
+            ".......oooooooooo.......",
+            ".........oooooo.........",
+        ],
+        "eyes": [(6, 10, 4, 4), (14, 10, 4, 4)],
+        "mouth": (11, 15),
+    },
 }
 
 # ---------------------------------------------------------------------------
@@ -976,9 +1010,9 @@ def main() -> int:
         validate(meta["body"], "%s.body" % key)
         # 원본 PNG 색 재샘플링으로 보조색('+') 자동 태깅
         meta["body"] = apply_accent(meta["body"], key)
-        # 성장기(28px)는 가장자리가 몸통색으로 끝나 테두리가 빠진 곳이 많아
+        # 성장기(28px)·털뭉치는 가장자리가 몸통색으로 끝나 테두리가 빠지므로
         # 실루엣을 검은 테두리로 감싼다 (유아기는 원본 테두리가 살아있음)
-        if key.endswith("2"):
+        if key.endswith("2") or key == "fluff":
             meta["body"] = add_outline(meta["body"])
 
     sprite_frames = {}
