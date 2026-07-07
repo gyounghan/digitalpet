@@ -315,13 +315,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
+  /// 도트 모션 데이터가 있는 스테이지인지 (유아기 2, 성장기 3)
+  bool _hasMotionStage(Pet pet) =>
+      pet.evolutionStage == 2 || pet.evolutionStage == 3;
+
   /// 펫 스테이지 스프라이트
   ///
-  /// - 베이비(stage 2): mood 기반 도트 모션 루프 + 액션 시 일시 모션(밥먹기)
+  /// - 유아기(stage 2)·성장기(stage 3): mood 기반 도트 모션 루프
+  ///   + 액션 시 일시 모션(밥먹기)
   /// - 그 외 단계: 기존 mood 정적/프레임 도트 렌더
   Widget _buildPetSprite(Pet pet, SpeciesTheme theme) {
     final species = evolutionSpeciesImagePrefix(pet.evolutionType);
-    if (pet.evolutionStage == 2 && species != null) {
+    if (_hasMotionStage(pet) && species != null) {
+      // stage 2 → '{종}1', stage 3 → '{종}2' (에셋 인덱스와 동일 규칙)
+      final spriteKey = '$species${pet.evolutionStage - 1}';
       final motion = _transientMotion ?? motionForMood(pet.mood);
       return SizedBox(
         width: 300,
@@ -329,7 +336,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         child: Align(
           alignment: Alignment.bottomCenter,
           child: PixelMotionAnimation(
-            species: species,
+            spriteKey: spriteKey,
             motion: motion,
             width: 270,
             height: 270,
@@ -369,8 +376,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ref
                 .read(petNotifierProvider(HomeScreen.defaultPetId).notifier)
                 .feed();
-            // 베이비 단계면 밥먹는 모션을 잠깐 재생
-            if (pet.evolutionStage == 2) {
+            // 도트 모션이 있는 단계면 밥먹는 모션을 잠깐 재생
+            if (_hasMotionStage(pet)) {
               _playTransientMotion(PixelMotion.eat);
             }
           },

@@ -1,14 +1,17 @@
 # -*- coding: utf-8 -*-
-"""베이비(유아기, stage 2) 도트 모션 생성 — 사용자 원본 캐릭터 기반.
+"""도트 모션 생성 — 사용자 원본 캐릭터 기반 (유아기 24x24 + 성장기 28x28).
 
-assets/{dragon,tiger,bird,turtle}1.png 원본 픽셀아트를 24x24 도트 아트로
-옮긴 뒤(물방울·동전·그림자 제거 등 수작업 정리), 부위별 변형으로
-다마고치 방식 모션 3프레임을 만든다:
+assets/{종}{1|2}.png 원본 픽셀아트를 도트 아트로 옮긴 뒤(물방울·동전·그림자
+제거 등 수작업 정리), 부위별 변형으로 다마고치 방식 모션 3프레임을 만든다:
   - 걷기: 하단 다리 영역을 앞/뒤 절반으로 나눠 교차 스텝
   - 표정: 원본 눈 위치(rect)에 눈 4종(뜸/감음/^^/><) + 눈썹 + 입 벌림
   - 수면: 몸을 눌러 엎드림 + 감은 눈 + 호흡 + Z
   - 공격/회피/아픔: 상단 기울임(lean) + 돌진/젖힘
   - 이펙트 글리프 (Z, 반짝이, 화남, 땀, 속도선, 밥그릇)
+
+그리드 크기는 아트마다 다를 수 있다 (유아기 24, 성장기 28). 모든 연산
+함수는 len(g)에서 크기를 얻고, 이펙트 좌표는 24 기준값을 우측/하단
+앵커로 보정한다.
 
 아트 문법: '.' 빈칸 / '#' 진한 도트(아웃라인·눈) / 'o' 몸통 도트(테마색)
           / '+' 보조색 도트(배·부리·등딱지 등 — 원본 색에서 자동 태깅)
@@ -17,10 +20,11 @@ assets/{dragon,tiger,bird,turtle}1.png 원본 픽셀아트를 24x24 도트 아�
 사용법:
     python tool/generate_motion_data.py
 미리보기:
-    python tool/preview_motion.py <종> <모션> [프레임]
+    python tool/preview_motion.py <스프라이트키> <모션> [프레임]
+    (예: python tool/preview_motion.py dragon2 attack)
 
 출력:
-    lib/core/pixel/pet_motion_data.dart (PixelSprite size=24)
+    lib/core/pixel/pet_motion_data.dart (motionFrames — 키 '{종}{1|2}')
 """
 
 import os
@@ -28,33 +32,35 @@ import sys
 
 from PIL import Image
 
-GRID = 24
+BASE = 24  # 이펙트 글리프 좌표의 기준 그리드 (24 기준값 + 앵커 보정)
 OUTPUT_PATH = os.path.join("lib", "core", "pixel", "pet_motion_data.dart")
 
 # 아트를 덤프할 때 사용한 원본/크롭/배치 파라미터 — accent 자동 태깅에 재사용
-# (경로, 크롭 비율 (fx0,fy0,fx1,fy1) 또는 None, 리사이즈 (w,h), 그리드 y오프셋,
-#  밝음 임계값 또는 None, 갈색 중간톤을 '+'로 볼지)
+# path: 원본 PNG / crop: 비율 크롭 (fx0,fy0,fx1,fy1) 또는 None
+# size: 리사이즈 (w,h) / off: 그리드 배치 오프셋 (x,y)
+# light: 'o'를 '+'로 승격하는 밝음 임계값 또는 None
+# darkmid: 갈색 중간톤 '#'를 '+'로 볼지 (거북 등딱지)
 SPECIES_SRC = {
-    "dragon": ("assets/dragon1.png", (0.13, 0.15, 0.86, 0.95), (24, 20), 3,
-               0.75, False),
-    "tiger": ("assets/tiger1.png", None, (24, 21), 2, 0.80, False),
-    "bird": ("assets/bird1.png", (0.0, 0.0, 1.0, 0.95), (24, 20), 3,
-             0.68, False),
-    "turtle": ("assets/turtle1.png", (0.0, 0.0, 1.0, 0.93), (24, 20), 3,
-               None, True),
+    "dragon1": dict(path="assets/dragon1.png", crop=(0.13, 0.15, 0.86, 0.95),
+                    size=(24, 20), off=(0, 3), light=0.75, darkmid=False),
+    "tiger1": dict(path="assets/tiger1.png", crop=None,
+                   size=(24, 21), off=(0, 2), light=0.80, darkmid=False),
+    "bird1": dict(path="assets/bird1.png", crop=(0.0, 0.0, 1.0, 0.95),
+                  size=(24, 20), off=(0, 3), light=0.68, darkmid=False),
+    "turtle1": dict(path="assets/turtle1.png", crop=(0.0, 0.0, 1.0, 0.93),
+                    size=(24, 20), off=(0, 3), light=None, darkmid=True),
 }
 
 # ---------------------------------------------------------------------------
-# 아트 그리드 기본 연산 ('.'/'#'/'o' 문자 그리드, 24x24)
+# 아트 그리드 기본 연산 ('.'/'#'/'o'/'+' 문자 그리드 — 크기는 len(g)에서)
 # ---------------------------------------------------------------------------
-
-EMPTY_ROW = "." * GRID
 
 
 def validate(art, name):
-    assert len(art) == GRID, "%s: %d행 (24행이어야 함)" % (name, len(art))
+    n = len(art)
     for i, row in enumerate(art):
-        assert len(row) == GRID, "%s row %d: %d칸" % (name, i, len(row))
+        assert len(row) == n, "%s row %d: %d칸 (정사각 %d이어야 함)" % (
+            name, i, len(row), n)
         assert set(row) <= {".", "#", "o", "+"}, (
             "%s row %d: 잘못된 문자" % (name, i)
         )
@@ -65,20 +71,22 @@ def grid(art):
 
 
 def put(g, x, y, ch):
-    if 0 <= x < GRID and 0 <= y < GRID:
+    n = len(g)
+    if 0 <= x < n and 0 <= y < n:
         g[y][x] = ch
 
 
-def stamp(g, dots, ox, oy, ch="#"):
+def stamp(g, dots, ox, oy):
     for dx, dy in dots:
-        put(g, ox + dx, oy + dy, ch)
+        put(g, ox + dx, oy + dy, "#")
 
 
 def bbox(g):
     """도트가 있는 영역 (x0, x1, y0, y1)."""
-    x0, x1, y0, y1 = GRID, -1, GRID, -1
-    for y in range(GRID):
-        for x in range(GRID):
+    n = len(g)
+    x0, x1, y0, y1 = n, -1, n, -1
+    for y in range(n):
+        for x in range(n):
             if g[y][x] != ".":
                 x0, x1 = min(x0, x), max(x1, x)
                 y0, y1 = min(y0, y), max(y1, y)
@@ -86,22 +94,24 @@ def bbox(g):
 
 
 def shift_art(g, dx, dy):
-    out = [["."] * GRID for _ in range(GRID)]
-    for y in range(GRID):
-        for x in range(GRID):
+    n = len(g)
+    out = [["."] * n for _ in range(n)]
+    for y in range(n):
+        for x in range(n):
             if g[y][x] == ".":
                 continue
             nx, ny = x + dx, y + dy
-            if 0 <= nx < GRID and 0 <= ny < GRID:
+            if 0 <= nx < n and 0 <= ny < n:
                 out[ny][nx] = g[y][x]
     return out
 
 
 def move_region(g, x0, y0, x1, y1, dx, dy):
     """사각 영역의 도트만 이동 (다리 스텝, 머리 숙임 등)."""
+    n = len(g)
     moved = []
-    for y in range(max(0, y0), min(GRID - 1, y1) + 1):
-        for x in range(max(0, x0), min(GRID - 1, x1) + 1):
+    for y in range(max(0, y0), min(n - 1, y1) + 1):
+        for x in range(max(0, x0), min(n - 1, x1) + 1):
             if g[y][x] != ".":
                 moved.append((x + dx, y + dy, g[y][x]))
                 g[y][x] = "."
@@ -124,23 +134,27 @@ def lift_art(g, dy_up):
     return shift_art(g, 0, -min(dy_up, top_margin(g)))
 
 
-def apply_accent(art, species):
+def apply_accent(art, key):
     """원본 PNG 색을 다시 샘플링해 'o'/'#' 셀 일부를 '+'(보조색)로 승격.
 
     - 밝은 영역(크림 배·흰 몸·노란 부리): luminance > light 임계값인 'o'
     - 갈색 중간톤(거북 등딱지): 0.18 <= luminance < 0.45인 '#'
     아웃라인(아주 어두움)과 눈은 dark로 유지된다.
     """
-    path, frac, (w, h), y_off, light, darkmid = SPECIES_SRC[species]
-    im = Image.open(path).convert("RGBA")
+    src = SPECIES_SRC[key]
+    w, h = src["size"]
+    x_off, y_off = src["off"]
+    light, darkmid = src["light"], src["darkmid"]
+    im = Image.open(src["path"]).convert("RGBA")
     im = im.crop(im.getbbox())
-    if frac is not None:
+    if src["crop"] is not None:
+        fx0, fy0, fx1, fy1 = src["crop"]
         width, height = im.size
         im = im.crop((
-            int(width * frac[0]),
-            int(height * frac[1]),
-            int(width * frac[2]),
-            int(height * frac[3]),
+            int(width * fx0),
+            int(height * fy0),
+            int(width * fx1),
+            int(height * fy1),
         ))
         im = im.crop(im.getbbox() or (0, 0, im.width, im.height))
     small = im.resize((w, h), Image.BOX)
@@ -154,10 +168,11 @@ def apply_accent(art, species):
             continue
         new_row = []
         for x, ch in enumerate(row):
-            if ch in (".",) or x >= w:
+            sx = x - x_off
+            if ch == "." or not 0 <= sx < w:
                 new_row.append(ch)
                 continue
-            r, g, b, a = px[x, sy]
+            r, g, b, a = px[sx, sy]
             if a / 255.0 <= 0.5:
                 new_row.append(ch)
                 continue
@@ -175,9 +190,10 @@ def apply_accent(art, species):
 
 def squash_art(g, factor):
     """바닥 고정 세로 눌림 (역매핑이라 구멍 없음). factor < 1.0"""
+    n = len(g)
     _, _, y0, y1 = bbox(g)
-    out = [["."] * GRID for _ in range(GRID)]
-    for ny in range(GRID):
+    out = [["."] * n for _ in range(n)]
+    for ny in range(n):
         if ny > y1:
             continue
         src = y1 - int(round((y1 - ny) / factor))
@@ -255,27 +271,28 @@ def _breath_origin(g, my):
 
     tiger처럼 입이 몸 안쪽(정면 얼굴)에 있는 종도 몸 밖으로 분사되게 한다.
     """
+    n = len(g)
     for y in (my, my - 1, my + 1):
-        if not 0 <= y < GRID:
+        if not 0 <= y < n:
             continue
-        for x in range(GRID):
+        for x in range(n):
             if g[y][x] != ".":
                 return x
-    return GRID // 2
+    return n // 2
 
 
-def draw_breath_puff(g, species):
+def draw_breath_puff(g, key):
     """발사 직후 — 몸 앞에 갓 떨어져 나온 작은 덩어리."""
-    my = SPECIES_ART[species]["mouth"][1]
+    my = SPECIES_ART[key]["mouth"][1]
     origin = _breath_origin(g, my)
     for ox, oy, ch in BREATH_PUFF:
         put(g, origin + ox, my + oy, ch)
     return g
 
 
-def draw_breath_ball(g, species):
+def draw_breath_ball(g, key):
     """멀리 날아간 투사체 — 왼쪽 끝에 파이어볼 + 몸과의 사이에 궤적 잔상."""
-    my = SPECIES_ART[species]["mouth"][1]
+    my = SPECIES_ART[key]["mouth"][1]
     origin = _breath_origin(g, my)
     for ox, oy, ch in BREATH_BALL:
         put(g, ox, my + oy, ch)
@@ -286,13 +303,14 @@ def draw_breath_ball(g, species):
 
 
 # ---------------------------------------------------------------------------
-# 종별 도트 아트 (24x24) — 원본 PNG를 옮긴 뒤 수작업 정리
-# meta: eyes(rect 목록), mouth, 원본 유지를 위해 다리는 하단 영역 분리로 표현
+# 스프라이트별 도트 아트 — 원본 PNG를 옮긴 뒤 수작업 정리
+# 키: '{종}{스테이지}' (유아기 1 = 24x24, 성장기 2 = 28x28)
+# meta: body(정사각 아트), eyes(rect 목록), mouth
 # ---------------------------------------------------------------------------
 
 SPECIES_ART = {
     # 아기 청룡 — 머리 볏, 큰 눈, 크림색 배, 오른쪽 말린 꼬리 (물방울·동전 제거)
-    "dragon": {
+    "dragon1": {
         "body": [
             "........................",
             "........................",
@@ -323,7 +341,7 @@ SPECIES_ART = {
         "mouth": (5, 16),
     },
     # 아기 백호 — 세모 귀, 정면 두 눈, 줄무늬, 오른쪽 꼬리
-    "tiger": {
+    "tiger1": {
         "body": [
             "........................",
             "........................",
@@ -354,7 +372,7 @@ SPECIES_ART = {
         "mouth": (7, 12),
     },
     # 아기 주작 — 불꽃 볏/꼬리, 노란 부리, 둥근 몸 (그림자 제거)
-    "bird": {
+    "bird1": {
         "body": [
             "........................",
             "........................",
@@ -385,7 +403,7 @@ SPECIES_ART = {
         "mouth": (3, 12),
     },
     # 아기 현무 — 왼쪽으로 내민 머리, 큰 눈, 갈색 등딱지 (그림자 제거)
-    "turtle": {
+    "turtle1": {
         "body": [
             "........................",
             "........................",
@@ -418,7 +436,7 @@ SPECIES_ART = {
 }
 
 # ---------------------------------------------------------------------------
-# 이펙트 글리프 (24그리드 기준 dark 도트 좌표)
+# 이펙트 글리프 (24 기준 dark 도트 좌표 — 배치 시 앵커 보정)
 # ---------------------------------------------------------------------------
 
 GLYPH_Z = [(0, 0), (1, 0), (2, 0), (1, 1), (0, 2), (1, 2), (2, 2)]
@@ -447,15 +465,18 @@ FOOD_HALF = _FOOD_BOWL + [
     (1, 2, "+"), (2, 2, "+"), (3, 2, "+"),
 ]
 FOOD_EMPTY = _FOOD_BOWL
-FOOD_POS = (0, 17)
 
 # ---------------------------------------------------------------------------
 # 프레임 조립
 # ---------------------------------------------------------------------------
 
 
+def art_size(key):
+    return len(SPECIES_ART[key]["body"])
+
+
 def pose(
-    species,
+    key,
     eye="open",
     mouth="none",
     step=None,  # None / 'front' / 'back' / 'both_up'
@@ -464,8 +485,9 @@ def pose(
     lean=0,  # 상단 절반 가로 이동: -1 앞으로 숙임, +1 뒤로 젖힘
 ):
     """원본 몸체 + 표정 + 다리 스텝을 조립해 아트 그리드 반환."""
-    meta = SPECIES_ART[species]
+    meta = SPECIES_ART[key]
     g = grid(meta["body"])
+    n = len(g)
 
     # 표정 (기울임/이동 전에 원본 좌표 기준으로)
     for rect in meta["eyes"]:
@@ -489,16 +511,16 @@ def pose(
     if lean:
         x0, x1, y0, y1 = bbox(g)
         head_bottom = y0 + (y1 - y0) // 2
-        g = move_region(g, 0, 0, GRID - 1, head_bottom, lean, 0)
+        g = move_region(g, 0, 0, n - 1, head_bottom, lean, 0)
 
     if dx or dy:
         g = shift_art(g, dx, dy)
     return g
 
 
-def lying_pose(species, factor):
+def lying_pose(key, factor):
     """몸을 눌러 엎드린 수면 자세 + 감은 눈 (호흡은 factor 차이로)."""
-    meta = SPECIES_ART[species]
+    meta = SPECIES_ART[key]
     g = grid(meta["body"])
     _, _, _, y1 = bbox(g)
     squashed = squash_art(g, factor)
@@ -512,9 +534,10 @@ def lying_pose(species, factor):
 
 def head_bow(g, depth):
     """머리(상단 절반)를 앞(-x)·아래로 숙임 (밥먹기)."""
+    n = len(g)
     x0, x1, y0, y1 = bbox(g)
     head_bottom = y0 + (y1 - y0) // 2
-    return move_region(g, 0, 0, GRID - 1, head_bottom, -1, depth)
+    return move_region(g, 0, 0, n - 1, head_bottom, -1, depth)
 
 
 def with_glyph(g, glyph, ox, oy):
@@ -533,6 +556,7 @@ def with_chars(g, dots, ox, oy):
 
 # ---------------------------------------------------------------------------
 # 모션 정의 — 각 함수는 아트 그리드 3프레임 반환
+# 이펙트 좌표는 24 기준값에 r(= 크기 - 24)을 더해 우측/하단 앵커로 보정
 # ---------------------------------------------------------------------------
 
 
@@ -551,25 +575,28 @@ def motion_eat(sp):
     그릇 자리를 만들기 위해 몸을 오른쪽으로 2칸 비켜 세운다.
     밥은 보조색 쌀 무더기 + 김으로 그려 한눈에 '밥'으로 읽히게 한다.
     """
+    n = art_size(sp)
+    food_pos = (0, n - 7)  # 그릇 바닥이 지면(n-2행 근처)에 닿게 하단 앵커
     f1 = pose(sp, eye="open", mouth="open", dx=2)
-    f1 = with_chars(f1, FOOD_FULL, *FOOD_POS)
+    f1 = with_chars(f1, FOOD_FULL, *food_pos)
     f2 = head_bow(pose(sp, eye="closed", dx=2), 2)
-    f2 = with_chars(f2, FOOD_HALF, *FOOD_POS)
+    f2 = with_chars(f2, FOOD_HALF, *food_pos)
     f3 = pose(sp, eye="happy", mouth="open", dx=2)
-    f3 = with_chars(f3, FOOD_EMPTY, *FOOD_POS)
+    f3 = with_chars(f3, FOOD_EMPTY, *food_pos)
     return [f1, f2, f3]
 
 
 def motion_sleep(sp):
     """엎드려 눈 감고 호흡, Z가 하나씩 올라감."""
+    r = art_size(sp) - BASE
     inhale = lying_pose(sp, 0.62)
     exhale = lying_pose(sp, 0.55)
-    f1 = with_glyph(inhale, GLYPH_Z_SMALL, 17, 8)
-    f2 = with_glyph(exhale, GLYPH_Z_SMALL, 17, 8)
-    f2 = with_glyph(f2, GLYPH_Z, 19, 4)
-    f3 = with_glyph(inhale, GLYPH_Z_SMALL, 16, 9)
-    f3 = with_glyph(f3, GLYPH_Z, 18, 5)
-    f3 = with_glyph(f3, GLYPH_Z, 20, 1)
+    f1 = with_glyph(inhale, GLYPH_Z_SMALL, 17 + r, 8 + r)
+    f2 = with_glyph(exhale, GLYPH_Z_SMALL, 17 + r, 8 + r)
+    f2 = with_glyph(f2, GLYPH_Z, 19 + r, 4 + r)
+    f3 = with_glyph(inhale, GLYPH_Z_SMALL, 16 + r, 9 + r)
+    f3 = with_glyph(f3, GLYPH_Z, 18 + r, 5 + r)
+    f3 = with_glyph(f3, GLYPH_Z, 20 + r, 1 + r)
     return [f1, f2, f3]
 
 
@@ -589,11 +616,12 @@ def motion_attack(sp):
 
 def motion_dodge(sp):
     """움찔 → 뒤로 크게 젖히며 물러남(속도선) → 복귀."""
+    r = art_size(sp) - BASE
     f2 = pose(sp, eye="closed", step="back", dx=3, lean=1)
     f3 = pose(sp, eye="open", dx=1)
     return [
         pose(sp, eye="open"),
-        with_glyph(f2, GLYPH_SPEED, 0, 8),
+        with_glyph(f2, GLYPH_SPEED, 0, 8 + r // 2),
         f3,
     ]
 
@@ -605,36 +633,39 @@ def motion_hurt(sp):
     하얗게 사라져 보여서 실제 휘청이는 포즈로 교체했다.
     """
     # 땀방울은 몸이 닿지 않는 머리 위 상단(0~3행)에 배치 — 잘림/겹침 방지
+    r = art_size(sp) - BASE
     f1 = pose(sp, eye="pain", mouth="open", lean=1)
-    f1 = with_glyph(f1, GLYPH_SWEAT, 19, 1)
+    f1 = with_glyph(f1, GLYPH_SWEAT, 19 + r, 1)
     f2 = pose(sp, eye="pain", mouth="open", dx=1, lean=2)
-    f2 = with_glyph(f2, GLYPH_SWEAT, 21, 2)
-    f2 = with_glyph(f2, GLYPH_SWEAT, 18, 0)
+    f2 = with_glyph(f2, GLYPH_SWEAT, 21 + r, 2)
+    f2 = with_glyph(f2, GLYPH_SWEAT, 18 + r, 0)
     f3 = pose(sp, eye="pain", dx=-1)
-    f3 = with_glyph(f3, GLYPH_SWEAT, 17, 1)
+    f3 = with_glyph(f3, GLYPH_SWEAT, 17 + r, 1)
     return [f1, f2, f3]
 
 
 def motion_angry(sp):
     """부릅뜬 눈 + 입 벌려 씩씩 + 💢, 쿵쿵 발 구르기."""
+    r = art_size(sp) - BASE
     f1 = pose(sp, eye="angry", mouth="open", step="front")
-    f1 = with_glyph(f1, GLYPH_ANGER, 18, 3)
+    f1 = with_glyph(f1, GLYPH_ANGER, 18 + r, 3)
     f2 = pose(sp, eye="angry", dx=1)
-    f2 = with_glyph(f2, GLYPH_ANGER, 17, 2)
+    f2 = with_glyph(f2, GLYPH_ANGER, 17 + r, 2)
     f3 = pose(sp, eye="angry", mouth="open", step="back")
-    f3 = with_glyph(f3, GLYPH_ANGER, 19, 4)
+    f3 = with_glyph(f3, GLYPH_ANGER, 19 + r, 4)
     return [f1, f2, f3]
 
 
 def motion_joy(sp):
     """^^ 눈으로 살짝 숙였다 점프(다리 웅크림) → 착지, 반짝이."""
+    r = art_size(sp) - BASE
     crouch = pose(sp, eye="happy", dy=1)
     airborne = lift_art(pose(sp, eye="happy", mouth="open", step="both_up"), 3)
     landing = pose(sp, eye="happy", mouth="open", dy=1)
-    f2 = with_glyph(airborne, GLYPH_SPARKLE, 0, 6)
-    f2 = with_glyph(f2, GLYPH_SPARKLE, 21, 6)
-    f3 = with_glyph(landing, GLYPH_SPARKLE, 0, 12)
-    f3 = with_glyph(f3, GLYPH_SPARKLE, 21, 12)
+    f2 = with_glyph(airborne, GLYPH_SPARKLE, 0, 6 + r // 2)
+    f2 = with_glyph(f2, GLYPH_SPARKLE, 21 + r, 6 + r // 2)
+    f3 = with_glyph(landing, GLYPH_SPARKLE, 0, 12 + r // 2)
+    f3 = with_glyph(f3, GLYPH_SPARKLE, 21 + r, 12 + r // 2)
     return [crouch, f2, f3]
 
 
@@ -656,14 +687,15 @@ MOTIONS = {
 
 def art_to_masks(g):
     """아트 그리드 → (dark, body, accent) 행 마스크."""
+    n = len(g)
     dark_rows = []
     body_rows = []
     accent_rows = []
-    for y in range(GRID):
+    for y in range(n):
         dark = 0
         body = 0
         accent = 0
-        for x in range(GRID):
+        for x in range(n):
             ch = g[y][x]
             if ch == "#":
                 dark |= 1 << x
@@ -678,7 +710,7 @@ def art_to_masks(g):
 
 
 def format_rows(rows):
-    parts = ["0x%06X" % v for v in rows]
+    parts = ["0x%07X" % v for v in rows]
     lines = []
     for i in range(0, len(parts), 8):
         lines.append("      " + ", ".join(parts[i : i + 8]) + ",")
@@ -686,18 +718,18 @@ def format_rows(rows):
 
 
 def main() -> int:
-    for name, meta in SPECIES_ART.items():
-        validate(meta["body"], "%s.body" % name)
+    for key, meta in SPECIES_ART.items():
+        validate(meta["body"], "%s.body" % key)
         # 원본 PNG 색 재샘플링으로 보조색('+') 자동 태깅
-        meta["body"] = apply_accent(meta["body"], name)
+        meta["body"] = apply_accent(meta["body"], key)
 
-    species_frames = {}
-    for species in SPECIES_ART:
+    sprite_frames = {}
+    for key in SPECIES_ART:
         motions = {}
         for motion_name, build in MOTIONS.items():
-            frames = [art_to_masks(built) for built in build(species)]
+            frames = [art_to_masks(built) for built in build(key)]
             motions[motion_name] = frames
-        species_frames[species] = motions
+        sprite_frames[key] = motions
 
     os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)
     with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
@@ -706,17 +738,19 @@ def main() -> int:
             "// tool/generate_motion_data.py 로 재생성:\n"
             "//   python tool/generate_motion_data.py\n"
             "//\n"
-            "// 베이비(stage 2) 도트 모션 3프레임 — 원본 캐릭터(assets/*1.png)를\n"
-            "// 24x24 도트 아트로 옮긴 뒤 다리 교차/표정/호흡을 입힌 데이터.\n"
+            "// 도트 모션 3프레임 — 원본 캐릭터(assets/{종}{1|2}.png)를\n"
+            "// 도트 아트(유아기 24x24, 성장기 28x28)로 옮긴 뒤\n"
+            "// 다리 교차/표정/호흡을 입힌 데이터.\n"
             "\n"
             "import 'pet_pixel_data.dart';\n"
             "\n"
-            "/// 종(species) → 모션 이름 → 3프레임 도트 스프라이트\n"
+            "/// 스프라이트 키('{종}{스테이지}') → 모션 이름 → 3프레임 도트\n"
             "const Map<String, Map<String, List<PixelSprite>>> "
-            "babyMotionFrames = {\n"
+            "motionFrames = {\n"
         )
-        for species, motions in species_frames.items():
-            f.write("  '%s': {\n" % species)
+        for key, motions in sprite_frames.items():
+            f.write("  '%s': {\n" % key)
+            size = art_size(key)
             for motion_name, frames in motions.items():
                 f.write("    '%s': [\n" % motion_name)
                 for dark, body, accent in frames:
@@ -728,7 +762,7 @@ def main() -> int:
                         "        accent: %s,\n"
                         "      ),\n"
                         % (
-                            GRID,
+                            size,
                             format_rows(dark),
                             format_rows(body),
                             format_rows(accent),
@@ -738,8 +772,11 @@ def main() -> int:
             f.write("  },\n")
         f.write("};\n")
 
-    total = sum(len(m) * 3 for m in species_frames.values())
-    print("생성 완료: %s (%d개 프레임, %dx%d)" % (OUTPUT_PATH, total, GRID, GRID))
+    total = sum(len(m) * 3 for m in sprite_frames.values())
+    sizes = ", ".join(
+        "%s=%d" % (k, art_size(k)) for k in sprite_frames
+    )
+    print("생성 완료: %s (%d개 프레임, %s)" % (OUTPUT_PATH, total, sizes))
     return 0
 
 

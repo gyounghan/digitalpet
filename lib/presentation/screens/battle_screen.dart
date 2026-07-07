@@ -946,18 +946,18 @@ class _FighterRow extends StatelessWidget {
     this.motion,
   });
 
-  /// 파이터 아이콘 — 베이비 스프라이트 + 모션이면 도트 모션, 아니면 정적 도트
+  /// 파이터 아이콘 — 모션 데이터가 있는 스프라이트면 도트 모션, 아니면 정적 도트
   Widget _buildSprite() {
     final path = imagePath;
     if (path == null) {
       return const Icon(Icons.pets, color: DesignTokens.ink3);
     }
-    final babySpecies = babySpeciesFromAssetPath(path);
-    if (babySpecies != null && motion != null) {
+    final spriteKey = motionSpriteKeyFromAssetPath(path);
+    if (spriteKey != null && motion != null) {
       return Padding(
         padding: const EdgeInsets.all(3),
         child: PixelMotionAnimation(
-          species: babySpecies,
+          spriteKey: spriteKey,
           motion: motion!,
           duration: const Duration(milliseconds: 600),
           dotColor: theme.primary,

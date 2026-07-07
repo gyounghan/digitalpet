@@ -13,7 +13,7 @@ const Map<EvolutionType, String> _evolutionImagePrefix = {
 
 /// EvolutionType의 이미지 파일 접두어(종 키) 반환
 ///
-/// 도트 모션 데이터([babyMotionFrames])의 종 키와 동일하다.
+/// 도트 모션 데이터(motionFrames)의 스프라이트 키 접두어와 동일하다.
 /// snake → 'dragon' (뱀→이무기→청룡 이미지 공유)
 String? evolutionSpeciesImagePrefix(EvolutionType? type) {
   if (type == null) return null;

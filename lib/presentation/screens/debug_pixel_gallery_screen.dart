@@ -66,7 +66,7 @@ class _DebugPixelGalleryScreenState extends State<DebugPixelGalleryScreen> {
           bottom: const TabBar(
             tabs: [
               Tab(text: '스프라이트'),
-              Tab(text: '베이비 모션'),
+              Tab(text: '도트 모션'),
             ],
           ),
         ),
@@ -129,20 +129,20 @@ class _DebugPixelGalleryScreenState extends State<DebugPixelGalleryScreen> {
   }
 
   Widget _buildMotionList() {
-    final speciesKeys = babyMotionFrames.keys.toList()..sort();
+    final spriteKeys = motionFrames.keys.toList()..sort();
     return ListView.builder(
       padding: const EdgeInsets.all(12),
-      itemCount: speciesKeys.length,
+      itemCount: spriteKeys.length,
       itemBuilder: (context, index) {
-        final species = speciesKeys[index];
-        final motions = babyMotionFrames[species]!.keys.toList();
+        final spriteKey = spriteKeys[index];
+        final motions = motionFrames[spriteKey]!.keys.toList();
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(4, 12, 4, 8),
               child: Text(
-                species,
+                spriteKey,
                 style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
@@ -155,7 +155,7 @@ class _DebugPixelGalleryScreenState extends State<DebugPixelGalleryScreen> {
               runSpacing: 10,
               children: [
                 for (final motionName in motions)
-                  _buildMotionTile(species, motionName),
+                  _buildMotionTile(spriteKey, motionName),
               ],
             ),
           ],
@@ -164,7 +164,7 @@ class _DebugPixelGalleryScreenState extends State<DebugPixelGalleryScreen> {
     );
   }
 
-  Widget _buildMotionTile(String species, String motionName) {
+  Widget _buildMotionTile(String spriteKey, String motionName) {
     final motion = PixelMotion.values.firstWhere(
       (candidate) => candidate.name == motionName,
       orElse: () => PixelMotion.walk,
@@ -181,10 +181,10 @@ class _DebugPixelGalleryScreenState extends State<DebugPixelGalleryScreen> {
           ),
           padding: const EdgeInsets.all(6),
           child: PixelMotionAnimation(
-            species: species,
+            spriteKey: spriteKey,
             motion: motion,
-            dotColor: _dotColorForKey(species),
-            accentColor: _accentColorForKey(species),
+            dotColor: _dotColorForKey(spriteKey),
+            accentColor: _accentColorForKey(spriteKey),
           ),
         ),
         const SizedBox(height: 3),

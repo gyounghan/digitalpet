@@ -4,7 +4,7 @@ import 'package:pocketfriend/domain/entities/pet.dart';
 import 'package:pocketfriend/presentation/widgets/pixel_motion_animation.dart';
 
 void main() {
-  const species = ['tiger', 'bird', 'turtle', 'dragon'];
+  const babyKeys = ['tiger1', 'bird1', 'turtle1', 'dragon1'];
   const motions = [
     'walk',
     'eat',
@@ -16,68 +16,89 @@ void main() {
     'joy',
   ];
 
-  group('babyMotionFrames 데이터 무결성', () {
-    test('4종 × 8모션 × 3프레임이 모두 존재', () {
-      expect(babyMotionFrames.keys, containsAll(species));
-      for (final s in species) {
-        final motionMap = babyMotionFrames[s]!;
-        expect(motionMap.keys, containsAll(motions), reason: '$s 모션 누락');
+  group('motionFrames 데이터 무결성', () {
+    test('유아기 4종이 존재하고, 모든 키는 8모션 × 3프레임을 가진다', () {
+      expect(motionFrames.keys, containsAll(babyKeys));
+      for (final key in motionFrames.keys) {
+        final motionMap = motionFrames[key]!;
+        expect(motionMap.keys, containsAll(motions), reason: '$key 모션 누락');
         for (final m in motions) {
-          expect(motionMap[m]!.length, 3, reason: '$s/$m 프레임 수');
+          expect(motionMap[m]!.length, 3, reason: '$key/$m 프레임 수');
         }
       }
     });
 
-    test('모든 프레임은 24x24(원본 캐릭터 도트)이고 dark/body가 겹치지 않는다', () {
-      for (final s in species) {
+    test('프레임은 size와 행 수가 일치하고 dark/body/accent가 겹치지 않는다', () {
+      for (final key in motionFrames.keys) {
         for (final m in motions) {
-          final frames = babyMotionFrames[s]![m]!;
+          final frames = motionFrames[key]![m]!;
           for (var i = 0; i < frames.length; i++) {
             final frame = frames[i];
-            expect(frame.size, 24, reason: '$s/$m[$i]: size');
-            expect(frame.dark.length, 24, reason: '$s/$m[$i]: dark rows');
-            expect(frame.body.length, 24, reason: '$s/$m[$i]: body rows');
-            expect(frame.accent.length, 24, reason: '$s/$m[$i]: accent rows');
-            for (var y = 0; y < 24; y++) {
+            final n = frame.size;
+            expect(n, greaterThanOrEqualTo(16), reason: '$key/$m[$i]: size');
+            expect(frame.dark.length, n, reason: '$key/$m[$i]: dark rows');
+            expect(frame.body.length, n, reason: '$key/$m[$i]: body rows');
+            expect(frame.accent.length, n, reason: '$key/$m[$i]: accent rows');
+            for (var y = 0; y < n; y++) {
               expect(frame.dark[y] & frame.body[y], 0,
-                  reason: '$s/$m[$i]: row $y dark∩body');
+                  reason: '$key/$m[$i]: row $y dark∩body');
               expect(frame.dark[y] & frame.accent[y], 0,
-                  reason: '$s/$m[$i]: row $y dark∩accent');
+                  reason: '$key/$m[$i]: row $y dark∩accent');
               expect(frame.body[y] & frame.accent[y], 0,
-                  reason: '$s/$m[$i]: row $y body∩accent');
+                  reason: '$key/$m[$i]: row $y body∩accent');
             }
           }
         }
       }
     });
 
-    test('모든 프레임은 최소 1개 도트를 가진다', () {
-      for (final s in species) {
+    test('같은 스프라이트 키의 모든 프레임은 같은 size를 가진다', () {
+      for (final key in motionFrames.keys) {
+        final sizes = <int>{};
         for (final m in motions) {
-          final frames = babyMotionFrames[s]![m]!;
+          for (final frame in motionFrames[key]![m]!) {
+            sizes.add(frame.size);
+          }
+        }
+        expect(sizes.length, 1, reason: '$key: size 혼재 $sizes');
+      }
+    });
+
+    test('유아기는 24, 성장기는 28 그리드', () {
+      for (final key in motionFrames.keys) {
+        final expected = key.endsWith('1') ? 24 : 28;
+        expect(motionFrames[key]!['walk']![0].size, expected,
+            reason: '$key: 그리드 크기');
+      }
+    });
+
+    test('모든 프레임은 최소 1개 도트를 가진다', () {
+      for (final key in motionFrames.keys) {
+        for (final m in motions) {
+          final frames = motionFrames[key]![m]!;
           for (var i = 0; i < frames.length; i++) {
             final hasDot = frames[i].dark.any((row) => row != 0) ||
                 frames[i].body.any((row) => row != 0);
-            expect(hasDot, isTrue, reason: '$s/$m[$i]: 빈 프레임');
+            expect(hasDot, isTrue, reason: '$key/$m[$i]: 빈 프레임');
           }
         }
       }
     });
 
     test('모션 프레임끼리는 서로 다르다 (움직임이 있다)', () {
-      for (final s in species) {
+      for (final key in motionFrames.keys) {
         for (final m in motions) {
-          final frames = babyMotionFrames[s]![m]!;
+          final frames = motionFrames[key]![m]!;
           bool sameFrames(int a, int b) {
-            for (var y = 0; y < 24; y++) {
+            for (var y = 0; y < frames[a].size; y++) {
               if (frames[a].dark[y] != frames[b].dark[y]) return false;
               if (frames[a].body[y] != frames[b].body[y]) return false;
             }
             return true;
           }
 
-          expect(sameFrames(0, 1), isFalse, reason: '$s/$m: f1==f2');
-          expect(sameFrames(1, 2), isFalse, reason: '$s/$m: f2==f3');
+          expect(sameFrames(0, 1), isFalse, reason: '$key/$m: f1==f2');
+          expect(sameFrames(1, 2), isFalse, reason: '$key/$m: f2==f3');
         }
       }
     });
@@ -95,20 +116,19 @@ void main() {
     });
   });
 
-  group('motionFramesFor / babySpeciesFromAssetPath', () {
-    test('유효한 종/모션 조회', () {
-      expect(motionFramesFor('dragon', PixelMotion.walk), isNotNull);
-      expect(motionFramesFor('없는종', PixelMotion.walk), isNull);
+  group('motionFramesFor / motionSpriteKeyFromAssetPath', () {
+    test('유효한 스프라이트 키/모션 조회', () {
+      expect(motionFramesFor('dragon1', PixelMotion.walk), isNotNull);
+      expect(motionFramesFor('없는키', PixelMotion.walk), isNull);
     });
 
-    test('베이비 스프라이트 경로에서 종 키 추출', () {
-      expect(babySpeciesFromAssetPath('assets/dragon1.png'), 'dragon');
-      expect(babySpeciesFromAssetPath('assets/tiger1.png'), 'tiger');
-      // stage 3/4 이미지는 베이비가 아니다
-      expect(babySpeciesFromAssetPath('assets/dragon2.png'), isNull);
-      expect(babySpeciesFromAssetPath('assets/dragon3.png'), isNull);
+    test('에셋 경로에서 모션 스프라이트 키 추출', () {
+      expect(motionSpriteKeyFromAssetPath('assets/dragon1.png'), 'dragon1');
+      expect(motionSpriteKeyFromAssetPath('assets/tiger1.png'), 'tiger1');
+      // 신수(stage 4) 이미지는 모션 미지원
+      expect(motionSpriteKeyFromAssetPath('assets/dragon3.png'), isNull);
       // 털뭉치(기본이미지)도 아니다
-      expect(babySpeciesFromAssetPath('assets/기본이미지.png'), isNull);
+      expect(motionSpriteKeyFromAssetPath('assets/기본이미지.png'), isNull);
     });
   });
 }
