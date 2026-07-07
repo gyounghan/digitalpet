@@ -33,12 +33,15 @@ class _DebugPixelGalleryScreenState extends State<DebugPixelGalleryScreen> {
 
   Color _dotColorForKey(String key) {
     if (_darkBackground) return Colors.white.withValues(alpha: 0.95);
+    // 털뭉치는 종 미결정 → 밝은 베이지 단색 (홈과 동일)
+    if (key == 'fluff') return SpeciesTheme.fluffBody;
     return _themeForKey(key).primary;
   }
 
   /// 보조색 — 어두운 배경에서는 대비를 위해 반투명 흰색
   Color _accentColorForKey(String key) {
     if (_darkBackground) return Colors.white.withValues(alpha: 0.6);
+    if (key == 'fluff') return SpeciesTheme.fluffBody;
     return _themeForKey(key).spriteAccent;
   }
 

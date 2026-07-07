@@ -73,9 +73,9 @@ class SpeciesTheme {
     spriteAccent: Color(0xFFFFC94D),
   );
 
-  /// 현무 (turtle) - fresh jade/mint (더 연한 파스텔 제이드)
+  /// 현무 (turtle) - 연두 (yellow-green, 파스텔 라임)
   static const SpeciesTheme turtle = SpeciesTheme(
-    primary: Color(0xFF52CFA3),
+    primary: Color(0xFF9CCC65),
     primaryDeep: Color(0xFF0E8E68),
     primarySoft: Color(0xFFC4F1E2),
     surfaceDeep: Color(0xFFCEF3E5),

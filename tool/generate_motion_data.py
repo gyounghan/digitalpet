@@ -866,18 +866,28 @@ def motion_attack(sp):
     브레스가 나갈 공간을 만들기 위해 몸을 오른쪽으로 물렸다가 내뿜는다.
     브레스의 'o' 도트는 테마색으로 렌더링 → 종별 속성 브레스처럼 보임.
     """
+    # 털뭉치는 다리가 없어 스텝 대신 몸통을 웅크렸다(눌림) 앞으로 내민다
+    legs = sp != "fluff"
     windup = pose(sp, eye="angry", mouth="none", dx=5, lean=1)
-    puff = pose(sp, eye="angry", mouth="open", step="front", dx=4, lean=-1)
+    if not legs:
+        windup = squash_art(windup, 0.9)
+    puff = pose(sp, eye="angry", mouth="open",
+                step="front" if legs else None, dx=4, lean=-1)
     puff = draw_breath_puff(puff, sp)
-    blast = pose(sp, eye="angry", mouth="open", step="back", dx=4, lean=-1)
+    blast = pose(sp, eye="angry", mouth="open",
+                 step="back" if legs else None, dx=4, lean=-1)
     blast = draw_breath_ball(blast, sp)
     return [windup, puff, blast]
 
 
 def motion_dodge(sp):
-    """움찔 → 뒤로 크게 젖히며 물러남(속도선) → 복귀."""
+    """움찔 → 뒤로 크게 젖히며 물러남(속도선) → 복귀.
+
+    털뭉치는 다리가 없어 스텝 대신 몸 전체가 옆으로 젖혀 피한다.
+    """
     r = art_size(sp) - BASE
-    f2 = pose(sp, eye="closed", step="back", dx=3, lean=1)
+    legs = sp != "fluff"
+    f2 = pose(sp, eye="closed", step="back" if legs else None, dx=3, lean=1)
     f3 = pose(sp, eye="open", dx=1)
     return [
         pose(sp, eye="open"),
@@ -905,8 +915,19 @@ def motion_hurt(sp):
 
 
 def motion_angry(sp):
-    """부릅뜬 눈 + 입 벌려 씩씩 + 💢, 쿵쿵 발 구르기."""
+    """부릅뜬 눈 + 입 벌려 씩씩 + 💢.
+
+    다리 있는 종은 쿵쿵 발 구르기, 털뭉치는 다리가 없어 좌우로 부르르 떤다.
+    """
     r = art_size(sp) - BASE
+    if sp == "fluff":
+        f1 = pose(sp, eye="angry", mouth="open", lean=-1)
+        f1 = with_glyph(f1, GLYPH_ANGER, 18 + r, 3)
+        f2 = pose(sp, eye="angry")
+        f2 = with_glyph(f2, GLYPH_ANGER, 17 + r, 2)
+        f3 = pose(sp, eye="angry", mouth="open", lean=1)
+        f3 = with_glyph(f3, GLYPH_ANGER, 19 + r, 4)
+        return [f1, f2, f3]
     f1 = pose(sp, eye="angry", mouth="open", step="front")
     f1 = with_glyph(f1, GLYPH_ANGER, 18 + r, 3)
     f2 = pose(sp, eye="angry", dx=1)
@@ -917,11 +938,21 @@ def motion_angry(sp):
 
 
 def motion_joy(sp):
-    """^^ 눈으로 살짝 숙였다 점프(다리 웅크림) → 착지, 반짝이."""
+    """^^ 눈으로 살짝 숙였다 점프 → 착지, 반짝이.
+
+    다리 있는 종은 다리를 웅크려 점프, 털뭉치는 몸 전체가 납작 웅크렸다
+    통째로 솟았다 착지한다(다리 없음).
+    """
     r = art_size(sp) - BASE
-    crouch = pose(sp, eye="happy", dy=1)
-    airborne = lift_art(pose(sp, eye="happy", mouth="open", step="both_up"), 3)
-    landing = pose(sp, eye="happy", mouth="open", dy=1)
+    if sp == "fluff":
+        crouch = squash_art(pose(sp, eye="happy"), 0.9)
+        airborne = pose(sp, eye="happy", mouth="open", dy=-3)
+        landing = squash_art(pose(sp, eye="happy", mouth="open"), 0.85)
+    else:
+        crouch = pose(sp, eye="happy", dy=1)
+        airborne = lift_art(
+            pose(sp, eye="happy", mouth="open", step="both_up"), 3)
+        landing = pose(sp, eye="happy", mouth="open", dy=1)
     f2 = with_glyph(airborne, GLYPH_SPARKLE, 0, 6 + r // 2)
     f2 = with_glyph(f2, GLYPH_SPARKLE, 21 + r, 6 + r // 2)
     f3 = with_glyph(landing, GLYPH_SPARKLE, 0, 12 + r // 2)
