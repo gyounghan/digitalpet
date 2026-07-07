@@ -5,6 +5,7 @@ import 'package:pocketfriend/presentation/widgets/pixel_motion_animation.dart';
 
 void main() {
   const babyKeys = ['tiger1', 'bird1', 'turtle1', 'dragon1'];
+  const juniorKeys = ['tiger2', 'bird2', 'turtle2', 'dragon2'];
   const motions = [
     'walk',
     'eat',
@@ -17,8 +18,9 @@ void main() {
   ];
 
   group('motionFrames 데이터 무결성', () {
-    test('유아기 4종이 존재하고, 모든 키는 8모션 × 3프레임을 가진다', () {
+    test('유아기·성장기 4종씩 존재하고, 모든 키는 8모션 × 3프레임을 가진다', () {
       expect(motionFrames.keys, containsAll(babyKeys));
+      expect(motionFrames.keys, containsAll(juniorKeys));
       for (final key in motionFrames.keys) {
         final motionMap = motionFrames[key]!;
         expect(motionMap.keys, containsAll(motions), reason: '$key 모션 누락');
@@ -125,6 +127,9 @@ void main() {
     test('에셋 경로에서 모션 스프라이트 키 추출', () {
       expect(motionSpriteKeyFromAssetPath('assets/dragon1.png'), 'dragon1');
       expect(motionSpriteKeyFromAssetPath('assets/tiger1.png'), 'tiger1');
+      // 성장기(stage 3) 이미지도 모션 지원
+      expect(motionSpriteKeyFromAssetPath('assets/dragon2.png'), 'dragon2');
+      expect(motionSpriteKeyFromAssetPath('assets/turtle2.png'), 'turtle2');
       // 신수(stage 4) 이미지는 모션 미지원
       expect(motionSpriteKeyFromAssetPath('assets/dragon3.png'), isNull);
       // 털뭉치(기본이미지)도 아니다

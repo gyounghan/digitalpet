@@ -15,7 +15,7 @@ PocketFriend의 펫 렌더링은 이미지 파일을 런타임에 디코딩하�
 
 ```dart
 class PixelSprite {
-  final int size;            // 그리드 한 변 (정적 64, 모션 24)
+  final int size;            // 그리드 한 변 (정적 64, 모션 24/28)
   final List<int> dark;      // 아웃라인/눈 — 행(y)별 비트마스크
   final List<int> body;      // 몸통(테마색) — 행별 비트마스크
   final List<int> accent;    // 보조색(배/부리/등딱지) — 행별 비트마스크
@@ -68,14 +68,19 @@ python tool/generate_pixel_data.py
 
 ---
 
-## 3. 베이비 모션 파이프라인 (4종×8모션×3프레임, 24×24)
+## 3. 모션 파이프라인 (8스프라이트×8모션×3프레임 — 유아기 24, 성장기 28)
 
 **스크립트**: `tool/generate_motion_data.py` → `lib/core/pixel/pet_motion_data.dart`
-(출력: `babyMotionFrames` — `Map<String종, Map<String모션, List<PixelSprite>>>`)
+(출력: `motionFrames` — `Map<String 스프라이트키, Map<String모션, List<PixelSprite>>>`,
+키는 `'{종}{스테이지}'` — `'dragon1'`(유아기 24×24), `'dragon2'`(성장기 28×28))
 
-핵심 아이디어: 원본 `assets/{종}1.png` 픽셀아트를 **24×24 도트 아트 문자열**로
-옮긴 뒤(수작업 정리), 부위별 변형으로 모션을 합성한다. 프레임을 손으로 96장
-그리는 게 아니라, 종당 몸체 아트 1장 + 조립 규칙으로 만든다.
+핵심 아이디어: 원본 `assets/{종}{1|2}.png` 픽셀아트를 **도트 아트 문자열**로
+옮긴 뒤(수작업 정리), 부위별 변형으로 모션을 합성한다. 프레임을 손으로 192장
+그리는 게 아니라, 스프라이트당 몸체 아트 1장 + 조립 규칙으로 만든다.
+
+그리드 크기는 아트마다 달라도 된다 — 모든 연산 함수는 `len(g)`에서 크기를
+얻고, 이펙트 글리프 좌표는 24 기준값에 `r = 크기 - 24`를 더해 우측/하단
+앵커로 보정한다 (`motion_*` 함수들 참고).
 
 ### 3.1 아트 문법
 
@@ -83,9 +88,10 @@ python tool/generate_pixel_data.py
 '.' 빈칸  /  '#' 진한 도트(아웃라인·눈)  /  'o' 몸통(테마색)  /  '+' 보조색
 ```
 
-`SPECIES_ART[종]` 구조:
-- `body`: 24행×24칸 문자열 리스트 (다리 포함 원본 실루엣, 왼쪽을 봄)
-- `eyes`: 눈 rect 목록 `[(x, y, w, h)]` — tiger는 정면 얼굴이라 2개
+`SPECIES_ART[스프라이트키]` 구조:
+- `body`: N행×N칸 정사각 문자열 리스트 (다리 포함 원본 실루엣, 왼쪽을 봄)
+- `eyes`: 눈 rect 목록 `[(x, y, w, h)]` — tiger는 정면 얼굴이라 2개,
+  turtle2(현무)는 거북 눈 + 뱀 머리 눈 2개
 - `mouth`: 입 좌표 `(x, y)`
 
 ### 3.2 아트를 처음 만드는 절차 (성장기 등 새 스프라이트 추가 시)
@@ -105,16 +111,19 @@ python tool/generate_pixel_data.py
 ### 3.3 보조색 자동 태깅 — `SPECIES_SRC`
 
 아트의 'o'/'#' 셀에 대해 **원본 PNG 색을 재샘플링**해 '+'로 승격한다.
-`SPECIES_SRC[종] = (경로, 크롭비율 or None, (w, h), y오프셋, 밝음임계 or None, 갈색중간톤 여부)`
+`SPECIES_SRC[스프라이트키] = dict(path, crop or None, size=(w,h), off=(x,y), light or None, darkmid)`
 
 - 크롭비율/리사이즈/오프셋은 **아트를 덤프할 때 쓴 값과 동일해야** 한다
   (셀 ↔ 원본 픽셀이 1:1 대응돼야 하므로).
-- `y오프셋` = 덤프 행 d가 아트의 몇 행에 배치됐는지 (`아트행 = d + 오프셋`).
-- 규칙: `'o'` + luminance > 밝음임계 → `'+'` /
+- `off` = 덤프 (sx, sy)가 아트의 어느 칸에 배치됐는지
+  (`아트칸 = 덤프칸 + off` — bird2처럼 세로가 긴 원본은 x 오프셋도 사용).
+- 규칙: `'o'` + luminance > light → `'+'` /
   `'#'` + 0.18 ≤ luminance < 0.45 **AND r > g** (붉은 계열) → `'+'`
   (turtle 등딱지용 — r>g 조건이 없으면 어두운 초록 아웃라인까지 갈색이 됨)
-- 종별 임계가 다르다: dragon 0.75, tiger 0.80(흰 몸), bird 0.68(노랑),
-  turtle은 밝음 규칙 없이 갈색 규칙만.
+- 아트에 직접 쓴 `'+'`는 그대로 유지된다 — 알파 평균이 낮아 자동 태깅이
+  놓치는 부분(dragon2 노란 뿔 등)은 손으로 '+'를 박으면 된다.
+- 키별 임계가 다르다: dragon 0.75, tiger 0.80(흰 몸), bird 0.68(노랑),
+  turtle은 밝음 규칙 없이 갈색 규칙만 (스테이지 1·2 동일).
 
 ### 3.4 포즈 엔진
 
@@ -172,8 +181,9 @@ TMP/TEMP를 지정할 것.
 테스트 파일:
 - `test/core/pixel/pet_pixel_data_test.dart` — 정적 146장 무결성
   (64그리드, 3레이어 비겹침, 핵심 에셋 키 존재)
-- `test/core/pixel/pet_motion_data_test.dart` — 모션 96프레임 무결성
-  (24그리드, 3레이어 비겹침, 프레임 간 차이 존재, mood 매핑)
+- `test/core/pixel/pet_motion_data_test.dart` — 모션 192프레임 무결성
+  (size-행수 일치, 유아기 24/성장기 28, 3레이어 비겹침, 프레임 간 차이,
+  mood 매핑, 에셋 경로→스프라이트 키 추출)
 
 ---
 
@@ -190,17 +200,19 @@ lib/presentation/widgets/
 │   ├── PixelMotion enum          walk/eat/sleep/attack/dodge/hurt/angry/joy
 │   ├── motionForMood()           happy→joy, normal→walk, hungry→angry,
 │   │                             sleepy·tired→sleep, sad·dead→hurt
-│   ├── babySpeciesFromAssetPath  '{종}1.png'만 종 키 반환 (stage 2 게이트)
-│   └── PixelMotionAnimation      3프레임 루프 (기본 900ms/사이클,
-│                                 인덱스 변경 시에만 setState)
+│   ├── motionSpriteKeyFromAssetPath  모션 데이터가 있는 에셋이면
+│   │                             '{종}{1|2}' 키 반환 (stage 2·3 게이트)
+│   └── PixelMotionAnimation      spriteKey 기반 3프레임 루프 (기본 900ms/
+│                                 사이클, 인덱스 변경 시에만 setState)
 └── pet_image_animation.dart      stage 1(털뭉치) mood 프레임 애니메이션
 ```
 
 ### 화면 연결
 
-- **홈** (`home_screen.dart` `_buildPetSprite`): stage 2 + 종 결정 시
-  `PixelMotionAnimation(mood 기반 모션)`. 급식 버튼 → `_playTransientMotion
-  (PixelMotion.eat)` 2.7초. 그 외 스테이지는 `PetImageAnimation`(정적 도트).
+- **홈** (`home_screen.dart` `_buildPetSprite`): stage 2·3 + 종 결정 시
+  `PixelMotionAnimation(spriteKey: '{종}{stage-1}', mood 기반 모션)`.
+  급식 버튼 → `_playTransientMotion(PixelMotion.eat)` 2.7초.
+  그 외 스테이지는 `PetImageAnimation`(정적 도트).
 - **배틀** (`battle_screen.dart` `_myTurnMotion`): 턴 중 내 펫이
   회피(상대 피해 0)→dodge / 우세→attack / 열세→hurt, 600ms 사이클.
 - **색 주입**: 밝은 배경에서는 `theme.primary`+`theme.spriteAccent`,
@@ -216,33 +228,26 @@ lib/presentation/widgets/
   (`me_screen.dart`의 `_buildDebugGalleryButton` — 삭제 시 이 버튼과 화면
   파일, import 한 줄만 지우면 됨)
 - 탭 1 "스프라이트": `petPixelSprites` 146장 그리드 (키 접두어로 종 테마색 적용)
-- 탭 2 "베이비 모션": `babyMotionFrames` 4종×8모션 애니메이션
+- 탭 2 "도트 모션": `motionFrames` 8스프라이트×8모션 애니메이션
 - 우상단 🌙: 어두운 배경 토글 (흰 도트 대비 확인)
 
 ---
 
-## 6. 확장 레시피: 성장기(stage 3) 모션 추가하기
+## 6. 확장 레시피: 새 스테이지 모션 추가하기 (성장기는 완료됨)
 
-다음 작업자가 이어서 할 경우의 절차 (유아기와 동일 패턴):
+**성장기(stage 3, `'{종}2'` 28×28)는 이 레시피대로 구현 완료.**
+신수(stage 4, `'{종}3'`) 등 추가 스테이지를 붙일 때의 절차:
 
-1. `assets/{종}2.png` 4장을 열어 특징 파악 (용=목 긴 수룡+뿔, 백호=꼬리 선
-   생긴 백호, 주작=불꽃 볏이 커진 새, 현무=목 내민 거북 — 이미 확인됨).
-2. 성장기는 몸집 표현을 위해 **28×28 권장**. 이때 생성기의 `GRID` 전역
-   상수 의존을 제거해야 한다 — 아트 연산 함수들이 `len(g)`에서 크기를
-   얻도록 리팩터링하고, 글리프 절대 좌표(땀 위치, Z, FOOD_POS 등)를
-   그리드 크기 상대값으로 바꿀 것.
-3. `SPECIES_ART`/`SPECIES_SRC`를 스테이지 구조로 확장
-   (예: 키를 `'dragon1'`/`'dragon2'`로).
-4. 출력 맵 키도 `'{종}{1|2}'`로 바꾸고 Dart 쪽을 갱신:
-   - `babySpeciesFromAssetPath` → 에셋 키가 맵에 있으면 반환하는
-     `motionSpriteKeyFromAssetPath`로 일반화
-   - 홈 `_buildPetSprite`의 `evolutionStage == 2` 게이트를 `2 || 3`으로,
-     스테이지에 맞는 키 선택
-   - 배틀은 에셋 경로 기반이라 키 함수만 바꾸면 자동 적용
-   - 갤러리/테스트의 `babyMotionFrames` 참조 갱신 (프레임 size가 스테이지별로
-     다르므로 테스트는 크기 하드코딩 대신 size 일관성 검사로)
-5. 검증 루틴은 3.6과 동일. 커밋 단위: 파이프라인 리팩터링 → 성장기 아트/
-   데이터 → 화면 연결.
+1. `assets/{종}N.png`를 열어 특징 파악.
+2. 그리드 크기 결정 (몸집 표현 — 성장기 28 사용, 신수는 32 권장).
+   생성기는 이미 크기 무관 구조라 정사각 아트만 넣으면 된다.
+3. 덤프 스크립트(§3.2 절차, `SPECIES_SRC`와 동일 파라미터)로 초안을 뽑고
+   수작업 정리 → `SPECIES_ART`/`SPECIES_SRC`에 `'{종}N'` 키로 추가.
+4. Dart 쪽은 대부분 자동 적용:
+   - `motionSpriteKeyFromAssetPath`가 맵 키 존재로 판단 → 배틀/갤러리 자동
+   - 홈 `_hasMotionStage`의 스테이지 게이트에 새 스테이지 추가
+   - 테스트의 그리드 크기 기대값(`유아기 24, 성장기 28`)에 새 스테이지 추가
+5. 검증 루틴은 3.6과 동일. 커밋 단위: 아트/데이터 → 화면 연결.
 
 ---
 
