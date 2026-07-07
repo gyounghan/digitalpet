@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/entities/pet.dart';
 import '../../domain/repositories/pet_repository.dart';
@@ -445,43 +447,66 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
       // 5. 포그라운드 전환 처리 (다음 수면 계산 기준 시각 갱신)
       await phoneUsageRepository.onForeground();
 
-      // 6. 시간 경과에 따른 상태 업데이트
-      var updatedPet = await updatePetStateUseCase(petId);
+      // 6. 시간 경과에 따른 상태 업데이트 (여기까지 로컬 Hive I/O만 — 빠름)
+      final localPet = await updatePetStateUseCase(petId);
 
-      // 7. 활동 데이터 기반 상태 업데이트 (걷기/운동량)
-      try {
-        updatedPet = await updatePetFromActivityUseCase(petId);
-      } catch (e) {
-        // 헬스케어 권한이 없거나 에러 발생 시 무시 (앱 동작에 영향 없음)
-        if (kDebugMode) {
-          debugPrint('PetNotifier._loadPet: activity update failed: $e');
-        }
-      }
-
-      // 8. 접속 보너스 + 일일 이벤트
-      try {
-        await loginBonusUseCase(petId);
-        updatedPet = await repository.getPet(petId);
-      } catch (e) {
-        if (kDebugMode) {
-          debugPrint('PetNotifier._loadPet: login bonus failed: $e');
-        }
-      }
-
-      // 9. 서버 동기화 (앱 시작 시 pull - 실패해도 무시)
-      try {
-        updatedPet = await syncPetUseCase(petId);
-      } catch (e) {
-        if (kDebugMode) {
-          debugPrint('PetNotifier._loadPet: sync failed: $e');
-        }
-      }
-
-      // 10. 일일 목표 점수 적용, 진화 체크, 위젯 업데이트를 한 번에 처리
-      final evolvedPet = await _updateAndEvolve(updatedPet);
+      // 로컬 상태로 홈을 먼저 렌더한다. 이후의 활동(헬스/센서 채널)과
+      // 서버 동기화(HTTP 5초 타임아웃)는 콜드 스타트 스피너를 길게 잡으므로
+      // 첫 페인트 이후 백그라운드로 미룬다.
+      final evolvedPet = await _updateAndEvolve(localPet);
       state = AsyncValue.data(evolvedPet);
+
+      // 7~9. 활동/접속보너스/서버동기화는 렌더를 막지 않고 뒤이어 반영
+      unawaited(_loadDeferredUpdates());
     } catch (e, stackTrace) {
       state = AsyncValue.error(e, stackTrace);
+    }
+  }
+
+  /// 첫 렌더를 막지 않는 후속 갱신 (네트워크/플랫폼 채널)
+  ///
+  /// 활동 데이터(헬스 커넥트·걸음수 센서), 접속 보너스, 서버 동기화를
+  /// 순서대로 반영한다. 각 단계는 독립적으로 실패를 무시하며, 완료 후
+  /// 진화 체크까지 마친 최신 상태로 [state]를 다시 내보낸다.
+  /// (이미 로컬 상태가 화면에 떠 있으므로 전부 실패해도 무방)
+  Future<void> _loadDeferredUpdates() async {
+    var pet = await repository.getPet(petId);
+
+    // 활동 데이터 기반 상태 업데이트 (걷기/운동량)
+    try {
+      pet = await updatePetFromActivityUseCase(petId);
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('PetNotifier._loadDeferredUpdates: activity failed: $e');
+      }
+    }
+
+    // 접속 보너스 + 일일 이벤트
+    try {
+      await loginBonusUseCase(petId);
+      pet = await repository.getPet(petId);
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('PetNotifier._loadDeferredUpdates: login bonus failed: $e');
+      }
+    }
+
+    // 서버 동기화 (앱 시작 시 pull - 실패해도 무시)
+    try {
+      pet = await syncPetUseCase(petId);
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('PetNotifier._loadDeferredUpdates: sync failed: $e');
+      }
+    }
+
+    try {
+      final evolvedPet = await _updateAndEvolve(pet);
+      state = AsyncValue.data(evolvedPet);
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('PetNotifier._loadDeferredUpdates: evolve failed: $e');
+      }
     }
   }
   
