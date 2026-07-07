@@ -655,6 +655,14 @@ GLYPH_SPEED = [(0, 0), (1, 0), (0, 4), (1, 4), (0, 8), (1, 8)]
 GLYPH_DROOL = [(0, 0), (0, 1)]  # 입 아래로 흘리는 침 (짧게)
 GLYPH_DROOL_LONG = [(0, 0), (0, 1), (0, 2)]  # 길게 늘어진 침
 
+# 밥 상상 아이콘 — 머리 위 말풍선에 떠오르는 밥공기 (배고픔의 명확한 기호)
+# '+' 밥(보조색 무더기), '#' 그릇(진한 사다리꼴)
+FOOD_THOUGHT = [
+    (1, 0, "+"), (2, 0, "+"), (3, 0, "+"),
+    (0, 1, "#"), (1, 1, "#"), (2, 1, "#"), (3, 1, "#"), (4, 1, "#"),
+    (1, 2, "#"), (2, 2, "#"), (3, 2, "#"),
+]
+
 # 밥그릇 — (dx, dy, 문자) 목록. '#' 그릇/김, '+' 밥(보조색 쌀 무더기)
 _FOOD_BOWL = [
     # 그릇 (진한 사다리꼴 — rim / body / base)
@@ -879,22 +887,38 @@ def motion_joy(sp):
 
 
 def motion_hungry(sp):
-    """배고픔: 입 벌려 침 흘리며 밥 달라고 조름 (밥그릇 없음 → eat과 구분).
+    """배고픔: 힘없이 축 처져 머리 위로 밥을 떠올리며 군침 흘림.
 
-    축 처져 조르다(숙임) → 더 처지며 침 길게(눈 반쯤 감음) → 고개 들어
-    두리번(먹을 것 찾기). 침은 몸 앞(왼쪽)으로 빼 뚝뚝 떨어지게 하고,
-    angry(부릅뜬 눈)와 달리 처량한 눈으로 배고픔을 표현한다.
+    배고픔의 명확한 기호인 '밥 상상 말풍선'을 핵심으로 한다:
+      f1 힘없이 처짐(눈 감음) + 생각 점 하나 (밥 떠올리기 시작)
+      f2 더 처짐 + 밥공기 아이콘 등장 + 말풍선 점 + 침
+      f3 밥을 보며 눈 뜨고 군침(반짝) — 루프 시 아이콘이 피어올랐다 사라져
+         '계속 밥 생각하는' 느낌을 준다.
+    밥그릇을 바닥에 두는 eat과 달리 아이콘은 머리 위(상상)에 뜬다.
     """
     my = SPECIES_ART[sp]["mouth"][1]
+    n = art_size(sp)
+    ix, iy = n - 6, 0  # 밥 상상 아이콘 — 머리 위 오른쪽
 
-    def drool(g, long):
+    def drool(g):
         ox = _breath_origin(g, my) - 1  # 몸 왼쪽(입 앞) 바로 바깥
-        return with_glyph(g, GLYPH_DROOL_LONG if long else GLYPH_DROOL,
-                          ox, my + 1)
+        return with_glyph(g, GLYPH_DROOL, ox, my + 1)
 
-    f1 = drool(pose(sp, eye="open", mouth="open", lean=-1, dy=1), False)
-    f2 = drool(pose(sp, eye="closed", mouth="open", dy=2), True)
-    f3 = drool(pose(sp, eye="open", mouth="open", lean=1, dy=1), False)
+    # f1: 힘없이 축 처져 눈 감고 밥을 떠올리기 시작 (말풍선 점 하나)
+    f1 = pose(sp, eye="closed", mouth="none", dy=1)
+    f1 = with_glyph(f1, [(0, 0)], ix + 1, iy + 4)
+
+    # f2: 더 처지고 밥공기가 떠오름 + 말풍선 꼬리 점 + 침
+    f2 = pose(sp, eye="closed", mouth="open", dy=2)
+    f2 = with_glyph(f2, [(0, 0), (2, 1)], ix - 2, iy + 3)
+    f2 = with_chars(f2, FOOD_THOUGHT, ix, iy)
+    f2 = drool(f2)
+
+    # f3: 밥을 보며 눈 뜨고 군침 (반짝) — 아이콘 유지
+    f3 = pose(sp, eye="open", mouth="open", dy=1)
+    f3 = with_chars(f3, FOOD_THOUGHT, ix, iy)
+    f3 = with_glyph(f3, GLYPH_SPARKLE, ix - 3, iy + 1)
+    f3 = drool(f3)
     return [f1, f2, f3]
 
 
