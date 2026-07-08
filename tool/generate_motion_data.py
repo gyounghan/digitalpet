@@ -75,20 +75,22 @@ SPECIES_SRC = {
 # 자동 생성한다. accent('+')는 밝기(accent 임계값)로 태깅되므로 stage3는
 # apply_accent를 건너뛴다(SPECIES_SRC에 넣지 않음).
 # eyes/mouth 는 미리보기(도트 래스터)로 눈대중 배치 — 표정/브레스 기준점.
-STAGE3_GRID = 40
+STAGE3_GRID = 48
 STAGE3_SRC = {
     "dragon3": dict(path="assets/dragon3.png", crop=(0.0, 0.0, 1.0, 0.93),
                     dark=0.30, accent=0.66,
-                    eyes=[(12, 11, 3, 3)], mouth=(6, 14)),
+                    eyes=[(14, 13, 3, 3)], mouth=(7, 17)),
+    # 백호는 흰 몸 → 밝은 부분을 accent(near-white)로 태깅해야 앱의 slate
+    # body색과 대비돼 흰 호랑이로 보인다 (accent 없으면 전부 slate 덩어리).
     "tiger3": dict(path="assets/tiger3.png", crop=None,
-                   dark=0.45, accent=2.0,  # 흰 몸 → accent 없음(전부 body)
-                   eyes=[(5, 10, 2, 2), (9, 10, 2, 2)], mouth=(6, 13)),
+                   dark=0.40, accent=0.56,
+                   eyes=[(6, 12, 2, 2), (11, 12, 2, 2)], mouth=(7, 16)),
     "bird3": dict(path="assets/bird3.png", crop=None,
                   dark=0.30, accent=0.62,
-                  eyes=[(20, 13, 3, 3)], mouth=(17, 14)),
+                  eyes=[(24, 16, 3, 3)], mouth=(20, 17)),
     "turtle3": dict(path="assets/turtle3.png", crop=None,
-                    dark=0.30, accent=0.60,
-                    eyes=[(12, 6, 2, 2), (6, 21, 2, 2)], mouth=(4, 24)),
+                    dark=0.33, accent=0.62,
+                    eyes=[(14, 7, 2, 2), (7, 25, 2, 2)], mouth=(5, 29)),
 }
 
 # 스테이지별 목표 그리드 크기 (아트 소스 크기와 다르면 업스케일)
@@ -277,20 +279,27 @@ def upscale_art(art, target):
     return out
 
 
-def scale_rect(rect, n, target):
-    """눈 rect (x, y, w, h)를 n→target 비율로 스케일 (최소 1px)."""
-    x, y, w, h = rect
-    nx = x * target // n
-    ny = y * target // n
-    nw = max(1, (x + w) * target // n - nx)
-    nh = max(1, (y + h) * target // n - ny)
-    return (nx, ny, nw, nh)
-
-
 def scale_point(pt, n, target):
     """입 좌표 (x, y)를 n→target 비율로 스케일."""
     x, y = pt
     return (x * target // n, y * target // n)
+
+
+def scale_eye(rect, n, target):
+    """눈은 위치만 스케일하고 크기는 원본보다 작게 유지.
+
+    업스케일 비율로 눈을 통째로 키우면 큰 검은 블록이 돼 무섭다.
+    중심만 새 그리드로 옮기고 폭·높이는 원본에서 1 줄여(최소 2) 더 작고
+    귀엽게 만든다.
+    """
+    x, y, w, h = rect
+    cx = (x + w / 2.0) * target / n
+    cy = (y + h / 2.0) * target / n
+    nw = max(2, w - 1)
+    nh = max(2, h - 1)
+    nx = int(round(cx - nw / 2.0))
+    ny = int(round(cy - nh / 2.0))
+    return (nx, ny, nw, nh)
 
 
 def largest_component(rows):
@@ -324,11 +333,40 @@ def largest_component(rows):
     ]
 
 
-def base_from_png(key):
-    """성숙기(stage3) 베이스 아트를 원본 PNG에서 40 그리드로 자동 생성.
+def despeckle(rows):
+    """고립된 단일 색 픽셀('o'/'+')을 주변 다수색으로 눌러 얼룩(잡티) 완화.
 
-    크롭 → 정사각 패딩 → 40 다운샘플 후 밝기로 '#'/'o'/'+' 분류하고,
-    최대 연결요소만 남겨 부유 아티팩트를 정리한다.
+    이웃 4칸이 모두 반대 색이고 같은 색 이웃이 없는 진짜 외톨이 픽셀만
+    뒤집는다 (현무 등딱지의 초록/갈색 salt-and-pepper 정리). 아웃라인('#')과
+    빈칸('.')은 건드리지 않아 실루엣·구조는 유지된다.
+    """
+    n = len(rows)
+    g = [list(r) for r in rows]
+    out = [row[:] for row in g]
+    for y in range(n):
+        for x in range(n):
+            ch = g[y][x]
+            if ch not in ("o", "+"):
+                continue
+            other = "+" if ch == "o" else "o"
+            opposite = same = 0
+            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                nx, ny = x + dx, y + dy
+                if 0 <= nx < n and 0 <= ny < n:
+                    if g[ny][nx] == other:
+                        opposite += 1
+                    elif g[ny][nx] == ch:
+                        same += 1
+            if opposite >= 3 and same == 0:
+                out[y][x] = other
+    return ["".join(r) for r in out]
+
+
+def base_from_png(key):
+    """성숙기(stage3) 베이스 아트를 원본 PNG에서 STAGE3_GRID로 자동 생성.
+
+    크롭 → 정사각 패딩 → 다운샘플 후 밝기로 '#'/'o'/'+' 분류하고,
+    최대 연결요소만 남겨 부유 아티팩트를 정리, 고립 픽셀은 despeckle.
     """
     src = STAGE3_SRC[key]
     im = Image.open(src["path"]).convert("RGBA")
@@ -360,7 +398,7 @@ def base_from_png(key):
             else:
                 row.append("o")
         rows.append("".join(row))
-    return largest_component(rows)
+    return despeckle(largest_component(rows))
 
 
 def squash_art(g, factor):
@@ -885,17 +923,20 @@ def pose(
     mx, my = meta["mouth"]
     draw_mouth(g, mx, my, mouth)
 
-    # 다리 스텝 — 하단 3행을 앞/뒤 절반으로 나눠 들어올림
+    # 다리 스텝 — 하단 다리 영역을 앞/뒤 절반으로 나눠 들어올림
+    # 그리드가 클수록(성숙기 48) 다리 영역·들어올림을 키워 스텝이 잘 보이게 함
     if step:
         x0, x1, y0, y1 = bbox(g)
         xm = (x0 + x1) // 2
-        leg_top = y1 - 2
+        leg_h = max(3, n // 9)      # 다리 영역 높이 (24→3, 48→5)
+        lift = max(1, n // 24)      # 들어올림 정도 (≤36→1, 48→2)
+        leg_top = y1 - leg_h + 1
         if step == "front":
-            g = move_region(g, x0, leg_top, xm, y1, -1, -1)
+            g = move_region(g, x0, leg_top, xm, y1, -1, -lift)
         elif step == "back":
-            g = move_region(g, xm + 1, leg_top, x1, y1, -1, -1)
+            g = move_region(g, xm + 1, leg_top, x1, y1, -1, -lift)
         elif step == "both_up":  # 점프 시 다리 웅크림
-            g = move_region(g, x0, leg_top, x1, y1, 0, -1)
+            g = move_region(g, x0, leg_top, x1, y1, 0, -lift)
 
     # 기울임 (상단 절반만 가로 이동)
     if lean:
@@ -920,6 +961,20 @@ def lying_pose(key, factor):
         for dx in range(w):
             put(squashed, x + dx, ny, "#")
     return squashed
+
+
+def flap_wings(g, dy):
+    """새 날개(상단 좌우 바깥 영역)를 위/아래로 이동 — 퍼덕임.
+
+    주작처럼 날개를 활짝 편 새가 걷기/기쁨에서 날개가 고정돼 어색한 걸
+    막는다. 몸 중앙(어깨)은 두고 바깥 1/3만 상하로 움직여 펄럭이게 한다.
+    """
+    x0, x1, y0, y1 = bbox(g)
+    ymid = y0 + (y1 - y0) * 3 // 5   # 상단(날개가 있는) 영역
+    xw = max(1, (x1 - x0) // 3)      # 바깥 1/3 = 날개
+    g = move_region(g, x0, y0, x0 + xw, ymid, 0, dy)
+    g = move_region(g, x1 - xw, y0, x1, ymid, 0, dy)
+    return g
 
 
 def head_bow(g, depth):
@@ -961,6 +1016,13 @@ def motion_walk(sp):
         hop = pose(sp, eye="happy", mouth="open", dy=-2)
         land = squash_art(pose(sp, eye="open"), 0.84)
         return [crouch, hop, land]
+    if sp.startswith("bird"):
+        # 새는 다리 스텝 + 날개 퍼덕임을 함께 (날개 고정 방지)
+        return [
+            flap_wings(pose(sp, step="front"), -2),
+            pose(sp),
+            flap_wings(pose(sp, step="back"), 2),
+        ]
     return [
         pose(sp, step="front"),
         pose(sp),
@@ -1087,6 +1149,12 @@ def motion_joy(sp):
         crouch = squash_art(pose(sp, eye="happy"), 0.9)
         airborne = pose(sp, eye="happy", mouth="open", dy=-3)
         landing = squash_art(pose(sp, eye="happy", mouth="open"), 0.85)
+    elif sp.startswith("bird"):
+        # 새는 다리 점프 대신 날개를 활짝 폈다 내리며 떠오른다
+        crouch = flap_wings(pose(sp, eye="happy", dy=1), 2)
+        airborne = flap_wings(
+            lift_art(pose(sp, eye="happy", mouth="open"), 3), -3)
+        landing = flap_wings(pose(sp, eye="happy", mouth="open", dy=1), 2)
     else:
         crouch = pose(sp, eye="happy", dy=1)
         airborne = lift_art(
@@ -1205,7 +1273,7 @@ def main() -> int:
         target = TARGET_SIZE.get(key, src_n)
         if target != src_n:
             meta["body"] = upscale_art(meta["body"], target)
-            meta["eyes"] = [scale_rect(r, src_n, target) for r in meta["eyes"]]
+            meta["eyes"] = [scale_eye(r, src_n, target) for r in meta["eyes"]]
             meta["mouth"] = scale_point(meta["mouth"], src_n, target)
         # 성장기(2)·성숙기(3)·털뭉치는 가장자리가 몸통색으로 끝나 테두리가
         # 빠지므로 실루엣을 검은 테두리로 감싼다 (유아기는 원본 테두리 유지)

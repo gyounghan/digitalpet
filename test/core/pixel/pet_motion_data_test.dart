@@ -70,12 +70,12 @@ void main() {
       }
     });
 
-    test('그리드 크기: 털뭉치 24, 유아기 32, 성장기 36, 성숙기 40', () {
+    test('그리드 크기: 털뭉치 24, 유아기 32, 성장기 36, 성숙기 48', () {
       int expectedSize(String key) {
         if (key == 'fluff') return 24;
         if (key.endsWith('1')) return 32;
         if (key.endsWith('2')) return 36;
-        return 40; // 성숙기(3)
+        return 48; // 성숙기(3)
       }
 
       for (final key in motionFrames.keys) {
