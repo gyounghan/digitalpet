@@ -1,11 +1,5 @@
 # -*- coding: utf-8 -*-
-"""도트 모션 생성 — 사용자 원본 캐릭터 기반.
-
-그리드 크기는 성장 단계별로 다르다:
-  - 유아기({종}1): 32x32  (원본 24 아트를 업스케일)
-  - 성장기({종}2): 36x36  (원본 28 아트를 업스케일)
-  - 성숙기({종}3): 40x40  (원본 PNG를 40 그리드로 자동 부트스트랩)
-  - 털뭉치(fluff): 24x24
+"""도트 모션 생성 — 사용자 원본 캐릭터 기반 (유아기 24x24 + 성장기 28x28).
 
 assets/{종}{1|2}.png 원본 픽셀아트를 도트 아트로 옮긴 뒤(물방울·동전·그림자
 제거 등 수작업 정리), 부위별 변형으로 다마고치 방식 모션 3프레임을 만든다:
@@ -67,38 +61,6 @@ SPECIES_SRC = {
     # 털뭉치(stage 1) — 단색 크림이라 보조색 태깅 없이 몸통색 단색으로
     "fluff": dict(path="assets/기본이미지.png", crop=None, size=(24, 24),
                   off=(0, 0), light=None, darkmid=False),
-}
-
-# 성숙기(stage 3, 40x40) 부트스트랩 파라미터.
-# 손으로 40x40 아트를 옮기는 대신 원본 PNG를 40 그리드로 변환하고 최대
-# 연결요소만 남겨(물방울·구슬·그림자 같은 부유 아티팩트 제거) 베이스 아트를
-# 자동 생성한다. accent('+')는 밝기(accent 임계값)로 태깅되므로 stage3는
-# apply_accent를 건너뛴다(SPECIES_SRC에 넣지 않음).
-# eyes/mouth 는 미리보기(도트 래스터)로 눈대중 배치 — 표정/브레스 기준점.
-STAGE3_GRID = 48
-STAGE3_SRC = {
-    "dragon3": dict(path="assets/dragon3.png", crop=(0.0, 0.0, 1.0, 0.93),
-                    dark=0.30, accent=0.66,
-                    eyes=[(14, 13, 3, 3)], mouth=(7, 17)),
-    # 백호는 흰 몸 → 밝은 부분을 accent(near-white)로 태깅해야 앱의 slate
-    # body색과 대비돼 흰 호랑이로 보인다 (accent 없으면 전부 slate 덩어리).
-    "tiger3": dict(path="assets/tiger3.png", crop=None,
-                   dark=0.40, accent=0.56,
-                   eyes=[(6, 12, 2, 2), (11, 12, 2, 2)], mouth=(7, 16)),
-    "bird3": dict(path="assets/bird3.png", crop=None,
-                  dark=0.30, accent=0.62,
-                  eyes=[(24, 16, 3, 3)], mouth=(20, 17)),
-    "turtle3": dict(path="assets/turtle3.png", crop=None,
-                    dark=0.33, accent=0.62,
-                    eyes=[(14, 7, 2, 2), (7, 25, 2, 2)], mouth=(5, 29)),
-}
-
-# 스테이지별 목표 그리드 크기 (아트 소스 크기와 다르면 업스케일)
-TARGET_SIZE = {
-    "dragon1": 32, "tiger1": 32, "bird1": 32, "turtle1": 32,
-    "dragon2": 36, "tiger2": 36, "bird2": 36, "turtle2": 36,
-    # stage3(성숙기)는 40 그리드로 자동 부트스트랩 → 업스케일 없음
-    "fluff": 24,
 }
 
 # ---------------------------------------------------------------------------
@@ -260,145 +222,6 @@ def add_outline(art):
                     out[y][x] = "#"
                     break
     return ["".join(r) for r in out]
-
-
-def upscale_art(art, target):
-    """char 그리드를 최근접 이웃으로 target x target 정사각 확대.
-
-    승인된 유아기(24)·성장기(28) 아트를 디자인 변경 없이 그대로 32/36으로
-    키운다. 실루엣/테두리 위상은 보존되고 일부 행·열이 복제될 뿐이다.
-    """
-    n = len(art)
-    if target == n:
-        return [row for row in art]
-    out = []
-    for ty in range(target):
-        sy = ty * n // target
-        src = art[sy]
-        out.append("".join(src[tx * n // target] for tx in range(target)))
-    return out
-
-
-def scale_point(pt, n, target):
-    """입 좌표 (x, y)를 n→target 비율로 스케일."""
-    x, y = pt
-    return (x * target // n, y * target // n)
-
-
-def scale_eye(rect, n, target):
-    """눈은 위치만 스케일하고 크기는 원본보다 작게 유지.
-
-    업스케일 비율로 눈을 통째로 키우면 큰 검은 블록이 돼 무섭다.
-    중심만 새 그리드로 옮기고 폭·높이는 원본에서 1 줄여(최소 2) 더 작고
-    귀엽게 만든다.
-    """
-    x, y, w, h = rect
-    cx = (x + w / 2.0) * target / n
-    cy = (y + h / 2.0) * target / n
-    nw = max(2, w - 1)
-    nh = max(2, h - 1)
-    nx = int(round(cx - nw / 2.0))
-    ny = int(round(cy - nh / 2.0))
-    return (nx, ny, nw, nh)
-
-
-def largest_component(rows):
-    """최대 4-연결 요소만 남긴다 (떠다니는 물방울·구슬·그림자 제거)."""
-    n = len(rows)
-    g = [list(r) for r in rows]
-    seen = [[False] * n for _ in range(n)]
-    best = []
-    for sy in range(n):
-        for sx in range(n):
-            if g[sy][sx] == "." or seen[sy][sx]:
-                continue
-            comp = []
-            stack = [(sx, sy)]
-            seen[sy][sx] = True
-            while stack:
-                x, y = stack.pop()
-                comp.append((x, y))
-                for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
-                    nx, ny = x + dx, y + dy
-                    if (0 <= nx < n and 0 <= ny < n
-                            and not seen[ny][nx] and g[ny][nx] != "."):
-                        seen[ny][nx] = True
-                        stack.append((nx, ny))
-            if len(comp) > len(best):
-                best = comp
-    keep = set(best)
-    return [
-        "".join(g[y][x] if (x, y) in keep else "." for x in range(n))
-        for y in range(n)
-    ]
-
-
-def despeckle(rows):
-    """고립된 단일 색 픽셀('o'/'+')을 주변 다수색으로 눌러 얼룩(잡티) 완화.
-
-    이웃 4칸이 모두 반대 색이고 같은 색 이웃이 없는 진짜 외톨이 픽셀만
-    뒤집는다 (현무 등딱지의 초록/갈색 salt-and-pepper 정리). 아웃라인('#')과
-    빈칸('.')은 건드리지 않아 실루엣·구조는 유지된다.
-    """
-    n = len(rows)
-    g = [list(r) for r in rows]
-    out = [row[:] for row in g]
-    for y in range(n):
-        for x in range(n):
-            ch = g[y][x]
-            if ch not in ("o", "+"):
-                continue
-            other = "+" if ch == "o" else "o"
-            opposite = same = 0
-            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
-                nx, ny = x + dx, y + dy
-                if 0 <= nx < n and 0 <= ny < n:
-                    if g[ny][nx] == other:
-                        opposite += 1
-                    elif g[ny][nx] == ch:
-                        same += 1
-            if opposite >= 3 and same == 0:
-                out[y][x] = other
-    return ["".join(r) for r in out]
-
-
-def base_from_png(key):
-    """성숙기(stage3) 베이스 아트를 원본 PNG에서 STAGE3_GRID로 자동 생성.
-
-    크롭 → 정사각 패딩 → 다운샘플 후 밝기로 '#'/'o'/'+' 분류하고,
-    최대 연결요소만 남겨 부유 아티팩트를 정리, 고립 픽셀은 despeckle.
-    """
-    src = STAGE3_SRC[key]
-    im = Image.open(src["path"]).convert("RGBA")
-    im = im.crop(im.getbbox())
-    if src["crop"] is not None:
-        w, h = im.size
-        fx0, fy0, fx1, fy1 = src["crop"]
-        im = im.crop((int(w * fx0), int(h * fy0), int(w * fx1), int(h * fy1)))
-        im = im.crop(im.getbbox() or (0, 0, im.width, im.height))
-    side = max(im.width, im.height)
-    sq = Image.new("RGBA", (side, side), (0, 0, 0, 0))
-    sq.paste(im, ((side - im.width) // 2, (side - im.height) // 2))
-    small = sq.resize((STAGE3_GRID, STAGE3_GRID), Image.BOX)
-    px = small.load()
-    dark, accent = src["dark"], src["accent"]
-    rows = []
-    for y in range(STAGE3_GRID):
-        row = []
-        for x in range(STAGE3_GRID):
-            r, g, b, a = px[x, y]
-            if a / 255.0 <= 0.5:
-                row.append(".")
-                continue
-            lum = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255.0
-            if lum < dark:
-                row.append("#")
-            elif lum > accent:
-                row.append("+")
-            else:
-                row.append("o")
-        rows.append("".join(row))
-    return despeckle(largest_component(rows))
 
 
 def squash_art(g, factor):
@@ -923,20 +746,17 @@ def pose(
     mx, my = meta["mouth"]
     draw_mouth(g, mx, my, mouth)
 
-    # 다리 스텝 — 하단 다리 영역을 앞/뒤 절반으로 나눠 들어올림
-    # 그리드가 클수록(성숙기 48) 다리 영역·들어올림을 키워 스텝이 잘 보이게 함
+    # 다리 스텝 — 하단 3행을 앞/뒤 절반으로 나눠 들어올림
     if step:
         x0, x1, y0, y1 = bbox(g)
         xm = (x0 + x1) // 2
-        leg_h = max(3, n // 9)      # 다리 영역 높이 (24→3, 48→5)
-        lift = max(1, n // 24)      # 들어올림 정도 (≤36→1, 48→2)
-        leg_top = y1 - leg_h + 1
+        leg_top = y1 - 2
         if step == "front":
-            g = move_region(g, x0, leg_top, xm, y1, -1, -lift)
+            g = move_region(g, x0, leg_top, xm, y1, -1, -1)
         elif step == "back":
-            g = move_region(g, xm + 1, leg_top, x1, y1, -1, -lift)
+            g = move_region(g, xm + 1, leg_top, x1, y1, -1, -1)
         elif step == "both_up":  # 점프 시 다리 웅크림
-            g = move_region(g, x0, leg_top, x1, y1, 0, -lift)
+            g = move_region(g, x0, leg_top, x1, y1, 0, -1)
 
     # 기울임 (상단 절반만 가로 이동)
     if lean:
@@ -961,20 +781,6 @@ def lying_pose(key, factor):
         for dx in range(w):
             put(squashed, x + dx, ny, "#")
     return squashed
-
-
-def flap_wings(g, dy):
-    """새 날개(상단 좌우 바깥 영역)를 위/아래로 이동 — 퍼덕임.
-
-    주작처럼 날개를 활짝 편 새가 걷기/기쁨에서 날개가 고정돼 어색한 걸
-    막는다. 몸 중앙(어깨)은 두고 바깥 1/3만 상하로 움직여 펄럭이게 한다.
-    """
-    x0, x1, y0, y1 = bbox(g)
-    ymid = y0 + (y1 - y0) * 3 // 5   # 상단(날개가 있는) 영역
-    xw = max(1, (x1 - x0) // 3)      # 바깥 1/3 = 날개
-    g = move_region(g, x0, y0, x0 + xw, ymid, 0, dy)
-    g = move_region(g, x1 - xw, y0, x1, ymid, 0, dy)
-    return g
 
 
 def head_bow(g, depth):
@@ -1016,13 +822,6 @@ def motion_walk(sp):
         hop = pose(sp, eye="happy", mouth="open", dy=-2)
         land = squash_art(pose(sp, eye="open"), 0.84)
         return [crouch, hop, land]
-    if sp.startswith("bird"):
-        # 새는 다리 스텝 + 날개 퍼덕임을 함께 (날개 고정 방지)
-        return [
-            flap_wings(pose(sp, step="front"), -2),
-            pose(sp),
-            flap_wings(pose(sp, step="back"), 2),
-        ]
     return [
         pose(sp, step="front"),
         pose(sp),
@@ -1149,12 +948,6 @@ def motion_joy(sp):
         crouch = squash_art(pose(sp, eye="happy"), 0.9)
         airborne = pose(sp, eye="happy", mouth="open", dy=-3)
         landing = squash_art(pose(sp, eye="happy", mouth="open"), 0.85)
-    elif sp.startswith("bird"):
-        # 새는 다리 점프 대신 날개를 활짝 폈다 내리며 떠오른다
-        crouch = flap_wings(pose(sp, eye="happy", dy=1), 2)
-        airborne = flap_wings(
-            lift_art(pose(sp, eye="happy", mouth="open"), 3), -3)
-        landing = flap_wings(pose(sp, eye="happy", mouth="open", dy=1), 2)
     else:
         crouch = pose(sp, eye="happy", dy=1)
         airborne = lift_art(
@@ -1244,9 +1037,8 @@ def art_to_masks(g):
     return dark_rows, body_rows, accent_rows
 
 
-def format_rows(rows, n):
-    hex_width = (n + 3) // 4  # 그리드 크기에 맞춘 hex 자릿수 (40→10)
-    parts = ["0x%0*X" % (hex_width, v) for v in rows]
+def format_rows(rows):
+    parts = ["0x%07X" % v for v in rows]
     lines = []
     for i in range(0, len(parts), 8):
         lines.append("      " + ", ".join(parts[i : i + 8]) + ",")
@@ -1254,30 +1046,13 @@ def format_rows(rows, n):
 
 
 def main() -> int:
-    # 성숙기(stage3) 스프라이트를 원본 PNG에서 40 그리드로 부트스트랩해 주입
-    for key, src in STAGE3_SRC.items():
-        SPECIES_ART[key] = {
-            "body": base_from_png(key),
-            "eyes": [tuple(r) for r in src["eyes"]],
-            "mouth": tuple(src["mouth"]),
-        }
-
     for key, meta in SPECIES_ART.items():
         validate(meta["body"], "%s.body" % key)
         # 원본 PNG 색 재샘플링으로 보조색('+') 자동 태깅
-        # (stage3는 base_from_png에서 이미 '+'를 태깅하므로 건너뜀)
-        if key in SPECIES_SRC:
-            meta["body"] = apply_accent(meta["body"], key)
-        # 승인된 유아기(24)·성장기(28) 아트를 32/36으로 업스케일 (디자인 유지)
-        src_n = len(meta["body"])
-        target = TARGET_SIZE.get(key, src_n)
-        if target != src_n:
-            meta["body"] = upscale_art(meta["body"], target)
-            meta["eyes"] = [scale_eye(r, src_n, target) for r in meta["eyes"]]
-            meta["mouth"] = scale_point(meta["mouth"], src_n, target)
-        # 성장기(2)·성숙기(3)·털뭉치는 가장자리가 몸통색으로 끝나 테두리가
-        # 빠지므로 실루엣을 검은 테두리로 감싼다 (유아기는 원본 테두리 유지)
-        if key.endswith("2") or key.endswith("3") or key == "fluff":
+        meta["body"] = apply_accent(meta["body"], key)
+        # 성장기(28px)·털뭉치는 가장자리가 몸통색으로 끝나 테두리가 빠지므로
+        # 실루엣을 검은 테두리로 감싼다 (유아기는 원본 테두리가 살아있음)
+        if key.endswith("2") or key == "fluff":
             meta["body"] = add_outline(meta["body"])
 
     sprite_frames = {}
@@ -1295,8 +1070,8 @@ def main() -> int:
             "// tool/generate_motion_data.py 로 재생성:\n"
             "//   python tool/generate_motion_data.py\n"
             "//\n"
-            "// 도트 모션 3프레임 — 원본 캐릭터(assets/{종}{1|2|3}.png) 기반.\n"
-            "// 유아기 32x32, 성장기 36x36, 성숙기 40x40, 털뭉치 24x24 그리드에\n"
+            "// 도트 모션 3프레임 — 원본 캐릭터(assets/{종}{1|2}.png)를\n"
+            "// 도트 아트(유아기 24x24, 성장기 28x28)로 옮긴 뒤\n"
             "// 다리 교차/표정/호흡을 입힌 데이터.\n"
             "\n"
             "import 'pet_pixel_data.dart';\n"
@@ -1320,9 +1095,9 @@ def main() -> int:
                         "      ),\n"
                         % (
                             size,
-                            format_rows(dark, size),
-                            format_rows(body, size),
-                            format_rows(accent, size),
+                            format_rows(dark),
+                            format_rows(body),
+                            format_rows(accent),
                         )
                     )
                 f.write("    ],\n")
