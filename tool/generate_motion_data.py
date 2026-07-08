@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""도트 모션 생성 — 사용자 원본 캐릭터 기반 (유아기 24x24 + 성장기 28x28).
+"""도트 모션 생성 — 사용자 원본 캐릭터 기반 (유아기 32 + 성장기 36 + 털뭉치 24).
 
 assets/{종}{1|2}.png 원본 픽셀아트를 도트 아트로 옮긴 뒤(물방울·동전·그림자
 제거 등 수작업 정리), 부위별 변형으로 다마고치 방식 모션 3프레임을 만든다:
@@ -9,9 +9,9 @@ assets/{종}{1|2}.png 원본 픽셀아트를 도트 아트로 옮긴 뒤(물방�
   - 공격/회피/아픔: 상단 기울임(lean) + 돌진/젖힘
   - 이펙트 글리프 (Z, 반짝이, 화남, 땀, 속도선, 밥그릇)
 
-그리드 크기는 아트마다 다를 수 있다 (유아기 24, 성장기 28). 모든 연산
-함수는 len(g)에서 크기를 얻고, 이펙트 좌표는 24 기준값을 우측/하단
-앵커로 보정한다.
+아트 소스는 유아기 24·성장기 28이지만 TARGET_SIZE대로 32·36으로 업스케일
+한다(눈은 scale_eye로 위치만 스케일+크기 축소). 모든 연산 함수는 len(g)에서
+크기를 얻고, 이펙트 좌표는 24 기준값을 우측/하단 앵커로 보정한다.
 
 아트 문법: '.' 빈칸 / '#' 진한 도트(아웃라인·눈) / 'o' 몸통 도트(테마색)
           / '+' 보조색 도트(배·부리·등딱지 등 — 원본 색에서 자동 태깅)
@@ -61,6 +61,14 @@ SPECIES_SRC = {
     # 털뭉치(stage 1) — 단색 크림이라 보조색 태깅 없이 몸통색 단색으로
     "fluff": dict(path="assets/기본이미지.png", crop=None, size=(24, 24),
                   off=(0, 0), light=None, darkmid=False),
+}
+
+# 스테이지별 목표 그리드 크기 (아트 소스 크기와 다르면 업스케일)
+# 유아기 24→32, 성장기 28→36. 털뭉치는 그대로.
+TARGET_SIZE = {
+    "dragon1": 32, "tiger1": 32, "bird1": 32, "turtle1": 32,
+    "dragon2": 36, "tiger2": 36, "bird2": 36, "turtle2": 36,
+    "fluff": 24,
 }
 
 # ---------------------------------------------------------------------------
@@ -222,6 +230,46 @@ def add_outline(art):
                     out[y][x] = "#"
                     break
     return ["".join(r) for r in out]
+
+
+def upscale_art(art, target):
+    """char 그리드를 최근접 이웃으로 target x target 정사각 확대.
+
+    승인된 유아기(24)·성장기(28) 아트를 디자인 변경 없이 32/36으로 키운다.
+    실루엣/테두리 위상은 보존되고 일부 행·열이 복제될 뿐이다.
+    """
+    n = len(art)
+    if target == n:
+        return [row for row in art]
+    out = []
+    for ty in range(target):
+        sy = ty * n // target
+        src = art[sy]
+        out.append("".join(src[tx * n // target] for tx in range(target)))
+    return out
+
+
+def scale_point(pt, n, target):
+    """입 좌표 (x, y)를 n→target 비율로 스케일."""
+    x, y = pt
+    return (x * target // n, y * target // n)
+
+
+def scale_eye(rect, n, target):
+    """눈은 위치만 스케일하고 크기는 원본보다 작게 유지.
+
+    업스케일 비율로 눈을 통째로 키우면 큰 검은 블록이 돼 무섭다. 또 원본
+    눈 자체가 살짝 크므로 중심만 새 그리드로 옮기고 폭·높이는 ~0.7배로
+    줄여(최소 2) 더 작고 귀엽게 만든다.
+    """
+    x, y, w, h = rect
+    cx = (x + w / 2.0) * target / n
+    cy = (y + h / 2.0) * target / n
+    nw = max(2, int(round(w * 0.7)))
+    nh = max(2, int(round(h * 0.7)))
+    nx = int(round(cx - nw / 2.0))
+    ny = int(round(cy - nh / 2.0))
+    return (nx, ny, nw, nh)
 
 
 def squash_art(g, factor):
@@ -1037,8 +1085,9 @@ def art_to_masks(g):
     return dark_rows, body_rows, accent_rows
 
 
-def format_rows(rows):
-    parts = ["0x%07X" % v for v in rows]
+def format_rows(rows, n):
+    hex_width = (n + 3) // 4  # 그리드 크기에 맞춘 hex 자릿수 (32→8, 36→9)
+    parts = ["0x%0*X" % (hex_width, v) for v in rows]
     lines = []
     for i in range(0, len(parts), 8):
         lines.append("      " + ", ".join(parts[i : i + 8]) + ",")
@@ -1050,6 +1099,14 @@ def main() -> int:
         validate(meta["body"], "%s.body" % key)
         # 원본 PNG 색 재샘플링으로 보조색('+') 자동 태깅
         meta["body"] = apply_accent(meta["body"], key)
+        # 승인된 유아기(24)·성장기(28) 아트를 32/36으로 업스케일 (디자인 유지)
+        # 눈은 scale_eye로 위치만 옮기고 크기는 줄여(무섭지 않게), 입은 비율 스케일
+        src_n = len(meta["body"])
+        target = TARGET_SIZE.get(key, src_n)
+        if target != src_n:
+            meta["body"] = upscale_art(meta["body"], target)
+            meta["eyes"] = [scale_eye(r, src_n, target) for r in meta["eyes"]]
+            meta["mouth"] = scale_point(meta["mouth"], src_n, target)
         # 성장기(28px)·털뭉치는 가장자리가 몸통색으로 끝나 테두리가 빠지므로
         # 실루엣을 검은 테두리로 감싼다 (유아기는 원본 테두리가 살아있음)
         if key.endswith("2") or key == "fluff":
@@ -1071,8 +1128,8 @@ def main() -> int:
             "//   python tool/generate_motion_data.py\n"
             "//\n"
             "// 도트 모션 3프레임 — 원본 캐릭터(assets/{종}{1|2}.png)를\n"
-            "// 도트 아트(유아기 24x24, 성장기 28x28)로 옮긴 뒤\n"
-            "// 다리 교차/표정/호흡을 입힌 데이터.\n"
+            "// 도트 아트로 옮긴 뒤 32(유아기)·36(성장기)·24(털뭉치) 그리드로\n"
+            "// 업스케일하고 다리 교차/표정/호흡을 입힌 데이터.\n"
             "\n"
             "import 'pet_pixel_data.dart';\n"
             "\n"
@@ -1095,9 +1152,9 @@ def main() -> int:
                         "      ),\n"
                         % (
                             size,
-                            format_rows(dark),
-                            format_rows(body),
-                            format_rows(accent),
+                            format_rows(dark, size),
+                            format_rows(body, size),
+                            format_rows(accent, size),
                         )
                     )
                 f.write("    ],\n")

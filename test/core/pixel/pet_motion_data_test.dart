@@ -68,10 +68,14 @@ void main() {
       }
     });
 
-    test('털뭉치·유아기는 24, 성장기는 28 그리드', () {
+    test('그리드 크기: 털뭉치 24, 유아기 32, 성장기 36', () {
+      int expectedSize(String key) {
+        if (key == 'fluff') return 24;
+        return key.endsWith('1') ? 32 : 36; // 유아기 32 / 성장기 36
+      }
+
       for (final key in motionFrames.keys) {
-        final expected = (key == 'fluff' || key.endsWith('1')) ? 24 : 28;
-        expect(motionFrames[key]!['walk']![0].size, expected,
+        expect(motionFrames[key]!['walk']![0].size, expectedSize(key),
             reason: '$key: 그리드 크기');
       }
     });
