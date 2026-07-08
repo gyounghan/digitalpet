@@ -15,7 +15,7 @@ PocketFriend의 펫 렌더링은 이미지 파일을 런타임에 디코딩하�
 
 ```dart
 class PixelSprite {
-  final int size;            // 그리드 한 변 (정적 64, 모션 24/28)
+  final int size;            // 그리드 한 변 (정적 64, 모션 24·32·36·40)
   final List<int> dark;      // 아웃라인/눈 — 행(y)별 비트마스크
   final List<int> body;      // 몸통(테마색) — 행별 비트마스크
   final List<int> accent;    // 보조색(배/부리/등딱지) — 행별 비트마스크
@@ -74,19 +74,25 @@ hex 문자열로)을 굽는다. 안드로이드 홈 위젯이 이 JSON을 파싱
 
 ---
 
-## 3. 모션 파이프라인 (9스프라이트×9모션×3프레임 — 털뭉치·유아기 24, 성장기 28)
+## 3. 모션 파이프라인 (13스프라이트×9모션×3프레임 = 351 — 털뭉치 24 / 유아기 32 / 성장기 36 / 성숙기 40)
 
 **스크립트**: `tool/generate_motion_data.py` → `lib/core/pixel/pet_motion_data.dart`
 (출력: `motionFrames` — `Map<String 스프라이트키, Map<String모션, List<PixelSprite>>>`,
-키는 `'{종}{스테이지}'` — `'dragon1'`(유아기 24×24), `'dragon2'`(성장기 28×28))
+키는 `'{종}{스테이지}'` — `'dragon1'`(유아기), `'dragon2'`(성장기), `'dragon3'`(성숙기))
 
 핵심 아이디어: 원본 `assets/{종}{1|2}.png` 픽셀아트를 **도트 아트 문자열**로
-옮긴 뒤(수작업 정리), 부위별 변형으로 모션을 합성한다. 프레임을 손으로 243장
+옮긴 뒤(수작업 정리), 부위별 변형으로 모션을 합성한다. 프레임을 손으로 351장
 그리는 게 아니라, 스프라이트당 몸체 아트 1장 + 조립 규칙으로 만든다.
 
-그리드 크기는 아트마다 달라도 된다 — 모든 연산 함수는 `len(g)`에서 크기를
-얻고, 이펙트 글리프 좌표는 24 기준값에 `r = 크기 - 24`를 더해 우측/하단
-앵커로 보정한다 (`motion_*` 함수들 참고).
+**그리드 크기 정책** (모든 연산 함수는 `len(g)`에서 크기를 얻어 크기 무관):
+- 유아기(`{종}1`)·성장기(`{종}2`)는 손 아트(24/28)를 `TARGET_SIZE`대로
+  **업스케일**해 32/36으로 키운다 (`upscale_art` — 최근접 이웃, 디자인 유지).
+  눈 rect·입 좌표도 `scale_rect`/`scale_point`로 같은 비율로 스케일된다.
+- 성숙기(`{종}3`, 40×40)는 손 아트가 없어 원본 PNG에서 **자동 부트스트랩**
+  (`base_from_png` — 40 다운샘플 + `largest_component`로 물방울/구슬/그림자 제거).
+  파라미터·눈/입은 `STAGE3_SRC`에 둔다. accent는 밝기로 태깅되므로 stage3는
+  `apply_accent`를 건너뛴다.
+- 이펙트 글리프 좌표는 24 기준값에 `r = 크기 - 24`를 더해 우측/하단 앵커로 보정.
 
 ### 3.1 아트 문법
 
@@ -188,9 +194,9 @@ TMP/TEMP를 지정할 것.
 테스트 파일:
 - `test/core/pixel/pet_pixel_data_test.dart` — 정적 146장 무결성
   (64그리드, 3레이어 비겹침, 핵심 에셋 키 존재)
-- `test/core/pixel/pet_motion_data_test.dart` — 모션 243프레임 무결성
-  (size-행수 일치, 유아기 24/성장기 28, 3레이어 비겹침, 프레임 간 차이,
-  mood 매핑, 에셋 경로→스프라이트 키 추출)
+- `test/core/pixel/pet_motion_data_test.dart` — 모션 351프레임 무결성
+  (size-행수 일치, 털뭉치 24/유아기 32/성장기 36/성숙기 40, 3레이어 비겹침,
+  프레임 간 차이, mood 매핑, 에셋 경로→스프라이트 키 추출)
 
 ---
 
@@ -208,19 +214,19 @@ lib/presentation/widgets/
 │   ├── motionForMood()           happy→joy, normal→walk, hungry→hungry,
 │   │                             sleepy·tired→sleep, sad·dead→hurt
 │   ├── motionSpriteKeyFromAssetPath  모션 데이터가 있는 에셋이면
-│   │                             '기본이미지'→'fluff', '{종}{1|2}' 키 반환 (stage 1·2·3)
+│   │                             '기본이미지'→'fluff', '{종}{1|2|3}' 키 반환 (stage 1~4)
 │   └── PixelMotionAnimation      spriteKey 기반 3프레임 루프 (기본 900ms/
 │                                 사이클, 인덱스 변경 시에만 setState)
-└── pet_image_animation.dart      stage 4(사신수) mood 정적 프레임 렌더
+└── pet_image_animation.dart      종/스프라이트 키가 없을 때만 mood 정적 프레임 렌더
 ```
 
 ### 화면 연결
 
 - **홈** (`home_screen.dart` `_buildPetSprite`): `_motionSpriteKey(pet)`가
-  키를 주면(stage 1 'fluff' / stage 2·3 '{종}{stage-1}')
+  키를 주면(stage 1 'fluff' / stage 2~4 '{종}{stage-1}')
   `PixelMotionAnimation(mood 기반 모션)`. 급식 버튼 →
   `_playTransientMotion(PixelMotion.eat)` 2.7초.
-  사신수(stage 4)만 `PetImageAnimation`(정적 mood 도트).
+  스프라이트 키가 없을 때만 `PetImageAnimation`(정적 mood 도트) 폴백.
 - **배틀** (`battle_screen.dart` `_myTurnMotion`): 턴 중 내 펫이
   회피(상대 피해 0)→dodge / 우세→attack / 열세→hurt, 600ms 사이클.
 - **색 주입**: 밝은 배경에서는 `theme.primary`+`theme.spriteAccent`,
@@ -253,26 +259,31 @@ PNG였음). Flutter 엔진이 없어도(백그라운드) 항상 최신 도트를
   (`me_screen.dart`의 `_buildDebugGalleryButton` — 삭제 시 이 버튼과 화면
   파일, import 한 줄만 지우면 됨)
 - 탭 1 "스프라이트": `petPixelSprites` 146장 그리드 (키 접두어로 종 테마색 적용)
-- 탭 2 "도트 모션": `motionFrames` 9스프라이트×9모션 애니메이션
+- 탭 2 "도트 모션": `motionFrames` 13스프라이트×9모션 애니메이션
 - 우상단 🌙: 어두운 배경 토글 (흰 도트 대비 확인)
 
 ---
 
-## 6. 확장 레시피: 새 스테이지 모션 추가하기 (성장기는 완료됨)
+## 6. 확장 레시피: 새 스테이지 모션 추가하기 (전 스테이지 완료됨)
 
-**성장기(stage 3, `'{종}2'` 28×28)는 이 레시피대로 구현 완료.**
-신수(stage 4, `'{종}3'`) 등 추가 스테이지를 붙일 때의 절차:
+**유아기(32)·성장기(36)·성숙기(40) 모두 구현 완료.** 스테이지 크기·소스는
+`TARGET_SIZE`(업스케일 대상)와 `STAGE3_SRC`(성숙기 부트스트랩)로 관리한다.
 
-1. `assets/{종}N.png`를 열어 특징 파악.
-2. 그리드 크기 결정 (몸집 표현 — 성장기 28 사용, 신수는 32 권장).
-   생성기는 이미 크기 무관 구조라 정사각 아트만 넣으면 된다.
-3. 덤프 스크립트(§3.2 절차, `SPECIES_SRC`와 동일 파라미터)로 초안을 뽑고
-   수작업 정리 → `SPECIES_ART`/`SPECIES_SRC`에 `'{종}N'` 키로 추가.
-4. Dart 쪽은 대부분 자동 적용:
+**크기만 바꾸려면** → `TARGET_SIZE`의 값만 조정하고 재생성 (아트 재작업 불필요).
+손 아트를 그 값으로 업스케일하고 눈/입 좌표도 자동 스케일된다.
+
+**새 스테이지(예: 상위 진화)를 붙이려면**:
+1. `assets/{종}N.png`를 열어 특징 파악. 원본이 깔끔하면(백호처럼) 부트스트랩만으로
+   충분하고, 물방울/구슬 등 부유물이 있으면 `crop`·임계값을 미리보기로 조율한다.
+2. 부트스트랩 방식(성숙기와 동일): `STAGE3_SRC`에 준하는 dict(path/crop/dark/
+   accent/eyes/mouth)를 추가하고, `base_from_png`가 40 그리드로 자동 변환 +
+   `largest_component`로 아티팩트를 제거한다. **손으로 40×40 아트를 옮기지 않는다.**
+   미리보기는 스크래치패드 래스터라이저(char→PNG)로 눈·실루엣을 확인.
+3. Dart 쪽은 대부분 자동 적용:
    - `motionSpriteKeyFromAssetPath`가 맵 키 존재로 판단 → 배틀/갤러리 자동
-   - 홈 `_hasMotionStage`의 스테이지 게이트에 새 스테이지 추가
-   - 테스트의 그리드 크기 기대값(`유아기 24, 성장기 28`)에 새 스테이지 추가
-5. 검증 루틴은 3.6과 동일. 커밋 단위: 아트/데이터 → 화면 연결.
+   - 홈 `_motionSpriteKey`의 스테이지 게이트(`stage >= 2 && stage <= 4`) 확장
+   - 테스트의 그리드 크기 기대값에 새 스테이지 추가
+4. 검증 루틴은 3.6과 동일. 커밋 단위: 아트/데이터 → 화면 연결.
 
 ---
 

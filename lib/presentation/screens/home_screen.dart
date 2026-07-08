@@ -320,12 +320,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   /// - stage 1 (털뭉치)  → 'fluff'
   /// - stage 2 (유아기)  → '{종}1'
   /// - stage 3 (성장기)  → '{종}2'
-  /// - stage 4 (사신수)  → null (정적 mood 이미지)
+  /// - stage 4 (성숙기)  → '{종}3'
   String? _motionSpriteKey(Pet pet) {
     if (pet.evolutionStage == 1) return 'fluff';
     final species = evolutionSpeciesImagePrefix(pet.evolutionType);
     if (species != null &&
-        (pet.evolutionStage == 2 || pet.evolutionStage == 3)) {
+        pet.evolutionStage >= 2 &&
+        pet.evolutionStage <= 4) {
       return '$species${pet.evolutionStage - 1}';
     }
     return null;
@@ -333,9 +334,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   /// 펫 스테이지 스프라이트
   ///
-  /// - 도트 모션 스테이지(털뭉치·유아기·성장기): mood 기반 도트 모션 루프
-  ///   + 액션 시 일시 모션(밥먹기)
-  /// - 사신수(stage 4): 기존 mood 정적 도트 렌더
+  /// - 도트 모션 스테이지(털뭉치·유아기·성장기·성숙기): mood 기반 도트 모션
+  ///   루프 + 액션 시 일시 모션(밥먹기)
+  /// - 종 미결정 등으로 스프라이트 키가 없을 때만 정적 mood 도트 렌더
   Widget _buildPetSprite(Pet pet, SpeciesTheme theme) {
     final spriteKey = _motionSpriteKey(pet);
     if (spriteKey != null) {

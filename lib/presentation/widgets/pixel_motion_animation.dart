@@ -4,7 +4,7 @@ import '../../core/pixel/pet_pixel_data.dart';
 import '../../domain/entities/pet.dart';
 import 'pixel_pet_image.dart';
 
-/// 도트 모션 종류 (유아기 stage 2 / 성장기 stage 3 공통)
+/// 도트 모션 종류 (털뭉치·유아기·성장기·성숙기 공통)
 enum PixelMotion {
   walk,
   eat,
@@ -52,7 +52,7 @@ List<PixelSprite>? motionFramesFor(String spriteKey, PixelMotion motion) {
 ///
 /// 'assets/기본이미지.png' → 'fluff' (털뭉치),
 /// 'assets/dragon1.png' → 'dragon1', 'assets/dragon2.png' → 'dragon2',
-/// 'assets/dragon3.png' → null (mythical은 모션 미지원)
+/// 'assets/dragon3.png' → 'dragon3' (성숙기도 도트 모션 지원)
 String? motionSpriteKeyFromAssetPath(String assetPath) {
   final key = pixelKeyFromAssetPath(assetPath);
   final spriteKey = key == '기본이미지' ? 'fluff' : key;

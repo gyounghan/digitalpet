@@ -6,6 +6,7 @@ import 'package:pocketfriend/presentation/widgets/pixel_motion_animation.dart';
 void main() {
   const babyKeys = ['tiger1', 'bird1', 'turtle1', 'dragon1'];
   const juniorKeys = ['tiger2', 'bird2', 'turtle2', 'dragon2'];
+  const matureKeys = ['tiger3', 'bird3', 'turtle3', 'dragon3'];
   const motions = [
     'walk',
     'eat',
@@ -19,10 +20,11 @@ void main() {
   ];
 
   group('motionFrames 데이터 무결성', () {
-    test('털뭉치·유아기·성장기가 존재하고, 모든 키는 8모션 × 3프레임을 가진다', () {
+    test('털뭉치·유아기·성장기·성숙기가 존재하고, 모든 키는 9모션 × 3프레임을 가진다', () {
       expect(motionFrames.keys, contains('fluff'));
       expect(motionFrames.keys, containsAll(babyKeys));
       expect(motionFrames.keys, containsAll(juniorKeys));
+      expect(motionFrames.keys, containsAll(matureKeys));
       for (final key in motionFrames.keys) {
         final motionMap = motionFrames[key]!;
         expect(motionMap.keys, containsAll(motions), reason: '$key 모션 누락');
@@ -68,10 +70,16 @@ void main() {
       }
     });
 
-    test('털뭉치·유아기는 24, 성장기는 28 그리드', () {
+    test('그리드 크기: 털뭉치 24, 유아기 32, 성장기 36, 성숙기 40', () {
+      int expectedSize(String key) {
+        if (key == 'fluff') return 24;
+        if (key.endsWith('1')) return 32;
+        if (key.endsWith('2')) return 36;
+        return 40; // 성숙기(3)
+      }
+
       for (final key in motionFrames.keys) {
-        final expected = (key == 'fluff' || key.endsWith('1')) ? 24 : 28;
-        expect(motionFrames[key]!['walk']![0].size, expected,
+        expect(motionFrames[key]!['walk']![0].size, expectedSize(key),
             reason: '$key: 그리드 크기');
       }
     });
@@ -134,8 +142,9 @@ void main() {
       // 성장기(stage 3) 이미지도 모션 지원
       expect(motionSpriteKeyFromAssetPath('assets/dragon2.png'), 'dragon2');
       expect(motionSpriteKeyFromAssetPath('assets/turtle2.png'), 'turtle2');
-      // 신수(stage 4) 이미지는 모션 미지원
-      expect(motionSpriteKeyFromAssetPath('assets/dragon3.png'), isNull);
+      // 성숙기(stage 4) 이미지도 도트 모션 지원
+      expect(motionSpriteKeyFromAssetPath('assets/dragon3.png'), 'dragon3');
+      expect(motionSpriteKeyFromAssetPath('assets/bird3.png'), 'bird3');
     });
   });
 }
