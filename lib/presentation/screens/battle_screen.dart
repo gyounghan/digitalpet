@@ -962,7 +962,7 @@ class _FighterRow extends StatelessWidget {
           motion: motion!,
           duration: const Duration(milliseconds: 600),
           dotColor: isFluff ? SpeciesTheme.fluffBody : theme.primary,
-          accentColor: isFluff ? SpeciesTheme.fluffBody : theme.spriteAccent,
+          accentColor: isFluff ? SpeciesTheme.fluffAccent : theme.spriteAccent,
         ),
       );
     }

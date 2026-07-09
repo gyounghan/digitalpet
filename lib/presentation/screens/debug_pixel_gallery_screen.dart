@@ -41,7 +41,7 @@ class _DebugPixelGalleryScreenState extends State<DebugPixelGalleryScreen> {
   /// 보조색 — 어두운 배경에서는 대비를 위해 반투명 흰색
   Color _accentColorForKey(String key) {
     if (_darkBackground) return Colors.white.withValues(alpha: 0.6);
-    if (key == 'fluff') return SpeciesTheme.fluffBody;
+    if (key == 'fluff') return SpeciesTheme.fluffAccent;
     return _themeForKey(key).spriteAccent;
   }
 

@@ -102,6 +102,9 @@ class SpeciesTheme {
   /// 털뭉치(stage 1) 도트 몸통색 — 밝은 베이지 (종 미결정 상태)
   static const Color fluffBody = Color(0xFFEAD7A8);
 
+  /// 털뭉치(stage 1) 보조색 — 볼터치·귀 안쪽 연분홍 (귀여움 강조)
+  static const Color fluffAccent = Color(0xFFF2A0AE);
+
   /// 진화 타입으로 테마 조회
   static SpeciesTheme forType(EvolutionType? type) {
     return switch (type) {

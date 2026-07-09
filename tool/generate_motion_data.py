@@ -337,10 +337,13 @@ def draw_eye(g, rect, style):
         for dy in range(ph):
             for dx in range(pw):
                 put(g, ex + dx, ey + dy, "#")
-        # 큰 눈(4x4, 털뭉치)은 왼쪽 위에 몸통색 반짝이 한 점을 남겨
-        # 촉촉한 눈망울로 보이게 한다 (작은 눈은 뭉개지므로 제외).
-        if pw >= 4 and ph >= 4:
+        # 큰 눈(털뭉치 5x5): 네 귀퉁이를 몸통색으로 깎아 동그란 눈망울로 만들고
+        # 왼쪽 위에 몸통색 반짝이 2점을 남겨 촉촉하게 (작은 눈은 뭉개지므로 제외).
+        if pw >= 5 and ph >= 5:
+            for cx, cy in ((0, 0), (pw - 1, 0), (0, ph - 1), (pw - 1, ph - 1)):
+                put(g, ex + cx, ey + cy, "o")
             put(g, ex + 1, ey + 1, "o")
+            put(g, ex + 2, ey + 1, "o")
     elif style == "closed":  # 감은 눈 — 아래쪽 가로선
         for dx in range(pw):
             put(g, ex + dx, ey + ph - 1, "#")
@@ -699,32 +702,32 @@ SPECIES_ART = {
     "fluff": {
         "body": [
             "........................",
-            "....ooo........ooo......",
-            "...ooooo......ooooo.....",
-            "...ooooo......ooooo.....",
-            "...oooooo....oooooo.....",
-            "..ooooooooooooooooooo...",
-            "..ooooooooooooooooooo...",
-            ".ooooooooooooooooooooo..",
-            ".ooooooooooooooooooooo..",
-            "ooooooooooooooooooooooo.",
-            "ooooooooooooooooooooooo.",
-            "ooooooooooooooooooooooo.",
-            "ooooooooooooooooooooooo.",
-            "ooooooooooooooooooooooo.",
-            ".ooooooooooooooooooooo..",
-            ".ooooooooooooooooooooo..",
-            ".ooooooooooooooooooooo..",
-            ".ooooooooo#oo#oooooooo..",
-            "..oooooooooo##ooooooooo.",
-            "..ooooooooooooooooooo...",
-            "...ooooooooooooooooo....",
-            "....ooooooooooooooo.....",
-            ".....ooooooooooooo......",
-            ".......ooooooooo........",
+            "....oo............oo....",
+            "...o++o..........o++o...",
+            "...o++o..........o++o...",
+            "..oo++oo........oo++oo..",
+            "..oooooooooooooooooooo..",
+            ".oooooooooooooooooooooo.",
+            ".oooooooooooooooooooooo.",
+            "oooooooooooooooooooooooo",
+            "oooooooooooooooooooooooo",
+            "oooooooooooooooooooooooo",
+            "oooooooooooooooooooooooo",
+            "oooooooooooooooooooooooo",
+            "oooooooooooooooooooooooo",
+            "oooo++oooooooooooo++oooo",
+            "oooo++oooooooooooo++oooo",
+            "oooooooooo#oo#oooooooooo",
+            "ooooooooooo##ooooooooooo",
+            ".oooooooooooooooooooooo.",
+            "..oooooooooooooooooooo..",
+            "...oooooooooooooooooo...",
+            "....oooooooooooooooo....",
+            ".....oooooooooooooo.....",
+            ".......oooooooooo.......",
         ],
-        "eyes": [(6, 11, 4, 4), (13, 11, 4, 4)],
-        "mouth": (11, 17),
+        "eyes": [(5, 9, 5, 5), (14, 9, 5, 5)],
+        "mouth": (11, 16),
     },
 }
 

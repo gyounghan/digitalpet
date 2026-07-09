@@ -354,7 +354,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             height: 270,
             dotColor: isFluff ? SpeciesTheme.fluffBody : theme.primary,
             accentColor:
-                isFluff ? SpeciesTheme.fluffBody : theme.spriteAccent,
+                isFluff ? SpeciesTheme.fluffAccent : theme.spriteAccent,
           ),
         ),
       );
