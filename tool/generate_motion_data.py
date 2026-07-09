@@ -76,7 +76,7 @@ SPECIES_SRC = {
 TARGET_SIZE = {
     "dragon1": 32, "tiger1": 32, "bird1": 32, "turtle1": 32,
     "dragon2": 36, "tiger2": 36, "bird2": 36, "turtle2": 36,
-    "fluff": 24,
+    "fluff": 36,
 }
 
 # ---------------------------------------------------------------------------
@@ -345,9 +345,22 @@ def draw_eye(g, rect, style):
         for dy in range(ph):
             for dx in range(pw):
                 put(g, ex + dx, ey + dy, "#")
-        # 큰 눈(털뭉치 5x5): 네 귀퉁이를 몸통색으로 깎아 동그란 눈망울로 만들고
-        # 왼쪽 위에 몸통색 반짝이 2점을 남겨 촉촉하게 (작은 눈은 뭉개지므로 제외).
-        if pw >= 5 and ph >= 5:
+        # 큰 눈(털뭉치): 타원 눈망울 + 반짝이로 촉촉하게 (작은 눈은 뭉개지므로 제외).
+        if pw >= 6 and ph >= 7:
+            # 36 그리드 큰 눈 — 사각 채움을 타원으로 깎고 큰/작은 하이라이트 2점
+            cx0, cy0 = (pw - 1) / 2.0, (ph - 1) / 2.0
+            for dy in range(ph):
+                for dx in range(pw):
+                    nx = (dx - cx0) / (pw / 2.0)
+                    ny = (dy - cy0) / (ph / 2.0)
+                    if nx * nx + ny * ny > 1.0:
+                        put(g, ex + dx, ey + dy, "o")  # 타원 밖은 몸통색
+            for hy in range(1, 4):  # 왼쪽 위 큰 반짝이
+                for hx in range(2, 4):
+                    put(g, ex + hx, ey + hy, "o")
+            put(g, ex + pw - 3, ey + ph - 4, "o")  # 오른쪽 아래 작은 반짝이
+            put(g, ex + pw - 4, ey + ph - 4, "o")
+        elif pw >= 5 and ph >= 5:
             for cx, cy in ((0, 0), (pw - 1, 0), (0, ph - 1), (pw - 1, ph - 1)):
                 put(g, ex + cx, ey + cy, "o")
             put(g, ex + 1, ey + 1, "o")
@@ -709,33 +722,45 @@ SPECIES_ART = {
     # 털뭉치(stage 1) — 아기 같은 동글동글 크림 뭉치 + 둥근 귀 + 큰 두 눈 + 작은 입
     "fluff": {
         "body": [
-            "........................",
-            "....oo............oo....",
-            "...o++o..........o++o...",
-            "...o++o..........o++o...",
-            "..oo++oo........oo++oo..",
-            "..oooooooooooooooooooo..",
-            ".oooooooooooooooooooooo.",
-            ".oooooooooooooooooooooo.",
-            "oooooooooooooooooooooooo",
-            "oooooooooooooooooooooooo",
-            "oooooooooooooooooooooooo",
-            "oooooooooooooooooooooooo",
-            "oooooooooooooooooooooooo",
-            "oooooooooooooooooooooooo",
-            "oooo++oooooooooooo++oooo",
-            "oooo++oooooooooooo++oooo",
-            "oooooooooo#oo#oooooooooo",
-            "ooooooooooo##ooooooooooo",
-            ".oooooooooooooooooooooo.",
-            "..oooooooooooooooooooo..",
-            "...oooooooooooooooooo...",
-            "....oooooooooooooooo....",
-            ".....oooooooooooooo.....",
-            ".......oooooooooo.......",
+            "....................................",
+            "....................................",
+            "....................................",
+            ".........o................o.........",
+            "......ooooooo..........ooooooo......",
+            ".....ooooooooo........ooooooooo.....",
+            "....ooooooooooo......ooooooooooo....",
+            "....ooooooooooo......ooooooooooo....",
+            "...oooooooooooooooooooooooooooooo...",
+            "...oooooooooooooooooooooooooooooo...",
+            "...oooooooooooooooooooooooooooooo...",
+            "....oooooooooooooooooooooooooooo....",
+            "....oooooooooooooooooooooooooooo....",
+            "....oooooooooooooooooooooooooooo....",
+            "...oooooooo##oooooooooo##oooooooo...",
+            "...oooooooooooooooooooooooooooooo...",
+            "..oooooooooooooooooooooooooooooooo..",
+            "..oooooooooooooooooooooooooooooooo..",
+            "..oooooooooooooooooooooooooooooooo..",
+            "..oooooooooooooooooooooooooooooooo..",
+            "..oooooooooooooooooooooooooooooooo..",
+            ".oooooooooooooooooooooooooooooooooo.",
+            "..oooooooooooooooooooooooooooooooo..",
+            "..oooooooooooooooooooooooooooooooo..",
+            "..ooooo+++oooooooooooooooo+++ooooo..",
+            "..oooo+++++oooooooooooooo+++++oooo..",
+            "..ooooo+++oooooo#oo#oooooo+++ooooo..",
+            "...oooooooooooooo##oooooooooooooo...",
+            "...oooooooooooooooooooooooooooooo...",
+            "....oooooooooooooooooooooooooooo....",
+            "....oooooooooooooooooooooooooooo....",
+            "......oooooooooooooooooooooooo......",
+            ".......oooooooooooooooooooooo.......",
+            ".........oooooooooooooooooo.........",
+            "............oooooooooooo............",
+            "....................................",
         ],
-        "eyes": [(5, 9, 5, 5), (14, 9, 5, 5)],
-        "mouth": (11, 16),
+        "eyes": [(9, 16, 7, 9), (20, 16, 7, 9)],
+        "mouth": (16, 26),
     },
 }
 
@@ -1191,14 +1216,18 @@ def write_widget_json(sprite_frames):
     """홈 위젯용 모션 JSON — 스프라이트 키 → 모션 → 대표 프레임 1장.
 
     앱(pet_motion_data.dart)과 동일한 좌표를 쓰되, 위젯은 정지 이미지라
-    모션별 가운데 프레임 하나만 담는다. 행 마스크는 부호없는 hex 문자열.
+    모션별 대표 프레임 하나만 담는다. 행 마스크는 부호없는 hex 문자열.
+
+    대표 프레임은 기본 가운데(index 1)지만, 털뭉치 walk는 가운데가 '눈웃음
+    폴짝'이라 큰 눈망울이 안 보이므로 눈 뜬 첫 프레임(index 0)을 쓴다.
     """
     root = {}
     for key, motions in sprite_frames.items():
         size = art_size(key)
         entry = {"size": size}
+        idx = 0 if key == "fluff" else WIDGET_FRAME_INDEX
         for motion_name, frames in motions.items():
-            dark, body, accent = frames[WIDGET_FRAME_INDEX]
+            dark, body, accent = frames[min(idx, len(frames) - 1)]
             entry[motion_name] = {
                 "d": ["%X" % v for v in dark],
                 "b": ["%X" % v for v in body],

@@ -68,9 +68,9 @@ void main() {
       }
     });
 
-    test('그리드 크기: 털뭉치 24, 유아기 32, 성장기 36', () {
+    test('그리드 크기: 털뭉치 36, 유아기 32, 성장기 36', () {
       int expectedSize(String key) {
-        if (key == 'fluff') return 24;
+        if (key == 'fluff') return 36;
         return key.endsWith('1') ? 32 : 36; // 유아기 32 / 성장기 36
       }
 
