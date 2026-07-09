@@ -411,7 +411,7 @@ class PetWidgetProvider : AppWidgetProvider() {
     /// 반환: (몸통색, 보조색). 털뭉치(종 미결정/stage1)는 밝은 베이지 단색.
     private fun resolveDotColors(evolutionType: String?, stage: Int): Pair<Int, Int> {
         if (stage <= 1 || evolutionType.isNullOrBlank()) {
-            val fluffBody = 0xFFEAD7A8.toInt() // SpeciesTheme.fluffBody
+            val fluffBody = 0xFFF4E9CE.toInt() // SpeciesTheme.fluffBody
             val fluffAccent = 0xFFF2A0AE.toInt() // SpeciesTheme.fluffAccent (볼터치·귀 분홍)
             return fluffBody to fluffAccent
         }

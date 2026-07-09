@@ -74,7 +74,7 @@ hex 문자열로)을 굽는다. 안드로이드 홈 위젯이 이 JSON을 파싱
 
 ---
 
-## 3. 모션 파이프라인 (9스프라이트×9모션×3프레임 — 털뭉치 36 / 유아기 32 / 성장기 36)
+## 3. 모션 파이프라인 (9스프라이트×9모션×3프레임 — 털뭉치 40 / 유아기 32 / 성장기 36)
 
 **스크립트**: `tool/generate_motion_data.py` → `lib/core/pixel/pet_motion_data.dart`
 (출력: `motionFrames` — `Map<String 스프라이트키, Map<String모션, List<PixelSprite>>>`,
@@ -191,7 +191,7 @@ TMP/TEMP를 지정할 것.
 - `test/core/pixel/pet_pixel_data_test.dart` — 정적 146장 무결성
   (64그리드, 3레이어 비겹침, 핵심 에셋 키 존재)
 - `test/core/pixel/pet_motion_data_test.dart` — 모션 243프레임 무결성
-  (size-행수 일치, 털뭉치 36/유아기 32/성장기 36, 3레이어 비겹침, 프레임 간 차이,
+  (size-행수 일치, 털뭉치 40/유아기 32/성장기 36, 3레이어 비겹침, 프레임 간 차이,
   mood 매핑, 에셋 경로→스프라이트 키 추출)
 
 ---

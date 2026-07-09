@@ -99,8 +99,8 @@ class SpeciesTheme {
     spriteAccent: Color(0xFFF2E3C2),
   );
 
-  /// 털뭉치(stage 1) 도트 몸통색 — 밝은 베이지 (종 미결정 상태)
-  static const Color fluffBody = Color(0xFFEAD7A8);
+  /// 털뭉치(stage 1) 도트 몸통색 — 연한 크림 베이지 (종 미결정 상태)
+  static const Color fluffBody = Color(0xFFF4E9CE);
 
   /// 털뭉치(stage 1) 보조색 — 볼터치·귀 안쪽 연분홍 (귀여움 강조)
   static const Color fluffAccent = Color(0xFFF2A0AE);
