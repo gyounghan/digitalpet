@@ -58,12 +58,12 @@ class AppStrings {
   static const String speciesTiger = '호랑이 계열';
   static const String speciesTurtle = '거북이 계열';
 
-  // 진화 단계 카테고리 라벨
+  // 진화 단계 카테고리 라벨 (털뭉치 → 유아기 → 성장기 → 성숙기)
   static const Map<int, String> stageLabels = {
     1: '털뭉치',
-    2: '아기',
-    3: '청소년기',
-    4: '어른',
+    2: '유아기',
+    3: '성장기',
+    4: '성숙기',
   };
 
   // 진화 단계별 이름

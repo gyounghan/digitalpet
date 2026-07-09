@@ -627,9 +627,9 @@ class _MeScreenState extends ConsumerState<MeScreen> {
   Widget _buildEvoTreeCard(Pet pet, SpeciesTheme theme) {
     final stages = const [
       (1, '털뭉치'),
-      (2, '베이비'),
-      (3, '틴'),
-      (4, '성체'),
+      (2, '유아기'),
+      (3, '성장기'),
+      (4, '성숙기'),
     ];
     return AppCard(
       theme: theme,
