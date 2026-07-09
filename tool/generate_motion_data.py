@@ -337,6 +337,10 @@ def draw_eye(g, rect, style):
         for dy in range(ph):
             for dx in range(pw):
                 put(g, ex + dx, ey + dy, "#")
+        # 큰 눈(4x4, 털뭉치)은 왼쪽 위에 몸통색 반짝이 한 점을 남겨
+        # 촉촉한 눈망울로 보이게 한다 (작은 눈은 뭉개지므로 제외).
+        if pw >= 4 and ph >= 4:
+            put(g, ex + 1, ey + 1, "o")
     elif style == "closed":  # 감은 눈 — 아래쪽 가로선
         for dx in range(pw):
             put(g, ex + dx, ey + ph - 1, "#")
@@ -506,7 +510,7 @@ SPECIES_ART = {
             "..##oooooooooo###.......",
             "..##ooooooooooo##o......",
             ".#oooooooooooo##o.......",
-            "..####ooo#ooo####.......",
+            "..####ooooooo####.......",
             "..o#ooooooooooooo###ooo.",
             "..#ooooooooooooooo##oooo",
             ".##ooooooooo#oo######o..",
@@ -517,7 +521,7 @@ SPECIES_ART = {
             "......####...###........",
             "........................",
         ],
-        "eyes": [(8, 10, 4, 4)],
+        "eyes": [(8, 11, 4, 4)],
         "mouth": (3, 12),
     },
     # 아기 현무 — 왼쪽으로 내민 머리, 큰 눈, 갈색 등딱지 (그림자 제거)
@@ -695,32 +699,32 @@ SPECIES_ART = {
     "fluff": {
         "body": [
             "........................",
-            "......o..........o......",
-            ".....ooo........ooo.....",
-            "....ooooo.oooo.ooooo....",
-            "....oooooooooooooooo....",
-            ".....oooooooooooooo.....",
-            "....oooooooooooooooo....",
-            "...oooooooooooooooooo...",
-            "...oooooooooooooooooo...",
-            "..oooooooooooooooooooo..",
-            "..oooooooooooooooooooo..",
-            "..oooooooooooooooooooo..",
-            ".oooooooooooooooooooooo.",
-            ".oooooooooooooooooooooo.",
-            ".oooooooooooooooooooooo.",
-            "..oooooooooooooooooooo..",
-            "..oooooooo#oo#oooooooo..",
-            "..ooooooooo##ooooooooo..",
-            "...oooooooooooooooooo...",
-            "...oooooooooooooooooo...",
-            "....oooooooooooooooo....",
-            ".....oooooooooooooo.....",
-            "......oooooooooooo......",
-            "........oooooooo........",
+            "....ooo........ooo......",
+            "...ooooo......ooooo.....",
+            "...ooooo......ooooo.....",
+            "...oooooo....oooooo.....",
+            "..ooooooooooooooooooo...",
+            "..ooooooooooooooooooo...",
+            ".ooooooooooooooooooooo..",
+            ".ooooooooooooooooooooo..",
+            "ooooooooooooooooooooooo.",
+            "ooooooooooooooooooooooo.",
+            "ooooooooooooooooooooooo.",
+            "ooooooooooooooooooooooo.",
+            "ooooooooooooooooooooooo.",
+            ".ooooooooooooooooooooo..",
+            ".ooooooooooooooooooooo..",
+            ".ooooooooooooooooooooo..",
+            ".ooooooooo#oo#oooooooo..",
+            "..oooooooooo##ooooooooo.",
+            "..ooooooooooooooooooo...",
+            "...ooooooooooooooooo....",
+            "....ooooooooooooooo.....",
+            ".....ooooooooooooo......",
+            ".......ooooooooo........",
         ],
-        "eyes": [(6, 11, 4, 4), (14, 11, 4, 4)],
-        "mouth": (11, 16),
+        "eyes": [(6, 11, 4, 4), (13, 11, 4, 4)],
+        "mouth": (11, 17),
     },
 }
 
