@@ -3,6 +3,8 @@ import 'package:pocketfriend/domain/entities/pet.dart';
 import 'package:pocketfriend/domain/entities/evolution_type.dart';
 import 'package:pocketfriend/domain/repositories/pet_repository.dart';
 import 'package:pocketfriend/domain/usecases/evolve_pet_usecase.dart';
+import 'package:pocketfriend/domain/entities/mission.dart';
+import 'package:pocketfriend/domain/constants/mission_catalog.dart';
 
 /// 간단한 Mock PetRepository
 class MockPetRepository implements PetRepository {
@@ -580,6 +582,60 @@ void main() {
       final result = await useCase('test-pet');
       expect(result.evolutionStage, 2);
       expect(result.evolutionType, EvolutionType.turtle); // 차분 + 규칙
+    });
+  });
+
+  group('미션 시스템', () {
+    test('Mission 진행도·완료·비율 계산', () {
+      const m = Mission(
+        id: 'walk_50k',
+        title: '산책 매니아',
+        description: '누적 5만 보',
+        axis: MissionAxis.active,
+        metric: MissionMetric.totalSteps,
+        target: 50000,
+      );
+      expect(m.isComplete(_createPet(totalSteps: 49999)), isFalse);
+      expect(m.isComplete(_createPet(totalSteps: 50000)), isTrue);
+      // 진행도는 target에서 잘린다
+      expect(m.progress(_createPet(totalSteps: 80000)), 50000);
+      expect(m.ratio(_createPet(totalSteps: 25000)), closeTo(0.5, 1e-9));
+    });
+
+    test('axisBonus는 완료 미션 가중치 합', () {
+      // battleVictoryCount 10 → battle_10(active) 완료
+      final bonus = MissionCatalog.axisBonus(
+          _createPet(battleVictoryCount: 10), MissionAxis.active);
+      expect(bonus, greaterThanOrEqualTo(4.0));
+      // 미완료면 0
+      expect(
+          MissionCatalog.axisBonus(
+              _createPet(battleVictoryCount: 0), MissionAxis.active),
+          0.0);
+    });
+
+    test('전투 미션(battle_10) 완료가 활발 축을 밀어 종을 바꾼다', () async {
+      // 원천 활동은 차분(수면 2)이지만 전투 10승 미션(+활발)으로 활발 판정 뒤집힘
+      final withMission = _createPet(
+        level: 5,
+        evolutionStage: 1,
+        sleepAchievedCount: 2, // restScore 2, moveScore raw 0
+        battleVictoryCount: 10, // active +4 → moveScore 4 >= 2
+      );
+      repository.setPet(withMission);
+      final a = await useCase('test-pet');
+      expect(a.evolutionType, EvolutionType.tiger); // 활발+규칙
+
+      // 미션 미완료(9승)면 원천대로 차분 → turtle
+      final withoutMission = _createPet(
+        level: 5,
+        evolutionStage: 1,
+        sleepAchievedCount: 2,
+        battleVictoryCount: 9,
+      );
+      repository.setPet(withoutMission);
+      final b = await useCase('test-pet');
+      expect(b.evolutionType, EvolutionType.turtle); // 차분+규칙
     });
   });
 }

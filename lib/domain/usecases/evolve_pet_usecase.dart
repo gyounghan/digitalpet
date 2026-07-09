@@ -1,5 +1,7 @@
 import '../entities/pet.dart';
 import '../entities/evolution_type.dart';
+import '../entities/mission.dart';
+import '../constants/mission_catalog.dart';
 import '../repositories/pet_repository.dart';
 
 /// 반려동물 진화 유스케이스 (사신수 진화 트리)
@@ -92,19 +94,26 @@ class EvolvePetUseCase {
   ///   freeScore    = feedAchievedCount
   ///   (수면은 위 차분 축에만 반영해 축을 독립시킴)
   ///
+  /// 여기에 **완료한 미션([MissionCatalog])의 축별 가중치**를 더한다 —
+  /// "어떻게 키웠나(활동)" + "어떤 미션을 했나"가 함께 종을 결정한다.
+  ///
   /// 활발 && 규칙 → tiger (백호, 전투형)
   /// 활발 && 자유 → bird  (주작, 기동형)
   /// 차분 && 규칙 → turtle (현무, 방어형)
   /// 차분 && 자유 → snake  (청룡, 마법형)
   EvolutionType _determineEvolutionType(Pet pet) {
-    final moveScore =
-        pet.totalSteps / 2000.0 + pet.totalExerciseMinutes / 10.0;
-    final restScore =
-        pet.sleepAchievedCount.toDouble() + pet.totalIdleHours / 6.0;
+    final moveScore = pet.totalSteps / 2000.0 +
+        pet.totalExerciseMinutes / 10.0 +
+        MissionCatalog.axisBonus(pet, MissionAxis.active);
+    final restScore = pet.sleepAchievedCount.toDouble() +
+        pet.totalIdleHours / 6.0 +
+        MissionCatalog.axisBonus(pet, MissionAxis.calm);
     final isActive = moveScore >= restScore;
 
-    final regularScore = pet.consecutiveLoginDays.toDouble();
-    final freeScore = pet.feedAchievedCount.toDouble();
+    final regularScore = pet.consecutiveLoginDays.toDouble() +
+        MissionCatalog.axisBonus(pet, MissionAxis.regular);
+    final freeScore = pet.feedAchievedCount.toDouble() +
+        MissionCatalog.axisBonus(pet, MissionAxis.free);
     final isRegular = regularScore >= freeScore;
 
     if (isActive && isRegular) return EvolutionType.tiger;
