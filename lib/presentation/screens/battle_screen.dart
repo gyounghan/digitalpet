@@ -15,8 +15,9 @@ import '../../domain/usecases/battle_with_activity_usecase.dart'
 import '../../data/datasources/battle_socket_datasource.dart';
 import 'home_screen.dart';
 
-/// 배틀 화면 — 프로토타입 디자인 적용
-/// 상단 내 펫 카드(deep gradient) + 전적/랭킹 카드 + 액션 버튼 + 최근 전적
+/// 배틀 화면
+/// 상단 내 펫 카드(deep gradient) + 스타일 선택 + 모드 버튼 + 최근 전적
+/// (전적 요약은 최근 전적 섹션 타이틀에 표시 — 별도 카드 없음)
 class BattleScreen extends ConsumerStatefulWidget {
   const BattleScreen({super.key});
 
@@ -36,7 +37,6 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
   int ourMaxHp = 100;
   int opponentMaxHp = 100;
 
-  bool isOnlineMode = false;
   bool isMatchmaking = false;
   String? opponentName;
   int? opponentLevel;
@@ -268,8 +268,6 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
             children: [
               _buildMyPetCard(pet, theme),
               const SizedBox(height: 10),
-              _buildStatsAndRanking(pet, theme),
-              const SizedBox(height: 10),
               if (battleResult == null) ...[
                 if (!isLoading) ...[
                   _buildStyleSelector(theme),
@@ -282,7 +280,19 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
               ] else
                 _buildResultCard(theme),
               const SizedBox(height: 18),
-              const SectionTitle(title: '최근 전적'),
+              // 전적 요약(N승 N패)을 섹션 타이틀 우측에 함께 표시
+              FutureBuilder<_BattleStats>(
+                future: _getBattleStats(),
+                builder: (context, snapshot) {
+                  final stats = snapshot.data;
+                  return SectionTitle(
+                    title: '최근 전적',
+                    trailing: stats == null
+                        ? null
+                        : '${stats.victories}승 ${stats.defeats}패',
+                  );
+                },
+              ),
               _buildHistorySection(theme),
             ],
           ),
@@ -395,85 +405,6 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
     );
   }
 
-  Widget _buildStatsAndRanking(dynamic pet, SpeciesTheme theme) {
-    return Row(
-      children: [
-        Expanded(
-          child: FutureBuilder<_BattleStats>(
-            future: _getBattleStats(),
-            builder: (context, snapshot) {
-              final stats = snapshot.data;
-              return AppCard(
-                theme: theme,
-                variant: AppCardVariant.flat,
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      '전적',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: DesignTokens.ink3,
-                        letterSpacing: 0.6,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      stats == null
-                          ? '— —'
-                          : '${stats.victories}승 ${stats.defeats}패',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                        color: DesignTokens.ink,
-                        fontFeatures: [FontFeature.tabularFigures()],
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: AppCard(
-            theme: theme,
-            variant: AppCardVariant.flat,
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  '랭킹',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: DesignTokens.ink3,
-                    letterSpacing: 0.6,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  '#${(1000 - pet.level * 5 - pet.battleVictoryCount * 2).clamp(4, 999)}'
-                  ' · ${(pet.level * 100 + pet.battleVictoryCount * 30)}RP',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                    color: DesignTokens.ink,
-                    fontFeatures: [FontFeature.tabularFigures()],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
   /// 공격형/균형형/방어형 선택 카드
   Widget _buildStyleSelector(SpeciesTheme theme) {
     return AppCard(
@@ -494,15 +425,6 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
                   fontWeight: FontWeight.w800,
                   color: theme.primaryDeep,
                   letterSpacing: 0.4,
-                ),
-              ),
-              const Spacer(),
-              Text(
-                _battleStyle.description,
-                style: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: DesignTokens.ink3,
                 ),
               ),
             ],
@@ -569,10 +491,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
             icon: Icons.smart_toy,
             theme: theme,
             primary: true,
-            onTap: () {
-              setState(() => isOnlineMode = false);
-              _startBattle();
-            },
+            onTap: _startBattle,
           ),
         ),
         const SizedBox(width: 8),
@@ -581,10 +500,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
             label: '온라인 대전',
             icon: Icons.wifi,
             theme: theme,
-            onTap: () {
-              setState(() => isOnlineMode = true);
-              _startOnlineBattle(pet);
-            },
+            onTap: () => _startOnlineBattle(pet),
           ),
         ),
       ],
@@ -845,11 +761,9 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
 
   Future<_BattleStats> _getBattleStats() async {
     final repository = ref.read(battleHistoryRepositoryProvider);
-    final total = await repository.getTotalBattleCount();
     final victories = await repository.getVictoryCount();
     final defeats = await repository.getDefeatCount();
-    return _BattleStats(
-        total: total, victories: victories, defeats: defeats);
+    return _BattleStats(victories: victories, defeats: defeats);
   }
 
   Future<List<BattleHistory>> _getRecentBattleHistory() async {
@@ -1027,6 +941,7 @@ class _FighterRow extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 5),
+                // HP는 바 하나로만 표시 (수치 텍스트는 중복이라 제거)
                 AppMeter(
                   value: maxHp > 0
                       ? (hp / maxHp * 100).clamp(0.0, 100.0)
@@ -1034,16 +949,6 @@ class _FighterRow extends StatelessWidget {
                   theme: theme,
                   tone: mine ? AppMeterTone.themed : AppMeterTone.bad,
                   height: 10,
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  'HP $hp/$maxHp',
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: DesignTokens.ink3,
-                    fontFeatures: [FontFeature.tabularFigures()],
-                  ),
                 ),
               ],
             ),
@@ -1055,12 +960,7 @@ class _FighterRow extends StatelessWidget {
 }
 
 class _BattleStats {
-  final int total;
   final int victories;
   final int defeats;
-  _BattleStats({
-    required this.total,
-    required this.victories,
-    required this.defeats,
-  });
+  _BattleStats({required this.victories, required this.defeats});
 }

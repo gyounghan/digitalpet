@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/pet_provider.dart';
@@ -204,8 +205,10 @@ class _MeScreenState extends ConsumerState<MeScreen> {
                 ),
               const SizedBox(height: 18),
               _buildRestartButton(),
-              const SizedBox(height: 8),
-              _buildDebugGalleryButton(),
+              if (kDebugMode) ...[
+                const SizedBox(height: 8),
+                _buildDebugGalleryButton(),
+              ],
             ],
           ),
         ),
@@ -460,27 +463,6 @@ class _MeScreenState extends ConsumerState<MeScreen> {
               Expanded(child: _statBox('DEF', def, theme)),
             ],
           ),
-          const SizedBox(height: 10),
-          // "질"의 근거 — 영구 성장 요소를 눈에 보이게
-          Row(
-            children: [
-              const Icon(Icons.trending_up,
-                  size: 13, color: DesignTokens.ink3),
-              const SizedBox(width: 5),
-              Expanded(
-                child: Text(
-                  '성장 Lv.${pet.level} · 누적 ${pet.totalSetsRewarded}세트 · '
-                  '${_formatNumber(pet.totalSteps)}보',
-                  style: const TextStyle(
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.w600,
-                    color: DesignTokens.ink3,
-                    fontFeatures: [FontFeature.tabularFigures()],
-                  ),
-                ),
-              ),
-            ],
-          ),
         ],
       ),
     );
@@ -650,17 +632,7 @@ class _MeScreenState extends ConsumerState<MeScreen> {
               ],
             ],
           ),
-          const SizedBox(height: 12),
-          Text(
-            pet.evolutionStage >= 4
-                ? '최종 진화 완료'
-                : '다음 진화: Lv.${_requiredLevelForStage(pet.evolutionStage)} · ${_stageLabel(pet.evolutionStage + 1)}',
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: DesignTokens.ink3,
-            ),
-          ),
+          // 다음 진화 안내는 프로필 카드의 진화율 게이지(N% · Lv.n/m)가 담당
         ],
       ),
     );

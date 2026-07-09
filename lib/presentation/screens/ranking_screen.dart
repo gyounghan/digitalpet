@@ -9,13 +9,11 @@ import '../../data/datasources/ranking_remote_datasource.dart';
 import '../../domain/entities/evolution_type.dart';
 import 'home_screen.dart';
 
-/// 랭킹 화면 - 프로토타입 디자인 + 서버 연동
+/// 랭킹 화면 - 전체 랭킹 (서버 연동)
 ///
 /// 데이터 소스:
 /// - 서버 GET /ranking/me/:deviceId — TOP3 + 내 주변 5명
 /// - 서버 unreachable 시 안내 배너 + 비어있는 리스트 (오프라인 폴백)
-///
-/// 친구/레벨대 탭은 현재 서버 미지원 → "준비 중" 배너로 안내.
 class RankingScreen extends ConsumerStatefulWidget {
   const RankingScreen({super.key});
 
@@ -24,8 +22,6 @@ class RankingScreen extends ConsumerStatefulWidget {
 }
 
 class _RankingScreenState extends ConsumerState<RankingScreen> {
-  /// 0=친구(준비중), 1=전체(서버), 2=레벨대(준비중)
-  int _tabIndex = 1;
   Future<_RankingData>? _future;
   String? _loadedDeviceId;
 
@@ -41,7 +37,6 @@ class _RankingScreenState extends ConsumerState<RankingScreen> {
     return _RankingData(
       top3: response.top3,
       surrounding: response.surrounding,
-      me: response.me,
       totalCount: response.totalCount,
       isOffline: false,
     );
@@ -111,11 +106,7 @@ class _RankingScreenState extends ConsumerState<RankingScreen> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(18, 0, 18, 18),
       children: [
-        _buildTabBar(theme),
-        const SizedBox(height: 12),
-        if (_tabIndex != 1) ...[
-          _comingSoonBanner(theme),
-        ] else if (data.isOffline) ...[
+        if (data.isOffline) ...[
           _offlineBanner(theme),
         ] else ...[
           if (data.top3.length >= 3) _buildPodium(data.top3, theme),
@@ -128,50 +119,6 @@ class _RankingScreenState extends ConsumerState<RankingScreen> {
           _totalCountFooter(data.totalCount, theme),
         ],
       ],
-    );
-  }
-
-  Widget _buildTabBar(SpeciesTheme theme) {
-    const labels = ['친구', '전체', '레벨대'];
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: DesignTokens.surface,
-        borderRadius: BorderRadius.circular(999),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 14,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Row(
-        children: List.generate(labels.length, (i) {
-          final active = _tabIndex == i;
-          return Expanded(
-            child: GestureDetector(
-              onTap: () => setState(() => _tabIndex = i),
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                decoration: BoxDecoration(
-                  color: active ? theme.primary : Colors.transparent,
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  labels[i],
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: active ? Colors.white : DesignTokens.ink3,
-                  ),
-                ),
-              ),
-            ),
-          );
-        }),
-      ),
     );
   }
 
@@ -306,31 +253,6 @@ class _RankingScreenState extends ConsumerState<RankingScreen> {
     );
   }
 
-  Widget _comingSoonBanner(SpeciesTheme theme) {
-    final label = _tabIndex == 0 ? '친구' : '레벨대';
-    return AppCard(
-      theme: theme,
-      variant: AppCardVariant.tinted,
-      padding: const EdgeInsets.all(14),
-      child: Row(
-        children: [
-          Icon(Icons.hourglass_empty, color: theme.primaryDeep, size: 18),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              '$label 랭킹은 준비 중입니다',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: theme.primaryDeep,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   _RowEntry _toRow(RankingEntryDto dto) {
     final isMine = dto.isMine ||
         (_loadedDeviceId != null && dto.deviceId == _loadedDeviceId);
@@ -349,14 +271,12 @@ class _RankingScreenState extends ConsumerState<RankingScreen> {
 class _RankingData {
   final List<RankingEntryDto> top3;
   final List<RankingEntryDto> surrounding;
-  final RankingEntryDto? me;
   final int totalCount;
   final bool isOffline;
 
   const _RankingData({
     required this.top3,
     required this.surrounding,
-    required this.me,
     required this.totalCount,
     required this.isOffline,
   });
@@ -364,7 +284,6 @@ class _RankingData {
   factory _RankingData.offline() => const _RankingData(
         top3: [],
         surrounding: [],
-        me: null,
         totalCount: 0,
         isOffline: true,
       );

@@ -1,15 +1,11 @@
 /// 앱 문자열 상수
 /// 한국어 현지화를 위한 문자열 모음
+///
+/// 실제 참조되는 상수만 유지한다 (미사용 상수는 UI 정리 때 일괄 제거).
 class AppStrings {
   AppStrings._(); // private constructor
-  
-  // 상태 라벨
-  static const String hunger = '포만감';
-  static const String happiness = '운동';
-  static const String stamina = '수면';
-  static const String level = '레벨';
-  
-  // 펫 상태
+
+  // 펫 상태 (mood)
   static const String moodHappy = '행복';
   static const String moodNormal = '보통';
   static const String moodHungry = '배고픔';
@@ -17,46 +13,21 @@ class AppStrings {
   static const String moodTired = '지침';
   static const String moodSad = '시무룩';
   static const String moodDead = '사망';
-  
-  // 화면 제목
-  static const String home = '홈';
-  static const String evolution = '진화';
-  static const String battle = '대결';
-  static const String share = '공유';
-  
-  // 버튼 (자동화로 인해 사용되지 않지만 호환성을 위해 유지)
+
+  // 액션
   static const String feed = '먹이주기';
-  static const String play = '놀아주기';
-  static const String sleep = '재우기';
-  static const String alternativeCareTitle = '대체 케어';
-  static const String alternativeFeed = '간편 급식';
-  static const String alternativeSleep = '낮잠 모드 15분';
-  static const String alternativeExercise = '폰 흔들기';
-  static const String alternativeExerciseRunning = '운동 진행 중';
-  static const String snackTimeGuide = '간편 급식: 식사 시간대만 활성화';
-  static const String shakeBonusTitle = '폰 흔들기 보너스';
+
+  // 대체 케어
   static const String shakeBonusInProgress = '폰을 흔드세요!';
   static const String shakeBonusComplete = '흔들기 완료';
-  static const String shakeBonusCount = '흔든 횟수';
   static const String napModeRunning = '낮잠 모드 진행 중';
-  
+
   // 알림 메시지
   static const String notificationTitle = '내 펫';
   static const String notificationInactive = '오늘 나 안 볼거야?';
   static const String notificationHungry = '나 너무 배고파...';
   static const String notificationBored = '나 심심해...';
   static const String notificationFeedTime = '밥 먹을 시간이에요! 🍽️';
-  
-  // 진화 단계
-  static const String evolutionStage1 = '털뭉치';
-  static const String evolutionStage2 = '성장';
-  static const String evolutionStage3 = '완성';
-  
-  // 진화 종
-  static const String speciesBird = '새 계열';
-  static const String speciesSnake = '뱀 계열';
-  static const String speciesTiger = '호랑이 계열';
-  static const String speciesTurtle = '거북이 계열';
 
   // 진화 단계 카테고리 라벨 (털뭉치 → 유아기 → 성장기 → 성숙기)
   static const Map<int, String> stageLabels = {
@@ -79,48 +50,20 @@ class AppStrings {
   static const Map<String, String> stage4Names = {
     'bird': '주작 \u{1F525}', 'snake': '청룡 \u{1F409}', 'tiger': '백호 \u{26A1}', 'turtle': '현무 \u{1F30A}',
   };
-  
+
   // 대결
-  static const String battleArena = '대결 아레나';
-  static const String battleTurn = '턴';
-  static const String battleYourTurn = '당신의 턴';
-  static const String battleAttack = '공격';
-  static const String battleDefend = '방어';
   static const String battleVictory = '승리!';
   static const String battleDefeat = '패배!';
-  static const String battleWon = '대결에서 승리했습니다!';
-  static const String battleLost = '다음엔 더 잘할 수 있을 거예요!';
-  static const String battleStarted = '대결 시작!';
-  
-  // 진화 화면
-  static const String evolutionReady = '펫을 진화시킬 준비가 되었나요?';
-  static const String evolutionCurrent = '현재';
-  static const String evolutionNextStage = '다음 단계';
-  static const String evolutionRequirements = '진화 요구사항';
-  static const String evolutionLevelRequired = '레벨 15 이상';
-  static const String evolutionCurrentLevel = '현재 레벨';
+
+  // 진화
   static const String evolutionEvolving = '진화 중...';
-  static const String evolutionEvolved = '진화 완료!';
   static const String evolutionEvolveNow = '지금 진화하기';
-  
-  // 공유 화면
-  static const String shareYourPet = '펫 공유하기';
-  static const String shareSubtitle = '친구들에게 내 펫을 소개해보세요';
-  static const String shareHappy = '운동';
-  static const String shareFed = '포만감';
-  static const String shareEnergy = '수면';
-  static const String shareToFriends = '친구에게 공유하기';
-  static const String downloadCard = '카드 다운로드';
-  static const String shareInfo = '펫을 친구들에게 공유하면 특별한 보상을 받을 수 있어요!';
-  
+
   // 사망/부활
-  static const String petDead = '사망';
   static const String gravestoneTitle = '여기 잠들다';
   static const String resurrectButton = '부활하기 (광고 시청)';
   static const String resurrectSuccess = '펫이 부활했어요!';
   static const String adLoadFailed = '광고를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.';
-  static const String deathWarning = '수치가 모두 0이에요! 5일 안에 회복하지 않으면...';
-  static const String deathNotification = '펫이 죽었어요... 부활시켜 주세요.';
 
   // 새로 키우기(초기화)
   static const String restartButton = '처음부터 새로 키우기';
@@ -140,13 +83,6 @@ class AppStrings {
     'adventure': '모험의 날 - 배틀 EXP 2배',
     'normal': '평범한 날',
   };
-
-  // 목표 기간
-  static const String goalPeriod = '목표 기간';
-  static const String goalStreak = '연속 달성';
-  static const String goalExpired = '목표 기간 만료! 페널티가 적용됩니다.';
-  static const String goalStreakBonus = '연속 달성 보너스!';
-  static const String goalDaysRemaining = '남은 기간';
 
   // 에러 메시지
   static const String error = '오류';

@@ -110,7 +110,6 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
     return Scaffold(
       backgroundColor: DesignTokens.bg,
       // 비활성 탭의 Ticker/애니메이션 자동 정지 (CPU/배터리 절약)
-      // 비활성 탭의 Ticker/애니메이션 자동 정지 (CPU/배터리 절약)
       // + 미방문 탭은 빈 SizedBox로 둬서 첫 빌드 비용 회피 (lazy 빌드)
       body: IndexedStack(
         index: _currentIndex,
