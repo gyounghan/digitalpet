@@ -52,33 +52,26 @@ List<PixelSprite>? motionFramesFor(String spriteKey, PixelMotion motion) {
 
 /// 진화 단계 → 도트 모션 스프라이트 키 (홈/썸네일/위젯 공통 규칙)
 ///
-/// - stage 1 (털뭉치)  → 'fluff'
-/// - stage 2 (유아기)  → '{종}1'
-/// - stage 3 (성장기)  → '{종}2'
-/// - stage 4 (성숙기)  → '{종}2' — 전용 아트 없이 성장기 모션을 재활용하고
-///   색(matureBody + 금빛 보조색)으로 격을 구분한다
+/// - stage 1 (털뭉치)  → 'fluff' (40)
+/// - stage 2 (유아기)  → '{종}1' (32)
+/// - stage 3 (성장기)  → '{종}2' (36)
+/// - stage 4 (성숙기)  → '{종}3' (48 — 전용 도트 모션)
 /// - 종 미결정 stage 2+ → null
 String? motionSpriteKeyForStage(EvolutionType? type, int stage) {
   if (stage <= 1) return 'fluff';
   final species = evolutionSpeciesImagePrefix(type);
   if (species == null) return null;
-  if (stage == 2 || stage == 3) return '$species${stage - 1}';
-  if (stage >= 4) return '${species}2'; // 성숙기: 성장기 모션 재활용
+  if (stage >= 2 && stage <= 4) return '$species${stage - 1}';
   return null;
 }
 
 /// 에셋 경로에 모션 데이터가 있으면 스프라이트 키 반환
 ///
 /// 'assets/기본이미지.png' → 'fluff' (털뭉치),
-/// 'assets/dragon1.png' → 'dragon1', 'assets/dragon2.png' → 'dragon2',
-/// 'assets/dragon3.png' → 'dragon2' (성숙기는 성장기 모션 재활용)
+/// 'assets/dragon1.png' → 'dragon1' ... 'assets/dragon3.png' → 'dragon3'
 String? motionSpriteKeyFromAssetPath(String assetPath) {
   final key = pixelKeyFromAssetPath(assetPath);
-  var spriteKey = key == '기본이미지' ? 'fluff' : key;
-  // 성숙기('{종}3') 에셋은 성장기('{종}2') 모션으로 매핑
-  if (spriteKey.endsWith('3')) {
-    spriteKey = '${spriteKey.substring(0, spriteKey.length - 1)}2';
-  }
+  final spriteKey = key == '기본이미지' ? 'fluff' : key;
   return motionFrames.containsKey(spriteKey) ? spriteKey : null;
 }
 

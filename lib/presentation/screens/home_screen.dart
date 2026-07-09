@@ -270,21 +270,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  /// 도트 모션 스프라이트 키 (공통 규칙 — 성숙기는 성장기 모션 재활용)
+  /// 도트 모션 스프라이트 키 (공통 규칙 — 성숙기 포함 전 단계 모션)
   String? _motionSpriteKey(Pet pet) =>
       motionSpriteKeyForStage(pet.evolutionType, pet.evolutionStage);
 
   /// 펫 스테이지 스프라이트
   ///
   /// 모든 단계가 mood 기반 도트 모션 루프 + 액션 시 일시 모션(밥먹기).
-  /// 성숙기(stage 4)는 성장기 모션에 짙은 몸통색+금빛 보조색으로 격 구분.
   Widget _buildPetSprite(Pet pet, SpeciesTheme theme) {
     final spriteKey = _motionSpriteKey(pet);
     if (spriteKey != null) {
       final motion = _transientMotion ?? motionForMood(pet.mood);
       // 털뭉치는 종 미결정 → 밝은 베이지 단색
       final isFluff = spriteKey == 'fluff';
-      final isMature = pet.evolutionStage >= 4;
       return SizedBox(
         width: 300,
         height: 300,
@@ -295,12 +293,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             motion: motion,
             width: 270,
             height: 270,
-            dotColor: isFluff
-                ? SpeciesTheme.fluffBody
-                : (isMature ? theme.matureBody : theme.primary),
-            accentColor: isFluff
-                ? SpeciesTheme.fluffAccent
-                : (isMature ? SpeciesTheme.matureAccent : theme.spriteAccent),
+            dotColor: isFluff ? SpeciesTheme.fluffBody : theme.primary,
+            accentColor:
+                isFluff ? SpeciesTheme.fluffAccent : theme.spriteAccent,
           ),
         ),
       );

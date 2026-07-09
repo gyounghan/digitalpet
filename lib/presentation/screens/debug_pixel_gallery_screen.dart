@@ -19,17 +19,8 @@ class DebugPixelGalleryScreen extends StatefulWidget {
 }
 
 class _DebugPixelGalleryScreenState extends State<DebugPixelGalleryScreen> {
-  /// 성숙기 색 미리보기용 표시 접미사 (실제 스프라이트 키 아님)
-  static const String _matureSuffix = ' → 성숙기';
-
   /// 어두운 배경(그라데이션 카드 위 흰 도트 상황) 대비 확인용 토글
   bool _darkBackground = false;
-
-  bool _isMatureKey(String key) => key.endsWith(_matureSuffix);
-
-  String _baseKey(String key) => _isMatureKey(key)
-      ? key.substring(0, key.length - _matureSuffix.length)
-      : key;
 
   /// 키 접두어로 종 테마 추정 (도감 실제 표시색과 동일한 규칙)
   SpeciesTheme _themeForKey(String key) {
@@ -44,7 +35,6 @@ class _DebugPixelGalleryScreenState extends State<DebugPixelGalleryScreen> {
     if (_darkBackground) return Colors.white.withValues(alpha: 0.95);
     // 털뭉치는 종 미결정 → 밝은 베이지 단색 (홈과 동일)
     if (key == 'fluff') return SpeciesTheme.fluffBody;
-    if (_isMatureKey(key)) return _themeForKey(_baseKey(key)).matureBody;
     return _themeForKey(key).primary;
   }
 
@@ -52,7 +42,6 @@ class _DebugPixelGalleryScreenState extends State<DebugPixelGalleryScreen> {
   Color _accentColorForKey(String key) {
     if (_darkBackground) return Colors.white.withValues(alpha: 0.6);
     if (key == 'fluff') return SpeciesTheme.fluffAccent;
-    if (_isMatureKey(key)) return SpeciesTheme.matureAccent;
     return _themeForKey(key).spriteAccent;
   }
 
@@ -143,20 +132,13 @@ class _DebugPixelGalleryScreenState extends State<DebugPixelGalleryScreen> {
   }
 
   Widget _buildMotionList() {
-    final baseKeys = motionFrames.keys.toList()..sort();
-    // 성숙기(stage 4)는 성장기('{종}2') 모션 재활용 + matureBody/matureAccent —
-    // 실제 성숙기 펫 없이도 색 조합을 점검할 수 있게 미리보기 행을 덧붙인다.
-    final spriteKeys = [
-      ...baseKeys,
-      for (final key in baseKeys.where((key) => key.endsWith('2')))
-        '$key$_matureSuffix',
-    ];
+    final spriteKeys = motionFrames.keys.toList()..sort();
     return ListView.builder(
       padding: const EdgeInsets.all(12),
       itemCount: spriteKeys.length,
       itemBuilder: (context, index) {
         final spriteKey = spriteKeys[index];
-        final motions = motionFrames[_baseKey(spriteKey)]!.keys.toList();
+        final motions = motionFrames[spriteKey]!.keys.toList();
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -202,7 +184,7 @@ class _DebugPixelGalleryScreenState extends State<DebugPixelGalleryScreen> {
           ),
           padding: const EdgeInsets.all(6),
           child: PixelMotionAnimation(
-            spriteKey: _baseKey(spriteKey),
+            spriteKey: spriteKey,
             motion: motion,
             dotColor: _dotColorForKey(spriteKey),
             accentColor: _accentColorForKey(spriteKey),

@@ -385,8 +385,7 @@ class PetWidgetProvider : AppWidgetProvider() {
     }
 
     /// 앱 motionSpriteKeyForStage와 동일한 규칙.
-    /// stage1 → 'fluff', stage2/3 → '{종}{stage-1}',
-    /// stage4(성숙기) → '{종}2' (성장기 모션 재활용 + 성숙기 색으로 격 구분).
+    /// stage1 → 'fluff', stage2/3/4 → '{종}{stage-1}' (성숙기 전용 48 도트 포함).
     private fun motionSpriteKey(evolutionType: String?, stage: Int): String? {
         if (stage <= 1) return "fluff"
         val prefix = when (evolutionType) {
@@ -396,11 +395,7 @@ class PetWidgetProvider : AppWidgetProvider() {
             "turtle" -> "turtle"
             else -> return null
         }
-        return when {
-            stage == 2 || stage == 3 -> "$prefix${stage - 1}"
-            stage >= 4 -> "${prefix}2" // 성숙기: 성장기 모션 재활용
-            else -> null
-        }
+        return if (stage in 2..4) "$prefix${stage - 1}" else null
     }
 
     /// 앱 motionForMood와 동일한 mood → 모션 매핑.
@@ -414,23 +409,11 @@ class PetWidgetProvider : AppWidgetProvider() {
 
     /// 종별 도트 색 (앱 SpeciesTheme와 동일 값 — 색은 거의 불변이라 수동 유지)
     /// 반환: (몸통색, 보조색). 털뭉치(종 미결정/stage1)는 밝은 베이지 단색.
-    /// 성숙기(stage4)는 짙은 몸통색(matureBody) + 금빛 보조색(matureAccent).
     private fun resolveDotColors(evolutionType: String?, stage: Int): Pair<Int, Int> {
         if (stage <= 1 || evolutionType.isNullOrBlank()) {
             val fluffBody = 0xFFF4E9CE.toInt() // SpeciesTheme.fluffBody
             val fluffAccent = 0xFFF2A0AE.toInt() // SpeciesTheme.fluffAccent (볼터치·귀 분홍)
             return fluffBody to fluffAccent
-        }
-        if (stage >= 4) {
-            val matureAccent = 0xFFF0C75A.toInt() // SpeciesTheme.matureAccent (금빛)
-            val matureBody = when (evolutionType) {
-                "tiger" -> 0xFF3D4B66.toInt()
-                "bird" -> 0xFFC13C21.toInt()
-                "turtle" -> 0xFF55AD67.toInt()
-                "snake" -> 0xFF1D64B9.toInt()
-                else -> 0xFF3D4B66.toInt()
-            }
-            return matureBody to matureAccent
         }
         return when (evolutionType) {
             "tiger" -> 0xFF4A5A78.toInt() to 0xFFF0F3F8.toInt()

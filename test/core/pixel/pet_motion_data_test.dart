@@ -7,6 +7,7 @@ import 'package:pocketfriend/presentation/widgets/pixel_motion_animation.dart';
 void main() {
   const babyKeys = ['tiger1', 'bird1', 'turtle1', 'dragon1'];
   const juniorKeys = ['tiger2', 'bird2', 'turtle2', 'dragon2'];
+  const matureKeys = ['tiger3', 'bird3', 'turtle3', 'dragon3'];
   const motions = [
     'walk',
     'eat',
@@ -20,10 +21,11 @@ void main() {
   ];
 
   group('motionFrames 데이터 무결성', () {
-    test('털뭉치·유아기·성장기가 존재하고, 모든 키는 8모션 × 3프레임을 가진다', () {
+    test('털뭉치·유아기·성장기·성숙기가 존재하고, 모든 키는 9모션 × 3프레임을 가진다', () {
       expect(motionFrames.keys, contains('fluff'));
       expect(motionFrames.keys, containsAll(babyKeys));
       expect(motionFrames.keys, containsAll(juniorKeys));
+      expect(motionFrames.keys, containsAll(matureKeys));
       for (final key in motionFrames.keys) {
         final motionMap = motionFrames[key]!;
         expect(motionMap.keys, containsAll(motions), reason: '$key 모션 누락');
@@ -69,10 +71,12 @@ void main() {
       }
     });
 
-    test('그리드 크기: 털뭉치 40, 유아기 32, 성장기 36', () {
+    test('그리드 크기: 털뭉치 40, 유아기 32, 성장기 36, 성숙기 48', () {
       int expectedSize(String key) {
         if (key == 'fluff') return 40;
-        return key.endsWith('1') ? 32 : 36; // 유아기 32 / 성장기 36
+        if (key.endsWith('1')) return 32; // 유아기
+        if (key.endsWith('2')) return 36; // 성장기
+        return 48; // 성숙기
       }
 
       for (final key in motionFrames.keys) {
@@ -136,20 +140,19 @@ void main() {
       expect(motionSpriteKeyFromAssetPath('assets/기본이미지.png'), 'fluff');
       expect(motionSpriteKeyFromAssetPath('assets/dragon1.png'), 'dragon1');
       expect(motionSpriteKeyFromAssetPath('assets/tiger1.png'), 'tiger1');
-      // 성장기(stage 3) 이미지도 모션 지원
+      // 성장기(stage 3)·성숙기(stage 4) 이미지도 모션 지원
       expect(motionSpriteKeyFromAssetPath('assets/dragon2.png'), 'dragon2');
       expect(motionSpriteKeyFromAssetPath('assets/turtle2.png'), 'turtle2');
-      // 성숙기(stage 4) 이미지는 성장기 모션 재활용
-      expect(motionSpriteKeyFromAssetPath('assets/dragon3.png'), 'dragon2');
-      expect(motionSpriteKeyFromAssetPath('assets/bird3.png'), 'bird2');
+      expect(motionSpriteKeyFromAssetPath('assets/dragon3.png'), 'dragon3');
+      expect(motionSpriteKeyFromAssetPath('assets/bird3.png'), 'bird3');
     });
 
-    test('진화 단계 → 모션 키 (성숙기는 성장기 모션 재활용)', () {
+    test('진화 단계 → 모션 키 (성숙기 전용 48 도트)', () {
       expect(motionSpriteKeyForStage(null, 1), 'fluff');
       expect(motionSpriteKeyForStage(EvolutionType.snake, 2), 'dragon1');
       expect(motionSpriteKeyForStage(EvolutionType.tiger, 3), 'tiger2');
-      expect(motionSpriteKeyForStage(EvolutionType.bird, 4), 'bird2');
-      expect(motionSpriteKeyForStage(EvolutionType.turtle, 4), 'turtle2');
+      expect(motionSpriteKeyForStage(EvolutionType.bird, 4), 'bird3');
+      expect(motionSpriteKeyForStage(EvolutionType.turtle, 4), 'turtle3');
       // 종 미결정 상태의 미래 단계는 null
       expect(motionSpriteKeyForStage(null, 2), isNull);
     });
