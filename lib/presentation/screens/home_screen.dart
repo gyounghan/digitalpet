@@ -342,21 +342,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       final motion = _transientMotion ?? motionForMood(pet.mood);
       // 털뭉치는 종 미결정 → 밝은 베이지 단색
       final isFluff = spriteKey == 'fluff';
-      return SizedBox(
-        width: 300,
-        height: 300,
-        child: Align(
-          alignment: Alignment.bottomCenter,
-          child: PixelMotionAnimation(
-            spriteKey: spriteKey,
-            motion: motion,
-            width: 270,
-            height: 270,
-            dotColor: isFluff ? SpeciesTheme.fluffBody : theme.primary,
-            accentColor:
-                isFluff ? SpeciesTheme.fluffAccent : theme.spriteAccent,
-          ),
-        ),
+      // 펫 카드는 Expanded(가변 높이)라 고정 크기면 화면이 작을 때 위쪽(귀)이
+      // 잘린다. 가용 공간에 맞춰(최대 300) 축소해 항상 온전히 보이게 한다.
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          final maxW = constraints.maxWidth.isFinite ? constraints.maxWidth : 300.0;
+          final maxH = constraints.maxHeight.isFinite ? constraints.maxHeight : 300.0;
+          final side = [maxW, maxH, 300.0].reduce((a, b) => a < b ? a : b);
+          return Align(
+            alignment: Alignment.bottomCenter,
+            child: PixelMotionAnimation(
+              spriteKey: spriteKey,
+              motion: motion,
+              width: side,
+              height: side,
+              dotColor: isFluff ? SpeciesTheme.fluffBody : theme.primary,
+              accentColor:
+                  isFluff ? SpeciesTheme.fluffAccent : theme.spriteAccent,
+            ),
+          );
+        },
       );
     }
     return PetImageAnimation(

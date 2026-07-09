@@ -3,14 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/pet_provider.dart';
 import '../widgets/app_design.dart';
 import '../widgets/pixel_pet_image.dart';
+import '../widgets/pixel_motion_animation.dart';
 import '../../core/theme/species_theme.dart';
 import '../../core/constants/app_strings.dart';
 import '../../core/utils/pet_image_helper.dart';
 import '../../data/services/ad_service.dart';
 import '../../domain/entities/pet.dart';
 import '../../domain/entities/evolution_type.dart';
-import '../../domain/entities/mission.dart';
-import '../../domain/constants/mission_catalog.dart';
 import 'debug_pixel_gallery_screen.dart';
 import 'home_screen.dart';
 
@@ -172,9 +171,6 @@ class _MeScreenState extends ConsumerState<MeScreen> {
               const SizedBox(height: 14),
               const SectionTitle(title: '진화 트리'),
               _buildEvoTreeCard(pet, theme),
-              const SizedBox(height: 14),
-              const SectionTitle(title: '미션'),
-              _buildMissionsCard(pet, theme),
               const SizedBox(height: 14),
               if (pet.evolutionStage < 4)
                 SizedBox(
@@ -670,110 +666,6 @@ class _MeScreenState extends ConsumerState<MeScreen> {
     );
   }
 
-  /// 미션 카드 — 성향 축별 도전과제 진행도. 완료 시 유아기 진화 종에 기여.
-  Widget _buildMissionsCard(Pet pet, SpeciesTheme theme) {
-    final done = MissionCatalog.completedCount(pet);
-    final total = MissionCatalog.all.length;
-    return AppCard(
-      theme: theme,
-      variant: AppCardVariant.flat,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                '미션을 달성하면 그 성향의 종으로 자란다',
-                style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: DesignTokens.ink3),
-              ),
-              Text(
-                '$done/$total',
-                style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w800,
-                    color: theme.primary),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          for (final m in MissionCatalog.all) _missionRow(m, pet, theme),
-        ],
-      ),
-    );
-  }
-
-  Widget _missionRow(Mission m, Pet pet, SpeciesTheme theme) {
-    final complete = m.isComplete(pet);
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                complete ? Icons.check_circle : Icons.radio_button_unchecked,
-                size: 16,
-                color: complete ? DesignTokens.good : DesignTokens.ink3,
-              ),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  m.title,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: complete ? DesignTokens.ink2 : DesignTokens.ink3,
-                  ),
-                ),
-              ),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: theme.primarySoft,
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  m.axis.label,
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    color: theme.primary,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Row(
-            children: [
-              Expanded(
-                child: AppMeter(
-                  value: m.progress(pet).toDouble(),
-                  max: m.target.toDouble(),
-                  theme: theme,
-                  tone: complete ? AppMeterTone.good : AppMeterTone.themed,
-                  height: 6,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                '${m.progress(pet)}/${m.target}',
-                style: const TextStyle(fontSize: 10, color: DesignTokens.ink3),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _evoTreeNode(
     EvolutionType? type,
     int stage,
@@ -782,7 +674,6 @@ class _MeScreenState extends ConsumerState<MeScreen> {
     required bool passed,
     required bool current,
   }) {
-    final imagePath = getEvolutionImagePath(type, stage);
     return Opacity(
       opacity: passed ? 1.0 : 0.35,
       child: Column(
@@ -799,17 +690,7 @@ class _MeScreenState extends ConsumerState<MeScreen> {
                   : Border.all(color: DesignTokens.line, width: 1),
             ),
             alignment: Alignment.center,
-            child: imagePath != null
-                ? PixelPetImage(
-                    assetPath: imagePath,
-                    width: 40,
-                    height: 40,
-                    dotColor: theme.primary,
-                    accentColor: theme.spriteAccent,
-                  )
-                : const Text('?',
-                    style: TextStyle(
-                        fontSize: 20, fontWeight: FontWeight.w800)),
+            child: _treeSprite(type, stage, theme),
           ),
           const SizedBox(height: 4),
           Text(
@@ -823,6 +704,48 @@ class _MeScreenState extends ConsumerState<MeScreen> {
         ],
       ),
     );
+  }
+
+  /// 진화 트리 노드 스프라이트 — 우리가 만든 도트 모션(털뭉치·유아기·성장기)의
+  /// 대표 프레임을 렌더한다. 모션이 없는 단계(사신수)·종 미결정은 정적 이미지로 폴백.
+  Widget _treeSprite(EvolutionType? type, int stage, SpeciesTheme theme) {
+    final key = _treeMotionKey(type, stage);
+    if (key != null) {
+      final frames = motionFramesFor(key, PixelMotion.walk);
+      if (frames != null && frames.isNotEmpty) {
+        final isFluff = key == 'fluff';
+        return PixelSpriteView(
+          sprite: frames.first,
+          width: 40,
+          height: 40,
+          dotColor: isFluff ? SpeciesTheme.fluffBody : theme.primary,
+          accentColor:
+              isFluff ? SpeciesTheme.fluffAccent : theme.spriteAccent,
+        );
+      }
+    }
+    final imagePath = getEvolutionImagePath(type, stage);
+    if (imagePath != null) {
+      return PixelPetImage(
+        assetPath: imagePath,
+        width: 40,
+        height: 40,
+        dotColor: theme.primary,
+        accentColor: theme.spriteAccent,
+      );
+    }
+    return const Text('?',
+        style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800));
+  }
+
+  /// 진화 단계 → 도트 모션 스프라이트 키 (홈 _motionSpriteKey와 동일).
+  String? _treeMotionKey(EvolutionType? type, int stage) {
+    if (stage == 1) return 'fluff';
+    final species = evolutionSpeciesImagePrefix(type);
+    if (species != null && (stage == 2 || stage == 3)) {
+      return '$species${stage - 1}';
+    }
+    return null;
   }
 
   Widget _dashedConnector() {

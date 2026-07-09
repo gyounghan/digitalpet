@@ -6,6 +6,8 @@ import '../widgets/app_design.dart';
 import '../../core/theme/species_theme.dart';
 import '../../core/constants/app_strings.dart';
 import '../../domain/entities/pet.dart';
+import '../../domain/entities/mission.dart';
+import '../../domain/constants/mission_catalog.dart';
 import '../../domain/usecases/alternative_feed_pet_usecase.dart';
 import '../../domain/usecases/alternative_sleep_pet_usecase.dart';
 import '../../domain/usecases/shake_step_bonus_usecase.dart';
@@ -79,10 +81,117 @@ class _CareScreenState extends ConsumerState<CareScreen> {
               _buildAltSleepRow(pet, theme),
               const SizedBox(height: 6),
               _buildShakeRow(pet, theme),
+              const SizedBox(height: 16),
+              const SectionTitle(title: '미션'),
+              _buildMissionsCard(pet, theme),
             ],
           ),
         ),
       ],
+    );
+  }
+
+  /// 미션 카드 — 성향 축별 도전과제 진행도. 완료 시 유아기 진화 종에 기여.
+  Widget _buildMissionsCard(Pet pet, SpeciesTheme theme) {
+    final done = MissionCatalog.completedCount(pet);
+    final total = MissionCatalog.all.length;
+    return AppCard(
+      theme: theme,
+      variant: AppCardVariant.flat,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                '미션을 달성하면 그 성향의 종으로 자란다',
+                style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: DesignTokens.ink3),
+              ),
+              Text(
+                '$done/$total',
+                style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    color: theme.primary),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          for (final m in MissionCatalog.all) _missionRow(m, pet, theme),
+        ],
+      ),
+    );
+  }
+
+  Widget _missionRow(Mission m, Pet pet, SpeciesTheme theme) {
+    final complete = m.isComplete(pet);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                complete ? Icons.check_circle : Icons.radio_button_unchecked,
+                size: 16,
+                color: complete ? DesignTokens.good : DesignTokens.ink3,
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  m.title,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: complete ? DesignTokens.ink2 : DesignTokens.ink3,
+                  ),
+                ),
+              ),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: theme.primarySoft,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  m.axis.label,
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: theme.primary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              Expanded(
+                child: AppMeter(
+                  value: m.progress(pet).toDouble(),
+                  max: m.target.toDouble(),
+                  theme: theme,
+                  tone: complete ? AppMeterTone.good : AppMeterTone.themed,
+                  height: 6,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '${m.progress(pet)}/${m.target}',
+                style: const TextStyle(fontSize: 10, color: DesignTokens.ink3),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
