@@ -929,7 +929,7 @@ def motion_walk(sp):
     """
     if sp == "fluff":
         crouch = squash_art(pose(sp, eye="open"), 0.92)
-        hop = pose(sp, eye="happy", mouth="open", dy=-2)
+        hop = pose(sp, eye="happy", mouth="open", dy=-1)
         land = squash_art(pose(sp, eye="open"), 0.84)
         return [crouch, hop, land]
     return [
@@ -1065,7 +1065,7 @@ def motion_joy(sp):
     r = art_size(sp) - BASE
     if sp == "fluff":
         crouch = squash_art(pose(sp, eye="happy"), 0.9)
-        airborne = pose(sp, eye="happy", mouth="open", dy=-3)
+        airborne = pose(sp, eye="happy", mouth="open", dy=-2)
         landing = squash_art(pose(sp, eye="happy", mouth="open"), 0.85)
     else:
         crouch = pose(sp, eye="happy", dy=1)
