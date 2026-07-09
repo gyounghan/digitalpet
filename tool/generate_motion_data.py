@@ -382,12 +382,18 @@ def draw_eye(g, rect, style):
             dy = int(round(dx * (ph - 1) / max(pw - 1, 1)))
             put(g, ex + dx, ey + dy, "#")
             put(g, ex + dx, ey + (ph - 1) - dy, "#")
-    elif style == "angry":  # 부릅뜬 눈 + 치켜올린 눈썹
-        for dy in range(ph):
-            for dx in range(pw):
-                put(g, ex + dx, ey + dy, "#")
-        put(g, ex + pw - 1, ey - 1, "#")
-        put(g, ex + pw - 2, ey - 1, "#")
+    elif style == "angry":  # 화난 눈 — 안쪽이 처진 사선 (왼눈 \, 오른눈 /)
+        # 그리드 중심 기준 왼/오른 눈을 판별해 \ / 대칭으로 그린다. 안쪽(중앙
+        # 쪽) 끝이 아래로 처져 찌푸린 인상을 준다. 한 칸 아래도 찍어 굵게.
+        n = len(g)
+        is_left = (ex + pw / 2.0) < n / 2.0
+        for dx in range(pw):
+            t = dx / (pw - 1) if pw > 1 else 0.0
+            frac = t if is_left else (1.0 - t)
+            yy = ey + int(round(frac * (ph - 1)))
+            put(g, ex + dx, yy, "#")
+            if yy + 1 < ey + ph:
+                put(g, ex + dx, yy + 1, "#")
 
 
 def draw_mouth(g, mx, my, style):
@@ -749,9 +755,9 @@ SPECIES_ART = {
             "...oooooooooooooooooooooooooooooooooo...",
             "...oooooo++++oooooooooooooo++++oooooo...",
             "...ooooo++++++oooooooooooo++++++ooooo...",
-            "...oooooo++++oooo#o#o#ooooo++++oooooo...",
-            "...ooooooooooooooo#o#oooooooooooooooo...",
-            "....oooooooooooooooooooooooooooooooo....",
+            "...oooooo++++oo#ooo#ooo#ooo++++oooooo...",
+            "...ooooooooooooo#o#o#o#oooooooooooooo...",
+            "....ooooooooooooo#ooo#oooooooooooooo....",
             "....oooooooooooooooooooooooooooooooo....",
             ".....oooooooooooooooooooooooooooooo.....",
             "......oooooooooooooooooooooooooooo......",
@@ -764,7 +770,7 @@ SPECIES_ART = {
             "........................................",
         ],
         "eyes": [(10, 18, 6, 7), (24, 18, 6, 7)],
-        "mouth": (18, 27),
+        "mouth": (18, 28),
     },
 }
 
@@ -958,16 +964,20 @@ def motion_attack(sp):
     브레스가 나갈 공간을 만들기 위해 몸을 오른쪽으로 물렸다가 내뿜는다.
     브레스의 'o' 도트는 테마색으로 렌더링 → 종별 속성 브레스처럼 보임.
     """
-    # 털뭉치는 다리가 없어 스텝 대신 몸통을 웅크렸다(눌림) 앞으로 내민다
+    # 털뭉치는 다리가 없어 스텝 대신 몸통을 웅크렸다(눌림) 앞으로 내민다.
+    # 몸집이 40그리드를 꽉 채워 큰 dx는 볼·귀가 화면 밖으로 잘리므로 이동폭 축소.
     legs = sp != "fluff"
-    windup = pose(sp, eye="angry", mouth="none", dx=5, lean=1)
+    back = 2 if sp == "fluff" else 5
+    fwd = 2 if sp == "fluff" else 4
+    lw = 0 if sp == "fluff" else 1
+    windup = pose(sp, eye="angry", mouth="none", dx=back, lean=lw)
     if not legs:
         windup = squash_art(windup, 0.9)
     puff = pose(sp, eye="angry", mouth="open",
-                step="front" if legs else None, dx=4, lean=-1)
+                step="front" if legs else None, dx=fwd, lean=-lw)
     puff = draw_breath_puff(puff, sp)
     blast = pose(sp, eye="angry", mouth="open",
-                 step="back" if legs else None, dx=4, lean=-1)
+                 step="back" if legs else None, dx=fwd, lean=-lw)
     blast = draw_breath_ball(blast, sp)
     return [windup, puff, blast]
 
@@ -979,7 +989,9 @@ def motion_dodge(sp):
     """
     r = art_size(sp) - BASE
     legs = sp != "fluff"
-    f2 = pose(sp, eye="closed", step="back" if legs else None, dx=3, lean=1)
+    # 털뭉치는 몸집이 커 큰 이동은 화면 밖으로 잘리므로 이동폭을 줄인다
+    f2 = pose(sp, eye="closed", step="back" if legs else None,
+              dx=2 if sp == "fluff" else 3, lean=0 if sp == "fluff" else 1)
     f3 = pose(sp, eye="open", dx=1)
     return [
         pose(sp, eye="open"),
@@ -995,10 +1007,13 @@ def motion_hurt(sp):
     하얗게 사라져 보여서 실제 휘청이는 포즈로 교체했다.
     """
     # 땀방울은 몸이 닿지 않는 머리 위 상단(0~3행)에 배치 — 잘림/겹침 방지
+    # 털뭉치는 몸집이 커 큰 lean/dx는 볼·귀가 화면 밖으로 잘리므로 휘청폭 축소.
     r = art_size(sp) - BASE
+    big = sp != "fluff"
     f1 = pose(sp, eye="pain", mouth="open", lean=1)
     f1 = with_glyph(f1, GLYPH_SWEAT, 19 + r, 1)
-    f2 = pose(sp, eye="pain", mouth="open", dx=1, lean=2)
+    f2 = pose(sp, eye="pain", mouth="open",
+              dx=1 if big else 0, lean=2 if big else 1)
     f2 = with_glyph(f2, GLYPH_SWEAT, 21 + r, 2)
     f2 = with_glyph(f2, GLYPH_SWEAT, 18 + r, 0)
     f3 = pose(sp, eye="pain", dx=-1)
