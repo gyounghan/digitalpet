@@ -34,6 +34,9 @@ class _CareScreenState extends ConsumerState<CareScreen> {
   Timer? _napTimer;
   int _napRemainingSeconds = 0;
 
+  /// 미션 전체 펼침 여부 (기본: 진행 중 상위 3개만)
+  bool _showAllMissions = false;
+
   @override
   void dispose() {
     _shakeTimer?.cancel();
@@ -75,6 +78,9 @@ class _CareScreenState extends ConsumerState<CareScreen> {
             padding: const EdgeInsets.fromLTRB(18, 0, 18, 18),
             children: [
               const SizedBox(height: 4),
+              // 현재 상태 — 대체 행동의 효과를 보는 화면이므로 여기서 노출
+              _buildStatusCard(pet, theme),
+              const SizedBox(height: 14),
               // 대체 케어 — 바쁠 때 직접 채우는 행동
               _buildAltFeedRow(pet, theme),
               const SizedBox(height: 6),
@@ -91,10 +97,79 @@ class _CareScreenState extends ConsumerState<CareScreen> {
     );
   }
 
+  /// 현재 상태 카드 — 포만감/행복/기력 실제 스탯 3줄 (홈에서 이동).
+  /// 대체 행동(급식/낮잠/흔들기)의 효과가 바로 반영되는 곳이라 여기에 둔다.
+  Widget _buildStatusCard(Pet pet, SpeciesTheme theme) {
+    return AppCard(
+      theme: theme,
+      variant: AppCardVariant.flat,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      child: Column(
+        children: [
+          _statusRow(Icons.restaurant, '포만감', pet.hunger, theme),
+          const SizedBox(height: 8),
+          _statusRow(Icons.favorite, '행복', pet.happiness, theme),
+          const SizedBox(height: 8),
+          _statusRow(Icons.bolt, '기력', pet.stamina, theme),
+        ],
+      ),
+    );
+  }
+
+  Widget _statusRow(IconData icon, String label, int value, SpeciesTheme theme) {
+    return Row(
+      children: [
+        Icon(icon, size: 15, color: theme.primaryDeep),
+        const SizedBox(width: 7),
+        SizedBox(
+          width: 44,
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: DesignTokens.ink2,
+            ),
+          ),
+        ),
+        Expanded(
+          child: AppMeter(
+            value: value.toDouble().clamp(0, 100),
+            theme: theme,
+            tone: AppMeterTone.themed,
+            height: 7,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          '$value',
+          style: const TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            color: DesignTokens.ink3,
+            fontFeatures: [FontFeature.tabularFigures()],
+          ),
+        ),
+      ],
+    );
+  }
+
   /// 미션 카드 — 성향 축별 도전과제 진행도. 완료 시 유아기 진화 종에 기여.
+  ///
+  /// 기본은 미완료 중 진행률 상위 3개만 보여주고, "전체 보기"로 펼친다.
   Widget _buildMissionsCard(Pet pet, SpeciesTheme theme) {
     final done = MissionCatalog.completedCount(pet);
     final total = MissionCatalog.all.length;
+
+    final incomplete = MissionCatalog.all
+        .where((m) => !m.isComplete(pet))
+        .toList()
+      ..sort((a, b) => b.ratio(pet).compareTo(a.ratio(pet)));
+    final visible = _showAllMissions
+        ? MissionCatalog.all
+        : incomplete.take(3).toList();
+    final hiddenCount = total - visible.length;
+
     return AppCard(
       theme: theme,
       variant: AppCardVariant.flat,
@@ -122,7 +197,26 @@ class _CareScreenState extends ConsumerState<CareScreen> {
             ],
           ),
           const SizedBox(height: 6),
-          for (final m in MissionCatalog.all) _missionRow(m, pet, theme),
+          for (final m in visible) _missionRow(m, pet, theme),
+          if (total > 3)
+            Center(
+              child: TextButton(
+                onPressed: () =>
+                    setState(() => _showAllMissions = !_showAllMissions),
+                style: TextButton.styleFrom(
+                  foregroundColor: theme.primaryDeep,
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 4),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: Text(
+                  _showAllMissions ? '접기' : '전체 보기 ($hiddenCount)',
+                  style: const TextStyle(
+                      fontSize: 11.5, fontWeight: FontWeight.w700),
+                ),
+              ),
+            ),
         ],
       ),
     );

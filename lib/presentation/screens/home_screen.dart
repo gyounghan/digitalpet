@@ -9,18 +9,16 @@ import '../../core/theme/species_theme.dart';
 import '../../core/constants/app_strings.dart';
 import '../../domain/entities/pet.dart';
 import '../../domain/usecases/calculate_daily_goals_score_usecase.dart';
+import '../../domain/usecases/today_goal_progress.dart';
 import '../../core/utils/pet_image_helper.dart';
 import '../../data/services/ad_service.dart';
 import '../widgets/gravestone_widget.dart';
 import '../widgets/sync_permission_banner.dart';
 
-/// 홈 화면 — 단순화·확대된 디자인
-/// 상단 펫명 + EXP strip + (확대) 펫 스테이지 + 카드형 목표 게이지(원형)
+/// 홈 화면 — "펫이 주인공, 정보는 행동 가능한 것만"
 ///
-/// 변경사항:
-/// - 메뉴/설정 아이콘 제거 (펫명 영역 + EXP만 상단)
-/// - 펫 스테이지 영역 확대 (Expanded)
-/// - 상태/목표 탭 전환 UI 제거 → 카드형 원형 게이지 3개로 통합
+/// 상단 펫명(종·기분) + Lv/EXP 미터 + 펫 스테이지 + 밥주기 + 오늘의 목표 카드.
+/// 종/기분 라벨은 헤더 한 곳에만, 스탯 상세 수치는 케어 화면에서 확인한다.
 class HomeScreen extends ConsumerStatefulWidget {
   static const String defaultPetId = 'default-pet';
 
@@ -138,7 +136,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             Flexible(child: _buildPetStage(pet, theme)),
             // Feed 버튼 + 현재 상태 3카드
             _buildFeedButton(ref, pet, theme),
-            _buildStatCards(pet, theme),
+            _buildTodayGoalsCard(pet, theme),
           ],
         ),
       ),
@@ -213,16 +211,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               height: 10,
             ),
           ),
-          const SizedBox(width: 10),
-          Text(
-            '$expPct%',
-            style: TextStyle(
-              fontSize: 11.5,
-              fontWeight: FontWeight.w800,
-              color: theme.primaryDeep,
-              fontFeatures: const [FontFeature.tabularFigures()],
-            ),
-          ),
         ],
       ),
     );
@@ -276,42 +264,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
           ],
         ),
-        child: Stack(
-          children: [
-            Positioned(
-              top: 14,
-              left: 14,
-              right: 14,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  AppPill(
-                    text: SpeciesTheme.labelFor(pet.evolutionType),
-                    theme: theme,
-                    variant: AppPillVariant.themed,
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.92),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: Text(
-                      _getMoodText(pet.mood),
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: DesignTokens.ink,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Center(child: _buildPetSprite(pet, theme)),
-          ],
-        ),
+        // 종/기분 라벨은 상단 헤더에 이미 있으므로 카드는 순수 펫 무대로 둔다
+        child: Center(child: _buildPetSprite(pet, theme)),
       ),
     );
   }
@@ -411,101 +365,132 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  /// 오늘의 세트 카드 — 포만감+수면+운동을 모두 채우면 1세트 완성.
-  /// 아직 안 채운 항목만 강조되고, 셋 다 완료되면 세트 보상(반감 EXP)을 받는다.
-  /// pet 데이터만으로 동기 계산 (FutureBuilder 불필요).
-  /// 현재 상태 3카드 (포만감=hunger · 수면=stamina · 운동=happiness)
-  /// 실제 스탯을 그대로 보여줘 펫의 mood(기분)와 항상 일치한다.
-  /// 하단에 오늘의 세트 진행을 한 줄로 덧붙여 보상 동기를 유지.
-  Widget _buildStatCards(Pet pet, SpeciesTheme theme) {
+  /// 오늘의 목표 카드 — 식사/걸음/수면 목표 진행 3줄 + 세트 보상 1줄.
+  ///
+  /// "무엇을 채워야 세트가 완성되는지"를 보여주는 유일한 곳.
+  /// [TodayGoalProgress]로 pet 데이터만으로 동기 계산 (FutureBuilder 불필요).
+  /// 스탯(hunger 등) 상세 수치는 케어 화면으로 이동 — 홈은 기분 텍스트로 요약.
+  Widget _buildTodayGoalsCard(Pet pet, SpeciesTheme theme) {
+    final goals = TodayGoalProgress.fromPet(pet);
     final todaySets = pet.todaySetExpClaimed;
     final nextReward =
         CalculateDailyGoalsScoreUseCase.setExpBase >> todaySets.clamp(0, 31);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(18, 0, 18, 14),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: _statCard('포만감', Icons.restaurant, pet.hunger, theme),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _statCard('수면', Icons.bedtime, pet.stamina, theme),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _statCard(
-                    '운동', Icons.directions_run, pet.happiness, theme),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          // 오늘의 세트 진행 (포만감+수면+운동 목표를 모두 채우면 1세트)
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.task_alt, size: 13, color: theme.primaryDeep),
-              const SizedBox(width: 5),
-              Text(
-                todaySets > 0
-                    ? '오늘 $todaySets세트 완성 · 다음 +$nextReward EXP'
-                    : '오늘의 세트 완성 시 +$nextReward EXP',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color: theme.primaryDeep,
-                  fontFeatures: const [FontFeature.tabularFigures()],
+      child: AppCard(
+        theme: theme,
+        variant: AppCardVariant.flat,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        radius: 16,
+        child: Column(
+          children: [
+            _goalRow(
+              icon: Icons.restaurant,
+              label: '식사',
+              valueText: '${goals.feedProgress}/${goals.feedGoal}회',
+              ratio: goals.feedRatio,
+              done: goals.feedDone,
+              theme: theme,
+            ),
+            const SizedBox(height: 8),
+            _goalRow(
+              icon: Icons.directions_run,
+              label: '걸음',
+              valueText:
+                  '${_formatSteps(goals.steps)}/${_formatSteps(goals.stepsGoal)}보',
+              ratio: goals.exerciseRatio,
+              done: goals.exerciseDone,
+              theme: theme,
+            ),
+            const SizedBox(height: 8),
+            _goalRow(
+              icon: Icons.bedtime,
+              label: '수면',
+              valueText:
+                  '${goals.sleepMinutes ~/ 60}/${goals.sleepGoalMinutes ~/ 60}시간',
+              ratio: goals.sleepRatio,
+              done: goals.sleepDone,
+              theme: theme,
+            ),
+            const SizedBox(height: 10),
+            // 세트 진행 (셋 다 채우면 1세트 — 반감 EXP 보상)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.task_alt, size: 13, color: theme.primaryDeep),
+                const SizedBox(width: 5),
+                Text(
+                  todaySets > 0
+                      ? '오늘 $todaySets세트 완성 · 다음 +$nextReward EXP'
+                      : '셋 다 채우면 +$nextReward EXP',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: theme.primaryDeep,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
                 ),
-              ),
-            ],
-          ),
-        ],
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  /// 단일 스탯 카드 (원형 게이지 + 수치)
-  Widget _statCard(String label, IconData icon, int value, SpeciesTheme theme) {
-    return AppCard(
-      theme: theme,
-      variant: AppCardVariant.flat,
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-      radius: 16,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          AppCircularGauge(
-            value: value.toDouble().clamp(0, 100),
-            theme: theme,
-            size: 60,
-            strokeWidth: 6,
-            child: Icon(icon, size: 18, color: theme.primaryDeep),
-          ),
-          const SizedBox(height: 8),
-          Text(
+  /// 목표 한 줄 — 아이콘 + 라벨 + 진행바 + 수치 (달성 시 체크·good 톤)
+  Widget _goalRow({
+    required IconData icon,
+    required String label,
+    required String valueText,
+    required double ratio,
+    required bool done,
+    required SpeciesTheme theme,
+  }) {
+    final color = done ? DesignTokens.good : theme.primaryDeep;
+    return Row(
+      children: [
+        Icon(done ? Icons.check_circle : icon, size: 15, color: color),
+        const SizedBox(width: 7),
+        SizedBox(
+          width: 34,
+          child: Text(
             label,
             style: const TextStyle(
               fontSize: 12,
-              fontWeight: FontWeight.w800,
-              color: DesignTokens.ink,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            '$value/100',
-            style: const TextStyle(
-              fontSize: 10.5,
               fontWeight: FontWeight.w700,
-              color: DesignTokens.ink3,
-              fontFeatures: [FontFeature.tabularFigures()],
+              color: DesignTokens.ink2,
             ),
           ),
-        ],
-      ),
+        ),
+        Expanded(
+          child: AppMeter(
+            value: ratio * 100,
+            theme: theme,
+            tone: done ? AppMeterTone.good : AppMeterTone.themed,
+            height: 7,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          valueText,
+          style: const TextStyle(
+            fontSize: 10.5,
+            fontWeight: FontWeight.w700,
+            color: DesignTokens.ink3,
+            fontFeatures: [FontFeature.tabularFigures()],
+          ),
+        ),
+      ],
     );
+  }
+
+  /// 걸음 수 축약 표기 (3,200 → 3.2k)
+  String _formatSteps(int steps) {
+    if (steps < 1000) return '$steps';
+    final k = steps / 1000.0;
+    return k == k.roundToDouble() ? '${k.round()}k' : '${k.toStringAsFixed(1)}k';
   }
 
   /// 현재 레벨의 EXP 진행률 (%) — Pet.getRequiredExpForLevel 규칙과 동일
