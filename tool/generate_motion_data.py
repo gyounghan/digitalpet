@@ -320,7 +320,7 @@ def _clear_eye_box(g, ex, ey, pw, ph, halo=1):
                 g[yy][xx] = "o"
 
 
-def draw_eye(g, rect, style, group_cx=None):
+def draw_eye(g, rect, style, group_cx=None, frontal=True):
     """rect=(x, y, w, h) 영역에 눈 스타일을 그림.
 
     happy/pain/angry는 획이 성글어 작은 눈(2x2)에선 안 보이므로 최소 3x3로
@@ -382,20 +382,22 @@ def draw_eye(g, rect, style, group_cx=None):
             dy = int(round(dx * (ph - 1) / max(pw - 1, 1)))
             put(g, ex + dx, ey + dy, "#")
             put(g, ex + dx, ey + (ph - 1) - dy, "#")
-    elif style == "angry":  # 화난 눈 — 안쪽이 처진 사선 \ / (안쪽 끝이 아래)
-        # 눈 그룹 중심 기준으로 왼/오른을 판별한다(그리드 중심이 아님 — 캐릭터
-        # 눈이 치우쳐 있어서). 왼눈 \, 오른눈 / 라 안쪽(중앙 쪽)이 처져 화난 인상.
-        # 단일 눈(그룹 중심과 거의 같음)은 가운데가 처진 V(\/)로 그린다.
+    elif style == "angry":  # 화난 눈 — 안쪽이 처진 사선
+        # 정면 얼굴(frontal): 눈 그룹 중심으로 왼/오른을 나눠 왼눈 \, 오른눈 /.
+        # 옆모습(주작·청룡·현무): 앞쪽(왼쪽)이 아래로 처진 / 로 통일(눈 개수 무관).
         ec = ex + pw / 2.0
         ref = group_cx if group_cx is not None else len(g) / 2.0
-        side = "left" if ec < ref - 0.5 else ("right" if ec > ref + 0.5 else "single")
+        if frontal:
+            side = "left" if ec < ref - 0.5 else ("right" if ec > ref + 0.5 else "single")
+        else:
+            side = "right"  # / 로 통일
         mid = (pw - 1) / 2.0
         for dx in range(pw):
             t = dx / (pw - 1) if pw > 1 else 0.0
             if side == "left":
                 frac = t              # \  : 안쪽(오른쪽) 아래
             elif side == "right":
-                frac = 1.0 - t        # /  : 안쪽(왼쪽) 아래
+                frac = 1.0 - t        # /  : 앞쪽(왼쪽) 아래
             else:
                 frac = 1.0 - abs(dx - mid) / mid if mid > 0 else 1.0  # \/ 가운데 처짐
             yy = ey + int(round(frac * (ph - 1)))
@@ -851,8 +853,11 @@ def pose(
     # (캐릭터마다 눈이 한쪽으로 치우쳐 있어 그리드 중심을 쓰면 좌우가 틀림).
     eye_rects = meta["eyes"]
     group_cx = sum(x + w / 2.0 for (x, y, w, h) in eye_rects) / len(eye_rects)
+    # 정면 얼굴(백호·털뭉치)은 화난 눈을 \ / 로, 옆모습(주작·청룡·현무 — 왼쪽을
+    # 봐 앞쪽이 왼쪽)은 항상 / 로 그린다.
+    frontal = key.startswith("tiger") or key == "fluff"
     for rect in eye_rects:
-        draw_eye(g, rect, eye, group_cx=group_cx)
+        draw_eye(g, rect, eye, group_cx=group_cx, frontal=frontal)
     mx, my = meta["mouth"]
     draw_mouth(g, mx, my, mouth)
 
