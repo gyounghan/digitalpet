@@ -27,6 +27,7 @@ assets/{종}{1|2}.png 원본 픽셀아트를 도트 아트로 옮긴 뒤(물방�
     lib/core/pixel/pet_motion_data.dart (motionFrames — 키 '{종}{1|2}')
 """
 
+import json
 import os
 import sys
 
@@ -34,6 +35,13 @@ from PIL import Image
 
 BASE = 24  # 이펙트 글리프 좌표의 기준 그리드 (24 기준값 + 앵커 보정)
 OUTPUT_PATH = os.path.join("lib", "core", "pixel", "pet_motion_data.dart")
+
+# 안드로이드 홈 위젯이 앱과 동일한 도트 모션을 네이티브로 렌더하기 위한 JSON.
+# 위젯은 정지 이미지라 모션별 대표 프레임(가운데=index 1) 1장만 내보낸다.
+WIDGET_JSON_PATH = os.path.join(
+    "android", "app", "src", "main", "assets", "pet_motion_data.json"
+)
+WIDGET_FRAME_INDEX = 1
 
 # 아트를 덤프할 때 사용한 원본/크롭/배치 파라미터 — accent 자동 태깅에 재사용
 # path: 원본 PNG / crop: 비율 크롭 (fx0,fy0,fx1,fy1) 또는 None
@@ -1168,12 +1176,38 @@ def main() -> int:
             f.write("  },\n")
         f.write("};\n")
 
+    write_widget_json(sprite_frames)
+
     total = sum(len(m) * 3 for m in sprite_frames.values())
     sizes = ", ".join(
         "%s=%d" % (k, art_size(k)) for k in sprite_frames
     )
     print("생성 완료: %s (%d개 프레임, %s)" % (OUTPUT_PATH, total, sizes))
+    print("위젯 JSON: %s" % WIDGET_JSON_PATH)
     return 0
+
+
+def write_widget_json(sprite_frames):
+    """홈 위젯용 모션 JSON — 스프라이트 키 → 모션 → 대표 프레임 1장.
+
+    앱(pet_motion_data.dart)과 동일한 좌표를 쓰되, 위젯은 정지 이미지라
+    모션별 가운데 프레임 하나만 담는다. 행 마스크는 부호없는 hex 문자열.
+    """
+    root = {}
+    for key, motions in sprite_frames.items():
+        size = art_size(key)
+        entry = {"size": size}
+        for motion_name, frames in motions.items():
+            dark, body, accent = frames[WIDGET_FRAME_INDEX]
+            entry[motion_name] = {
+                "d": ["%X" % v for v in dark],
+                "b": ["%X" % v for v in body],
+                "a": ["%X" % v for v in accent],
+            }
+        root[key] = entry
+    os.makedirs(os.path.dirname(WIDGET_JSON_PATH), exist_ok=True)
+    with open(WIDGET_JSON_PATH, "w", encoding="utf-8") as f:
+        json.dump(root, f, ensure_ascii=False, separators=(",", ":"))
 
 
 if __name__ == "__main__":

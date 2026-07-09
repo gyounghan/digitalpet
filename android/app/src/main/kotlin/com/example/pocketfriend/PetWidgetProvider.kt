@@ -156,7 +156,7 @@ class PetWidgetProvider : AppWidgetProvider() {
             val views = RemoteViews(context.packageName, R.layout.pet_widget)
 
             // 이미지 결정: 앱과 동일한 도트 PNG 우선, 없으면 drawable(진화/mood)
-            if (!tryApplyDotImage(context, views)) {
+            if (!tryApplyDotImage(context, views, resolvedMood)) {
                 val imageResourceId =
                     resolveWidgetImageResourceId(context, evolutionImage, imageType)
                 if (imageResourceId != 0) {
@@ -219,7 +219,7 @@ class PetWidgetProvider : AppWidgetProvider() {
             val views = RemoteViews(context.packageName, R.layout.pet_widget)
 
             // 이미지 결정: 앱과 동일한 도트 PNG 우선(정적), 없으면 drawable
-            if (!tryApplyDotImage(context, views)) {
+            if (!tryApplyDotImage(context, views, resolvedMood)) {
                 val imageResourceId =
                     resolveWidgetImageResourceId(context, evolutionImage, imageType)
                 if (imageResourceId != 0) {
@@ -349,13 +349,11 @@ class PetWidgetProvider : AppWidgetProvider() {
     /// 좌표를 찾아, 종별 색(evolutionType/stage)으로 Bitmap을 그린다.
     /// 키/좌표가 없으면 false를 반환해 기존 drawable 리소스로 폴백한다.
     /// (앱과 100% 동일한 도트 데이터·렌더 규칙 — 좌표는 스크립트가 자동 동기화)
-    private fun tryApplyDotImage(context: Context, views: RemoteViews): Boolean {
-        val pixelKey = getWidgetString(context, "pixelKey", null)
-        if (pixelKey.isNullOrBlank()) return false
-        val sprite = WidgetPixelData.sprite(context, pixelKey) ?: return false
-
+    private fun tryApplyDotImage(context: Context, views: RemoteViews, mood: String): Boolean {
         val evolutionType = getWidgetString(context, "evolutionType", null)
         val stage = getWidgetString(context, "evolutionStage", "1")?.toIntOrNull() ?: 1
+
+        val sprite = resolveWidgetSprite(context, evolutionType, stage, mood) ?: return false
         val (dotColor, accentColor) = resolveDotColors(evolutionType, stage)
 
         val bitmap = runCatching {
@@ -368,12 +366,54 @@ class PetWidgetProvider : AppWidgetProvider() {
         return true
     }
 
+    /// 앱 홈과 동일한 스프라이트 선택.
+    /// 모션 스테이지(털뭉치·유아기·성장기)는 mood에 맞는 도트 모션 대표 프레임을,
+    /// 그 외(사신수 등)는 Flutter가 저장한 정적 mood 도트(pixelKey)를 쓴다.
+    private fun resolveWidgetSprite(
+        context: Context,
+        evolutionType: String?,
+        stage: Int,
+        mood: String,
+    ): WidgetSprite? {
+        val motionKey = motionSpriteKey(evolutionType, stage)
+        if (motionKey != null) {
+            WidgetMotionData.sprite(context, motionKey, motionForMood(mood))?.let { return it }
+        }
+        val pixelKey = getWidgetString(context, "pixelKey", null)
+        if (pixelKey.isNullOrBlank()) return null
+        return WidgetPixelData.sprite(context, pixelKey)
+    }
+
+    /// 앱 home_screen._motionSpriteKey와 동일한 규칙.
+    /// stage1 → 'fluff', stage2/3 → '{종}{stage-1}', 그 외 → null(정적 도트).
+    private fun motionSpriteKey(evolutionType: String?, stage: Int): String? {
+        if (stage <= 1) return "fluff"
+        val prefix = when (evolutionType) {
+            "bird" -> "bird"
+            "snake" -> "dragon" // 뱀→이무기→청룡 계열은 dragon 에셋 사용
+            "tiger" -> "tiger"
+            "turtle" -> "turtle"
+            else -> return null
+        }
+        return if (stage == 2 || stage == 3) "$prefix${stage - 1}" else null
+    }
+
+    /// 앱 motionForMood와 동일한 mood → 모션 매핑.
+    private fun motionForMood(mood: String): String = when (mood.trim().lowercase()) {
+        "happy" -> "joy"
+        "sleepy", "tired" -> "sleep"
+        "hungry" -> "hungry"
+        "sad", "dead" -> "hurt"
+        else -> "walk"
+    }
+
     /// 종별 도트 색 (앱 SpeciesTheme와 동일 값 — 색은 거의 불변이라 수동 유지)
     /// 반환: (몸통색, 보조색). 털뭉치(종 미결정/stage1)는 밝은 베이지 단색.
     private fun resolveDotColors(evolutionType: String?, stage: Int): Pair<Int, Int> {
         if (stage <= 1 || evolutionType.isNullOrBlank()) {
-            val fluff = 0xFFEAD7A8.toInt() // SpeciesTheme.fluffBody
-            return fluff to fluff
+            val fluffBody = 0xFFEAD7A8.toInt() // SpeciesTheme.fluffBody
+            val fluffAccent = 0xFFF2A0AE.toInt() // SpeciesTheme.fluffAccent (볼터치·귀 분홍)
+            return fluffBody to fluffAccent
         }
         return when (evolutionType) {
             "tiger" -> 0xFF4A5A78.toInt() to 0xFFF0F3F8.toInt()

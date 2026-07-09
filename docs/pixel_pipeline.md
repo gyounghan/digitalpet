@@ -237,11 +237,18 @@ PNG였음). Flutter 엔진이 없어도(백그라운드) 항상 최신 도트를
 - **Flutter → 위젯** (`widget_service.dart`): 현재 mood/stage로 고른 스프라이트
   키를 `pixelKey`로, 종·단계를 `evolutionType`/`evolutionStage`로 저장
   (`saveWidgetData`). 이미지 파일/PNG는 넘기지 않는다.
-- **네이티브 렌더** (`WidgetPixelRenderer.kt`): `WidgetPixelData`가
-  `assets/pet_pixel_data.json`(§2에서 생성)을 파싱해 `pixelKey`로 스프라이트를
-  찾고, `resolveDotColors`(종별 색, 앱 `SpeciesTheme`와 동일 값)로 Bitmap을
-  그려 `setImageViewBitmap`. `PetWidgetProvider.tryApplyDotImage`가 진입점.
-- **폴백**: `pixelKey`/좌표가 없으면 기존 drawable 리소스(`evolutionImage`)로.
+- **네이티브 렌더** (`WidgetPixelRenderer.kt`): `PetWidgetProvider.tryApplyDotImage`가
+  진입점. 앱 홈과 **동일한 스프라이트**를 고른다:
+  - **모션 스테이지(털뭉치·유아기·성장기)**: `WidgetMotionData`가
+    `assets/pet_motion_data.json`(§3의 generate_motion_data.py가 함께 생성 —
+    스프라이트키→모션→대표 프레임 1장)을 파싱. `evolutionType`+`evolutionStage`로
+    모션 스프라이트 키를(`motionSpriteKey`, 앱 `_motionSpriteKey`와 동일),
+    `mood`로 모션을(`motionForMood`, 앱과 동일) 골라 프레임을 찾는다.
+  - **사신수(stage 4) 등 모션 없는 단계**: `WidgetPixelData`가
+    `assets/pet_pixel_data.json`(§2)을 `pixelKey`로 조회(정적 mood 도트).
+  - 색은 `resolveDotColors`(종별 색, 앱 `SpeciesTheme`와 동일 — 털뭉치는
+    `fluffBody`+`fluffAccent` 분홍 볼터치)로 주입해 Bitmap을 `setImageViewBitmap`.
+- **폴백**: 모션/정적 도트 모두 없으면 기존 drawable 리소스(`evolutionImage`)로.
 - **좌표 자동 동기화**: 도트 데이터는 JSON으로만 공유 — Kotlin에 복제 없음.
   단, **색(5종)은 `SpeciesTheme`와 `resolveDotColors`에 이중 유지**(거의 불변).
 
@@ -288,5 +295,7 @@ PNG였음). Flutter 엔진이 없어도(백그라운드) 항상 최신 도트를
 - 아트 수정 후에는 반드시 `preview_motion.py`로 눈 확인 → 재생성 →
   analyze/test/build 순서.
 - Android 홈 위젯은 네이티브에서 도트를 직접 렌더한다 (§4.1). 도트 수정 후엔
-  `generate_pixel_data.py`를 돌려 `pet_pixel_data.json`도 갱신할 것.
+  두 스크립트가 각각 위젯 JSON을 함께 굽는다:
+  `generate_pixel_data.py` → `pet_pixel_data.json`(정적),
+  `generate_motion_data.py` → `pet_motion_data.json`(모션). 둘 다 재생성할 것.
 - AdMob은 테스트 유닛 ID 상태 — 릴리스 전 교체 필요.

@@ -68,6 +68,63 @@ object WidgetPixelData {
         }
 }
 
+/// 홈 위젯용 모션 도트 로더 — `tool/generate_motion_data.py`가 앱
+/// (`pet_motion_data.dart`)과 동시에 굽는 `assets/pet_motion_data.json`.
+///
+/// 스프라이트 키('fluff'/'dragon1'/'dragon2') → 모션 이름('walk'/'joy'/…) →
+/// 대표 프레임(가운데) 스프라이트. 위젯은 정지 이미지라 프레임 1장만 담는다.
+/// 앱 홈이 그리는 도트 모션과 100% 동일 좌표 — 스크립트가 자동 동기화.
+object WidgetMotionData {
+    private const val TAG = "WidgetMotionData"
+    private const val ASSET_NAME = "pet_motion_data.json"
+
+    @Volatile
+    private var cache: Map<String, Map<String, WidgetSprite>>? = null
+
+    /// 스프라이트 키 + 모션 이름으로 대표 프레임 조회
+    fun sprite(context: Context, key: String, motion: String): WidgetSprite? =
+        load(context)[key]?.get(motion)
+
+    private fun load(context: Context): Map<String, Map<String, WidgetSprite>> {
+        cache?.let { return it }
+        val parsed = runCatching { parse(context) }.getOrElse {
+            Log.e(TAG, "모션 JSON 파싱 실패", it)
+            emptyMap()
+        }
+        cache = parsed
+        return parsed
+    }
+
+    private fun parse(context: Context): Map<String, Map<String, WidgetSprite>> {
+        val text = context.assets.open(ASSET_NAME)
+            .bufferedReader(Charsets.UTF_8).use { it.readText() }
+        val root = JSONObject(text)
+        val result = HashMap<String, Map<String, WidgetSprite>>(root.length())
+        for (key in root.keys()) {
+            val obj = root.getJSONObject(key)
+            val size = obj.getInt("size")
+            val motions = HashMap<String, WidgetSprite>()
+            for (motion in obj.keys()) {
+                if (motion == "size") continue
+                val frame = obj.getJSONObject(motion)
+                motions[motion] = WidgetSprite(
+                    size = size,
+                    dark = toRows(frame.getJSONArray("d")),
+                    body = toRows(frame.getJSONArray("b")),
+                    accent = toRows(frame.getJSONArray("a")),
+                )
+            }
+            result[key] = motions
+        }
+        return result
+    }
+
+    private fun toRows(array: JSONArray): LongArray =
+        LongArray(array.length()) { index ->
+            java.lang.Long.parseUnsignedLong(array.getString(index), 16)
+        }
+}
+
 /// [WidgetSprite]를 3계조 색으로 Bitmap에 렌더 (앱 _PixelSpritePainter와 동일 규칙)
 object WidgetPixelRenderer {
     /// 아웃라인/눈 색 (앱 darkColor 기본값과 동일)
