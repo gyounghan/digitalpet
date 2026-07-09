@@ -320,7 +320,7 @@ def _clear_eye_box(g, ex, ey, pw, ph, halo=1):
                 g[yy][xx] = "o"
 
 
-def draw_eye(g, rect, style):
+def draw_eye(g, rect, style, group_cx=None):
     """rect=(x, y, w, h) 영역에 눈 스타일을 그림.
 
     happy/pain/angry는 획이 성글어 작은 눈(2x2)에선 안 보이므로 최소 3x3로
@@ -382,14 +382,22 @@ def draw_eye(g, rect, style):
             dy = int(round(dx * (ph - 1) / max(pw - 1, 1)))
             put(g, ex + dx, ey + dy, "#")
             put(g, ex + dx, ey + (ph - 1) - dy, "#")
-    elif style == "angry":  # 화난 눈 — 안쪽이 처진 사선 (왼눈 \, 오른눈 /)
-        # 그리드 중심 기준 왼/오른 눈을 판별해 \ / 대칭으로 그린다. 안쪽(중앙
-        # 쪽) 끝이 아래로 처져 찌푸린 인상을 준다. 한 칸 아래도 찍어 굵게.
-        n = len(g)
-        is_left = (ex + pw / 2.0) < n / 2.0
+    elif style == "angry":  # 화난 눈 — 안쪽이 처진 사선 \ / (안쪽 끝이 아래)
+        # 눈 그룹 중심 기준으로 왼/오른을 판별한다(그리드 중심이 아님 — 캐릭터
+        # 눈이 치우쳐 있어서). 왼눈 \, 오른눈 / 라 안쪽(중앙 쪽)이 처져 화난 인상.
+        # 단일 눈(그룹 중심과 거의 같음)은 가운데가 처진 V(\/)로 그린다.
+        ec = ex + pw / 2.0
+        ref = group_cx if group_cx is not None else len(g) / 2.0
+        side = "left" if ec < ref - 0.5 else ("right" if ec > ref + 0.5 else "single")
+        mid = (pw - 1) / 2.0
         for dx in range(pw):
             t = dx / (pw - 1) if pw > 1 else 0.0
-            frac = t if is_left else (1.0 - t)
+            if side == "left":
+                frac = t              # \  : 안쪽(오른쪽) 아래
+            elif side == "right":
+                frac = 1.0 - t        # /  : 안쪽(왼쪽) 아래
+            else:
+                frac = 1.0 - abs(dx - mid) / mid if mid > 0 else 1.0  # \/ 가운데 처짐
             yy = ey + int(round(frac * (ph - 1)))
             put(g, ex + dx, yy, "#")
             if yy + 1 < ey + ph:
@@ -839,8 +847,12 @@ def pose(
     n = len(g)
 
     # 표정 (기울임/이동 전에 원본 좌표 기준으로)
-    for rect in meta["eyes"]:
-        draw_eye(g, rect, eye)
+    # 화난/사선 눈의 좌우 판별 기준은 그리드 중심이 아니라 눈 그룹 중심
+    # (캐릭터마다 눈이 한쪽으로 치우쳐 있어 그리드 중심을 쓰면 좌우가 틀림).
+    eye_rects = meta["eyes"]
+    group_cx = sum(x + w / 2.0 for (x, y, w, h) in eye_rects) / len(eye_rects)
+    for rect in eye_rects:
+        draw_eye(g, rect, eye, group_cx=group_cx)
     mx, my = meta["mouth"]
     draw_mouth(g, mx, my, mouth)
 
