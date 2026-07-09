@@ -865,14 +865,20 @@ class _FighterRow extends StatelessWidget {
     final spriteKey = motionSpriteKeyFromAssetPath(path);
     if (spriteKey != null && motion != null) {
       final isFluff = spriteKey == 'fluff';
+      // 성숙기('{종}3' 에셋)는 성장기 모션 재활용 + 성숙기 색
+      final isMature = path.contains('3.png');
       return Padding(
         padding: const EdgeInsets.all(3),
         child: PixelMotionAnimation(
           spriteKey: spriteKey,
           motion: motion!,
           duration: const Duration(milliseconds: 600),
-          dotColor: isFluff ? SpeciesTheme.fluffBody : theme.primary,
-          accentColor: isFluff ? SpeciesTheme.fluffAccent : theme.spriteAccent,
+          dotColor: isFluff
+              ? SpeciesTheme.fluffBody
+              : (isMature ? theme.matureBody : theme.primary),
+          accentColor: isFluff
+              ? SpeciesTheme.fluffAccent
+              : (isMature ? SpeciesTheme.matureAccent : theme.spriteAccent),
         ),
       );
     }

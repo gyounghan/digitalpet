@@ -270,33 +270,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  /// 도트 모션 스프라이트 키 (없으면 정적 렌더)
-  ///
-  /// - stage 1 (털뭉치)  → 'fluff'
-  /// - stage 2 (유아기)  → '{종}1'
-  /// - stage 3 (성장기)  → '{종}2'
-  /// - stage 4 (사신수)  → null (정적 mood 이미지)
-  String? _motionSpriteKey(Pet pet) {
-    if (pet.evolutionStage == 1) return 'fluff';
-    final species = evolutionSpeciesImagePrefix(pet.evolutionType);
-    if (species != null &&
-        (pet.evolutionStage == 2 || pet.evolutionStage == 3)) {
-      return '$species${pet.evolutionStage - 1}';
-    }
-    return null;
-  }
+  /// 도트 모션 스프라이트 키 (공통 규칙 — 성숙기는 성장기 모션 재활용)
+  String? _motionSpriteKey(Pet pet) =>
+      motionSpriteKeyForStage(pet.evolutionType, pet.evolutionStage);
 
   /// 펫 스테이지 스프라이트
   ///
-  /// - 도트 모션 스테이지(털뭉치·유아기·성장기): mood 기반 도트 모션 루프
-  ///   + 액션 시 일시 모션(밥먹기)
-  /// - 사신수(stage 4): 기존 mood 정적 도트 렌더
+  /// 모든 단계가 mood 기반 도트 모션 루프 + 액션 시 일시 모션(밥먹기).
+  /// 성숙기(stage 4)는 성장기 모션에 짙은 몸통색+금빛 보조색으로 격 구분.
   Widget _buildPetSprite(Pet pet, SpeciesTheme theme) {
     final spriteKey = _motionSpriteKey(pet);
     if (spriteKey != null) {
       final motion = _transientMotion ?? motionForMood(pet.mood);
       // 털뭉치는 종 미결정 → 밝은 베이지 단색
       final isFluff = spriteKey == 'fluff';
+      final isMature = pet.evolutionStage >= 4;
       return SizedBox(
         width: 300,
         height: 300,
@@ -307,9 +295,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             motion: motion,
             width: 270,
             height: 270,
-            dotColor: isFluff ? SpeciesTheme.fluffBody : theme.primary,
-            accentColor:
-                isFluff ? SpeciesTheme.fluffAccent : theme.spriteAccent,
+            dotColor: isFluff
+                ? SpeciesTheme.fluffBody
+                : (isMature ? theme.matureBody : theme.primary),
+            accentColor: isFluff
+                ? SpeciesTheme.fluffAccent
+                : (isMature ? SpeciesTheme.matureAccent : theme.spriteAccent),
           ),
         ),
       );

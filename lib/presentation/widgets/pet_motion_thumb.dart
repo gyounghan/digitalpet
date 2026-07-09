@@ -7,8 +7,8 @@ import 'pixel_pet_image.dart';
 
 /// 펫 대표 썸네일 — 도트 모션의 대표 프레임(walk 1프레임)을 그린다.
 ///
-/// - 털뭉치·유아기·성장기(모션 있음): 도트 모션 첫 프레임을 종별 테마색으로
-/// - 사신수(stage 4, 모션 없음): 정적 도트 이미지 폴백
+/// - 털뭉치·유아기·성장기: 도트 모션 첫 프레임을 종별 테마색으로
+/// - 성숙기(stage 4): 성장기 모션 재활용 + 짙은 몸통색·금빛 보조색
 /// - 종 미결정(stage 2+ 인데 type null): '?' 표시
 ///
 /// 배틀 내 펫 카드 / 도감 프로필·진화 트리 등 "프로필 사진" 자리 공용.
@@ -23,16 +23,6 @@ class PetMotionThumb extends StatelessWidget {
     required this.stage,
     required this.size,
   });
-
-  /// 진화 단계 → 도트 모션 스프라이트 키 (홈 _motionSpriteKey와 동일 규칙)
-  static String? motionKey(EvolutionType? type, int stage) {
-    if (stage <= 1) return 'fluff';
-    final species = evolutionSpeciesImagePrefix(type);
-    if (species != null && (stage == 2 || stage == 3)) {
-      return '$species${stage - 1}';
-    }
-    return null;
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -55,18 +45,22 @@ class PetMotionThumb extends StatelessWidget {
     }
 
     final theme = SpeciesTheme.forType(type);
-    final key = motionKey(type, stage);
+    final key = motionSpriteKeyForStage(type, stage);
     if (key != null) {
       final frames = motionFramesFor(key, PixelMotion.walk);
       if (frames != null && frames.isNotEmpty) {
         final isFluff = key == 'fluff';
+        final isMature = stage >= 4;
         return PixelSpriteView(
           sprite: frames.first,
           width: size,
           height: size,
-          dotColor: isFluff ? SpeciesTheme.fluffBody : theme.primary,
-          accentColor:
-              isFluff ? SpeciesTheme.fluffAccent : theme.spriteAccent,
+          dotColor: isFluff
+              ? SpeciesTheme.fluffBody
+              : (isMature ? theme.matureBody : theme.primary),
+          accentColor: isFluff
+              ? SpeciesTheme.fluffAccent
+              : (isMature ? SpeciesTheme.matureAccent : theme.spriteAccent),
         );
       }
     }

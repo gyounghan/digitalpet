@@ -23,6 +23,11 @@ class SpeciesTheme {
   /// (청룡 크림 배, 백호 설백 몸, 주작 노란 부리/가슴, 현무 갈색 등딱지)
   final Color spriteAccent;
 
+  /// 성숙기(stage 4) 도트 몸통색 — 성장기 모션을 재활용해 렌더할 때
+  /// "완성형"임을 나타내는 짙은 중간톤 (primary와 primaryDeep 사이).
+  /// Kotlin 위젯(PetWidgetProvider.resolveDotColors)과 값 수동 동기화.
+  final Color matureBody;
+
   const SpeciesTheme({
     required this.primary,
     required this.primaryDeep,
@@ -33,6 +38,7 @@ class SpeciesTheme {
     required this.gradStart,
     required this.gradEnd,
     this.spriteAccent = const Color(0xFFDDE3EC),
+    this.matureBody = const Color(0xFF3D4B66),
   });
 
   /// 기본 (진화 미결정)
@@ -58,6 +64,7 @@ class SpeciesTheme {
     gradStart: Color(0xFFF5F8FC),
     gradEnd: Color(0xFFDBE3F0),
     spriteAccent: Color(0xFFF0F3F8),
+    matureBody: Color(0xFF3D4B66),
   );
 
   /// 주작 (bird/phoenix) - red-orange
@@ -71,6 +78,7 @@ class SpeciesTheme {
     gradStart: Color(0xFFFFF6EF),
     gradEnd: Color(0xFFFFD0A8),
     spriteAccent: Color(0xFFFFC94D),
+    matureBody: Color(0xFFC13C21),
   );
 
   /// 현무 (turtle) - 연두 (yellow-green, 파스텔 라임)
@@ -84,6 +92,7 @@ class SpeciesTheme {
     gradStart: Color(0xFFEFFDF8),
     gradEnd: Color(0xFFC6F3E4),
     spriteAccent: Color(0xFF9C7A4C),
+    matureBody: Color(0xFF55AD67),
   );
 
   /// 청룡 (snake/dragon) - blue
@@ -97,6 +106,7 @@ class SpeciesTheme {
     gradStart: Color(0xFFEEF5FD),
     gradEnd: Color(0xFFC8DEFA),
     spriteAccent: Color(0xFFF2E3C2),
+    matureBody: Color(0xFF1D64B9),
   );
 
   /// 털뭉치(stage 1) 도트 몸통색 — 연한 크림 베이지 (종 미결정 상태)
@@ -104,6 +114,9 @@ class SpeciesTheme {
 
   /// 털뭉치(stage 1) 보조색 — 볼터치·귀 안쪽 연분홍 (귀여움 강조)
   static const Color fluffAccent = Color(0xFFF2A0AE);
+
+  /// 성숙기(stage 4) 공통 보조색 — 금빛 (사신수의 격 표현)
+  static const Color matureAccent = Color(0xFFF0C75A);
 
   /// 진화 타입으로 테마 조회
   static SpeciesTheme forType(EvolutionType? type) {

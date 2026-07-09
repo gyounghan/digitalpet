@@ -41,24 +41,13 @@ void main() {
       }
     });
 
-    testWidgets('stage 4 (사신수)는 정적 도트 이미지 폴백', (tester) async {
+    testWidgets('stage 4 (성숙기)는 성장기 모션 프레임을 재활용해 렌더', (tester) async {
       await pump(
         tester,
         const PetMotionThumb(type: EvolutionType.tiger, stage: 4, size: 40),
       );
-      // 모션 데이터가 없으므로 PixelPetImage 경로
-      expect(find.byType(PixelPetImage), findsOneWidget);
+      expect(find.byType(PixelSpriteView), findsOneWidget);
       expect(find.text('?'), findsNothing);
-    });
-  });
-
-  group('PetMotionThumb.motionKey', () {
-    test('단계 → 스프라이트 키 매핑', () {
-      expect(PetMotionThumb.motionKey(null, 1), 'fluff');
-      expect(PetMotionThumb.motionKey(EvolutionType.snake, 2), 'dragon1');
-      expect(PetMotionThumb.motionKey(EvolutionType.tiger, 3), 'tiger2');
-      expect(PetMotionThumb.motionKey(EvolutionType.bird, 4), isNull);
-      expect(PetMotionThumb.motionKey(null, 2), isNull);
     });
   });
 }

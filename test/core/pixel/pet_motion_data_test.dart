@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pocketfriend/core/pixel/pet_motion_data.dart';
+import 'package:pocketfriend/domain/entities/evolution_type.dart';
 import 'package:pocketfriend/domain/entities/pet.dart';
 import 'package:pocketfriend/presentation/widgets/pixel_motion_animation.dart';
 
@@ -138,8 +139,19 @@ void main() {
       // 성장기(stage 3) 이미지도 모션 지원
       expect(motionSpriteKeyFromAssetPath('assets/dragon2.png'), 'dragon2');
       expect(motionSpriteKeyFromAssetPath('assets/turtle2.png'), 'turtle2');
-      // 신수(stage 4) 이미지는 모션 미지원
-      expect(motionSpriteKeyFromAssetPath('assets/dragon3.png'), isNull);
+      // 성숙기(stage 4) 이미지는 성장기 모션 재활용
+      expect(motionSpriteKeyFromAssetPath('assets/dragon3.png'), 'dragon2');
+      expect(motionSpriteKeyFromAssetPath('assets/bird3.png'), 'bird2');
+    });
+
+    test('진화 단계 → 모션 키 (성숙기는 성장기 모션 재활용)', () {
+      expect(motionSpriteKeyForStage(null, 1), 'fluff');
+      expect(motionSpriteKeyForStage(EvolutionType.snake, 2), 'dragon1');
+      expect(motionSpriteKeyForStage(EvolutionType.tiger, 3), 'tiger2');
+      expect(motionSpriteKeyForStage(EvolutionType.bird, 4), 'bird2');
+      expect(motionSpriteKeyForStage(EvolutionType.turtle, 4), 'turtle2');
+      // 종 미결정 상태의 미래 단계는 null
+      expect(motionSpriteKeyForStage(null, 2), isNull);
     });
   });
 }
