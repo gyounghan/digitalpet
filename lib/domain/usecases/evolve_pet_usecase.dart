@@ -81,12 +81,16 @@ class EvolvePetUseCase {
   /// 단순 카운트 비교는 종이 한쪽으로 쏠린다. 그래서 사용자가 실제로
   /// 다르게 행동하는 "원천 지표"를 정규화해 두 축으로 판정한다.
   ///
+  /// 두 축은 서로 독립적인 "원천 지표"만 사용한다(한 지표가 두 축에 겹치면
+  /// 대각선으로 종이 쏠리므로). 모든 지표는 누적값으로 통일한다(오늘값 혼용 금지).
+  ///
   /// 활발 ↔ 차분: 실제 움직임(걸음·운동) vs 정적 휴식(수면·idle)
   ///   moveScore = totalSteps/2000 + totalExerciseMinutes/10
   ///   restScore = sleepAchievedCount + totalIdleHours/6
-  /// 규칙 ↔ 자유: 규칙적 생활(수면 달성·연속 접속) vs 자유로운 식사(포만감·간편급식)
-  ///   regularScore = sleepAchievedCount + consecutiveLoginDays/2
-  ///   freeScore    = feedAchievedCount + todayAlternativeFeedCount
+  /// 규칙 ↔ 자유: 꾸준한 접속(연속 로그인) vs 자유로운 식사(급식 달성)
+  ///   regularScore = consecutiveLoginDays
+  ///   freeScore    = feedAchievedCount
+  ///   (수면은 위 차분 축에만 반영해 축을 독립시킴)
   ///
   /// 활발 && 규칙 → tiger (백호, 전투형)
   /// 활발 && 자유 → bird  (주작, 기동형)
@@ -99,10 +103,8 @@ class EvolvePetUseCase {
         pet.sleepAchievedCount.toDouble() + pet.totalIdleHours / 6.0;
     final isActive = moveScore >= restScore;
 
-    final regularScore =
-        pet.sleepAchievedCount.toDouble() + pet.consecutiveLoginDays / 2.0;
-    final freeScore = pet.feedAchievedCount.toDouble() +
-        pet.todayAlternativeFeedCount.toDouble();
+    final regularScore = pet.consecutiveLoginDays.toDouble();
+    final freeScore = pet.feedAchievedCount.toDouble();
     final isRegular = regularScore >= freeScore;
 
     if (isActive && isRegular) return EvolutionType.tiger;
