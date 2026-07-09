@@ -190,8 +190,14 @@ void main() {
 
     test('오늘 sync된 펫은 retroactive fetch 안 함 (이미 오늘 0시 이후)', () async {
       final petRepo = _FakePetRepository();
+      // "2시간 전"은 자정 직후 실행 시 어제로 넘어가 flaky —
+      // 오늘 0시 이후가 보장되도록 (2시간 전)과 (오늘 0시) 중 늦은 쪽을 쓴다
+      final now = DateTime.now();
+      final twoHoursAgo = now.subtract(const Duration(hours: 2));
+      final todayMidnight = DateTime(now.year, now.month, now.day);
       final today2hAgo =
-          DateTime.now().subtract(const Duration(hours: 2)).millisecondsSinceEpoch;
+          (twoHoursAgo.isAfter(todayMidnight) ? twoHoursAgo : todayMidnight)
+              .millisecondsSinceEpoch;
 
       final activityRepo = _RangeAwareActivityRepository(
         todayData: ActivityData(
