@@ -47,7 +47,8 @@ void main() {
       expect(SpeciesTheme.labelFor(EvolutionType.bird), '주작');
       expect(SpeciesTheme.labelFor(EvolutionType.turtle), '현무');
       expect(SpeciesTheme.labelFor(EvolutionType.snake), '청룡');
-      expect(SpeciesTheme.labelFor(null), '???');
+      // 종 미결정(털뭉치 단계)은 '???' 대신 '털뭉치'로 표기
+      expect(SpeciesTheme.labelFor(null), '털뭉치');
     });
   });
 }

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/pet_provider.dart';
 import '../widgets/app_design.dart';
+import '../widgets/pet_motion_thumb.dart';
 import '../widgets/pixel_pet_image.dart';
 import '../widgets/pixel_motion_animation.dart';
 import '../../core/theme/species_theme.dart';
@@ -306,7 +307,6 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
     final myAtk = (pet.battleAtk * _battleStyle.attackMultiplier).round();
     final myDef = (pet.battleDef * _battleStyle.defenseMultiplier).round();
     final myHp = pet.battleHp as int;
-    final imagePath = getEvolutionImagePath(pet.evolutionType, pet.evolutionStage);
 
     return AppCard(
       theme: theme,
@@ -339,19 +339,16 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
                 width: 80,
                 height: 80,
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.15),
+                  // 밝은 배경 위에 실제 테마색 도트 모션 프레임을 그린다
+                  color: Colors.white.withValues(alpha: 0.92),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 alignment: Alignment.center,
-                child: imagePath != null
-                    // 컬러 그라데이션 배경 위라 흰 몸통 도트가 잘 보인다
-                    ? PixelPetImage(
-                        assetPath: imagePath,
-                        width: 60,
-                        height: 60,
-                        dotColor: Colors.white.withValues(alpha: 0.95),
-                      )
-                    : const Icon(Icons.pets, size: 40, color: Colors.white),
+                child: PetMotionThumb(
+                  type: pet.evolutionType,
+                  stage: pet.evolutionStage,
+                  size: 62,
+                ),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -490,7 +487,6 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
             label: 'AI 대전',
             icon: Icons.smart_toy,
             theme: theme,
-            primary: true,
             onTap: _startBattle,
           ),
         ),

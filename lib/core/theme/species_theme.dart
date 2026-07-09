@@ -116,14 +116,14 @@ class SpeciesTheme {
     };
   }
 
-  /// 종 이름 (한국어)
+  /// 종 이름 (한국어) — 종 미결정(털뭉치 단계)은 '털뭉치'
   static String labelFor(EvolutionType? type) {
     return switch (type) {
       EvolutionType.tiger => '백호',
       EvolutionType.bird => '주작',
       EvolutionType.turtle => '현무',
       EvolutionType.snake => '청룡',
-      null => '???',
+      null => '털뭉치',
     };
   }
 }

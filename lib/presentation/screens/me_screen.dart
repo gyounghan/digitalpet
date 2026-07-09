@@ -3,11 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/pet_provider.dart';
 import '../widgets/app_design.dart';
-import '../widgets/pixel_pet_image.dart';
-import '../widgets/pixel_motion_animation.dart';
+import '../widgets/pet_motion_thumb.dart';
 import '../../core/theme/species_theme.dart';
 import '../../core/constants/app_strings.dart';
-import '../../core/utils/pet_image_helper.dart';
 import '../../data/services/ad_service.dart';
 import '../../domain/entities/pet.dart';
 import '../../domain/entities/evolution_type.dart';
@@ -270,7 +268,6 @@ class _MeScreenState extends ConsumerState<MeScreen> {
     final stage = pet.evolutionStage;
     final requiredLevel = _requiredLevelForStage(stage);
     final stageName = _stageName(pet.evolutionType, stage, pet.evolutionGrade);
-    final imagePath = getEvolutionImagePath(pet.evolutionType, stage);
     // 진화율: 다음 단계까지 레벨 진행도 (현재 stage가 최종이면 100%)
     final evoPct = stage >= 4
         ? 100
@@ -295,19 +292,16 @@ class _MeScreenState extends ConsumerState<MeScreen> {
                 width: 96,
                 height: 96,
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.16),
+                  // 밝은 배경 위에 실제 테마색 도트 모션 프레임을 그린다
+                  color: Colors.white.withValues(alpha: 0.92),
                   borderRadius: BorderRadius.circular(18),
                 ),
                 alignment: Alignment.center,
-                child: imagePath != null
-                    // 컬러 그라데이션 배경 위라 흰 몸통 도트가 잘 보인다
-                    ? PixelPetImage(
-                        assetPath: imagePath,
-                        width: 78,
-                        height: 78,
-                        dotColor: Colors.white.withValues(alpha: 0.95),
-                      )
-                    : const Icon(Icons.pets, size: 44, color: Colors.white),
+                child: PetMotionThumb(
+                  type: pet.evolutionType,
+                  stage: stage,
+                  size: 78,
+                ),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -662,7 +656,8 @@ class _MeScreenState extends ConsumerState<MeScreen> {
                   : Border.all(color: DesignTokens.line, width: 1),
             ),
             alignment: Alignment.center,
-            child: _treeSprite(type, stage, theme),
+            // 종 미결정(털뭉치) 상태의 미래 단계는 '?'로 표시
+            child: PetMotionThumb(type: type, stage: stage, size: 40),
           ),
           const SizedBox(height: 4),
           Text(
@@ -676,48 +671,6 @@ class _MeScreenState extends ConsumerState<MeScreen> {
         ],
       ),
     );
-  }
-
-  /// 진화 트리 노드 스프라이트 — 우리가 만든 도트 모션(털뭉치·유아기·성장기)의
-  /// 대표 프레임을 렌더한다. 모션이 없는 단계(사신수)·종 미결정은 정적 이미지로 폴백.
-  Widget _treeSprite(EvolutionType? type, int stage, SpeciesTheme theme) {
-    final key = _treeMotionKey(type, stage);
-    if (key != null) {
-      final frames = motionFramesFor(key, PixelMotion.walk);
-      if (frames != null && frames.isNotEmpty) {
-        final isFluff = key == 'fluff';
-        return PixelSpriteView(
-          sprite: frames.first,
-          width: 40,
-          height: 40,
-          dotColor: isFluff ? SpeciesTheme.fluffBody : theme.primary,
-          accentColor:
-              isFluff ? SpeciesTheme.fluffAccent : theme.spriteAccent,
-        );
-      }
-    }
-    final imagePath = getEvolutionImagePath(type, stage);
-    if (imagePath != null) {
-      return PixelPetImage(
-        assetPath: imagePath,
-        width: 40,
-        height: 40,
-        dotColor: theme.primary,
-        accentColor: theme.spriteAccent,
-      );
-    }
-    return const Text('?',
-        style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800));
-  }
-
-  /// 진화 단계 → 도트 모션 스프라이트 키 (홈 _motionSpriteKey와 동일).
-  String? _treeMotionKey(EvolutionType? type, int stage) {
-    if (stage == 1) return 'fluff';
-    final species = evolutionSpeciesImagePrefix(type);
-    if (species != null && (stage == 2 || stage == 3)) {
-      return '$species${stage - 1}';
-    }
-    return null;
   }
 
   Widget _dashedConnector() {
