@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../core/pixel/pet_motion_data.dart';
 import '../../core/pixel/pet_pixel_data.dart';
 import '../../core/utils/pet_image_helper.dart';
+import '../../core/theme/species_theme.dart';
 import '../../domain/entities/evolution_type.dart';
 import '../../domain/entities/pet.dart';
 import 'pixel_pet_image.dart';
@@ -55,14 +56,33 @@ List<PixelSprite>? motionFramesFor(String spriteKey, PixelMotion motion) {
 /// - stage 1 (털뭉치)  → 'fluff' (40)
 /// - stage 2 (유아기)  → '{종}1' (32)
 /// - stage 3 (성장기)  → '{종}2' (36)
-/// - stage 4 (성숙기)  → '{종}3' (48 — 전용 도트 모션)
+/// - stage 4 (성숙기)  → 사신수(mythical) '{종}3' / 일반종 '{종}3n' (56)
 /// - 종 미결정 stage 2+ → null
-String? motionSpriteKeyForStage(EvolutionType? type, int stage) {
+String? motionSpriteKeyForStage(EvolutionType? type, int stage,
+    [String grade = '']) {
   if (stage <= 1) return 'fluff';
   final species = evolutionSpeciesImagePrefix(type);
   if (species == null) return null;
-  if (stage >= 2 && stage <= 4) return '$species${stage - 1}';
+  // 성숙기(stage 4)는 등급으로 분기: 사신수 '{종}3' vs 일반종 '{종}3n'
+  if (stage == 4) return grade == 'mythical' ? '${species}3' : '${species}3n';
+  if (stage >= 2 && stage <= 3) return '$species${stage - 1}';
   return null;
+}
+
+/// 스프라이트 키가 일반종(normal 성숙기, '{종}3n')인지 — 자연색 렌더 판정용.
+bool isNaturalMatureKey(String? spriteKey) =>
+    spriteKey != null && spriteKey.endsWith('3n');
+
+/// 도트 스프라이트 (몸통색, 보조색) — 털뭉치=베이지, 일반종=자연색, 그 외=테마색.
+(Color, Color) dotColorsForKey(
+    String? spriteKey, EvolutionType? type, SpeciesTheme theme) {
+  if (spriteKey == 'fluff') {
+    return (SpeciesTheme.fluffBody, SpeciesTheme.fluffAccent);
+  }
+  if (isNaturalMatureKey(spriteKey)) {
+    return SpeciesTheme.naturalDotColors(type);
+  }
+  return (theme.primary, theme.spriteAccent);
 }
 
 /// 에셋 경로에 모션 데이터가 있으면 스프라이트 키 반환

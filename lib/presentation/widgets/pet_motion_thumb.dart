@@ -16,11 +16,15 @@ class PetMotionThumb extends StatelessWidget {
   final int stage;
   final double size;
 
+  /// 진화 등급 — 성숙기 사신수('mythical')/일반종 분기용 (기본: 일반종)
+  final String grade;
+
   const PetMotionThumb({
     super.key,
     required this.type,
     required this.stage,
     required this.size,
+    this.grade = '',
   });
 
   @override
@@ -44,18 +48,17 @@ class PetMotionThumb extends StatelessWidget {
     }
 
     final theme = SpeciesTheme.forType(type);
-    final key = motionSpriteKeyForStage(type, stage);
+    final key = motionSpriteKeyForStage(type, stage, grade);
     if (key != null) {
       final frames = motionFramesFor(key, PixelMotion.walk);
       if (frames != null && frames.isNotEmpty) {
-        final isFluff = key == 'fluff';
+        final (dotColor, accentColor) = dotColorsForKey(key, type, theme);
         return PixelSpriteView(
           sprite: frames.first,
           width: size,
           height: size,
-          dotColor: isFluff ? SpeciesTheme.fluffBody : theme.primary,
-          accentColor:
-              isFluff ? SpeciesTheme.fluffAccent : theme.spriteAccent,
+          dotColor: dotColor,
+          accentColor: accentColor,
         );
       }
     }

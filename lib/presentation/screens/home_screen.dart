@@ -270,9 +270,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  /// 도트 모션 스프라이트 키 (공통 규칙 — 성숙기 포함 전 단계 모션)
-  String? _motionSpriteKey(Pet pet) =>
-      motionSpriteKeyForStage(pet.evolutionType, pet.evolutionStage);
+  /// 도트 모션 스프라이트 키 (공통 규칙 — 성숙기 등급 분기 포함)
+  String? _motionSpriteKey(Pet pet) => motionSpriteKeyForStage(
+      pet.evolutionType, pet.evolutionStage, pet.evolutionGrade);
 
   /// 펫 스테이지 스프라이트
   ///
@@ -281,8 +281,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final spriteKey = _motionSpriteKey(pet);
     if (spriteKey != null) {
       final motion = _transientMotion ?? motionForMood(pet.mood);
-      // 털뭉치는 종 미결정 → 밝은 베이지 단색
-      final isFluff = spriteKey == 'fluff';
+      // 털뭉치=베이지, 일반종=자연색, 사신수/그 외=테마색
+      final (dotColor, accentColor) =
+          dotColorsForKey(spriteKey, pet.evolutionType, theme);
       return SizedBox(
         width: 300,
         height: 300,
@@ -293,9 +294,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             motion: motion,
             width: 270,
             height: 270,
-            dotColor: isFluff ? SpeciesTheme.fluffBody : theme.primary,
-            accentColor:
-                isFluff ? SpeciesTheme.fluffAccent : theme.spriteAccent,
+            dotColor: dotColor,
+            accentColor: accentColor,
           ),
         ),
       );

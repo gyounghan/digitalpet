@@ -112,7 +112,11 @@ class _MeScreenState extends ConsumerState<MeScreen> {
       final g = grade.isNotEmpty ? grade : 'normal';
       return AppStrings.stage3Names[typeName]?[g] ?? '???';
     }
-    if (stage >= 4) return AppStrings.stage4Names[typeName] ?? '???';
+    if (stage >= 4) {
+      // 성숙기: 사신수(mythical) vs 일반종(그 외)
+      final g = grade == 'mythical' ? 'mythical' : 'normal';
+      return AppStrings.stage4Names[typeName]?[g] ?? '???';
+    }
     return '???';
   }
 
@@ -300,6 +304,7 @@ class _MeScreenState extends ConsumerState<MeScreen> {
                 child: PetMotionThumb(
                   type: pet.evolutionType,
                   stage: stage,
+                  grade: pet.evolutionGrade,
                   size: 78,
                 ),
               ),
@@ -620,6 +625,7 @@ class _MeScreenState extends ConsumerState<MeScreen> {
               for (var i = 0; i < stages.length; i++) ...[
                 _evoTreeNode(pet.evolutionType, stages[i].$1, stages[i].$2,
                     theme,
+                    grade: pet.evolutionGrade,
                     passed: pet.evolutionStage >= stages[i].$1,
                     current: pet.evolutionStage == stages[i].$1),
                 if (i < stages.length - 1) _dashedConnector(),
@@ -639,6 +645,7 @@ class _MeScreenState extends ConsumerState<MeScreen> {
     SpeciesTheme theme, {
     required bool passed,
     required bool current,
+    String grade = '',
   }) {
     return Opacity(
       opacity: passed ? 1.0 : 0.35,
@@ -657,7 +664,8 @@ class _MeScreenState extends ConsumerState<MeScreen> {
             ),
             alignment: Alignment.center,
             // 종 미결정(털뭉치) 상태의 미래 단계는 '?'로 표시
-            child: PetMotionThumb(type: type, stage: stage, size: 40),
+            child: PetMotionThumb(
+                type: type, stage: stage, grade: grade, size: 40),
           ),
           const SizedBox(height: 4),
           Text(

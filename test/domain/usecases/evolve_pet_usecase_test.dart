@@ -353,7 +353,7 @@ void main() {
   });
 
   group('EvolvePetUseCase - Stage 4 mythical 승격', () {
-    test('normal 등급은 4단계 승격 불가', () async {
+    test('normal 등급은 4단계에서 사신수가 아닌 일반종(normal)이 된다', () async {
       final pet = _createPet(
         level: 15,
         evolutionStage: 3,
@@ -365,8 +365,8 @@ void main() {
       repository.setPet(pet);
 
       final result = await useCase('test-pet');
-      expect(result.evolutionStage, 3);
-      expect(result.evolutionGrade, 'normal');
+      expect(result.evolutionStage, 4); // 성숙기 도달
+      expect(result.evolutionGrade, 'normal'); // 사신수 아님 = 일반종
     });
 
     test('bird superior + steps>=300000 + victories>=30 → mythical', () async {
@@ -490,14 +490,14 @@ void main() {
       expect(useCase.canEvolve(pet), true);
     });
 
-    test('Lv15 + stage3 + normal → 4단계 진화 불가', () {
+    test('Lv15 + stage3 + normal → 일반종 성숙기로 진화 가능', () {
       final pet = _createPet(
         level: 15,
         evolutionStage: 3,
         evolutionType: EvolutionType.bird,
         evolutionGrade: 'normal',
       );
-      expect(useCase.canEvolve(pet), false);
+      expect(useCase.canEvolve(pet), true);
     });
 
     test('Lv15 + stage3 + superior + 조건 충족 → 4단계 진화 가능', () {

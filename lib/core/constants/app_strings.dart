@@ -47,8 +47,12 @@ class AppStrings {
     'tiger': {'normal': '호랑이', 'superior': '맹호'},
     'turtle': {'normal': '바다거북', 'superior': '영귀'},
   };
-  static const Map<String, String> stage4Names = {
-    'bird': '주작 \u{1F525}', 'snake': '청룡 \u{1F409}', 'tiger': '백호 \u{26A1}', 'turtle': '현무 \u{1F30A}',
+  // 성숙기: 잘 키우면 사신수(mythical), 아니면 그냥 동물(normal)
+  static const Map<String, Map<String, String>> stage4Names = {
+    'bird': {'normal': '수리', 'mythical': '주작 \u{1F525}'},
+    'snake': {'normal': '구렁이', 'mythical': '청룡 \u{1F409}'},
+    'tiger': {'normal': '호랑이', 'mythical': '백호 \u{26A1}'},
+    'turtle': {'normal': '왕거북', 'mythical': '현무 \u{1F30A}'},
   };
 
   // 대결

@@ -347,6 +347,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
                 child: PetMotionThumb(
                   type: pet.evolutionType,
                   stage: pet.evolutionStage,
+                  grade: pet.evolutionGrade,
                   size: 62,
                 ),
               ),

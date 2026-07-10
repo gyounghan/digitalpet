@@ -147,12 +147,16 @@ void main() {
       expect(motionSpriteKeyFromAssetPath('assets/bird3.png'), 'bird3');
     });
 
-    test('진화 단계 → 모션 키 (성숙기 전용 56 도트)', () {
+    test('진화 단계 → 모션 키 (성숙기 등급 분기: 사신수 vs 일반종)', () {
       expect(motionSpriteKeyForStage(null, 1), 'fluff');
       expect(motionSpriteKeyForStage(EvolutionType.snake, 2), 'dragon1');
       expect(motionSpriteKeyForStage(EvolutionType.tiger, 3), 'tiger2');
-      expect(motionSpriteKeyForStage(EvolutionType.bird, 4), 'bird3');
-      expect(motionSpriteKeyForStage(EvolutionType.turtle, 4), 'turtle3');
+      // 성숙기: mythical → 사신수 '{종}3', 그 외 → 일반종 '{종}3n'
+      expect(motionSpriteKeyForStage(EvolutionType.bird, 4, 'mythical'), 'bird3');
+      expect(motionSpriteKeyForStage(EvolutionType.bird, 4, 'normal'), 'bird3n');
+      expect(motionSpriteKeyForStage(EvolutionType.turtle, 4), 'turtle3n'); // 기본 일반종
+      expect(isNaturalMatureKey('bird3n'), isTrue);
+      expect(isNaturalMatureKey('bird3'), isFalse);
       // 종 미결정 상태의 미래 단계는 null
       expect(motionSpriteKeyForStage(null, 2), isNull);
     });

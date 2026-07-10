@@ -37,11 +37,17 @@ class EvolvePetUseCase {
     EvolutionType? newType = pet.evolutionType;
     String newGrade = pet.evolutionGrade;
 
-    // 4단계: Lv15 + superior만 mythical 가능
+    // 4단계(성숙기): Lv15에서 등급으로 최종 형태 분기.
+    // - superior + 신수 조건 충족 → 사신수(mythical)
+    // - normal → 그냥 동물(일반종). 잘 못 키우면 사신수가 아닌 일반종이 된다.
+    // - superior인데 신수 조건 미달 → 성장기 유지(계속 도전)
     if (pet.level >= 15 && newStage < 4 && newStage >= 3) {
       if (pet.evolutionGrade == 'superior' && _meetsStage4Condition(pet)) {
         newStage = 4;
         newGrade = 'mythical';
+      } else if (pet.evolutionGrade == 'normal') {
+        newStage = 4;
+        newGrade = 'normal';
       }
     }
     // 3단계: Lv10 + 종별 조건 → normal / superior
@@ -186,8 +192,9 @@ class EvolvePetUseCase {
   bool canEvolve(Pet pet) {
     if (pet.isDead) return false;
 
-    // 4단계 승격 가능?
+    // 4단계(성숙기) 진화 가능? normal은 항상 일반종으로, superior는 신수 조건 충족 시.
     if (pet.level >= 15 && pet.evolutionStage < 4 && pet.evolutionStage >= 3) {
+      if (pet.evolutionGrade == 'normal') return true;
       return pet.evolutionGrade == 'superior' && _meetsStage4Condition(pet);
     }
     // 3단계 진화 가능?

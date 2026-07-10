@@ -105,6 +105,22 @@ class SpeciesTheme {
   /// 털뭉치(stage 1) 보조색 — 볼터치·귀 안쪽 연분홍 (귀여움 강조)
   static const Color fluffAccent = Color(0xFFF2A0AE);
 
+  /// 일반종(normal 성숙기) 도트 색 — (몸통, 보조색). 사신수 대신 '그냥 동물'
+  /// 자연색으로 렌더해 사신수(테마 primary)와 형태·색 모두 구분한다.
+  static (Color, Color) naturalDotColors(EvolutionType? type) {
+    return switch (type) {
+      EvolutionType.tiger =>
+        (Color(0xFFE0913F), Color(0xFFF3E4C8)), // 주황 호랑이 + 크림 배
+      EvolutionType.bird =>
+        (Color(0xFF9A7B4E), Color(0xFFD8C39A)), // 갈색 새 + 탄
+      EvolutionType.snake =>
+        (Color(0xFF5E9B49), Color(0xFFE7DFBF)), // 초록 뱀 + 크림
+      EvolutionType.turtle =>
+        (Color(0xFF6E8F52), Color(0xFF9C7A4C)), // 올리브 거북 + 갈색 등딱지
+      null => (defaultTheme.primary, defaultTheme.spriteAccent),
+    };
+  }
+
   /// 진화 타입으로 테마 조회
   static SpeciesTheme forType(EvolutionType? type) {
     return switch (type) {
