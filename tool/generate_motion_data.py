@@ -376,9 +376,14 @@ def draw_eye(g, rect, style, group_cx=None, frontal=True):
                 put(g, ex + cx, ey + cy, "o")
             put(g, ex + 1, ey + 1, "o")
             put(g, ex + 2, ey + 1, "o")
-    elif style == "closed":  # 감은 눈 — 아래쪽 가로선
-        for dx in range(pw):
-            put(g, ex + dx, ey + ph - 1, "#")
+    elif style == "closed":  # 감은 눈 — 가운데 가로 실선 '-' (모든 캐릭터 공통)
+        lw = max(pw, 3)
+        lx = ex - (lw - pw) // 2
+        ly = ey + ph // 2
+        halo = 2 if min(pw, ph) <= 2 else 1
+        _clear_eye_box(g, lx, ly - 1, lw, 3, halo=halo)
+        for dx in range(lw):
+            put(g, lx + dx, ly, "#")
     elif style == "happy":  # ^ 웃는 눈 (위로 볼록, 굵게)
         mid = (pw - 1) / 2.0
         for dx in range(pw):
@@ -815,12 +820,12 @@ SPECIES_ART = {
             "....#ooooooooooooooooo#o................................",
             "....oooooooooooooooooooo................................",
             "....#oooooooooooooooooo#................................",
-            "....#oooooooooooooooooo#................................",
-            "....#o##ooooooo###ooooo#................................",
-            "....#o#oooooooo#o#ooooo#o...............................",
-            "...#oo##ooooooo###ooooooo#..............................",
-            "...#oo##oooooooo##ooooooo#..............................",
-            "...##ooooooooooooooo#ooo#o..............................",
+            "....ooooooooooooooooooo#................................",
+            "....ooooooooooooooooooo#................................",
+            "....ooooooooooooooooooo#o...............................",
+            "...#ooooooooooooooooooooo#..............................",
+            "...#ooooooooooooooooooooo#..............................",
+            "...#oooooooooooooooo#ooo#o..............................",
             "..#oo#oooo#oooooooooooooo#..............................",
             "...#ooooo###oooooooooooo#o..............................",
             "...ooooooooooooooooooooo#.......######..................",
@@ -853,7 +858,7 @@ SPECIES_ART = {
             "........................................................",
             "........................................................",
         ],
-        "eyes": [(5, 20, 2, 4), (14, 20, 3, 4)],
+        "eyes": [(4, 20, 3, 3), (14, 20, 3, 3)],
         "mouth": (9, 25),
     },
     # 성숙기 주작 — 원본 bird3.png 덤프(52×44) · 활짝 편 양 날개, 볏, 불꽃 꼬리
@@ -879,9 +884,9 @@ SPECIES_ART = {
             "..##ooooooo##o##..........oo...........#o##oooooooo#o...",
             "...o#oooooo##oo#.........#ooooo.......##oo##oooooo###...",
             "..####ooooo#ooo##......##oooooo.......#oo##oooooo##o##..",
-            "..#oooooooo##oo##......oo##oo#ooo....#oo##oooooooooo#o..",
-            "...#oooooo#o##o##.....####oo#ooo#....#oo#oo#ooooooo#o...",
-            "....#ooooo#ooooo#.....###oo#o##o.....#oooo##oooooo#o....",
+            "..#oooooooo##oo##......oo#ooooooo....#oo##oooooooooo#o..",
+            "...#oooooo#o##o##.....####oooooo#....#oo#oo#ooooooo#o...",
+            "....#ooooo#ooooo#.....###ooooooo.....#oooo##oooooo#o....",
             "....##oooooooooo##...#oooo####oo.....#ooo##oooooo####...",
             "...####oooo###oo##..##ooooooo####...#ooo####oooooooo#...",
             "...##oooooo#oooo##..##ooooooo###o...#ooooo#oooooooo#....",
@@ -916,7 +921,7 @@ SPECIES_ART = {
             "........................................................",
             "........................................................",
         ],
-        "eyes": [(28, 20, 2, 2)],
+        "eyes": [(27, 19, 3, 3)],
         "mouth": (22, 22),
         "wings": [(2, 9, 18, 32, "right"), (36, 9, 53, 36, "left")],
     },
@@ -1001,10 +1006,10 @@ SPECIES_ART = {
             ".................#o#oo#o#o##ooo#........................",
             ".................#oooo##oo#ooo#o#.......................",
             "..................#oo####ooo##o#####....................",
-            ".................##oooo#ooo#ooo#ooo#....................",
+            ".................##oooooooo#ooo#ooo#....................",
             ".................##ooooooo#ooo#ooo##....................",
-            "................o#oooo##o#oo##ooo####...................",
-            "................ooooooo##oooooo##oooo#..................",
+            "................o#oooooooooo##ooo####...................",
+            "................ooooooooooooooo##oooo#..................",
             "...............#oooooooooooooo#ooooo#...................",
             "...............#oooooooooooooo..ooo##...................",
             "...............#ooooooo#oooo..ooooo#....................",
@@ -1190,11 +1195,14 @@ def lying_pose(key, factor):
     g = grid(meta["body"])
     _, _, _, y1 = bbox(g)
     squashed = squash_art(g, factor)
-    # 눌린 좌표계에서 감은 눈 다시 그림
+    # 눌린 좌표계에서 감은 눈 '-' 다시 그림 (주변 정리로 노이즈에 안 묻히게)
     for x, y, w, h in meta["eyes"]:
         ny = y1 - int(round((y1 - (y + h - 1)) * factor))
-        for dx in range(w):
-            put(squashed, x + dx, ny, "#")
+        lw = max(w, 3)
+        lx = x - (lw - w) // 2
+        _clear_eye_box(squashed, lx, ny - 1, lw, 3, halo=1)
+        for dx in range(lw):
+            put(squashed, lx + dx, ny, "#")
     return squashed
 
 
