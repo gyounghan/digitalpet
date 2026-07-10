@@ -11,6 +11,7 @@ import '../../data/services/ad_service.dart';
 import '../../domain/entities/pet.dart';
 import '../../domain/entities/evolution_type.dart';
 import 'debug_pixel_gallery_screen.dart';
+import 'debug_cheat_screen.dart';
 import 'home_screen.dart';
 
 /// 도감 화면 — 펫 프로필 + 전투 스탯 + 진화율 + 누적 통계 + 진화 트리
@@ -211,6 +212,7 @@ class _MeScreenState extends ConsumerState<MeScreen> {
               if (kDebugMode) ...[
                 const SizedBox(height: 8),
                 _buildDebugGalleryButton(),
+                _buildDebugCheatButton(),
               ],
             ],
           ),
@@ -263,6 +265,25 @@ class _MeScreenState extends ConsumerState<MeScreen> {
         },
         icon: const Icon(Icons.grid_on, size: 16),
         label: const Text('픽셀 갤러리 (디버그)'),
+        style: TextButton.styleFrom(foregroundColor: DesignTokens.ink3),
+      ),
+    );
+  }
+
+  /// [디버그 전용] 시나리오 치트 패널 진입 버튼 — 릴리스 전 화면과 함께 삭제
+  Widget _buildDebugCheatButton() {
+    return SizedBox(
+      width: double.infinity,
+      child: TextButton.icon(
+        onPressed: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => const DebugCheatScreen(),
+            ),
+          );
+        },
+        icon: const Icon(Icons.tune, size: 16),
+        label: const Text('치트 패널 (디버그)'),
         style: TextButton.styleFrom(foregroundColor: DesignTokens.ink3),
       ),
     );

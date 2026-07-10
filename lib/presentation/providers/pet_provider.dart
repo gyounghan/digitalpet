@@ -648,8 +648,37 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
   }
 
 
+  /// [디버그 전용] 임의의 Pet 상태를 즉시 주입해 렌더한다 (시나리오 점검용).
+  ///
+  /// [runEvolution]이 true면 주입 상태에서 진화 유스케이스를 안정될 때까지
+  /// 반복 실행해, 주입한 레벨·누적 카운터가 실제로 어떤 단계·등급·종을 만드는지
+  /// 눈으로 확인할 수 있게 한다(진화 게이팅 로직 시각 검증). false면 주입한
+  /// 값을 그대로 렌더한다(모든 스프라이트·색·mood 조합 직접 확인).
+  /// 릴리스 빌드에서는 호출되지 않는다(kDebugMode 진입 버튼 뒤에만 존재).
+  Future<Pet> debugApplyPet(Pet pet, {bool runEvolution = false}) async {
+    await repository.updatePet(pet);
+    var result = pet;
+    if (runEvolution) {
+      for (int i = 0; i < 5; i++) {
+        final next = await evolvePetUseCase(petId);
+        final stable = next.evolutionStage == result.evolutionStage &&
+            next.evolutionGrade == result.evolutionGrade &&
+            next.evolutionType == result.evolutionType;
+        result = next;
+        if (stable) break;
+      }
+    }
+    try {
+      await widgetService.updatePetWidget(result);
+    } catch (_) {
+      // 위젯 미설치 시 무시
+    }
+    state = AsyncValue.data(result);
+    return result;
+  }
+
   /// 먹이 주기
-  /// 
+  ///
   /// Feed 버튼 클릭 시 호출
   /// 상태 변경 후 자동으로 진화 체크 수행
   Future<void> feed() async {
