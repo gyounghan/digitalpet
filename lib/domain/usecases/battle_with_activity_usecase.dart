@@ -164,8 +164,8 @@ class BattleWithActivityUseCase {
       if (playerAtkDebuffTurns > 0) { playerAtkDebuffTurns--; } else { playerAtk = playerStats.attack; }
       if (opponentDefDebuffTurns > 0) { opponentDefDebuffTurns--; } else { opponentDef = opponentStats.defense; }
       if (opponentAtkDebuffTurns > 0) { opponentAtkDebuffTurns--; } else { opponentAtk = opponentStats.attack; }
-      if (playerDmgReductionTurns > 0) { playerDmgReductionTurns--; } else { playerDmgReduction = 0.0; }
-      if (opponentDmgReductionTurns > 0) { opponentDmgReductionTurns--; } else { opponentDmgReduction = 0.0; }
+      // 피해감소(방어자세)는 턴 타이머가 아니라 "다음 N회 피격 방어" 충전으로 관리한다.
+      // → 시전자(플레이어/AI)·턴 순서와 무관하게 정확히 reductionDuration회만 적용.
 
       // 플레이어 스킬 선택 (AI: 쿨타임 끝나면 특수기 우선)
       final playerSkill = _selectSkill(playerSkills, playerSpecialCooldown);
@@ -175,7 +175,11 @@ class BattleWithActivityUseCase {
       // 플레이어 공격
       var rawDamage = (playerAtk * playerSkill.damageMultiplier - opponentDef ~/ 2 + random.nextInt(5) - 2).round();
       rawDamage = (rawDamage * affinityMultiplier).round();
-      if (opponentDmgReduction > 0) rawDamage = (rawDamage * (1.0 - opponentDmgReduction)).round();
+      final oppShield =
+          applyDamageShield(rawDamage, opponentDmgReduction, opponentDmgReductionTurns);
+      rawDamage = oppShield.damage;
+      opponentDmgReduction = oppShield.reduction;
+      opponentDmgReductionTurns = oppShield.charges;
       final playerDamage = max(1, rawDamage);
       opponentHp = max(0, opponentHp - playerDamage);
 
@@ -203,7 +207,11 @@ class BattleWithActivityUseCase {
       if (opponentHp > 0) {
         var rawOppDmg = (opponentAtk * opponentSkill.damageMultiplier - playerDef ~/ 2 + random.nextInt(5) - 2).round();
         rawOppDmg = (rawOppDmg * opponentAffinityMultiplier).round();
-        if (playerDmgReduction > 0) rawOppDmg = (rawOppDmg * (1.0 - playerDmgReduction)).round();
+        final playerShield =
+            applyDamageShield(rawOppDmg, playerDmgReduction, playerDmgReductionTurns);
+        rawOppDmg = playerShield.damage;
+        playerDmgReduction = playerShield.reduction;
+        playerDmgReductionTurns = playerShield.charges;
         opponentDamage = max(1, rawOppDmg);
         playerHp = max(0, playerHp - opponentDamage);
 
@@ -312,6 +320,26 @@ class BattleWithActivityUseCase {
     return 1.0;
   }
 
+  /// 방어자세 등 피해감소 "충전"을 1회 적용한다.
+  ///
+  /// 남은 충전([charges])이 있으면 [rawDamage]를 [reduction]만큼 깎고 충전을 1 소모한다.
+  /// 충전이 없거나 감소율이 0이면 원본을 그대로 통과시키고 감소를 0으로 만료한다.
+  /// 턴 타이머가 아니라 "다음 N회 피격 방어"라서 시전자·턴 순서와 무관하게
+  /// 정확히 reductionDuration회만 적용된다.
+  static DamageShieldResult applyDamageShield(
+      int rawDamage, double reduction, int charges) {
+    if (reduction <= 0 || charges <= 0) {
+      return DamageShieldResult(damage: rawDamage, reduction: 0.0, charges: 0);
+    }
+    final reduced = (rawDamage * (1.0 - reduction)).round();
+    final remaining = charges - 1;
+    return DamageShieldResult(
+      damage: reduced,
+      reduction: remaining > 0 ? reduction : 0.0,
+      charges: remaining,
+    );
+  }
+
   BattleSkill _selectSkill(List<BattleSkill> skills, int currentCooldown) {
     if (skills.length > 1 && currentCooldown <= 0) {
       return skills[1]; // 특수기
@@ -346,6 +374,24 @@ class BattleStats {
 
   BattleStats({required this.attack, required this.defense, required this.hp});
   factory BattleStats.zero() => BattleStats(attack: 0, defense: 0, hp: 0);
+}
+
+/// 피해감소 충전 1회 적용 결과 (방어자세)
+class DamageShieldResult {
+  /// 감소가 적용된(또는 그대로 통과한) 피해량
+  final int damage;
+
+  /// 다음 피격에도 유효한 감소율 — 충전 소진 시 0.0
+  final double reduction;
+
+  /// 남은 방어 충전 수 — 소진 시 0
+  final int charges;
+
+  const DamageShieldResult({
+    required this.damage,
+    required this.reduction,
+    required this.charges,
+  });
 }
 
 /// 배틀 턴 결과

@@ -74,4 +74,47 @@ void main() {
       );
     });
   });
+
+  group('BattleWithActivityUseCase.applyDamageShield (방어자세)', () {
+    test('충전이 있으면 피해를 감소율만큼 깎고 충전 1 소모', () {
+      final r = BattleWithActivityUseCase.applyDamageShield(100, 0.5, 1);
+      expect(r.damage, 50);
+      expect(r.charges, 0);
+      expect(r.reduction, 0.0); // 마지막 충전 소진 → 만료
+    });
+
+    test('reductionDuration만큼만 정확히 방어 — 1충전이면 딱 1회 피격 방어', () {
+      // 시전 시 충전 1. 첫 피격에서 소모돼 만료됨.
+      var reduction = 0.5;
+      var charges = 1;
+      final hit1 = BattleWithActivityUseCase.applyDamageShield(80, reduction, charges);
+      expect(hit1.damage, 40); // 1회차 감소
+      reduction = hit1.reduction;
+      charges = hit1.charges;
+
+      final hit2 = BattleWithActivityUseCase.applyDamageShield(80, reduction, charges);
+      expect(hit2.damage, 80); // 2회차는 방어 없음 (충전 소진)
+      expect(hit2.charges, 0);
+    });
+
+    test('2충전이면 연속 2회 피격 방어 후 만료', () {
+      final h1 = BattleWithActivityUseCase.applyDamageShield(100, 0.5, 2);
+      expect(h1.damage, 50);
+      expect(h1.charges, 1);
+      expect(h1.reduction, 0.5); // 아직 남음
+
+      final h2 = BattleWithActivityUseCase.applyDamageShield(100, h1.reduction, h1.charges);
+      expect(h2.damage, 50);
+      expect(h2.charges, 0);
+      expect(h2.reduction, 0.0); // 만료
+
+      final h3 = BattleWithActivityUseCase.applyDamageShield(100, h2.reduction, h2.charges);
+      expect(h3.damage, 100); // 방어 없음
+    });
+
+    test('충전 없거나 감소율 0이면 원본 피해 그대로 통과', () {
+      expect(BattleWithActivityUseCase.applyDamageShield(70, 0.5, 0).damage, 70);
+      expect(BattleWithActivityUseCase.applyDamageShield(70, 0.0, 3).damage, 70);
+    });
+  });
 }
