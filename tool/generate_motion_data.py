@@ -339,12 +339,16 @@ def draw_eye(g, rect, style, group_cx=None, frontal=True):
     open/closed는 면을 채워 작아도 보이므로 원본 크기 그대로 둔다.
     """
     x, y, w, h = rect
+    n = len(g)
+    # 표정 최소 크기는 그리드에 비례 — 32그리드의 3px 비율을 유지해
+    # 성숙기(56)에서도 ^ / X 가 또렷하게 보이도록 키운다.
+    min_dim = 5 if n >= 48 else 3
     if style in ("happy", "pain", "angry"):
-        pw, ph = max(w, 3), max(h, 3)
+        pw, ph = max(w, min_dim), max(h, min_dim)
         ex = x - (pw - w) // 2
         ey = y - (ph - h) // 2
-        # 작은 눈(2x2)은 얼굴 줄무늬에 파묻히므로 주변을 2px까지 넓게 정리
-        halo = 2 if min(w, h) <= 2 else 1
+        # 작은 눈(2x2)·큰 그리드(덤프 노이즈 아트)는 주변을 2px까지 넓게 정리
+        halo = 2 if min(w, h) <= 2 or n >= 48 else 1
         _clear_eye_box(g, ex, ey, pw, ph, halo=halo)
     else:
         pw, ph, ex, ey = w, h, x, y
@@ -377,10 +381,10 @@ def draw_eye(g, rect, style, group_cx=None, frontal=True):
             put(g, ex + 1, ey + 1, "o")
             put(g, ex + 2, ey + 1, "o")
     elif style == "closed":  # 감은 눈 — 가운데 가로 실선 '-' (모든 캐릭터 공통)
-        lw = max(pw, 3)
+        lw = max(pw, min_dim)
         lx = ex - (lw - pw) // 2
         ly = ey + ph // 2
-        halo = 2 if min(pw, ph) <= 2 else 1
+        halo = 2 if min(pw, ph) <= 2 or n >= 48 else 1
         _clear_eye_box(g, lx, ly - 1, lw, 3, halo=halo)
         for dx in range(lw):
             put(g, lx + dx, ly, "#")
@@ -942,10 +946,10 @@ SPECIES_ART = {
             "..................##ooooooooooo##.......................",
             "................##oooooo#oooooooo##.....................",
             "...............#oooooooooooooooooo##....................",
-            "..............#oooooo###ooooo#oooooo#...................",
-            "..............#ooooo#o##oooo#oooooo##...................",
-            "..............#ooooo###ooooooooooooo##..................",
-            "..............#o##ooo#ooooo##oooooooo#..................",
+            "..............#oooooooooooooo#oooooo#...................",
+            "..............#ooooooooooooo#oooooo##...................",
+            "..............#ooooooooooooooooooooo##..................",
+            "..............#o##ooooooooo##oooooooo#..................",
             "..............##oooooooo###o##ooooooo#..................",
             "...............o#########....#oooooooo#.................",
             "..............##o.............#ooooooo#.................",
@@ -962,10 +966,10 @@ SPECIES_ART = {
             ".....#oooooo##..####oo#################...#ooooo##oo##..",
             "...##oooooooo######oooo##ooo###########o...ooooooo###o..",
             "...#oooooooooo######oo###o##o########oo#...#ooooooo##o..",
-            "...#oooooo##ooo#################oo####o##...#oooo#oo##..",
-            "..#oooooo#o##oo##################oo#######...##o#o####..",
-            "..#oooooo####oo###################o#######o...#o###o##..",
-            "..#oo#ooo###ooo########o#o#################...#oo#......",
+            "...#ooooooooooo#################oo####o##...#oooo#oo##..",
+            "..#oooooooooooo##################oo#######...##o#o####..",
+            "..#oooooooooooo###################o#######o...#o###o##..",
+            "..#oo#ooooooooo########o#o#################...#oo#......",
             "...#o#oooooooooo#########o#################.#oo#o#......",
             "...#ooooooooooooo#oo###########oo####o######oo#o#o......",
             "....###oooooooooo##oo########oo#############o#ooo.......",
@@ -1198,7 +1202,7 @@ def lying_pose(key, factor):
     # 눌린 좌표계에서 감은 눈 '-' 다시 그림 (주변 정리로 노이즈에 안 묻히게)
     for x, y, w, h in meta["eyes"]:
         ny = y1 - int(round((y1 - (y + h - 1)) * factor))
-        lw = max(w, 3)
+        lw = max(w, 5 if len(squashed) >= 48 else 3)
         lx = x - (lw - w) // 2
         _clear_eye_box(squashed, lx, ny - 1, lw, 3, halo=1)
         for dx in range(lw):
