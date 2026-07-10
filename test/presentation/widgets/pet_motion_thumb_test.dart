@@ -41,7 +41,7 @@ void main() {
       }
     });
 
-    testWidgets('stage 4 (성숙기)는 전용 48 도트 모션 프레임을 렌더', (tester) async {
+    testWidgets('stage 4 (성숙기)는 전용 56 도트 모션 프레임을 렌더', (tester) async {
       await pump(
         tester,
         const PetMotionThumb(type: EvolutionType.tiger, stage: 4, size: 40),

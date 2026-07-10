@@ -71,12 +71,12 @@ void main() {
       }
     });
 
-    test('그리드 크기: 털뭉치 40, 유아기 32, 성장기 36, 성숙기 48', () {
+    test('그리드 크기: 털뭉치 40, 유아기 32, 성장기 36, 성숙기 56', () {
       int expectedSize(String key) {
         if (key == 'fluff') return 40;
         if (key.endsWith('1')) return 32; // 유아기
         if (key.endsWith('2')) return 36; // 성장기
-        return 48; // 성숙기
+        return 56; // 성숙기
       }
 
       for (final key in motionFrames.keys) {
@@ -147,7 +147,7 @@ void main() {
       expect(motionSpriteKeyFromAssetPath('assets/bird3.png'), 'bird3');
     });
 
-    test('진화 단계 → 모션 키 (성숙기 전용 48 도트)', () {
+    test('진화 단계 → 모션 키 (성숙기 전용 56 도트)', () {
       expect(motionSpriteKeyForStage(null, 1), 'fluff');
       expect(motionSpriteKeyForStage(EvolutionType.snake, 2), 'dragon1');
       expect(motionSpriteKeyForStage(EvolutionType.tiger, 3), 'tiger2');
