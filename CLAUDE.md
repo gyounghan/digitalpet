@@ -74,9 +74,9 @@ lib/
 
 The core `Pet` entity tracks:
 - **Stats**: `hunger` (0–100), `happiness` (0–100), `stamina` (0–100)
-- **Mood**: auto-calculated from stats — 10 types: `happy`, `sleepy`, `hungry`, `bored`, `normal`, `energetic`, `tired`, `full`, `anxious`, `satisfied`
-- **Evolution**: 3 types (`active`, `restful`, `balanced`) determined by activity patterns
-- **Daily goals**: feed count, sleep hours, alternative action limits
+- **Mood**: auto-calculated from stats — 6 types (`happy`, `normal`, `hungry`, `sleepy`, `tired`, `sad`) + `dead` (see `PetMood` in `domain/entities/pet.dart`)
+- **Evolution**: 4 stages (털뭉치 → 유아기 → 성장기 → 성숙기). Species (`EvolutionType`): `bird`(주작), `snake`(청룡), `tiger`(백호), `turtle`(현무) — determined at stage2 by 활발×규칙 activity axes. Grades: `normal`/`superior` (stage3), `mythical` (stage4 사신수, superior만) vs 일반종 (stage4 normal). See `evolve_pet_usecase.dart`.
+- **Daily goals**: feed count, sleep hours, exercise steps (걸음 단일 축), alternative action limits
 
 ### Key Patterns
 
