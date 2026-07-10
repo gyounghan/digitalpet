@@ -37,15 +37,25 @@ class EvolvePetUseCase {
     EvolutionType? newType = pet.evolutionType;
     String newGrade = pet.evolutionGrade;
 
+    // 단조 상향: 3단계 normal이 이후 superior 조건을 충족하면 승격(하향 없음).
+    // Lv10~14 동안 매 진화 체크마다 재평가되므로, 조건을 늦게 채워도
+    // 신수(mythical) 루트를 탈 수 있다. superior는 절대 normal로 내려가지 않는다.
+    if (newStage == 3 &&
+        newGrade == 'normal' &&
+        _determineStage3Grade(pet) == 'superior') {
+      newGrade = 'superior';
+    }
+
     // 4단계(성숙기): Lv15에서 등급으로 최종 형태 분기.
     // - superior + 신수 조건 충족 → 사신수(mythical)
     // - normal → 그냥 동물(일반종). 잘 못 키우면 사신수가 아닌 일반종이 된다.
     // - superior인데 신수 조건 미달 → 성장기 유지(계속 도전)
+    // (등급 판정은 위에서 갱신한 newGrade 기준 — 같은 틱에 승격되면 신수 도전 가능)
     if (pet.level >= 15 && newStage < 4 && newStage >= 3) {
-      if (pet.evolutionGrade == 'superior' && _meetsStage4Condition(pet)) {
+      if (newGrade == 'superior' && _meetsStage4Condition(pet)) {
         newStage = 4;
         newGrade = 'mythical';
-      } else if (pet.evolutionGrade == 'normal') {
+      } else if (newGrade == 'normal') {
         newStage = 4;
         newGrade = 'normal';
       }
@@ -128,61 +138,80 @@ class EvolvePetUseCase {
     return EvolutionType.snake;
   }
 
-  /// 3단계 등급 결정 (종별 조건)
+  /// 3단계 등급 결정 (종별 조건 — 종 대칭 · 누적 성취 게이팅)
   ///
-  /// bird:   battleVictoryCount>=15 AND happiness>=70 → superior
-  /// snake:  feedAchievedCount>=20 AND consecutiveLoginDays>=30 → superior
-  /// tiger:  battleVictoryCount>=15 AND (hunger+happiness+stamina)>=180 → superior
-  /// turtle: consecutiveLoginDays>=14 AND sleepAchievedCount>=20 → superior
+  /// 각 종을 정의한 **두 축**(활발/차분 × 규칙/자유)을 동일 임계값으로 요구한다.
+  /// "이 종이 된 방식대로 꾸준히 잘 키웠나"를 누적 달성 카운터로 판정 —
+  /// 변동 스냅샷(happiness/stamina)이나 특정 종만 유리한 전투 게이트를 쓰지 않는다.
+  ///
+  /// 축별 임계값(Lv10 ≈ 19일 기준 도달 가능):
+  ///   활발 exerciseAchievedCount>=[_supActive], 차분 sleepAchievedCount>=[_supCalm],
+  ///   자유 feedAchievedCount>=[_supFree],       규칙 consecutiveLoginDays>=[_supRegular]
+  ///
+  /// bird  (활발+자유): 운동 && 급식 달성
+  /// snake (차분+자유): 수면 && 급식 달성
+  /// tiger (활발+규칙): 운동 && 연속접속
+  /// turtle(차분+규칙): 수면 && 연속접속
+  static const int _supActive = 15;
+  static const int _supCalm = 15;
+  static const int _supFree = 15;
+  static const int _supRegular = 12;
+
   String _determineStage3Grade(Pet pet) {
+    final bool superior;
     switch (pet.evolutionType) {
       case EvolutionType.bird:
-        if (pet.battleVictoryCount >= 15 && pet.happiness >= 70) {
-          return 'superior';
-        }
-        return 'normal';
+        superior = pet.exerciseAchievedCount >= _supActive &&
+            pet.feedAchievedCount >= _supFree;
+        break;
       case EvolutionType.snake:
-        if (pet.feedAchievedCount >= 20 && pet.consecutiveLoginDays >= 30) {
-          return 'superior';
-        }
-        return 'normal';
+        superior = pet.sleepAchievedCount >= _supCalm &&
+            pet.feedAchievedCount >= _supFree;
+        break;
       case EvolutionType.tiger:
-        final totalStats = pet.hunger + pet.happiness + pet.stamina;
-        if (pet.battleVictoryCount >= 15 && totalStats >= 180) {
-          return 'superior';
-        }
-        return 'normal';
+        superior = pet.exerciseAchievedCount >= _supActive &&
+            pet.consecutiveLoginDays >= _supRegular;
+        break;
       case EvolutionType.turtle:
-        if (pet.consecutiveLoginDays >= 14 && pet.sleepAchievedCount >= 20) {
-          return 'superior';
-        }
-        return 'normal';
+        superior = pet.sleepAchievedCount >= _supCalm &&
+            pet.consecutiveLoginDays >= _supRegular;
+        break;
       default:
         return 'normal';
     }
+    return superior ? 'superior' : 'normal';
   }
 
-  /// 4단계 mythical 조건 충족 여부 (superior에서만 승격 가능)
+  /// 4단계 mythical 조건 충족 여부 (superior에서만 승격 가능 — 종 대칭)
   ///
-  /// bird(봉황→주작):   totalSteps>=300000 AND battleVictoryCount>=30
-  /// snake(이무기→청룡): consecutiveLoginDays>=60 AND feedAchievedCount>=50 AND resurrectCount==0
-  /// tiger(맹호→백호):   battleVictoryCount>=50 AND (hunger+happiness+stamina)>=210
-  /// turtle(영귀→현무):  consecutiveLoginDays>=30 AND sleepAchievedCount>=50 AND resurrectCount==0
+  /// superior와 같은 두 축을 더 높은 누적 임계값으로 요구한다
+  /// (Lv15 ≈ 48일 기준 "우수하게 키운 사용자"만 도달).
+  ///   활발 exerciseAchievedCount>=[_mythActive], 차분 sleepAchievedCount>=[_mythCalm],
+  ///   자유 feedAchievedCount>=[_mythFree],       규칙 consecutiveLoginDays>=[_mythRegular]
+  ///
+  /// bird(봉황→주작):   운동 && 급식
+  /// snake(이무기→청룡): 수면 && 급식
+  /// tiger(맹호→백호):   운동 && 연속접속
+  /// turtle(영귀→현무):  수면 && 연속접속
+  static const int _mythActive = 40;
+  static const int _mythCalm = 40;
+  static const int _mythFree = 40;
+  static const int _mythRegular = 25;
+
   bool _meetsStage4Condition(Pet pet) {
     switch (pet.evolutionType) {
       case EvolutionType.bird:
-        return pet.totalSteps >= 300000 && pet.battleVictoryCount >= 30;
+        return pet.exerciseAchievedCount >= _mythActive &&
+            pet.feedAchievedCount >= _mythFree;
       case EvolutionType.snake:
-        return pet.consecutiveLoginDays >= 60 &&
-            pet.feedAchievedCount >= 50 &&
-            pet.resurrectCount == 0;
+        return pet.sleepAchievedCount >= _mythCalm &&
+            pet.feedAchievedCount >= _mythFree;
       case EvolutionType.tiger:
-        final totalStats = pet.hunger + pet.happiness + pet.stamina;
-        return pet.battleVictoryCount >= 50 && totalStats >= 210;
+        return pet.exerciseAchievedCount >= _mythActive &&
+            pet.consecutiveLoginDays >= _mythRegular;
       case EvolutionType.turtle:
-        return pet.consecutiveLoginDays >= 30 &&
-            pet.sleepAchievedCount >= 50 &&
-            pet.resurrectCount == 0;
+        return pet.sleepAchievedCount >= _mythCalm &&
+            pet.consecutiveLoginDays >= _mythRegular;
       default:
         return false;
     }
@@ -200,6 +229,12 @@ class EvolvePetUseCase {
     // 3단계 진화 가능?
     if (pet.level >= 10 && pet.evolutionStage < 3 && pet.evolutionStage >= 2) {
       return true; // 3단계는 항상 normal 이상으로 진화 가능
+    }
+    // 3단계 normal → superior 상향 가능? (단조 상향)
+    if (pet.evolutionStage == 3 &&
+        pet.evolutionGrade == 'normal' &&
+        _determineStage3Grade(pet) == 'superior') {
+      return true;
     }
     // 2단계 종 결정 가능?
     if (pet.level >= 5 && pet.evolutionStage < 2) {

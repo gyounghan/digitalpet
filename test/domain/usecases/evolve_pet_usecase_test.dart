@@ -47,6 +47,7 @@ Pet _createPet({
   bool isDead = false,
   int sleepAchievedCount = 0,
   int feedAchievedCount = 0,
+  int exerciseAchievedCount = 0,
   int todayAlternativeFeedCount = 0,
 }) {
   final now = DateTime.now().millisecondsSinceEpoch;
@@ -72,6 +73,7 @@ Pet _createPet({
     isDead: isDead,
     sleepAchievedCount: sleepAchievedCount,
     feedAchievedCount: feedAchievedCount,
+    exerciseAchievedCount: exerciseAchievedCount,
     todayAlternativeFeedCount: todayAlternativeFeedCount,
   );
 }
@@ -227,13 +229,16 @@ void main() {
       expect(result.evolutionStage, 2);
     });
 
-    test('bird + battleVictoryCount>=15 + happiness>=70 → superior', () async {
+    // 종 대칭: 각 종을 정의한 두 축(활발/차분 × 규칙/자유)을 동일 임계값으로 요구
+    // superior 임계값: 활발/차분/자유 15, 규칙(연속접속) 12
+
+    test('bird + 운동15 + 급식15 → superior', () async {
       final pet = _createPet(
         level: 10,
         evolutionStage: 2,
         evolutionType: EvolutionType.bird,
-        battleVictoryCount: 15,
-        happiness: 70,
+        exerciseAchievedCount: 15,
+        feedAchievedCount: 15,
       );
       repository.setPet(pet);
 
@@ -242,13 +247,13 @@ void main() {
       expect(result.evolutionGrade, 'superior');
     });
 
-    test('bird + battleVictoryCount<15 → normal', () async {
+    test('bird + 급식만 충족(운동 부족) → normal', () async {
       final pet = _createPet(
         level: 10,
         evolutionStage: 2,
         evolutionType: EvolutionType.bird,
-        battleVictoryCount: 10,
-        happiness: 90,
+        exerciseAchievedCount: 10,
+        feedAchievedCount: 30,
       );
       repository.setPet(pet);
 
@@ -257,13 +262,13 @@ void main() {
       expect(result.evolutionGrade, 'normal');
     });
 
-    test('snake + feedAchieved>=20 + loginDays>=30 → superior', () async {
+    test('snake + 수면15 + 급식15 → superior', () async {
       final pet = _createPet(
         level: 10,
         evolutionStage: 2,
         evolutionType: EvolutionType.snake,
-        feedAchievedCount: 20,
-        consecutiveLoginDays: 30,
+        sleepAchievedCount: 15,
+        feedAchievedCount: 15,
       );
       repository.setPet(pet);
 
@@ -277,8 +282,8 @@ void main() {
         level: 10,
         evolutionStage: 2,
         evolutionType: EvolutionType.snake,
+        sleepAchievedCount: 10,
         feedAchievedCount: 10,
-        consecutiveLoginDays: 10,
       );
       repository.setPet(pet);
 
@@ -287,15 +292,13 @@ void main() {
       expect(result.evolutionGrade, 'normal');
     });
 
-    test('tiger + battleVictoryCount>=15 + totalStats>=180 → superior', () async {
+    test('tiger + 운동15 + 연속접속12 → superior', () async {
       final pet = _createPet(
         level: 10,
         evolutionStage: 2,
         evolutionType: EvolutionType.tiger,
-        battleVictoryCount: 15,
-        hunger: 60,
-        happiness: 60,
-        stamina: 60, // 60+60+60=180
+        exerciseAchievedCount: 15,
+        consecutiveLoginDays: 12,
       );
       repository.setPet(pet);
 
@@ -304,15 +307,13 @@ void main() {
       expect(result.evolutionGrade, 'superior');
     });
 
-    test('tiger + totalStats<180 → normal', () async {
+    test('tiger + 연속접속 부족 → normal', () async {
       final pet = _createPet(
         level: 10,
         evolutionStage: 2,
         evolutionType: EvolutionType.tiger,
-        battleVictoryCount: 20,
-        hunger: 50,
-        happiness: 50,
-        stamina: 50, // 150 < 180
+        exerciseAchievedCount: 20,
+        consecutiveLoginDays: 8,
       );
       repository.setPet(pet);
 
@@ -321,13 +322,13 @@ void main() {
       expect(result.evolutionGrade, 'normal');
     });
 
-    test('turtle + loginDays>=14 + sleepAchieved>=20 → superior', () async {
+    test('turtle + 수면15 + 연속접속12 → superior', () async {
       final pet = _createPet(
         level: 10,
         evolutionStage: 2,
         evolutionType: EvolutionType.turtle,
-        consecutiveLoginDays: 14,
-        sleepAchievedCount: 20,
+        consecutiveLoginDays: 12,
+        sleepAchievedCount: 15,
       );
       repository.setPet(pet);
 
@@ -336,7 +337,7 @@ void main() {
       expect(result.evolutionGrade, 'superior');
     });
 
-    test('turtle + sleepAchieved<20 → normal', () async {
+    test('turtle + 수면 부족 → normal', () async {
       final pet = _createPet(
         level: 10,
         evolutionStage: 2,
@@ -350,17 +351,84 @@ void main() {
       expect(result.evolutionStage, 3);
       expect(result.evolutionGrade, 'normal');
     });
+
+    test('4종 모두 superior 도달 경로가 대칭적으로 존재한다', () async {
+      final profiles = {
+        EvolutionType.bird: _createPet(
+            level: 10,
+            evolutionStage: 2,
+            evolutionType: EvolutionType.bird,
+            exerciseAchievedCount: 15,
+            feedAchievedCount: 15),
+        EvolutionType.snake: _createPet(
+            level: 10,
+            evolutionStage: 2,
+            evolutionType: EvolutionType.snake,
+            sleepAchievedCount: 15,
+            feedAchievedCount: 15),
+        EvolutionType.tiger: _createPet(
+            level: 10,
+            evolutionStage: 2,
+            evolutionType: EvolutionType.tiger,
+            exerciseAchievedCount: 15,
+            consecutiveLoginDays: 12),
+        EvolutionType.turtle: _createPet(
+            level: 10,
+            evolutionStage: 2,
+            evolutionType: EvolutionType.turtle,
+            sleepAchievedCount: 15,
+            consecutiveLoginDays: 12),
+      };
+      for (final entry in profiles.entries) {
+        repository.setPet(entry.value);
+        final r = await useCase('test-pet');
+        expect(r.evolutionGrade, 'superior',
+            reason: '${entry.key} superior 도달 실패');
+      }
+    });
+
+    test('단조 상향: 이미 3단계 normal이 이후 superior 조건을 채우면 승격', () async {
+      final pet = _createPet(
+        level: 12,
+        evolutionStage: 3,
+        evolutionType: EvolutionType.snake,
+        evolutionGrade: 'normal',
+        sleepAchievedCount: 15,
+        feedAchievedCount: 15,
+      );
+      repository.setPet(pet);
+
+      final result = await useCase('test-pet');
+      expect(result.evolutionStage, 3);
+      expect(result.evolutionGrade, 'superior'); // normal → superior 승격
+    });
+
+    test('하향 없음: 3단계 superior는 조건이 떨어져도 normal로 내려가지 않는다', () async {
+      final pet = _createPet(
+        level: 12,
+        evolutionStage: 3,
+        evolutionType: EvolutionType.snake,
+        evolutionGrade: 'superior',
+        sleepAchievedCount: 0,
+        feedAchievedCount: 0,
+      );
+      repository.setPet(pet);
+
+      final result = await useCase('test-pet');
+      expect(result.evolutionGrade, 'superior');
+    });
   });
 
   group('EvolvePetUseCase - Stage 4 mythical 승격', () {
     test('normal 등급은 4단계에서 사신수가 아닌 일반종(normal)이 된다', () async {
+      // superior 조건 미달(운동만 높고 급식 부족) → 상향 안 됨 → 일반종
       final pet = _createPet(
         level: 15,
         evolutionStage: 3,
         evolutionType: EvolutionType.bird,
         evolutionGrade: 'normal',
-        totalSteps: 500000,
-        battleVictoryCount: 50,
+        exerciseAchievedCount: 50,
+        feedAchievedCount: 0,
       );
       repository.setPet(pet);
 
@@ -369,14 +437,16 @@ void main() {
       expect(result.evolutionGrade, 'normal'); // 사신수 아님 = 일반종
     });
 
-    test('bird superior + steps>=300000 + victories>=30 → mythical', () async {
+    // 종 대칭: mythical 임계값 = superior와 같은 두 축, 더 높은 누적(활발/차분/자유 40, 규칙 25)
+
+    test('bird superior + 운동40 + 급식40 → mythical', () async {
       final pet = _createPet(
         level: 15,
         evolutionStage: 3,
         evolutionType: EvolutionType.bird,
         evolutionGrade: 'superior',
-        totalSteps: 300000,
-        battleVictoryCount: 30,
+        exerciseAchievedCount: 40,
+        feedAchievedCount: 40,
       );
       repository.setPet(pet);
 
@@ -391,8 +461,8 @@ void main() {
         evolutionStage: 3,
         evolutionType: EvolutionType.bird,
         evolutionGrade: 'superior',
-        totalSteps: 200000, // < 300000
-        battleVictoryCount: 30,
+        exerciseAchievedCount: 30, // < 40
+        feedAchievedCount: 40,
       );
       repository.setPet(pet);
 
@@ -401,15 +471,14 @@ void main() {
       expect(result.evolutionGrade, 'superior');
     });
 
-    test('snake superior + loginDays>=60 + feedAchieved>=50 + resurrect==0 → mythical', () async {
+    test('snake superior + 수면40 + 급식40 → mythical (청룡도 신수 도달 가능)', () async {
       final pet = _createPet(
         level: 15,
         evolutionStage: 3,
         evolutionType: EvolutionType.snake,
         evolutionGrade: 'superior',
-        consecutiveLoginDays: 60,
-        feedAchievedCount: 50,
-        resurrectCount: 0,
+        sleepAchievedCount: 40,
+        feedAchievedCount: 40,
       );
       repository.setPet(pet);
 
@@ -418,32 +487,14 @@ void main() {
       expect(result.evolutionGrade, 'mythical');
     });
 
-    test('snake superior + resurrectCount>0 → 승격 불가', () async {
-      final pet = _createPet(
-        level: 15,
-        evolutionStage: 3,
-        evolutionType: EvolutionType.snake,
-        evolutionGrade: 'superior',
-        consecutiveLoginDays: 60,
-        feedAchievedCount: 50,
-        resurrectCount: 1, // 부활 이력 있음
-      );
-      repository.setPet(pet);
-
-      final result = await useCase('test-pet');
-      expect(result.evolutionStage, 3);
-    });
-
-    test('tiger superior + victories>=50 + totalStats>=210 → mythical', () async {
+    test('tiger superior + 운동40 + 연속접속25 → mythical', () async {
       final pet = _createPet(
         level: 15,
         evolutionStage: 3,
         evolutionType: EvolutionType.tiger,
         evolutionGrade: 'superior',
-        battleVictoryCount: 50,
-        hunger: 70,
-        happiness: 70,
-        stamina: 70, // 210
+        exerciseAchievedCount: 40,
+        consecutiveLoginDays: 25,
       );
       repository.setPet(pet);
 
@@ -452,20 +503,35 @@ void main() {
       expect(result.evolutionGrade, 'mythical');
     });
 
-    test('turtle superior + loginDays>=30 + sleepAchieved>=50 + resurrect==0 → mythical', () async {
+    test('turtle superior + 수면40 + 연속접속25 → mythical (현무도 신수 도달 가능)', () async {
       final pet = _createPet(
         level: 15,
         evolutionStage: 3,
         evolutionType: EvolutionType.turtle,
         evolutionGrade: 'superior',
-        consecutiveLoginDays: 30,
-        sleepAchievedCount: 50,
-        resurrectCount: 0,
+        consecutiveLoginDays: 25,
+        sleepAchievedCount: 40,
       );
       repository.setPet(pet);
 
       final result = await useCase('test-pet');
       expect(result.evolutionStage, 4);
+      expect(result.evolutionGrade, 'mythical');
+    });
+
+    test('부활 이력이 있어도 신수 승격 가능 (resurrect 게이트 제거·종 대칭)', () async {
+      final pet = _createPet(
+        level: 15,
+        evolutionStage: 3,
+        evolutionType: EvolutionType.turtle,
+        evolutionGrade: 'superior',
+        consecutiveLoginDays: 25,
+        sleepAchievedCount: 40,
+        resurrectCount: 3,
+      );
+      repository.setPet(pet);
+
+      final result = await useCase('test-pet');
       expect(result.evolutionGrade, 'mythical');
     });
   });
@@ -506,8 +572,20 @@ void main() {
         evolutionStage: 3,
         evolutionType: EvolutionType.bird,
         evolutionGrade: 'superior',
-        totalSteps: 300000,
-        battleVictoryCount: 30,
+        exerciseAchievedCount: 40,
+        feedAchievedCount: 40,
+      );
+      expect(useCase.canEvolve(pet), true);
+    });
+
+    test('Lv12 + stage3 + normal + superior 조건 충족 → 상향 가능', () {
+      final pet = _createPet(
+        level: 12,
+        evolutionStage: 3,
+        evolutionType: EvolutionType.snake,
+        evolutionGrade: 'normal',
+        sleepAchievedCount: 15,
+        feedAchievedCount: 15,
       );
       expect(useCase.canEvolve(pet), true);
     });
