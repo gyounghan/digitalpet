@@ -115,15 +115,17 @@ void main() {
       expect(g.feedDone, isFalse);
     });
 
-    test('운동은 걸음이 부족해도 분 축으로 달성 가능', () {
-      // 레벨 1: 3000보 또는 10분
+    test('운동은 걸음(steps)만으로 판정 — 운동분은 달성에 안 잡힌다', () {
+      // 레벨 1: 3000보 목표. 운동분 10분이 있어도 걸음이 부족하면 미달성
       final g = TodayGoalProgress.fromPet(makePet(
         level: 1,
         totalSteps: 100,
         totalExerciseMinutes: 10,
       ));
-      expect(g.exerciseDone, isTrue);
-      expect(g.exerciseRatio, 1.0);
+      expect(g.exerciseDone, isFalse);
+      // 걸음만 채우면 달성
+      final g2 = TodayGoalProgress.fromPet(makePet(level: 1, totalSteps: 3000));
+      expect(g2.exerciseDone, isTrue);
     });
 
     test('걸음 진행은 lastExerciseGoalSteps 차감 후 증가분 기준', () {

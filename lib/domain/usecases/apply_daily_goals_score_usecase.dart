@@ -59,38 +59,16 @@ class ApplyDailyGoalsScoreUseCase {
       );
     }
 
-    // 운동: lastExerciseGoalSteps/Minutes에 목표치 × 달성횟수 만큼 누적
+    // 운동: 걸음(steps) 단일 축만 차감 (걸음만 판정하므로 이중 카운트 없음)
     if (scoreResult.exerciseAchievements > 0) {
-      // 실제로 스텝/분 중 어느 축에서 달성됐는지 판정
-      final stepsProgress = pet.exerciseProgressSteps;
-      final minutesProgress = pet.exerciseProgressMinutes;
-      final stepsAch = scoreResult.exerciseGoalSteps > 0
-          ? stepsProgress ~/ scoreResult.exerciseGoalSteps
-          : 0;
-      final minutesAch = scoreResult.exerciseGoalMinutes > 0
-          ? minutesProgress ~/ scoreResult.exerciseGoalMinutes
-          : 0;
-
-      if (stepsAch >= minutesAch) {
-        final consumedSteps =
-            scoreResult.exerciseGoalSteps * scoreResult.exerciseAchievements;
-        pet = pet.copyWith(
-          lastExerciseGoalSteps: pet.lastExerciseGoalSteps + consumedSteps,
-          exerciseAchievedCount:
-              pet.exerciseAchievedCount + scoreResult.exerciseAchievements,
-          lastExerciseAchievedDate: todayDate,
-        );
-      } else {
-        final consumedMinutes = scoreResult.exerciseGoalMinutes *
-            scoreResult.exerciseAchievements;
-        pet = pet.copyWith(
-          lastExerciseGoalMinutes:
-              pet.lastExerciseGoalMinutes + consumedMinutes,
-          exerciseAchievedCount:
-              pet.exerciseAchievedCount + scoreResult.exerciseAchievements,
-          lastExerciseAchievedDate: todayDate,
-        );
-      }
+      final consumedSteps =
+          scoreResult.exerciseGoalSteps * scoreResult.exerciseAchievements;
+      pet = pet.copyWith(
+        lastExerciseGoalSteps: pet.lastExerciseGoalSteps + consumedSteps,
+        exerciseAchievedCount:
+            pet.exerciseAchievedCount + scoreResult.exerciseAchievements,
+        lastExerciseAchievedDate: todayDate,
+      );
     }
 
     // 카테고리 독립 EXP: 달성한 카테고리마다 expPerCategory(+티어업 보너스)

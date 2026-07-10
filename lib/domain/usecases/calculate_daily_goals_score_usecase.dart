@@ -97,19 +97,13 @@ class CalculateDailyGoalsScoreUseCase {
             .clamp(0, maxAchievementsPerTick)
         : 0;
 
-    // 운동은 steps 기준과 minutes 기준 중 높은 쪽을 취함
+    // 운동 목표는 걸음(steps)만으로 판정한다. (걸음과 운동분은 별도 원천이라
+    // max로 묶으면 안 쓴 축이 남아 이중 카운트되던 문제 → 걸음 단일화)
     final stepsAchievements = exerciseGoalSteps > 0
         ? (currentExerciseSteps ~/ exerciseGoalSteps)
             .clamp(0, maxAchievementsPerTick)
         : 0;
-    final minutesAchievements = exerciseGoalMinutes > 0
-        ? (currentExerciseMinutes ~/ exerciseGoalMinutes)
-            .clamp(0, maxAchievementsPerTick)
-        : 0;
-    final exerciseAchievements =
-        stepsAchievements > minutesAchievements
-            ? stepsAchievements
-            : minutesAchievements;
+    final exerciseAchievements = stepsAchievements;
 
     // UI용: "현재 진행 중인 목표"에 대한 표시값
     final feedProgressDisplay = pet.todayFeedCount % feedGoalCount;

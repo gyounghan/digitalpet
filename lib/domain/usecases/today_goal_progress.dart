@@ -41,14 +41,11 @@ class TodayGoalProgress {
     final feedGoal = CalculateDailyGoalsScoreUseCase.getFeedGoalCount(pet.level);
     final stepsGoal =
         CalculateDailyGoalsScoreUseCase.getExerciseGoalSteps(pet.level);
-    final minutesGoal =
-        CalculateDailyGoalsScoreUseCase.getExerciseGoalMinutes(pet.level);
     final sleepGoalMinutes =
         CalculateDailyGoalsScoreUseCase.getSleepGoalHours(pet.level) * 60;
 
-    // 운동은 걸음/분 두 축 중 하나라도 채우면 달성 (Calculate와 동일 정책)
-    final exerciseReached = pet.exerciseProgressSteps >= stepsGoal ||
-        (minutesGoal > 0 && pet.exerciseProgressMinutes >= minutesGoal);
+    // 운동은 걸음(steps)만으로 판정 (Calculate와 동일 정책)
+    final exerciseReached = pet.exerciseProgressSteps >= stepsGoal;
 
     return TodayGoalProgress(
       feedProgress: pet.todayFeedCount,
