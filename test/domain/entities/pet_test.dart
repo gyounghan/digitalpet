@@ -226,6 +226,7 @@ void main() {
         todaySleepHours: 5,
         todayFedMealSlots: 7,
         todayAlternativeFeedCount: 2,
+        todayBattleCount: 3,
         feedAchievedCount: 12,
         sleepAchievedCount: 8,
       );
@@ -236,6 +237,8 @@ void main() {
       // 보조 카운터는 일일 리셋
       expect(reset.todayFedMealSlots, 0);
       expect(reset.todayAlternativeFeedCount, 0);
+      // 배틀 횟수도 자정 리셋 (하루 3회 제한이 종신 캡이 되지 않도록)
+      expect(reset.todayBattleCount, 0);
       // 누적 달성 카운트 유지
       expect(reset.feedAchievedCount, 12);
       expect(reset.sleepAchievedCount, 8);

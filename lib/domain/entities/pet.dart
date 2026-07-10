@@ -580,6 +580,7 @@ class Pet {
       todaySyncedSteps: 0,
       todaySyncedExerciseMinutes: 0,
       todaySetExpClaimed: 0,
+      todayBattleCount: 0,
       lastGoalResetDate: todayDateString,
     );
   }

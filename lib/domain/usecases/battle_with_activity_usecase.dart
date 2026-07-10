@@ -72,8 +72,11 @@ class BattleWithActivityUseCase {
 
   static const int maxBattlesPerDay = 3;
   static const int maxTurns = 7;
-  static const double affinityAdvantageMultiplier = 1.3;
-  static const double affinityDisadvantageMultiplier = 0.7;
+  // 상성은 "한쪽만" 보정한다: 유리한 쪽 +20%만, 불리한 쪽은 페널티 없음(×1.0).
+  // 예전 유리×1.3 + 불리×0.7 조합은 데미지비 ~1.86배로 스탯·스킬을 압도해
+  // 상성이 승패를 사실상 결정했다 → 상성을 "edge"로만 남기고 육성/스킬을 주역으로.
+  static const double affinityAdvantageMultiplier = 1.2;
+  static const double affinityDisadvantageMultiplier = 1.0;
   static const int specialCooldown = 2;
 
   static const int victoryExp = 50;
@@ -124,8 +127,9 @@ class BattleWithActivityUseCase {
     final opponentStats = _generateOpponentStats(opponentLevel, opponentType, random);
 
     // 상성 계산
-    final affinityMultiplier = _getAffinityMultiplier(playerType, opponentType);
-    final opponentAffinityMultiplier = _getAffinityMultiplier(opponentType, playerType);
+    final affinityMultiplier = affinityMultiplierFor(playerType, opponentType);
+    final opponentAffinityMultiplier =
+        affinityMultiplierFor(opponentType, playerType);
 
     // 스킬셋
     final playerSkills = _skillSets[playerType] ?? _defaultSkills;
@@ -286,17 +290,25 @@ class BattleWithActivityUseCase {
       turns: turns,
       playerTypeName: playerType?.name ?? '',
       opponentTypeName: opponentType.name,
+      // 유리 = 내가 상대에게 +20%, 불리 = 상대가 나에게 +20%(한쪽 보정 모델)
       affinityAdvantage: affinityMultiplier > 1.0,
-      affinityDisadvantage: affinityMultiplier < 1.0,
+      affinityDisadvantage: opponentAffinityMultiplier > 1.0,
       playerMaxHp: playerStats.hp,
       opponentMaxHp: opponentStats.hp,
     );
   }
 
-  double _getAffinityMultiplier(EvolutionType? attacker, EvolutionType? defender) {
+  /// 공격자→방어자 상성 배수. 유리하면 +20%(advantage), 불리하면 페널티 없음(1.0).
+  /// 인스턴스 상태를 쓰지 않으므로 static — 테스트/도감에서 직접 조회 가능.
+  static double affinityMultiplierFor(
+      EvolutionType? attacker, EvolutionType? defender) {
     if (attacker == null || defender == null) return 1.0;
-    if (_affinityAdvantage[attacker] == defender) return affinityAdvantageMultiplier;
-    if (_affinityAdvantage[defender] == attacker) return affinityDisadvantageMultiplier;
+    if (_affinityAdvantage[attacker] == defender) {
+      return affinityAdvantageMultiplier;
+    }
+    if (_affinityAdvantage[defender] == attacker) {
+      return affinityDisadvantageMultiplier;
+    }
     return 1.0;
   }
 
