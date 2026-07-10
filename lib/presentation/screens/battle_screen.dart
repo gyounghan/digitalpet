@@ -11,8 +11,9 @@ import '../../core/constants/app_strings.dart';
 import '../../core/utils/pet_image_helper.dart';
 import '../../domain/entities/battle_history.dart';
 import '../../domain/entities/battle_style.dart';
+import '../../domain/entities/pet.dart';
 import '../../domain/usecases/battle_with_activity_usecase.dart'
-    show BattleTurn;
+    show BattleTurn, BattleWithActivityUseCase;
 import '../../data/datasources/battle_socket_datasource.dart';
 import 'home_screen.dart';
 
@@ -52,7 +53,16 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
     super.dispose();
   }
 
-  Future<void> _startOnlineBattle(dynamic pet) async {
+  Future<void> _startOnlineBattle(Pet pet) async {
+    // AI 대전과 동일한 하루 배틀 횟수 제한 (자정 리셋 반영)
+    final effectiveBattleCount = pet.needsGoalReset ? 0 : pet.todayBattleCount;
+    if (effectiveBattleCount >= BattleWithActivityUseCase.maxBattlesPerDay) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('오늘 배틀 횟수를 모두 사용했습니다 (3/3)')),
+      );
+      return;
+    }
+
     setState(() {
       isLoading = true;
       isMatchmaking = true;
@@ -60,6 +70,13 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
       turns = [];
       currentTurnIndex = -1;
     });
+
+    // 실전 스탯 = 도감 스탯 × 배틀 스타일 배수 (AI 대전과 동일 공식)
+    final styledAtk = (pet.battleAtk * _battleStyle.attackMultiplier).round();
+    final styledDef = (pet.battleDef * _battleStyle.defenseMultiplier).round();
+    final maxHp = pet.battleHp;
+    final deviceId =
+        await ref.read(deviceIdDatasourceProvider).getOrCreateDeviceId();
 
     _socket = BattleSocketDatasource();
     _socket!.onQueued = () {
@@ -71,8 +88,10 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
           isMatchmaking = false;
           opponentName = opponent['petName'] as String? ?? '???';
           opponentLevel = opponent['level'] as int? ?? 1;
-          ourPetHp = 100;
-          opponentPetHp = 100;
+          ourMaxHp = maxHp;
+          ourPetHp = maxHp;
+          opponentMaxHp = opponent['maxHp'] as int? ?? 100;
+          opponentPetHp = opponentMaxHp;
         });
       }
     };
@@ -83,17 +102,26 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
           currentTurnIndex = turns.length - 1;
           ourPetHp = turn.playerHpRemaining;
           opponentPetHp = turn.opponentHpRemaining;
-          // 온라인은 최대 HP를 모르므로 관측된 최대치로 분모 보정 (바 넘침 방지)
+          // 구버전 서버가 maxHp를 안 내려주는 경우 관측치로 분모 보정
           if (ourPetHp > ourMaxHp) ourMaxHp = ourPetHp;
           if (opponentPetHp > opponentMaxHp) opponentMaxHp = opponentPetHp;
         });
       }
     };
-    _socket!.onResult = (data) {
+    _socket!.onResult = (data) async {
+      final isVictory = data['isVictory'] as bool? ?? false;
+      final isDominant = data['isDominantVictory'] as bool? ?? false;
+      // 서버 expGained는 기본 경험치 — 감쇠/이벤트 배수는 로컬에서 적용
+      final reward = await ref.read(applyOnlineBattleRewardUseCaseProvider)(
+        HomeScreen.defaultPetId,
+        isVictory: isVictory,
+        isDominantVictory: isDominant,
+        baseExp: data['expGained'] as int?,
+      );
       if (mounted) {
         setState(() {
-          battleResult = data['isVictory'] as bool? ?? false;
-          expGained = data['expGained'] as int? ?? 0;
+          battleResult = isVictory;
+          expGained = reward.expGained;
           isLoading = false;
         });
         ref
@@ -112,13 +140,24 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
         );
       }
     };
-    _socket!.onOpponentDisconnected = () {
+    _socket!.onOpponentDisconnected = () async {
+      // 결과 처리 후 도착한 이탈 이벤트는 무시 (이중 보상 방지)
+      if (battleResult != null) return;
+      final reward = await ref.read(applyOnlineBattleRewardUseCaseProvider)(
+        HomeScreen.defaultPetId,
+        isVictory: true,
+        isDominantVictory: false,
+      );
       if (mounted) {
         setState(() {
           battleResult = true;
-          expGained = 50;
+          expGained = reward.expGained;
           isLoading = false;
+          isMatchmaking = false;
         });
+        ref
+            .read(petNotifierProvider(HomeScreen.defaultPetId).notifier)
+            .refresh();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('상대가 연결을 끊었습니다. 승리!')),
         );
@@ -127,15 +166,14 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
 
     await _socket!.connect();
     _socket!.joinQueue(
-      petName: pet.name ?? '펫',
-      level: pet.level ?? 1,
-      hunger: pet.hunger ?? 50,
-      happiness: pet.happiness ?? 50,
-      stamina: pet.stamina ?? 50,
-      evolutionStage: pet.evolutionStage ?? 1,
+      deviceId: deviceId,
+      petName: pet.name,
+      level: pet.level,
+      evolutionStage: pet.evolutionStage,
       evolutionType: pet.evolutionType?.name,
-      todaySteps: 0,
-      todayExerciseMinutes: 0,
+      atk: styledAtk,
+      def: styledDef,
+      hp: maxHp,
     );
   }
 

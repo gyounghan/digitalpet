@@ -6,6 +6,7 @@ import '../entities/evolution_type.dart';
 import '../repositories/pet_repository.dart';
 import '../repositories/activity_repository.dart';
 import '../repositories/battle_history_repository.dart';
+import 'apply_battle_reward.dart';
 
 /// 상성 테이블: bird→snake→turtle→tiger→bird
 const Map<EvolutionType, EvolutionType> _affinityAdvantage = {
@@ -79,10 +80,11 @@ class BattleWithActivityUseCase {
   static const double affinityDisadvantageMultiplier = 1.0;
   static const int specialCooldown = 2;
 
-  static const int victoryExp = 50;
-  static const int defeatExp = 15;
-  static const int dominantVictoryExp = 70;
-  static const List<double> rewardMultipliers = [1.0, 0.7, 0.5];
+  // 보상 상수는 [BattleReward]가 단일 소스 — 여기는 하위 호환 별칭.
+  static const int victoryExp = BattleReward.victoryExp;
+  static const int defeatExp = BattleReward.defeatExp;
+  static const int dominantVictoryExp = BattleReward.dominantVictoryExp;
+  static const List<double> rewardMultipliers = BattleReward.rewardMultipliers;
 
   BattleWithActivityUseCase({
     required this.petRepository,
@@ -243,40 +245,15 @@ class BattleWithActivityUseCase {
     final isVictory = playerHp > opponentHp;
     final isDominantVictory = isVictory && playerHp > (playerStats.hp ~/ 2);
 
-    final multiplierIndex = pet.todayBattleCount.clamp(0, rewardMultipliers.length - 1);
-    final multiplier = rewardMultipliers[multiplierIndex];
-    int baseExp = isDominantVictory ? dominantVictoryExp : (isVictory ? victoryExp : defeatExp);
-    final eventMultiplier = pet.todayEvent == 'adventure' ? 2.0 : 1.0;
-    final expGain = (baseExp * multiplier * eventMultiplier).round();
-
-    var currentExp = pet.exp + expGain;
-    var currentLevel = pet.level;
-    int levelUps = 0;
-    while (true) {
-      final required = Pet.getRequiredExpForLevel(currentLevel);
-      if (currentExp >= required) {
-        currentExp -= required;
-        currentLevel++;
-        levelUps++;
-      } else {
-        break;
-      }
-    }
-
-    final levelUpStatBonus = levelUps * 10;
-    final happinessBonus = isDominantVictory ? 8 : (isVictory ? 5 : 0);
     final currentTime = DateTime.now().millisecondsSinceEpoch;
-
-    final updatedPet = pet.copyWith(
-      exp: currentExp,
-      level: currentLevel,
-      happiness: (pet.happiness + happinessBonus + levelUpStatBonus).clamp(0, 100),
-      hunger: (pet.hunger + levelUpStatBonus).clamp(0, 100),
-      stamina: (pet.stamina + levelUpStatBonus).clamp(0, 100),
-      todayBattleCount: pet.todayBattleCount + 1,
-      battleVictoryCount: isVictory ? pet.battleVictoryCount + 1 : pet.battleVictoryCount,
-      lastUpdated: currentTime,
+    final reward = BattleReward.apply(
+      pet,
+      isVictory: isVictory,
+      isDominantVictory: isDominantVictory,
+      nowMs: currentTime,
     );
+    final expGain = reward.expGained;
+    final updatedPet = reward.updatedPet;
 
     await petRepository.updatePet(updatedPet);
 

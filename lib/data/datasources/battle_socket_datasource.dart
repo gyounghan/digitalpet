@@ -97,27 +97,31 @@ class BattleSocketDatasource {
   }
 
   /// 매칭 큐 입장
+  ///
+  /// [deviceId]는 서버의 RP(랭킹 점수) 갱신·전적 저장 키 — 누락하면
+  /// 온라인 배틀이 랭킹/전적에 반영되지 않는다.
+  /// [atk]/[def]/[hp]는 클라이언트가 계산한 실전 스탯
+  /// (Pet.battleAtk/battleDef/battleHp × 배틀 스타일 배수) — 도감 표시와
+  /// 실전 수치가 항상 일치하도록 서버는 이 값을 그대로 사용한다.
   void joinQueue({
+    String? deviceId,
     required String petName,
     required int level,
-    required int hunger,
-    required int happiness,
-    required int stamina,
     required int evolutionStage,
     String? evolutionType,
-    required int todaySteps,
-    required int todayExerciseMinutes,
+    required int atk,
+    required int def,
+    required int hp,
   }) {
     _socket?.emit('battle:join', {
+      'deviceId': deviceId,
       'petName': petName,
       'level': level,
-      'hunger': hunger,
-      'happiness': happiness,
-      'stamina': stamina,
       'evolutionStage': evolutionStage,
       'evolutionType': evolutionType,
-      'todaySteps': todaySteps,
-      'todayExerciseMinutes': todayExerciseMinutes,
+      'atk': atk,
+      'def': def,
+      'hp': hp,
     });
   }
 

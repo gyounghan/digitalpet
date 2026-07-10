@@ -29,6 +29,7 @@ import '../../data/datasources/health_datasource.dart';
 import '../../data/datasources/step_sensor_datasource.dart';
 import '../../core/constants/app_strings.dart';
 import '../../domain/usecases/battle_with_activity_usecase.dart';
+import '../../domain/usecases/apply_online_battle_reward_usecase.dart';
 import '../../domain/usecases/can_feed_pet_usecase.dart';
 import '../../domain/repositories/battle_history_repository.dart';
 import '../../data/repositories/battle_history_repository_impl.dart';
@@ -263,6 +264,20 @@ final battleWithActivityUseCaseProvider = Provider<BattleWithActivityUseCase>((r
   final activityRepository = ref.watch(activityRepositoryProvider);
   final battleHistoryRepository = ref.watch(battleHistoryRepositoryProvider);
   return BattleWithActivityUseCase(
+    petRepository: petRepository,
+    activityRepository: activityRepository,
+    battleHistoryRepository: battleHistoryRepository,
+  );
+});
+
+/// ApplyOnlineBattleRewardUseCase Provider
+/// 온라인 배틀 결과 보상 적용 유스케이스 인스턴스를 제공
+final applyOnlineBattleRewardUseCaseProvider =
+    Provider<ApplyOnlineBattleRewardUseCase>((ref) {
+  final petRepository = ref.watch(petRepositoryProvider);
+  final activityRepository = ref.watch(activityRepositoryProvider);
+  final battleHistoryRepository = ref.watch(battleHistoryRepositoryProvider);
+  return ApplyOnlineBattleRewardUseCase(
     petRepository: petRepository,
     activityRepository: activityRepository,
     battleHistoryRepository: battleHistoryRepository,
