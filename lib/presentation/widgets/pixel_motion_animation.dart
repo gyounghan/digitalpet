@@ -63,24 +63,32 @@ String? motionSpriteKeyForStage(EvolutionType? type, int stage,
   if (stage <= 1) return 'fluff';
   final species = evolutionSpeciesImagePrefix(type);
   if (species == null) return null;
-  // 성숙기(stage 4)는 등급으로 분기: 사신수 '{종}3' vs 일반종 '{종}3n'
-  if (stage == 4) return grade == 'mythical' ? '${species}3' : '${species}3n';
-  if (stage >= 2 && stage <= 3) return '$species${stage - 1}';
+  // 성장기(3)·성숙기(4)는 등급으로 분기 — 사신수 라인 '{종}2'/'{종}3'(원색),
+  // 일반종 라인 '{종}2n'/'{종}3n'(자연색). 사신수는 stage4 mythical 뿐.
+  final n = stage - 1; // 3→2, 4→3
+  if (stage == 3) return grade == 'normal' ? '$species${n}n' : '$species$n';
+  if (stage == 4) return grade == 'mythical' ? '$species$n' : '$species${n}n';
+  if (stage == 2) return '$species$n';
   return null;
 }
 
-/// 스프라이트 키가 일반종(normal 성숙기, '{종}3n')인지 — 자연색 렌더 판정용.
-bool isNaturalMatureKey(String? spriteKey) =>
-    spriteKey != null && spriteKey.endsWith('3n');
+/// 스프라이트 키가 일반종 라인('{종}2n'·'{종}3n')인지 — 자연색 렌더 판정용.
+bool isNaturalLineKey(String? spriteKey) =>
+    spriteKey != null && spriteKey.endsWith('n') && spriteKey != 'fluff';
 
-/// 도트 스프라이트 (몸통색, 보조색) — 털뭉치=베이지, 일반종=자연색, 그 외=테마색.
+/// 일반종 개체 색 변이(0~3) — [Pet.colorVariant] 위임 (렌더부 편의 래퍼).
+int colorVariantFor(Pet pet) => pet.colorVariant;
+
+/// 도트 스프라이트 (몸통색, 보조색) — 털뭉치=베이지, 일반종=자연색(변이),
+/// 그 외(사신수·성장기 superior)=테마색.
 (Color, Color) dotColorsForKey(
-    String? spriteKey, EvolutionType? type, SpeciesTheme theme) {
+    String? spriteKey, EvolutionType? type, SpeciesTheme theme,
+    [int variant = 0]) {
   if (spriteKey == 'fluff') {
     return (SpeciesTheme.fluffBody, SpeciesTheme.fluffAccent);
   }
-  if (isNaturalMatureKey(spriteKey)) {
-    return SpeciesTheme.naturalDotColors(type);
+  if (isNaturalLineKey(spriteKey)) {
+    return SpeciesTheme.naturalDotColors(type, variant);
   }
   return (theme.primary, theme.spriteAccent);
 }

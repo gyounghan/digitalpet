@@ -281,9 +281,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final spriteKey = _motionSpriteKey(pet);
     if (spriteKey != null) {
       final motion = _transientMotion ?? motionForMood(pet.mood);
-      // 털뭉치=베이지, 일반종=자연색, 사신수/그 외=테마색
-      final (dotColor, accentColor) =
-          dotColorsForKey(spriteKey, pet.evolutionType, theme);
+      // 털뭉치=베이지, 일반종=자연색(개체 변이), 사신수/그 외=테마색
+      final (dotColor, accentColor) = dotColorsForKey(
+          spriteKey, pet.evolutionType, theme, colorVariantFor(pet));
       return SizedBox(
         width: 300,
         height: 300,

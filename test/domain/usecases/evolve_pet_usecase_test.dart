@@ -638,4 +638,17 @@ void main() {
       expect(b.evolutionType, EvolutionType.turtle); // 차분+규칙
     });
   });
+
+  group('일반종 개체 색 변이 (colorVariant)', () {
+    test('육성 스타일 우세 축 → 변이 0~3', () {
+      // 0 활동형 (걸음 우세)
+      expect(_createPet(totalSteps: 100000).colorVariant, 0);
+      // 1 휴식형 (수면 우세)
+      expect(_createPet(sleepAchievedCount: 50).colorVariant, 1);
+      // 2 미식형 (급식 우세)
+      expect(_createPet(feedAchievedCount: 60).colorVariant, 2);
+      // 3 전투형 (전투 우세)
+      expect(_createPet(battleVictoryCount: 40).colorVariant, 3);
+    });
+  });
 }

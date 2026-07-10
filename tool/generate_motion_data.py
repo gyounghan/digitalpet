@@ -1064,29 +1064,35 @@ SPECIES_ART = {
 # ---------------------------------------------------------------------------
 
 # 제거할 신수 요소 영역 (x0, y0, x1, y1 — 포함). 비면 형태 동일(색만 다름).
-STAGE4_NORMAL_STRIP = {
-    "turtle3": [(9, 6, 42, 24), (39, 24, 55, 37), (42, 37, 55, 45)],  # 등 뒤 뱀(머리·목·꼬리curl) 제거
+NORMAL_STRIP = {
+    # 성장기(stage3) — 효과가 작아 대부분 색만, 청룡만 여의주 제거
+    "dragon2": [(20, 10, 28, 22)],                   # 이무기 여의주 제거
+    "bird2": [], "tiger2": [], "turtle2": [],
+    # 성숙기(stage4) — 신수 요소 뚜렷
+    "turtle3": [(9, 6, 42, 24), (39, 24, 55, 37), (42, 37, 55, 45)],  # 등 뒤 뱀 제거
     "dragon3": [(0, 24, 11, 43)],                    # 왼손 여의주 + 팔 제거
     "bird3": [(13, 47, 43, 55)],                     # 하단 불꽃 꼬리 제거
-    "tiger3": [],                                    # 형태 동일 (백호 흰색 → 주황 호랑이)
+    "tiger3": [],                                    # 형태 동일 (색만)
 }
 # 일반종에서 빼는 눈(신수 부속의 눈) 인덱스
-STAGE4_NORMAL_DROP_EYES = {"turtle3": {1}}  # 뱀 눈 제거
+NORMAL_DROP_EYES = {"turtle3": {1}}  # 뱀 눈 제거
 
 
-def _make_normal_stage4():
-    """사신수 아트에서 신수 요소를 제거한 '{종}3n' 일반종 아트를 파생 등록."""
-    for base in ("tiger3", "bird3", "turtle3", "dragon3"):
+def _make_normal_forms():
+    """사신수/신수 아트에서 신수 요소를 제거한 '{종}2n'·'{종}3n' 일반종 아트 파생."""
+    bases = ("tiger2", "bird2", "turtle2", "dragon2",
+             "tiger3", "bird3", "turtle3", "dragon3")
+    for base in bases:
         src = SPECIES_ART[base]
         n = len(src["body"])
         body = [list(r) for r in src["body"]]
-        for x0, y0, x1, y1 in STAGE4_NORMAL_STRIP.get(base, []):
+        for x0, y0, x1, y1 in NORMAL_STRIP.get(base, []):
             for y in range(max(0, y0), min(n, y1 + 1)):
                 for x in range(max(0, x0), min(n, x1 + 1)):
                     body[y][x] = "."
-        drop = STAGE4_NORMAL_DROP_EYES.get(base, set())
+        drop = NORMAL_DROP_EYES.get(base, set())
         eyes = [e for i, e in enumerate(src["eyes"]) if i not in drop]
-        key = base + "n"  # tiger3 → tiger3n
+        key = base + "n"  # tiger3 → tiger3n, tiger2 → tiger2n
         SPECIES_ART[key] = {
             "body": ["".join(r) for r in body],
             "eyes": eyes,
@@ -1098,7 +1104,7 @@ def _make_normal_stage4():
         TARGET_SIZE[key] = TARGET_SIZE[base]
 
 
-_make_normal_stage4()
+_make_normal_forms()
 
 # ---------------------------------------------------------------------------
 # 이펙트 글리프 (24 기준 dark 도트 좌표 — 배치 시 앵커 보정)
@@ -1543,7 +1549,7 @@ def main() -> int:
         # 성장기(28px)·성숙기(56 덤프)·털뭉치는 가장자리가 몸통색으로 끝나
         # 테두리가 빠지므로 실루엣을 검은 테두리로 감싼다
         # (유아기는 원본 테두리가 살아있음)
-        if key.endswith(("2", "3", "3n")) or key == "fluff":
+        if key.endswith(("2", "3", "n")) or key == "fluff":
             meta["body"] = add_outline(meta["body"])
 
     sprite_frames = {}

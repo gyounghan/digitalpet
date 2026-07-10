@@ -348,6 +348,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
                   type: pet.evolutionType,
                   stage: pet.evolutionStage,
                   grade: pet.evolutionGrade,
+                  variant: colorVariantFor(pet),
                   size: 62,
                 ),
               ),

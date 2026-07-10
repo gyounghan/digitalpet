@@ -19,12 +19,16 @@ class PetMotionThumb extends StatelessWidget {
   /// 진화 등급 — 성숙기 사신수('mythical')/일반종 분기용 (기본: 일반종)
   final String grade;
 
+  /// 일반종 개체 색 변이(0~3) — 호출부에서 colorVariantFor(pet)로 계산해 전달
+  final int variant;
+
   const PetMotionThumb({
     super.key,
     required this.type,
     required this.stage,
     required this.size,
     this.grade = '',
+    this.variant = 0,
   });
 
   @override
@@ -52,7 +56,8 @@ class PetMotionThumb extends StatelessWidget {
     if (key != null) {
       final frames = motionFramesFor(key, PixelMotion.walk);
       if (frames != null && frames.isNotEmpty) {
-        final (dotColor, accentColor) = dotColorsForKey(key, type, theme);
+        final (dotColor, accentColor) =
+            dotColorsForKey(key, type, theme, variant);
         return PixelSpriteView(
           sprite: frames.first,
           width: size,

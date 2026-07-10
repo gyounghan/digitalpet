@@ -105,20 +105,43 @@ class SpeciesTheme {
   /// 털뭉치(stage 1) 보조색 — 볼터치·귀 안쪽 연분홍 (귀여움 강조)
   static const Color fluffAccent = Color(0xFFF2A0AE);
 
-  /// 일반종(normal 성숙기) 도트 색 — (몸통, 보조색). 사신수 대신 '그냥 동물'
-  /// 자연색으로 렌더해 사신수(테마 primary)와 형태·색 모두 구분한다.
-  static (Color, Color) naturalDotColors(EvolutionType? type) {
-    return switch (type) {
-      EvolutionType.tiger =>
-        (Color(0xFFE0913F), Color(0xFFF3E4C8)), // 주황 호랑이 + 크림 배
-      EvolutionType.bird =>
-        (Color(0xFF9A7B4E), Color(0xFFD8C39A)), // 갈색 새 + 탄
-      EvolutionType.snake =>
-        (Color(0xFF5E9B49), Color(0xFFE7DFBF)), // 초록 뱀 + 크림
-      EvolutionType.turtle =>
-        (Color(0xFF6E8F52), Color(0xFF9C7A4C)), // 올리브 거북 + 갈색 등딱지
-      null => (defaultTheme.primary, defaultTheme.spriteAccent),
+  /// 일반종(normal 성장기·성숙기) 도트 색 — (몸통, 보조색).
+  ///
+  /// 사신수 대신 '그냥 동물'로 렌더하며, 개체의 육성 스타일(지표 우세 축)에서
+  /// 파생한 [variant](0~3)로 종마다 4가지 자연색을 부여해 다양성을 준다.
+  /// (0 활동형 · 1 휴식형 · 2 미식형 · 3 전투형)
+  static (Color, Color) naturalDotColors(EvolutionType? type, int variant) {
+    final v = variant.clamp(0, 3);
+    final palettes = switch (type) {
+      EvolutionType.bird => const [
+          (Color(0xFF9A7B4E), Color(0xFFD8C39A)), // 갈색 수리
+          (Color(0xFF8B93A0), Color(0xFFCED4DC)), // 회색 새
+          (Color(0xFFCBBB98), Color(0xFFEDE4CF)), // 흰/베이지 새
+          (Color(0xFF5A5652), Color(0xFF9A948C)), // 검은 새
+        ],
+      EvolutionType.snake => const [
+          (Color(0xFF5E9B49), Color(0xFFE7DFBF)), // 초록 뱀
+          (Color(0xFF3E8E8A), Color(0xFFCFE3DF)), // 청록 뱀
+          (Color(0xFFB79A52), Color(0xFFE9DEB8)), // 황갈 뱀
+          (Color(0xFFA85A44), Color(0xFFE2C4B0)), // 적갈 뱀
+        ],
+      EvolutionType.tiger => const [
+          (Color(0xFFE0913F), Color(0xFFF3E4C8)), // 주황 호랑이
+          (Color(0xFFB9BEC6), Color(0xFFEDEFF3)), // 회백 호랑이
+          (Color(0xFFCBA13E), Color(0xFFF0E4BE)), // 황금 호랑이
+          (Color(0xFF5A544E), Color(0xFF9A9288)), // 흑 호랑이
+        ],
+      EvolutionType.turtle => const [
+          (Color(0xFF6E8F52), Color(0xFF9C7A4C)), // 올리브 거북
+          (Color(0xFF4C8A72), Color(0xFF8C7048)), // 청록 거북
+          (Color(0xFF9A8748), Color(0xFFB08C50)), // 황갈 거북
+          (Color(0xFF4A6B3E), Color(0xFF7A5E3C)), // 짙은초록 거북
+        ],
+      null => const [
+          (Color(0xFF4A5A78), Color(0xFFDDE3EC)),
+        ],
     };
+    return palettes[v % palettes.length];
   }
 
   /// 진화 타입으로 테마 조회

@@ -29,6 +29,7 @@ class WidgetService {
   static const String _keySyncTraceId = 'syncTraceId'; // 앱-위젯 동기화 추적 ID
   static const String _keyEvolutionType = 'evolutionType'; // 진화 종 (bird/snake/tiger/turtle)
   static const String _keyEvolutionGrade = 'evolutionGrade'; // 등급 (normal/superior/mythical)
+  static const String _keyColorVariant = 'colorVariant'; // 일반종 개체 색 변이 (0~3)
   static const String _keyEvolutionImage = 'evolutionImage'; // 진화 이미지 리소스명 (bird1, dragon2 등)
   static const String _keyPixelKey = 'pixelKey'; // 위젯이 도트를 직접 렌더할 스프라이트 키
 
@@ -57,6 +58,7 @@ class WidgetService {
       await HomeWidget.saveWidgetData<String>(_keyExp, pet.exp.toString());
       await HomeWidget.saveWidgetData<String>(_keyEvolutionStage, pet.evolutionStage.toString());
       await HomeWidget.saveWidgetData<String>(_keyEvolutionGrade, pet.evolutionGrade);
+      await HomeWidget.saveWidgetData<String>(_keyColorVariant, pet.colorVariant.toString());
       await HomeWidget.saveWidgetData<String>(_keyLastUpdated, pet.lastUpdated.toString());
       await HomeWidget.saveWidgetData<String>(_keyImageType, imageType);
 

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/pet_provider.dart';
 import '../widgets/app_design.dart';
 import '../widgets/pet_motion_thumb.dart';
+import '../widgets/pixel_motion_animation.dart' show colorVariantFor;
 import '../../core/theme/species_theme.dart';
 import '../../core/constants/app_strings.dart';
 import '../../data/services/ad_service.dart';
@@ -305,6 +306,7 @@ class _MeScreenState extends ConsumerState<MeScreen> {
                   type: pet.evolutionType,
                   stage: stage,
                   grade: pet.evolutionGrade,
+                  variant: colorVariantFor(pet),
                   size: 78,
                 ),
               ),
@@ -626,6 +628,7 @@ class _MeScreenState extends ConsumerState<MeScreen> {
                 _evoTreeNode(pet.evolutionType, stages[i].$1, stages[i].$2,
                     theme,
                     grade: pet.evolutionGrade,
+                    variant: colorVariantFor(pet),
                     passed: pet.evolutionStage >= stages[i].$1,
                     current: pet.evolutionStage == stages[i].$1),
                 if (i < stages.length - 1) _dashedConnector(),
@@ -646,6 +649,7 @@ class _MeScreenState extends ConsumerState<MeScreen> {
     required bool passed,
     required bool current,
     String grade = '',
+    int variant = 0,
   }) {
     return Opacity(
       opacity: passed ? 1.0 : 0.35,
@@ -665,7 +669,11 @@ class _MeScreenState extends ConsumerState<MeScreen> {
             alignment: Alignment.center,
             // 종 미결정(털뭉치) 상태의 미래 단계는 '?'로 표시
             child: PetMotionThumb(
-                type: type, stage: stage, grade: grade, size: 40),
+                type: type,
+                stage: stage,
+                grade: grade,
+                variant: variant,
+                size: 40),
           ),
           const SizedBox(height: 4),
           Text(

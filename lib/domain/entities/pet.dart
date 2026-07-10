@@ -512,6 +512,22 @@ class Pet {
   int get sleepTier => sleepAchievedCount ~/ 10;
   int get exerciseTier => exerciseAchievedCount ~/ 10;
 
+  /// 일반종(normal 성장기·성숙기) 개체 색 변이(0~3) — 육성 스타일 우세 축에서
+  /// 파생. 0 활동형 · 1 휴식형 · 2 미식형 · 3 전투형.
+  int get colorVariant {
+    final scores = <double>[
+      totalSteps / 2000.0 + totalExerciseMinutes / 10.0,
+      sleepAchievedCount + totalIdleHours / 6.0,
+      feedAchievedCount.toDouble(),
+      battleVictoryCount.toDouble(),
+    ];
+    var best = 0;
+    for (var i = 1; i < scores.length; i++) {
+      if (scores[i] > scores[best]) best = i;
+    }
+    return best;
+  }
+
   /// 다음 티어까지 남은 달성 횟수
   int get feedRemainingToNextTier => 10 - (feedAchievedCount % 10);
   int get sleepRemainingToNextTier => 10 - (sleepAchievedCount % 10);

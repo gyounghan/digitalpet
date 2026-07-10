@@ -74,8 +74,10 @@ void main() {
     test('그리드 크기: 털뭉치 40, 유아기 32, 성장기 36, 성숙기 56', () {
       int expectedSize(String key) {
         if (key == 'fluff') return 40;
-        if (key.endsWith('1')) return 32; // 유아기
-        if (key.endsWith('2')) return 36; // 성장기
+        // '{종}2n'/'{종}3n' 일반종 라인도 스테이지 크기를 따른다
+        final base = key.endsWith('n') ? key.substring(0, key.length - 1) : key;
+        if (base.endsWith('1')) return 32; // 유아기
+        if (base.endsWith('2')) return 36; // 성장기
         return 56; // 성숙기
       }
 
@@ -147,16 +149,20 @@ void main() {
       expect(motionSpriteKeyFromAssetPath('assets/bird3.png'), 'bird3');
     });
 
-    test('진화 단계 → 모션 키 (성숙기 등급 분기: 사신수 vs 일반종)', () {
+    test('진화 단계 → 모션 키 (성장기·성숙기 등급 분기: 사신수 라인 vs 일반종 라인)', () {
       expect(motionSpriteKeyForStage(null, 1), 'fluff');
       expect(motionSpriteKeyForStage(EvolutionType.snake, 2), 'dragon1');
-      expect(motionSpriteKeyForStage(EvolutionType.tiger, 3), 'tiger2');
+      // 성장기: superior → '{종}2', normal → '{종}2n'
+      expect(motionSpriteKeyForStage(EvolutionType.tiger, 3, 'superior'), 'tiger2');
+      expect(motionSpriteKeyForStage(EvolutionType.tiger, 3, 'normal'), 'tiger2n');
       // 성숙기: mythical → 사신수 '{종}3', 그 외 → 일반종 '{종}3n'
       expect(motionSpriteKeyForStage(EvolutionType.bird, 4, 'mythical'), 'bird3');
       expect(motionSpriteKeyForStage(EvolutionType.bird, 4, 'normal'), 'bird3n');
       expect(motionSpriteKeyForStage(EvolutionType.turtle, 4), 'turtle3n'); // 기본 일반종
-      expect(isNaturalMatureKey('bird3n'), isTrue);
-      expect(isNaturalMatureKey('bird3'), isFalse);
+      expect(isNaturalLineKey('bird3n'), isTrue);
+      expect(isNaturalLineKey('bird2n'), isTrue);
+      expect(isNaturalLineKey('bird3'), isFalse);
+      expect(isNaturalLineKey('fluff'), isFalse);
       // 종 미결정 상태의 미래 단계는 null
       expect(motionSpriteKeyForStage(null, 2), isNull);
     });

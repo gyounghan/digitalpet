@@ -353,10 +353,11 @@ class PetWidgetProvider : AppWidgetProvider() {
         val evolutionType = getWidgetString(context, "evolutionType", null)
         val stage = getWidgetString(context, "evolutionStage", "1")?.toIntOrNull() ?: 1
         val grade = getWidgetString(context, "evolutionGrade", "") ?: ""
+        val variant = getWidgetString(context, "colorVariant", "0")?.toIntOrNull() ?: 0
 
         val sprite =
             resolveWidgetSprite(context, evolutionType, stage, grade, mood) ?: return false
-        val (dotColor, accentColor) = resolveDotColors(evolutionType, stage, grade)
+        val (dotColor, accentColor) = resolveDotColors(evolutionType, stage, grade, variant)
 
         val bitmap = runCatching {
             WidgetPixelRenderer.render(sprite, dotColor, accentColor, DOT_RENDER_SIZE_PX)
@@ -388,8 +389,9 @@ class PetWidgetProvider : AppWidgetProvider() {
     }
 
     /// 앱 motionSpriteKeyForStage와 동일한 규칙.
-    /// stage1 → 'fluff', stage2/3 → '{종}{stage-1}',
-    /// stage4(성숙기) → 사신수(mythical) '{종}3' / 일반종 '{종}3n'.
+    /// stage1 → 'fluff', stage2 → '{종}1',
+    /// stage3(성장기) → superior '{종}2' / 일반 '{종}2n',
+    /// stage4(성숙기) → 사신수(mythical) '{종}3' / 일반 '{종}3n'.
     private fun motionSpriteKey(evolutionType: String?, stage: Int, grade: String): String? {
         if (stage <= 1) return "fluff"
         val prefix = when (evolutionType) {
@@ -399,9 +401,10 @@ class PetWidgetProvider : AppWidgetProvider() {
             "turtle" -> "turtle"
             else -> return null
         }
-        return when {
-            stage == 4 -> if (grade == "mythical") "${prefix}3" else "${prefix}3n"
-            stage in 2..3 -> "$prefix${stage - 1}"
+        return when (stage) {
+            2 -> "${prefix}1"
+            3 -> if (grade == "normal") "${prefix}2n" else "${prefix}2"
+            4 -> if (grade == "mythical") "${prefix}3" else "${prefix}3n"
             else -> null
         }
     }
@@ -421,21 +424,47 @@ class PetWidgetProvider : AppWidgetProvider() {
         evolutionType: String?,
         stage: Int,
         grade: String,
+        variant: Int,
     ): Pair<Int, Int> {
         if (stage <= 1 || evolutionType.isNullOrBlank()) {
             val fluffBody = 0xFFF4E9CE.toInt() // SpeciesTheme.fluffBody
             val fluffAccent = 0xFFF2A0AE.toInt() // SpeciesTheme.fluffAccent (볼터치·귀 분홍)
             return fluffBody to fluffAccent
         }
-        // 성숙기 일반종(사신수 아님)은 '그냥 동물' 자연색 (SpeciesTheme.naturalDotColors)
-        if (stage == 4 && grade != "mythical") {
-            return when (evolutionType) {
-                "tiger" -> 0xFFE0913F.toInt() to 0xFFF3E4C8.toInt() // 주황 호랑이
-                "bird" -> 0xFF9A7B4E.toInt() to 0xFFD8C39A.toInt() // 갈색 새
-                "snake" -> 0xFF5E9B49.toInt() to 0xFFE7DFBF.toInt() // 초록 뱀
-                "turtle" -> 0xFF6E8F52.toInt() to 0xFF9C7A4C.toInt() // 올리브 거북
-                else -> 0xFF4A5A78.toInt() to 0xFFDDE3EC.toInt()
+        // 일반종 라인(성장기 normal · 성숙기 non-mythical)은 개체 변이 자연색
+        // (앱 SpeciesTheme.naturalDotColors와 동일 4팔레트)
+        val isNatural =
+            (stage == 3 && grade == "normal") || (stage == 4 && grade != "mythical")
+        if (isNatural) {
+            val v = variant.coerceIn(0, 3)
+            val palettes = when (evolutionType) {
+                "bird" -> listOf(
+                    0xFF9A7B4E.toInt() to 0xFFD8C39A.toInt(),
+                    0xFF8B93A0.toInt() to 0xFFCED4DC.toInt(),
+                    0xFFCBBB98.toInt() to 0xFFEDE4CF.toInt(),
+                    0xFF5A5652.toInt() to 0xFF9A948C.toInt(),
+                )
+                "snake" -> listOf(
+                    0xFF5E9B49.toInt() to 0xFFE7DFBF.toInt(),
+                    0xFF3E8E8A.toInt() to 0xFFCFE3DF.toInt(),
+                    0xFFB79A52.toInt() to 0xFFE9DEB8.toInt(),
+                    0xFFA85A44.toInt() to 0xFFE2C4B0.toInt(),
+                )
+                "tiger" -> listOf(
+                    0xFFE0913F.toInt() to 0xFFF3E4C8.toInt(),
+                    0xFFB9BEC6.toInt() to 0xFFEDEFF3.toInt(),
+                    0xFFCBA13E.toInt() to 0xFFF0E4BE.toInt(),
+                    0xFF5A544E.toInt() to 0xFF9A9288.toInt(),
+                )
+                "turtle" -> listOf(
+                    0xFF6E8F52.toInt() to 0xFF9C7A4C.toInt(),
+                    0xFF4C8A72.toInt() to 0xFF8C7048.toInt(),
+                    0xFF9A8748.toInt() to 0xFFB08C50.toInt(),
+                    0xFF4A6B3E.toInt() to 0xFF7A5E3C.toInt(),
+                )
+                else -> listOf(0xFF4A5A78.toInt() to 0xFFDDE3EC.toInt())
             }
+            return palettes[v % palettes.size]
         }
         return when (evolutionType) {
             "tiger" -> 0xFF4A5A78.toInt() to 0xFFF0F3F8.toInt()
