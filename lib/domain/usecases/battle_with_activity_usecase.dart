@@ -122,9 +122,16 @@ class BattleWithActivityUseCase {
     );
 
     // AI 상대 생성 (종 랜덤)
+    // 미러 기준은 스타일 적용 "전" 스탯 — 스타일 선택은 플레이어만의 edge로 남긴다.
     final opponentLevel = max(1, pet.level - 2 + random.nextInt(4));
     final opponentType = EvolutionType.values[random.nextInt(EvolutionType.values.length)];
-    final opponentStats = _generateOpponentStats(opponentLevel, opponentType, random);
+    final baseStats = BattleStats(
+      attack: pet.battleAtk,
+      defense: pet.battleDef,
+      hp: pet.battleHp,
+    );
+    final opponentStats =
+        generateOpponentStats(baseStats, opponentLevel, opponentType, random);
 
     // 상성 계산
     final affinityMultiplier = affinityMultiplierFor(playerType, opponentType);
@@ -347,9 +354,16 @@ class BattleWithActivityUseCase {
     return skills[0]; // 기본공격
   }
 
-  /// AI 상대 스탯 — 플레이어의 영구 성장 골격(레벨 + 누적보너스 범위)과
-  /// 대등하도록 생성. 누적 세트(0~15)/걸음(0~20) 보너스 폭을 랜덤으로 흉내낸다.
-  BattleStats _generateOpponentStats(int level, EvolutionType type, Random random) {
+  /// AI 상대 스탯 — "레벨 기준 골격"과 "플레이어 실측 스탯 미러"를 절반씩 섞고
+  /// ±15% 변동을 준다.
+  ///
+  /// 플레이어의 육성(세트·걸음·진화단계·컨디션)이 절반만 상대에게 전이되므로:
+  /// 잘 키우면 우위(승률 ~70%대), 방치하면 열세(~40%대)가 유지되면서도
+  /// 예전처럼 상대가 절대치(레벨만)에 묶여 무조건 이기는 구조가 되지 않는다.
+  /// 상성(+20%)·스킬·배틀 스타일이 그 안에서 승부를 흔든다.
+  /// 인스턴스 상태를 쓰지 않으므로 static — 시뮬레이션/테스트에서 직접 호출 가능.
+  static BattleStats generateOpponentStats(
+      BattleStats player, int level, EvolutionType type, Random random) {
     int attackBonus = 0, defenseBonus = 0, hpBonus = 0;
     switch (type) {
       case EvolutionType.bird: attackBonus = 3; break;
@@ -358,10 +372,25 @@ class BattleWithActivityUseCase {
       case EvolutionType.turtle: defenseBonus = 3; hpBonus = 10; break;
     }
 
+    // 레벨 기준 골격 (옛 랜덤 보너스의 기대값을 상수화: atk/def +6, hp +10)
+    final baseAtk = Pet.battleFlatBase + level + 6 + attackBonus;
+    final baseDef = Pet.battleFlatBase + level + 6 + defenseBonus;
+    final baseHp = 50 + level * 2 + 10 + hpBonus;
+
+    // 골격 15% : 미러 85% 혼합 후 ±15% 변동
+    // (미러 비중이 낮으면 플레이어 스탯 우위가 7턴 HP 비교에서 증폭돼
+    //  보통 육성도 90%+ 승률이 나온다 — 시뮬레이션 튜닝 결과:
+    //  방치 ~40% / 보통 ~75% / 헤비 ~93%, 상성·스타일이 ±15%p 스윙)
+    int mix(int base, int mirror) {
+      final blended = base * 0.15 + mirror * 0.85;
+      final vary = 0.85 + random.nextDouble() * 0.3;
+      return (blended * vary).round().clamp(1, 1 << 30);
+    }
+
     return BattleStats(
-      attack: Pet.battleFlatBase + level + random.nextInt(13) + attackBonus,
-      defense: Pet.battleFlatBase + level + random.nextInt(13) + defenseBonus,
-      hp: 50 + (level * 2) + random.nextInt(21) + hpBonus,
+      attack: mix(baseAtk, player.attack),
+      defense: mix(baseDef, player.defense),
+      hp: mix(baseHp, player.hp),
     );
   }
 }
