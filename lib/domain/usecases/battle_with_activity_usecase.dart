@@ -41,14 +41,22 @@ class BattleSkill {
 }
 
 /// 종별 스킬셋
+// 시뮬레이션 밸런스 노트: 급강하 1.5는 bird가 불리 상성마저 뒤집는 최강 스킬이었고,
+// 조이기는 데미지 없는 디버프라 snake만 유독 약했다(보통 육성 95% vs 53%).
+// → 급강하 1.3 하향, 조이기에 소폭 데미지(1.2) 부여로 4종 승률 폭 축소.
 const Map<EvolutionType, List<BattleSkill>> _skillSets = {
   EvolutionType.bird: [
     BattleSkill(name: '쪼기'),
-    BattleSkill(name: '급강하', type: SkillType.special, damageMultiplier: 1.5),
+    BattleSkill(name: '급강하', type: SkillType.special, damageMultiplier: 1.25),
   ],
   EvolutionType.snake: [
     BattleSkill(name: '물기'),
-    BattleSkill(name: '조이기', type: SkillType.special, defenseDebuff: 3, debuffDuration: 2),
+    BattleSkill(
+        name: '조이기',
+        type: SkillType.special,
+        damageMultiplier: 1.2,
+        defenseDebuff: 3,
+        debuffDuration: 2),
   ],
   EvolutionType.tiger: [
     BattleSkill(name: '할퀴기'),
