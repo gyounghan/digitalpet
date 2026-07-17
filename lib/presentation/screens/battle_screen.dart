@@ -57,10 +57,10 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
     // 매칭 대기/진행 중 재진입 차단 (빠른 더블탭 시 소켓 중복 큐잉 방지)
     if (isLoading || isMatchmaking) return;
 
-    // 죽은 펫은 배틀 불가
+    // 긴 잠에 빠진 펫은 배틀 불가
     if (pet.isDead) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('펫이 하늘나라에 있어요. 부활 후 다시 시도해주세요.')),
+        const SnackBar(content: Text('펫이 깊은 잠에 빠져 있어요. 깨운 뒤 다시 시도해주세요.')),
       );
       return;
     }
@@ -269,7 +269,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
         ref.read(petNotifierProvider(HomeScreen.defaultPetId)).valueOrNull;
     if (pet != null && pet.isDead) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('펫이 하늘나라에 있어요. 부활 후 다시 시도해주세요.')),
+        const SnackBar(content: Text('펫이 깊은 잠에 빠져 있어요. 깨운 뒤 다시 시도해주세요.')),
       );
       return;
     }

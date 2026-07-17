@@ -80,8 +80,8 @@ void main() {
       expect(getPetImageTypeFromMood(PetMood.sad), PetImageType.sad);
     });
 
-    test('dead → sad', () {
-      expect(getPetImageTypeFromMood(PetMood.dead), PetImageType.sad);
+    test('dead(긴 잠) → sleep', () {
+      expect(getPetImageTypeFromMood(PetMood.dead), PetImageType.sleep);
     });
 
     test('모든 PetMood 값이 매핑됨', () {

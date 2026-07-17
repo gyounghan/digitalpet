@@ -57,29 +57,39 @@ void main() {
     useCase = ResurrectPetUseCase(repository);
   });
 
-  group('ResurrectPetUseCase', () {
-    test('사망한 펫 부활 시 isDead=false, 수치 50/50/50', () async {
-      final deadPet = _createPet(isDead: true, resurrectCount: 0);
-      repository.setPet(deadPet);
+  group('ResurrectPetUseCase (긴 잠 깨우기)', () {
+    test('무료 깨우기 시 isDead=false, 수치 30/30/30', () async {
+      final sleepingPet = _createPet(isDead: true, resurrectCount: 0);
+      repository.setPet(sleepingPet);
 
       final result = await useCase('test-pet');
       expect(result.isDead, false);
-      expect(result.hunger, 50);
-      expect(result.happiness, 50);
-      expect(result.stamina, 50);
+      expect(result.hunger, 30);
+      expect(result.happiness, 30);
+      expect(result.stamina, 30);
     });
 
-    test('부활 시 resurrectCount 증가', () async {
-      final deadPet = _createPet(isDead: true, resurrectCount: 3);
-      repository.setPet(deadPet);
+    test('완전 회복 깨우기(광고) 시 100/100/100', () async {
+      final sleepingPet = _createPet(isDead: true, resurrectCount: 0);
+      repository.setPet(sleepingPet);
+
+      final result = await useCase('test-pet', fullRecovery: true);
+      expect(result.hunger, 100);
+      expect(result.happiness, 100);
+      expect(result.stamina, 100);
+    });
+
+    test('깨우기 시 resurrectCount 증가', () async {
+      final sleepingPet = _createPet(isDead: true, resurrectCount: 3);
+      repository.setPet(sleepingPet);
 
       final result = await useCase('test-pet');
       expect(result.resurrectCount, 4);
     });
 
-    test('부활 시 레벨과 경험치는 유지', () async {
-      final deadPet = _createPet(isDead: true);
-      repository.setPet(deadPet);
+    test('여러 번 깨워도 레벨과 경험치는 유지 (패널티 없음)', () async {
+      final sleepingPet = _createPet(isDead: true, resurrectCount: 5);
+      repository.setPet(sleepingPet);
 
       final result = await useCase('test-pet');
       expect(result.level, 5);
@@ -87,7 +97,7 @@ void main() {
       expect(result.evolutionStage, 2);
     });
 
-    test('살아있는 펫에 호출하면 예외 발생', () async {
+    test('잠들지 않은 펫에 호출하면 예외 발생', () async {
       final alivePet = _createPet(isDead: false);
       repository.setPet(alivePet);
 
@@ -97,13 +107,13 @@ void main() {
       );
     });
 
-    test('부활 후 repository에 저장됨', () async {
-      final deadPet = _createPet(isDead: true);
-      repository.setPet(deadPet);
+    test('깨우기 후 repository에 저장됨', () async {
+      final sleepingPet = _createPet(isDead: true);
+      repository.setPet(sleepingPet);
 
       await useCase('test-pet');
       expect(repository.currentPet?.isDead, false);
-      expect(repository.currentPet?.hunger, 50);
+      expect(repository.currentPet?.hunger, 30);
     });
   });
 }

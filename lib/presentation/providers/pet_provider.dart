@@ -855,13 +855,17 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
     }
   }
   
-  /// 펫 부활 (광고 시청 후 호출)
-  Future<void> resurrect() async {
+  /// 긴 잠에서 깨우기
+  ///
+  /// [fullRecovery] false면 무료 깨우기(30/30/30),
+  /// true면 광고 시청 보상 완전 회복(100/100/100)
+  Future<void> resurrect({bool fullRecovery = false}) async {
     if (state.isLoading || state.hasError) return;
     if (state.valueOrNull?.isDead != true) return;
 
     try {
-      final resurrectedPet = await resurrectPetUseCase(petId);
+      final resurrectedPet =
+          await resurrectPetUseCase(petId, fullRecovery: fullRecovery);
       final evolvedPet = await _updateAndEvolve(resurrectedPet);
       state = AsyncValue.data(evolvedPet);
     } catch (e, stackTrace) {

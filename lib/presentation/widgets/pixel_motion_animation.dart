@@ -26,7 +26,7 @@ enum PixelMotion {
 /// - normal → walk (뒤뚱뒤뚱)
 /// - hungry → hungry (침 흘리며 조름)
 /// - sleepy/tired → sleep (엎드려 ZZZ)
-/// - sad/dead → hurt (시무룩)
+/// - sad → hurt (시무룩), dead(긴 잠) → sleep
 PixelMotion motionForMood(PetMood mood) {
   switch (mood) {
     case PetMood.happy:
@@ -42,7 +42,8 @@ PixelMotion motionForMood(PetMood mood) {
     case PetMood.sad:
       return PixelMotion.hurt;
     case PetMood.dead:
-      return PixelMotion.hurt;
+      // 긴 잠 컨셉 — 잠자는 모습으로 표현
+      return PixelMotion.sleep;
   }
 }
 

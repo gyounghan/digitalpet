@@ -127,7 +127,8 @@ void main() {
       expect(motionForMood(PetMood.sleepy), PixelMotion.sleep);
       expect(motionForMood(PetMood.tired), PixelMotion.sleep);
       expect(motionForMood(PetMood.sad), PixelMotion.hurt);
-      expect(motionForMood(PetMood.dead), PixelMotion.hurt);
+      // dead는 긴 잠 컨셉 — 잠자는 모션
+      expect(motionForMood(PetMood.dead), PixelMotion.sleep);
     });
   });
 

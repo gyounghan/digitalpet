@@ -140,43 +140,43 @@ void main() {
     });
   });
 
-  group('Pet.resurrect()', () {
-    test('1회차 부활 시 50/50/50', () {
-      final deadPet = _createPet(
+  group('Pet.wakeUp()', () {
+    test('무료 깨우기 시 isDead=false, 수치 30/30/30', () {
+      final sleepingPet = _createPet(
         hunger: 0, happiness: 0, stamina: 0,
         isDead: true,
         deathDate: DateTime.now().millisecondsSinceEpoch,
         resurrectCount: 0,
       );
-      final resurrectedPet = deadPet.resurrect();
-      expect(resurrectedPet.isDead, false);
-      expect(resurrectedPet.hunger, 50);
-      expect(resurrectedPet.happiness, 50);
-      expect(resurrectedPet.stamina, 50);
-      expect(resurrectedPet.resurrectCount, 1);
+      final awakenedPet = sleepingPet.wakeUp();
+      expect(awakenedPet.isDead, false);
+      expect(awakenedPet.hunger, 30);
+      expect(awakenedPet.happiness, 30);
+      expect(awakenedPet.stamina, 30);
+      expect(awakenedPet.resurrectCount, 1);
     });
 
-    test('2회차 부활 시 40/40/40', () {
-      final deadPet = _createPet(
+    test('완전 회복 깨우기(광고) 시 100/100/100', () {
+      final sleepingPet = _createPet(
         hunger: 0, happiness: 0, stamina: 0,
         isDead: true, resurrectCount: 1,
       );
-      final resurrectedPet = deadPet.resurrect();
-      expect(resurrectedPet.hunger, 40);
-      expect(resurrectedPet.happiness, 40);
-      expect(resurrectedPet.stamina, 40);
-      expect(resurrectedPet.resurrectCount, 2);
+      final awakenedPet = sleepingPet.wakeUp(fullRecovery: true);
+      expect(awakenedPet.hunger, 100);
+      expect(awakenedPet.happiness, 100);
+      expect(awakenedPet.stamina, 100);
+      expect(awakenedPet.resurrectCount, 2);
     });
 
-    test('3회차 부활 시 30/30/30 + 레벨 -1', () {
-      final deadPet = _createPet(
+    test('여러 번 깨워도 레벨 패널티 없음', () {
+      final sleepingPet = _createPet(
         hunger: 0, happiness: 0, stamina: 0,
         isDead: true, resurrectCount: 2, level: 5,
       );
-      final resurrectedPet = deadPet.resurrect();
-      expect(resurrectedPet.hunger, 30);
-      expect(resurrectedPet.level, 4);
-      expect(resurrectedPet.resurrectCount, 3);
+      final awakenedPet = sleepingPet.wakeUp();
+      expect(awakenedPet.hunger, 30);
+      expect(awakenedPet.level, 5);
+      expect(awakenedPet.resurrectCount, 3);
     });
   });
 

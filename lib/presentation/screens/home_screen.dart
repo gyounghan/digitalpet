@@ -12,7 +12,7 @@ import '../../domain/usecases/calculate_daily_goals_score_usecase.dart';
 import '../../domain/usecases/today_goal_progress.dart';
 import '../../core/utils/pet_image_helper.dart';
 import '../../data/services/ad_service.dart';
-import '../widgets/gravestone_widget.dart';
+import '../widgets/long_sleep_widget.dart';
 import '../widgets/sync_permission_banner.dart';
 
 /// 홈 화면 — "펫이 주인공, 정보는 행동 가능한 것만"
@@ -486,28 +486,35 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return ((exp / needed) * 100).clamp(0, 100).round();
   }
 
+  /// 긴 잠에 빠진 펫 — 무료 깨우기(30/30/30) 또는 광고 깨우기(완전 회복)
   Widget _buildDeadPetContent(BuildContext context, WidgetRef ref, Pet pet) {
+    final notifier = ref.read(
+      petNotifierProvider(HomeScreen.defaultPetId).notifier,
+    );
+    void showWakeSuccess() {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text(AppStrings.wakeSuccess)),
+        );
+      }
+    }
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
-        child: GravestoneWidget(
+        child: LongSleepWidget(
           pet: pet,
-          onResurrectPressed: () async {
-            final notifier = ref.read(
-              petNotifierProvider(HomeScreen.defaultPetId).notifier,
-            );
+          onWakeFree: () async {
+            await notifier.resurrect();
+            showWakeSuccess();
+          },
+          onWakeWithAd: () async {
             final messenger = ScaffoldMessenger.of(context);
-            // 리워드 광고 시청 완료 시에만 부활
+            // 리워드 광고 시청 완료 시에만 완전 회복으로 깨움
             await AdService().showRewardedAd(
               onRewarded: () async {
-                await notifier.resurrect();
-                if (context.mounted) {
-                  messenger.showSnackBar(
-                    const SnackBar(
-                      content: Text(AppStrings.resurrectSuccess),
-                    ),
-                  );
-                }
+                await notifier.resurrect(fullRecovery: true);
+                showWakeSuccess();
               },
               onAdFailed: () {
                 messenger.showSnackBar(

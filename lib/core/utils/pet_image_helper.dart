@@ -57,7 +57,7 @@ String? getEvolutionImagePath(EvolutionType? type, int evolutionStage) {
 /// - hungry → hungry
 /// - sleepy → sleepy
 /// - tired → sleep
-/// - sad/dead → sad
+/// - sad → sad, dead(긴 잠) → sleep
 String? getEvolutionMoodImagePath(
   EvolutionType? type,
   int evolutionStage,
@@ -92,7 +92,8 @@ String _getMoodImageSuffix(PetMood mood) {
     case PetMood.sad:
       return 'sad';
     case PetMood.dead:
-      return 'sad';
+      // 긴 잠 컨셉 — 잠자는 모습으로 표현
+      return 'sleep';
   }
 }
 
@@ -105,7 +106,7 @@ String _getMoodImageSuffix(PetMood mood) {
 /// - normal → exercise
 /// - hungry → hungry (배고파하는 전용 프레임)
 /// - sleepy/tired → sleep
-/// - sad/dead → sad
+/// - sad → sad, dead(긴 잠) → sleep
 PetImageType getPetImageTypeFromMood(PetMood mood) {
   switch (mood) {
     case PetMood.happy:
@@ -121,7 +122,8 @@ PetImageType getPetImageTypeFromMood(PetMood mood) {
     case PetMood.sad:
       return PetImageType.sad;
     case PetMood.dead:
-      return PetImageType.sad;
+      // 긴 잠 컨셉 — 잠자는 모습으로 표현
+      return PetImageType.sleep;
   }
 }
 

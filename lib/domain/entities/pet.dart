@@ -618,8 +618,9 @@ class Pet {
   /// 모든 수치가 0인지 확인
   bool get isAllStatsZero => hunger == 0 && happiness == 0 && stamina == 0;
 
-  /// 사망 조건 충족 여부 (모든 수치 0이 5일 이상 지속)
+  /// 긴 잠(isDead) 진입 조건 충족 여부 (모든 수치 0이 5일 이상 지속)
   /// CheckPetDeathUseCase.deathThresholdDays와 동일해야 한다
+  /// (필드명은 isDead지만 UX상 "사망"이 아니라 "긴 잠"으로 표현한다)
   bool get shouldDie {
     if (isDead) return false;
     if (!isAllStatsZero) return false;
@@ -654,7 +655,7 @@ class Pet {
   /// 기간 내 운동 시간 (분, deprecated, 호환용)
   int get periodExerciseMinutes => totalExerciseMinutes - goalStartTotalExerciseMinutes;
 
-  /// 사망 처리
+  /// 긴 잠 진입 처리 (필드명은 isDead — 저장 호환을 위해 유지)
   Pet die() {
     return Pet(
       id: id,
@@ -713,29 +714,22 @@ class Pet {
     );
   }
 
-  /// 부활 처리 (부활 횟수에 따라 차등 회복)
-  /// 1회: 50/50/50, 2회: 40/40/40, 3회+: 30/30/30 + 레벨 -1
-  Pet resurrect() {
+  /// 긴 잠에서 깨우기
+  ///
+  /// 사망이 아니라 "긴 잠" 컨셉 — 돌아온 유저를 벌하지 않는다.
+  /// - 무료 깨우기: 30/30/30으로 낮게 재시작
+  /// - [fullRecovery] (광고 시청): 100/100/100 완전 회복
+  /// 레벨 패널티는 없다. resurrectCount는 깨어난 횟수로 누적된다.
+  Pet wakeUp({bool fullRecovery = false}) {
     final now = DateTime.now().millisecondsSinceEpoch;
-    final int recoveryAmount;
-    final int levelPenalty;
-    if (resurrectCount == 0) {
-      recoveryAmount = 50;
-      levelPenalty = 0;
-    } else if (resurrectCount == 1) {
-      recoveryAmount = 40;
-      levelPenalty = 0;
-    } else {
-      recoveryAmount = 30;
-      levelPenalty = 1;
-    }
+    final recoveryAmount = fullRecovery ? 100 : 30;
     return Pet(
       id: id,
       name: name,
       hunger: recoveryAmount,
       happiness: recoveryAmount,
       stamina: recoveryAmount,
-      level: (level - levelPenalty).clamp(1, level),
+      level: level,
       exp: exp,
       evolutionStage: evolutionStage,
       lastUpdated: now,

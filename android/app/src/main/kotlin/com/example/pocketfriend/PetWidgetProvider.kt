@@ -289,12 +289,12 @@ class PetWidgetProvider : AppWidgetProvider() {
     }
 
     /// mood를 imageType으로 변환
-    /// (앱 getPetImageTypeFromMood와 동일 규칙 — sad/dead → sad)
+    /// (앱 getPetImageTypeFromMood와 동일 규칙 — dead는 "긴 잠" 컨셉이라 sleep)
     private fun mapMoodToImageType(mood: String): String? {
         return when (mood.trim()) {
             "hungry" -> "feed"
-            "sleepy", "tired" -> "sleep"
-            "sad", "dead" -> "sad"
+            "sleepy", "tired", "dead" -> "sleep"
+            "sad" -> "sad"
             "happy" -> "happy"
             "normal" -> "exercise"
             else -> null
@@ -414,9 +414,9 @@ class PetWidgetProvider : AppWidgetProvider() {
     /// 앱 motionForMood와 동일한 mood → 모션 매핑.
     private fun motionForMood(mood: String): String = when (mood.trim().lowercase()) {
         "happy" -> "joy"
-        "sleepy", "tired" -> "sleep"
+        "sleepy", "tired", "dead" -> "sleep"
         "hungry" -> "hungry"
-        "sad", "dead" -> "hurt"
+        "sad" -> "hurt"
         else -> "walk"
     }
 
@@ -552,7 +552,7 @@ class PetWidgetProvider : AppWidgetProvider() {
     }
 
     /// mood를 한국어 상태 텍스트로 변환
-    /// (앱 AppStrings의 mood 문자열과 동일하게 유지 — dead는 moodDead '사망')
+    /// (앱 AppStrings의 mood 문자열과 동일하게 유지 — dead는 moodDead '긴 잠')
     private fun mapMoodToKoreanText(mood: String): String? {
         return when (mood.trim()) {
             "happy" -> "행복"
@@ -561,7 +561,7 @@ class PetWidgetProvider : AppWidgetProvider() {
             "sleepy" -> "졸림"
             "tired" -> "지침"
             "sad" -> "시무룩"
-            "dead" -> "사망"
+            "dead" -> "긴 잠"
             else -> null
         }
     }

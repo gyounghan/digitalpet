@@ -12,7 +12,8 @@ class AppStrings {
   static const String moodSleepy = '졸림';
   static const String moodTired = '지침';
   static const String moodSad = '시무룩';
-  static const String moodDead = '사망';
+  // 사망이 아니라 "긴 잠" 컨셉 — 위젯(PetWidgetProvider.kt)과 동일 표기 유지
+  static const String moodDead = '긴 잠';
 
   // 액션
   static const String feed = '먹이주기';
@@ -63,10 +64,13 @@ class AppStrings {
   static const String evolutionEvolving = '진화 중...';
   static const String evolutionEvolveNow = '지금 진화하기';
 
-  // 사망/부활
-  static const String gravestoneTitle = '여기 잠들다';
-  static const String resurrectButton = '부활하기 (광고 시청)';
-  static const String resurrectSuccess = '펫이 부활했어요!';
+  // 긴 잠/깨우기 (사망·부활 리프레이밍 — 돌아온 유저를 벌하지 않는다)
+  static const String longSleepTitle = '깊은 잠에 빠졌어요';
+  static const String longSleepHint = '오래 혼자 있으면 긴 잠에 들어요.\n깨워주면 다시 함께할 수 있어요!';
+  static const String longSleepSinceLabel = '잠든 날';
+  static const String wakeFreeButton = '쓰다듬어 깨우기';
+  static const String wakeAdButton = '간식으로 깨우기 (광고 · 완전 회복)';
+  static const String wakeSuccess = '깨어났어요! "보고 싶었어!"';
   static const String adLoadFailed = '광고를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.';
 
   // 새로 키우기(초기화)
