@@ -1,4 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 네트워크 (펫 서버 동기화 · 온라인 배틀 · 랭킹) -->
+    <!-- debug 매니페스트에만 있으면 release 빌드에서 모든 HTTP/소켓이 불능이 된다 -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <!-- 헬스케어 데이터 접근 권한 -->
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
@@ -19,7 +23,8 @@
     <application
         android:label="pocketfriend"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:networkSecurityConfig="@xml/network_security_config">
         <activity
             android:name=".MainActivity"
             android:exported="true"

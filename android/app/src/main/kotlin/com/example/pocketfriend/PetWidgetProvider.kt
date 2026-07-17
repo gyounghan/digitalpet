@@ -289,11 +289,12 @@ class PetWidgetProvider : AppWidgetProvider() {
     }
 
     /// mood를 imageType으로 변환
+    /// (앱 getPetImageTypeFromMood와 동일 규칙 — sad/dead → sad)
     private fun mapMoodToImageType(mood: String): String? {
         return when (mood.trim()) {
             "hungry" -> "feed"
             "sleepy", "tired" -> "sleep"
-            "sad" -> "sad"
+            "sad", "dead" -> "sad"
             "happy" -> "happy"
             "normal" -> "exercise"
             else -> null
@@ -311,14 +312,15 @@ class PetWidgetProvider : AppWidgetProvider() {
         return calculateMoodFromStats(hunger, happiness, stamina)
     }
 
-    /// 유효한 mood 문자열인지 확인
+    /// 유효한 mood 문자열인지 확인 (Flutter PetMood 6종 + dead)
     private fun isKnownMood(mood: String): Boolean {
         return mood == "happy" ||
             mood == "normal" ||
             mood == "hungry" ||
             mood == "sleepy" ||
             mood == "tired" ||
-            mood == "sad"
+            mood == "sad" ||
+            mood == "dead"
     }
 
     /// Flutter Pet.mood 로직과 동일한 상태 판정
@@ -550,6 +552,7 @@ class PetWidgetProvider : AppWidgetProvider() {
     }
 
     /// mood를 한국어 상태 텍스트로 변환
+    /// (앱 AppStrings의 mood 문자열과 동일하게 유지 — dead는 moodDead '사망')
     private fun mapMoodToKoreanText(mood: String): String? {
         return when (mood.trim()) {
             "happy" -> "행복"
@@ -558,6 +561,7 @@ class PetWidgetProvider : AppWidgetProvider() {
             "sleepy" -> "졸림"
             "tired" -> "지침"
             "sad" -> "시무룩"
+            "dead" -> "사망"
             else -> null
         }
     }

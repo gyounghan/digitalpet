@@ -27,6 +27,35 @@ subprojects {
             }
         }
     }
+
+    // home_widget 0.9.0이 JVM 11로 빌드된 의존성을 쓰는데 자체 타깃이 1.8이라
+    // "Cannot inline bytecode built with JVM target 11" 오류가 나던 문제 해결.
+    // 다른 플러그인의 compileOptions는 AGP가 finalize 전 읽기를 금지하므로
+    // (targetCompatibility is not yet finalized) 문제가 된 home_widget에만
+    // 읽기 없이 11을 직접 지정한다.
+    if (project.name == "home_widget") {
+        val forceJvm11: Project.() -> Unit = {
+            extensions.findByType(com.android.build.gradle.BaseExtension::class.java)
+                ?.compileOptions
+                ?.apply {
+                    sourceCompatibility = JavaVersion.VERSION_11
+                    targetCompatibility = JavaVersion.VERSION_11
+                }
+            tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile::class.java)
+                .configureEach {
+                    kotlinOptions {
+                        jvmTarget = "11"
+                    }
+                }
+        }
+        // evaluationDependsOn(":app") 여파로 이미 평가된 프로젝트에는
+        // afterEvaluate 등록이 불가하므로 즉시 적용한다.
+        if (project.state.executed) {
+            project.forceJvm11()
+        } else {
+            afterEvaluate { forceJvm11() }
+        }
+    }
 }
 
 tasks.register<Delete>("clean") {
