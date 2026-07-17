@@ -8,6 +8,7 @@ import '../widgets/pixel_pet_image.dart';
 import '../widgets/pixel_motion_animation.dart';
 import '../../core/theme/species_theme.dart';
 import '../../core/constants/app_strings.dart';
+import '../../core/constants/feature_flags.dart';
 import '../../core/utils/pet_image_helper.dart';
 import '../../domain/entities/battle_history.dart';
 import '../../domain/entities/battle_style.dart';
@@ -547,15 +548,18 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
             onTap: _startBattle,
           ),
         ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: _BigButton(
-            label: '온라인 대전',
-            icon: Icons.wifi,
-            theme: theme,
-            onTap: () => _startOnlineBattle(pet),
+        // 실시간 온라인 대련은 MVP에서 숨김 (FeatureFlags 참조)
+        if (FeatureFlags.enableRealtimeBattle) ...[
+          const SizedBox(width: 8),
+          Expanded(
+            child: _BigButton(
+              label: '온라인 대전',
+              icon: Icons.wifi,
+              theme: theme,
+              onTap: () => _startOnlineBattle(pet),
+            ),
           ),
-        ),
+        ],
       ],
     );
   }

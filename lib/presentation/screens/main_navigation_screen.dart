@@ -7,11 +7,12 @@ import 'me_screen.dart';
 import 'battle_screen.dart';
 import 'ranking_screen.dart';
 import '../providers/pet_provider.dart';
+import '../../core/constants/feature_flags.dart';
 import '../../core/theme/species_theme.dart';
 import '../../main.dart' show runDeferredStartupTasks;
 
-/// 메인 네비게이션 화면 — 5탭 구조 (프로토타입 정렬)
-/// 홈 / 케어 / 배틀 / 랭킹 / 진화
+/// 메인 네비게이션 화면 — 홈 / 케어 / 배틀 / (랭킹) / 도감
+/// 랭킹 탭은 FeatureFlags.enableRanking일 때만 노출 (MVP 숨김)
 class MainNavigationScreen extends ConsumerStatefulWidget {
   const MainNavigationScreen({super.key});
 
@@ -25,32 +26,37 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
   int _currentIndex = 0;
   Timer? _periodicUpdateTimer;
 
-  /// 5탭 lazy 빌드 — 한 번이라도 방문한 탭만 실제 위젯 인스턴스를 생성·캐싱한다.
-  /// 첫 페인트에 5개 화면이 동시에 build/Provider watch를 시작하는 비용을 회피.
+  /// 탭 정의 — 랭킹은 feature flag가 켜졌을 때만 포함된다.
+  static final List<_NavTab> _tabs = [
+    _NavTab(
+        label: '홈', icon: Icons.home_rounded, builder: () => const HomeScreen()),
+    _NavTab(
+        label: '케어',
+        icon: Icons.favorite_rounded,
+        builder: () => const CareScreen()),
+    _NavTab(
+        label: '배틀',
+        icon: Icons.sports_martial_arts_rounded,
+        builder: () => const BattleScreen()),
+    if (FeatureFlags.enableRanking)
+      _NavTab(
+          label: '랭킹',
+          icon: Icons.emoji_events_rounded,
+          builder: () => const RankingScreen()),
+    _NavTab(
+        label: '도감',
+        icon: Icons.menu_book_rounded,
+        builder: () => const MeScreen()),
+  ];
+
+  /// 탭 lazy 빌드 — 한 번이라도 방문한 탭만 실제 위젯 인스턴스를 생성·캐싱한다.
+  /// 첫 페인트에 전 화면이 동시에 build/Provider watch를 시작하는 비용을 회피.
   /// 한 번 캐시된 위젯은 재사용되어 탭 전환 시 State가 유지된다.
-  final List<Widget?> _screenCache = List<Widget?>.filled(5, null);
+  final List<Widget?> _screenCache = List<Widget?>.filled(_tabs.length, null);
 
   Widget _screenAt(int index) {
-    if (_screenCache[index] != null) return _screenCache[index]!;
-    final widget = switch (index) {
-      0 => const HomeScreen(),
-      1 => const CareScreen(),
-      2 => const BattleScreen(),
-      3 => const RankingScreen(),
-      4 => const MeScreen(),
-      _ => const SizedBox.shrink(),
-    };
-    _screenCache[index] = widget;
-    return widget;
+    return _screenCache[index] ??= _tabs[index].builder();
   }
-
-  static const List<_NavTab> _tabs = [
-    _NavTab(label: '홈', icon: Icons.home_rounded),
-    _NavTab(label: '케어', icon: Icons.favorite_rounded),
-    _NavTab(label: '배틀', icon: Icons.sports_martial_arts_rounded),
-    _NavTab(label: '랭킹', icon: Icons.emoji_events_rounded),
-    _NavTab(label: '도감', icon: Icons.menu_book_rounded),
-  ];
 
   @override
   void initState() {
@@ -187,5 +193,10 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
 class _NavTab {
   final String label;
   final IconData icon;
-  const _NavTab({required this.label, required this.icon});
+  final Widget Function() builder;
+  const _NavTab({
+    required this.label,
+    required this.icon,
+    required this.builder,
+  });
 }
