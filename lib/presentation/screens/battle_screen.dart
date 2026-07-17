@@ -855,18 +855,10 @@ class _BigButton extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 16),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
+            // primary 버튼은 글로우 없이 순수 단색 플랫으로 둔다
             border: primary
                 ? null
                 : Border.all(color: DesignTokens.line2, width: 1),
-            boxShadow: primary
-                ? [
-                    BoxShadow(
-                      color: theme.primarySoft,
-                      blurRadius: 16,
-                      offset: const Offset(0, 6),
-                    ),
-                  ]
-                : null,
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
