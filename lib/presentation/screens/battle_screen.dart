@@ -18,7 +18,7 @@ import '../../data/datasources/battle_socket_datasource.dart';
 import 'home_screen.dart';
 
 /// 배틀 화면
-/// 상단 내 펫 카드(deep gradient) + 스타일 선택 + 모드 버튼 + 최근 전적
+/// 상단 내 펫 카드(단색 deep) + 스타일 선택 + 모드 버튼 + 최근 전적
 /// (전적 요약은 최근 전적 섹션 타이틀에 표시 — 별도 카드 없음)
 class BattleScreen extends ConsumerStatefulWidget {
   const BattleScreen({super.key});
@@ -54,6 +54,17 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
   }
 
   Future<void> _startOnlineBattle(Pet pet) async {
+    // 매칭 대기/진행 중 재진입 차단 (빠른 더블탭 시 소켓 중복 큐잉 방지)
+    if (isLoading || isMatchmaking) return;
+
+    // 죽은 펫은 배틀 불가
+    if (pet.isDead) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('펫이 하늘나라에 있어요. 부활 후 다시 시도해주세요.')),
+      );
+      return;
+    }
+
     // AI 대전과 동일한 하루 배틀 횟수 제한 (자정 리셋 반영)
     final effectiveBattleCount = pet.needsGoalReset ? 0 : pet.todayBattleCount;
     if (effectiveBattleCount >= BattleWithActivityUseCase.maxBattlesPerDay) {
@@ -109,6 +120,8 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
       }
     };
     _socket!.onResult = (data) async {
+      // 이미 결과가 처리됐다면 무시 (이탈 보상 후 result 도착 시 이중 보상 방지)
+      if (battleResult != null) return;
       final isVictory = data['isVictory'] as bool? ?? false;
       final isDominant = data['isDominantVictory'] as bool? ?? false;
       // 서버 expGained는 기본 경험치 — 감쇠/이벤트 배수는 로컬에서 적용
@@ -250,6 +263,17 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
 
   Future<void> _startBattle() async {
     if (isLoading || battleResult != null) return;
+
+    // 죽은 펫은 배틀 불가 (UseCase의 빈 결과 카드로 오해하지 않도록 사전 차단)
+    final pet =
+        ref.read(petNotifierProvider(HomeScreen.defaultPetId)).valueOrNull;
+    if (pet != null && pet.isDead) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('펫이 하늘나라에 있어요. 부활 후 다시 시도해주세요.')),
+      );
+      return;
+    }
+
     setState(() {
       isLoading = true;
     });
@@ -348,15 +372,8 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
 
     return AppCard(
       theme: theme,
-      // 그라데이션 완화: primary→primaryDeep 강한 대비 대신 절반 톤까지만
-      gradient: LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [
-          theme.primary,
-          Color.lerp(theme.primary, theme.primaryDeep, 0.5)!,
-        ],
-      ),
+      // 단색(primary) — 그라데이션 없이 종 테마색 그대로
+      variant: AppCardVariant.deep,
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -684,7 +701,8 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
         ),
         const SizedBox(height: 8),
         Text(
-          win ? '+$expGained EXP' : '경험치 없음',
+          // 패배 시에도 위로 경험치가 지급되므로 실제 획득량을 표시
+          expGained > 0 ? '+$expGained EXP' : '경험치 없음',
           style: TextStyle(
             fontSize: 28,
             fontWeight: FontWeight.w900,

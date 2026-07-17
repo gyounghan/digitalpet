@@ -293,8 +293,8 @@ class _CareScreenState extends ConsumerState<CareScreen> {
 
   Widget _buildAltFeedRow(Pet pet, SpeciesTheme theme) {
     final useCase = ref.read(alternativeFeedPetUseCaseProvider);
-    final canFeedUseCase = ref.read(canFeedPetUseCaseProvider);
-    final enabled = useCase.canUse(pet) && canFeedUseCase.canFeed(pet);
+    // 대체 급식은 시간대 제한 없음 (횟수 제한만 적용)
+    final enabled = useCase.canUse(pet);
     final used = pet.todayAlternativeFeedCount;
     final max = AlternativeFeedPetUseCase.maxAlternativeFeedsPerDay;
 
@@ -305,10 +305,8 @@ class _CareScreenState extends ConsumerState<CareScreen> {
           color: enabled ? theme.primaryDeep : DesignTokens.ink3, size: 20),
       title: '간편 급식',
       subtitle: enabled
-          ? '식사 시간대 · 오늘 $used/$max회 사용'
-          : (canFeedUseCase.canFeed(pet)
-              ? '오늘 모두 사용 ($used/$max)'
-              : '식사 시간대 아님'),
+          ? '시간대 제한 없음 · 오늘 $used/$max회 사용'
+          : '오늘 모두 사용 ($used/$max)',
       trailing: _trailingPill(enabled, theme),
       onTap: enabled
           ? () {
@@ -336,7 +334,7 @@ class _CareScreenState extends ConsumerState<CareScreen> {
       title: '낮잠 모드 (15분)',
       subtitle: _napTimer != null
           ? '진행 중...'
-          : '오늘 $used/$max회 사용 · 끝나면 수면 보상',
+          : '오늘 $used/$max회 사용 · 끝나면 기력 회복',
       trailing: _trailingPill(enabled, theme),
       onTap: enabled ? () => _startNapMode(ref) : null,
     );
@@ -513,7 +511,7 @@ class _CareScreenState extends ConsumerState<CareScreen> {
             .read(petNotifierProvider(HomeScreen.defaultPetId).notifier)
             .performAlternativeSleep();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('낮잠 모드 15분 완료! 수면 보상이 적용됐어요.')),
+          const SnackBar(content: Text('낮잠 모드 15분 완료! 기력이 회복됐어요.')),
         );
         remainingNotifier.dispose();
         setState(() {});
