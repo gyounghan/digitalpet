@@ -1,6 +1,7 @@
 import '../entities/pet.dart';
 import '../repositories/pet_repository.dart';
 import '../repositories/phone_usage_repository.dart';
+import '../constants/daily_events.dart';
 import '../constants/species_growth_config.dart';
 
 /// 자동 펫 재우기 유스케이스
@@ -70,8 +71,13 @@ class AutoSleepPetUseCase {
     final increments = effectiveIdleMinutes ~/ idleThresholdMinutes;
     final creditedMinutes = increments * idleThresholdMinutes;
     final m = SpeciesGrowthConfig.getGainMultipliers(pet.evolutionType);
+    // cozy 이벤트: 수면 stamina 회복 1.5배 (수면 목표 분 누적은 실제 시간 그대로)
+    final eventMultiplier = pet.todayEvent == DailyEvents.cozy
+        ? DailyEvents.cozySleepRecoveryMultiplier
+        : 1.0;
     final staminaIncrease =
-        (increments * staminaIncreasePerUnit * m.stamina).round();
+        (increments * staminaIncreasePerUnit * m.stamina * eventMultiplier)
+            .round();
     final newStamina = (pet.stamina + staminaIncrease).clamp(0, 100);
 
     // 7. 분 단위 정확 누적 → 시간 파생

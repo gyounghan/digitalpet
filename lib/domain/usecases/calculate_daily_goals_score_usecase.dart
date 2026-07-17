@@ -6,7 +6,9 @@ import '../repositories/activity_repository.dart';
 ///
 /// "오늘"의 누적이 아니라 **현재 진행 중인 목표**의 진행도를 계산한다.
 /// 포만감/수면/운동 각각 독립된 카운터를 가지며, 목표를 달성하면
-/// 즉시 다음 목표로 리셋된다(차감). 하루 리셋 개념은 없다.
+/// 즉시 다음 목표로 리셋된다(차감). 진행도는 자정에 리셋되지 않고 이월되며,
+/// **달성(EXP 지급) 횟수만 카테고리당 하루 최대 3회로 캡**된다
+/// (todayXxxAchievedCount로 추적, 자정 리셋 — 초과 진행분은 다음 날 소화).
 ///
 /// 현실적 목표 (보건 권장량 + 평균 사용자 수치 기반):
 /// - 포만감: 1~5=1회, 6~15=2회, 16+=3회 (식사 횟수)
@@ -29,10 +31,10 @@ class CalculateDailyGoalsScoreUseCase {
   /// 반감과 무관하게 누적 세트 워터마크 기반으로 부여 → RPG 마일스톤 보상
   static const int tierUpBonusExp = 50;
 
-  /// 한 번의 계산 사이클에서 처리 가능한 최대 달성 횟수
-  /// (장기 백그라운드 후 폭발적 지급 방지)
-  /// 일일 캡이 카테고리당 1 EXP이므로 cap을 작게 둬도 손해 없음.
-  static const int maxAchievementsPerTick = 3;
+  /// 카테고리당 하루 최대 달성(EXP 지급) 횟수
+  /// 오늘 이미 달성한 횟수(todayXxxAchievedCount)를 차감한 잔여만 지급 —
+  /// 장기 백그라운드 후 폭발적 지급도 함께 방지된다.
+  static const int maxAchievementsPerDay = 3;
 
   static int getFeedGoalCount(int level) {
     if (level <= 5) return 1;
@@ -87,21 +89,28 @@ class CalculateDailyGoalsScoreUseCase {
     final currentExerciseSteps = pet.exerciseProgressSteps;
     final currentExerciseMinutes = pet.exerciseProgressMinutes;
 
-    // 달성 가능 횟수 계산
+    // 달성 가능 횟수 계산 — 하루 캡(3회)에서 오늘 이미 달성한 횟수를 차감
+    final feedRemainingToday =
+        (maxAchievementsPerDay - pet.todayFeedAchievedCount).clamp(0, maxAchievementsPerDay);
+    final sleepRemainingToday =
+        (maxAchievementsPerDay - pet.todaySleepAchievedCount).clamp(0, maxAchievementsPerDay);
+    final exerciseRemainingToday =
+        (maxAchievementsPerDay - pet.todayExerciseAchievedCount).clamp(0, maxAchievementsPerDay);
+
     final feedAchievements = feedGoalCount > 0
         ? (pet.todayFeedCount ~/ feedGoalCount)
-            .clamp(0, maxAchievementsPerTick)
+            .clamp(0, feedRemainingToday)
         : 0;
     final sleepAchievements = sleepGoalMinutes > 0
         ? (pet.todaySleepMinutes ~/ sleepGoalMinutes)
-            .clamp(0, maxAchievementsPerTick)
+            .clamp(0, sleepRemainingToday)
         : 0;
 
     // 운동 목표는 걸음(steps)만으로 판정한다. (걸음과 운동분은 별도 원천이라
     // max로 묶으면 안 쓴 축이 남아 이중 카운트되던 문제 → 걸음 단일화)
     final stepsAchievements = exerciseGoalSteps > 0
         ? (currentExerciseSteps ~/ exerciseGoalSteps)
-            .clamp(0, maxAchievementsPerTick)
+            .clamp(0, exerciseRemainingToday)
         : 0;
     final exerciseAchievements = stepsAchievements;
 

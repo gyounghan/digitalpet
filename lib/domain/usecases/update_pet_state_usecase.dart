@@ -1,20 +1,40 @@
 import '../entities/pet.dart';
 import '../repositories/pet_repository.dart';
+import '../constants/daily_events.dart';
 import '../constants/species_growth_config.dart';
 
+/// 간격 그리드 경계 통과 횟수 (낮/밤 분리)
+class IntervalBoundaryCount {
+  final int day;
+  final int night;
+  const IntervalBoundaryCount({required this.day, required this.night});
+}
+
 /// 반려동물 상태 업데이트 유스케이스
-/// 시간 경과에 따라 펫�� 상태(hunger, happiness, stamina)를 차등 감소
+/// 시간 경과에 따라 펫의 상태(hunger, happiness, stamina)를 차등 감소
 ///
 /// 감소 규칙 (수치별 차등):
 /// - 포만감(hunger): 60분마다 -2 (밤: -1)
 /// - 행복도(happiness): 60분마다 -1 (밤: 감소 중단)
-/// - 체력(stamina): 40분마다 -1 (밤: 감소 ���단)
+/// - 체력(stamina): 40분마다 -1 (밤: 감소 중단)
 /// - 밤시간: 22시~06시
 /// - 값은 0 이하로 내려가지 않음
 ///
+/// 감소 판정은 **절대 시각 그리드 경계** 기준이다:
+/// 각 수치는 고정 간격(60분/40분)의 절대 그리드를 가지며, 마지막 계산
+/// 시각(lastStatusDecayUpdated) 이후 "경계를 넘은 횟수"만큼 감소한다.
+/// 경계가 절대 시각에 고정돼 있으므로 갱신 주기가 어떻든(5분 폴링,
+/// 15분 백그라운드 틱 등) 잔여 시간이 유실되지 않는다.
+/// (과거: 단일 anchor를 감소 시마다 now로 리셋해, 40분 주기 stamina 감소가
+///  60분 간격인 hunger/happiness의 진행 시간을 계속 절삭 → 낮 시간
+///  hunger/happiness가 사실상 감소하지 않던 버그)
+///
 /// 위기 가속:
 /// - 수치 2개 이상 ≤20: decay 1.5배
-/// - 수치 2�� 이상 ≤10: decay 2배
+/// - 수치 2개 이상 ≤10: decay 2배
+///
+/// 일일 이벤트:
+/// - happy_day(오늘 부여된 경우만): 감소량 절반
 class UpdatePetStateUseCase {
   final PetRepository petRepository;
 
@@ -39,44 +59,40 @@ class UpdatePetStateUseCase {
     return time.hour >= nightStartHour || time.hour < nightEndHour;
   }
 
-  /// 주어진 기간 내 낮 시간(06:00~22:00) 분 수 계산
+  /// (from, to] 구간에서 [intervalMinutes] 절대 그리드 경계를 넘은 횟수를
+  /// 낮/밤으로 분리해 계산한다.
   ///
-  /// 경과 기간이 밤과 낮에 걸치는 경우를 정확히 분리하여
-  /// happiness/stamina가 밤에 감소하지 않도록 보장한다.
-  int calculateDaytimeMinutes(DateTime from, DateTime to) {
-    if (!to.isAfter(from)) return 0;
-
-    int daytimeMinutes = 0;
-    var cursor = from;
-
-    while (cursor.isBefore(to)) {
-      if (_isNightTime(cursor)) {
-        // 밤 → 다음 낮 시작(06:00)으로 점프
-        final DateTime nextDayStart;
-        if (cursor.hour >= nightStartHour) {
-          // 22시~23시59분 → 다음날 06시
-          nextDayStart = DateTime(
-            cursor.year, cursor.month, cursor.day + 1, nightEndHour,
-          );
-        } else {
-          // 00시~05시59분 → 오늘 06시
-          nextDayStart = DateTime(
-            cursor.year, cursor.month, cursor.day, nightEndHour,
-          );
-        }
-        cursor = to.isBefore(nextDayStart) ? to : nextDayStart;
-      } else {
-        // 낮 → 오늘 밤 시작(22:00)까지
-        final todayNightStart = DateTime(
-          cursor.year, cursor.month, cursor.day, nightStartHour,
-        );
-        final segmentEnd = to.isBefore(todayNightStart) ? to : todayNightStart;
-        daytimeMinutes += segmentEnd.difference(cursor).inMinutes;
-        cursor = segmentEnd;
-      }
+  /// 경계는 epoch 분 기준 `intervalMinutes`의 배수 시각. 각 경계는 그 경계가
+  /// "닫는 구간"(직전 1분)의 낮/밤으로 분류한다 — 22:00 경계는 21시대(낮),
+  /// 06:00 경계는 05시대(밤)의 감소로 계산된다.
+  IntervalBoundaryCount countIntervalBoundaries(
+    DateTime from,
+    DateTime to,
+    int intervalMinutes,
+  ) {
+    if (!to.isAfter(from)) {
+      return const IntervalBoundaryCount(day: 0, night: 0);
     }
 
-    return daytimeMinutes;
+    final fromMin = from.millisecondsSinceEpoch ~/ 60000;
+    final toMin = to.millisecondsSinceEpoch ~/ 60000;
+
+    int day = 0;
+    int night = 0;
+    // from 직후 첫 경계부터 to까지 순회
+    var boundary = (fromMin ~/ intervalMinutes + 1) * intervalMinutes;
+    while (boundary <= toMin) {
+      final closingMinute =
+          DateTime.fromMillisecondsSinceEpoch((boundary - 1) * 60000);
+      if (_isNightTime(closingMinute)) {
+        night++;
+      } else {
+        day++;
+      }
+      boundary += intervalMinutes;
+    }
+
+    return IntervalBoundaryCount(day: day, night: night);
   }
 
   /// 위기 가속 배율 계산
@@ -114,36 +130,52 @@ class UpdatePetStateUseCase {
     // 최소 갱신 간격: 10분
     if (elapsedMinutes < 10) return pet;
 
-    // 경과 기간을 낮/밤으로 분리하여 정확한 감소량 계산
-    final daytimeMinutes = calculateDaytimeMinutes(lastDecayTime, now);
-    final nightMinutes = elapsedMinutes - daytimeMinutes;
     final crisisMultiplier = _getCrisisMultiplier(pet);
     final dm = SpeciesGrowthConfig.getDecayMultipliers(pet.evolutionType);
 
-    // Hunger: 60분마다 -2 (낮), 60분마다 -1 (밤)
-    final hungerDayIntervals = daytimeMinutes ~/ hungerIntervalMinutes;
-    final hungerNightIntervals = nightMinutes ~/ hungerIntervalMinutes;
+    // happy_day 이벤트(오늘 부여된 경우만): 감소량 절반
+    // lastEventDate 검사로 어제 이벤트가 자정 이월 적용되는 것을 방지
+    final isEventToday = pet.lastEventDate == pet.todayDateString;
+    final eventMultiplier =
+        (isEventToday && pet.todayEvent == DailyEvents.happyDay)
+            ? DailyEvents.happyDayDecayMultiplier
+            : 1.0;
+
+    // 절대 그리드 경계 통과 횟수 계산 (낮/밤 분리)
+    final hungerBounds =
+        countIntervalBoundaries(lastDecayTime, now, hungerIntervalMinutes);
+    final happinessBounds =
+        countIntervalBoundaries(lastDecayTime, now, happinessIntervalMinutes);
+    final staminaBounds =
+        countIntervalBoundaries(lastDecayTime, now, staminaIntervalMinutes);
+
+    // Hunger: 60분마다 -2 (낮), -1 (밤)
     final hungerNightBase =
         (hungerDecreasePerInterval ~/ 2).clamp(1, hungerDecreasePerInterval);
-    final hungerDecrease = ((hungerDayIntervals * hungerDecreasePerInterval +
-                hungerNightIntervals * hungerNightBase) *
+    final hungerDecrease = ((hungerBounds.day * hungerDecreasePerInterval +
+                hungerBounds.night * hungerNightBase) *
             crisisMultiplier *
-            dm.hunger)
+            dm.hunger *
+            eventMultiplier)
         .round();
 
     // Happiness: 60분마다 -1 (낮), 밤에는 감소 중단
-    final happinessIntervals = daytimeMinutes ~/ happinessIntervalMinutes;
-    final happinessDecrease =
-        (happinessIntervals * happinessDecreasePerInterval * crisisMultiplier * dm.happiness)
-            .round();
+    final happinessDecrease = (happinessBounds.day *
+            happinessDecreasePerInterval *
+            crisisMultiplier *
+            dm.happiness *
+            eventMultiplier)
+        .round();
 
     // Stamina: 40분마다 -1 (낮), 밤에는 감소 중단
-    final staminaIntervals = daytimeMinutes ~/ staminaIntervalMinutes;
-    final staminaDecrease =
-        (staminaIntervals * staminaDecreasePerInterval * crisisMultiplier * dm.stamina)
-            .round();
+    final staminaDecrease = (staminaBounds.day *
+            staminaDecreasePerInterval *
+            crisisMultiplier *
+            dm.stamina *
+            eventMultiplier)
+        .round();
 
-    // 변화 없으면 스킵
+    // 변화 없으면 스킵 (경계가 절대 시각이므로 anchor를 유지해도 유실 없음)
     if (hungerDecrease == 0 && happinessDecrease == 0 && staminaDecrease == 0) {
       return pet;
     }

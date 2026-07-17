@@ -1,6 +1,7 @@
 import '../entities/pet.dart';
 import '../repositories/pet_repository.dart';
 import '../repositories/activity_repository.dart';
+import '../constants/daily_events.dart';
 import '../constants/species_growth_config.dart';
 import 'package:flutter/foundation.dart';
 
@@ -147,8 +148,13 @@ class UpdatePetFromActivityUseCase {
     }
     
     // 5. 걸음 수 기반 happiness 증가 계산
+    //    sunny 이벤트: 걸음 보상 1.5배 (resetDailyGoals가 어제 이벤트를 지움)
+    final sunnyMultiplier = pet.todayEvent == DailyEvents.sunny
+        ? DailyEvents.sunnyStepRewardMultiplier
+        : 1.0;
     final stepsIncrement = stepsDelta ~/ 1000;
-    final happinessFromSteps = stepsIncrement * happinessPer1000Steps;
+    final happinessFromSteps =
+        (stepsIncrement * happinessPer1000Steps * sunnyMultiplier).round();
 
     // 6. 운동 시간 기반 happiness 증가 계산
     final exerciseIncrement = exerciseMinutesDelta ~/ 10;

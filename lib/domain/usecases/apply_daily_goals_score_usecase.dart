@@ -40,6 +40,8 @@ class ApplyDailyGoalsScoreUseCase {
         todayFeedCount: (pet.todayFeedCount - consumed).clamp(0, 1 << 30),
         feedAchievedCount:
             pet.feedAchievedCount + scoreResult.feedAchievements,
+        todayFeedAchievedCount:
+            pet.todayFeedAchievedCount + scoreResult.feedAchievements,
         lastFeedAchievedDate: todayDate,
       );
     }
@@ -55,6 +57,8 @@ class ApplyDailyGoalsScoreUseCase {
         todaySleepHours: remainingMinutes ~/ 60,
         sleepAchievedCount:
             pet.sleepAchievedCount + scoreResult.sleepAchievements,
+        todaySleepAchievedCount:
+            pet.todaySleepAchievedCount + scoreResult.sleepAchievements,
         lastSleepAchievedDate: todayDate,
       );
     }
@@ -67,6 +71,8 @@ class ApplyDailyGoalsScoreUseCase {
         lastExerciseGoalSteps: pet.lastExerciseGoalSteps + consumedSteps,
         exerciseAchievedCount:
             pet.exerciseAchievedCount + scoreResult.exerciseAchievements,
+        todayExerciseAchievedCount:
+            pet.todayExerciseAchievedCount + scoreResult.exerciseAchievements,
         lastExerciseAchievedDate: todayDate,
       );
     }
@@ -97,6 +103,21 @@ class ApplyDailyGoalsScoreUseCase {
         setMilestones * CalculateDailyGoalsScoreUseCase.tierUpBonusExp;
 
     final totalExpGain = categoryExpGain + setExpGain + milestoneBonusExp;
+
+    // 아무 변화가 없으면 저장하지 않는다 — 매 호출마다 lastUpdated를 밀면
+    // 서버 sync의 "서버가 최신" 회수 경로가 영영 실행되지 못한다.
+    // (feed/login 등이 쌓아둔 미소화 EXP는 레벨업 처리를 위해 계속 진행)
+    final hasAchievements = scoreResult.feedAchievements > 0 ||
+        scoreResult.sleepAchievements > 0 ||
+        scoreResult.exerciseAchievements > 0;
+    final hasPendingLevelUp =
+        pet.exp + totalExpGain >= Pet.getRequiredExpForLevel(pet.level);
+    if (!hasAchievements &&
+        newSets == 0 &&
+        totalExpGain == 0 &&
+        !hasPendingLevelUp) {
+      return pet;
+    }
 
     // 세트 보상 카운터 갱신 (오늘 받은 세트 + 누적 워터마크)
     pet = pet.copyWith(

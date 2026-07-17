@@ -791,10 +791,21 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
       // 2. 폰 사용 상태 업데이트 (포그라운드로 전환)
       await phoneUsageRepository.onForeground();
 
-      // 3. 시간 경과에 따른 상태 업데이트 (hunger, happiness, stamina 감소)
+      // 3. 접속 보너스 + 일일 이벤트 재판정
+      //    (콜드 스타트에서만 판정하면 앱을 종료하지 않는 사용자는
+      //     2·3회차 접속 보너스와 새 날 이벤트 추첨을 영영 받지 못한다)
+      try {
+        await loginBonusUseCase(petId);
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint('PetNotifier.onAppForeground: login bonus failed: $e');
+        }
+      }
+
+      // 4. 시간 경과에 따른 상태 업데이트 (hunger, happiness, stamina 감소)
       var activityUpdatedPet = await updatePetStateUseCase(petId);
 
-      // 4. 활동 데이터 기반 자동 Play 적용
+      // 5. 활동 데이터 기반 자동 Play 적용
       try {
         activityUpdatedPet = await updatePetFromActivityUseCase(petId);
       } catch (e) {
@@ -803,8 +814,8 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
           debugPrint('PetNotifier.onAppForeground: activity update failed: $e');
         }
       }
-      
-      // 5. 상태가 변경되었으면 업데이트
+
+      // 6. 상태가 변경되었으면 업데이트
       final currentPet = state.valueOrNull;
       if (currentPet == null || 
           activityUpdatedPet.hunger != currentPet.hunger ||
@@ -892,7 +903,10 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
 
     try {
       final evolvedPet = await evolvePetUseCase(petId);
-      if (evolvedPet.evolutionStage != pet.evolutionStage) {
+      // 단계 진화뿐 아니라 등급 승격(stage3 normal→superior)도 성공으로 처리
+      // — 과거에는 등급만 바뀌면 화면·위젯이 갱신되지 않았다
+      if (evolvedPet.evolutionStage != pet.evolutionStage ||
+          evolvedPet.evolutionGrade != pet.evolutionGrade) {
         state = AsyncValue.data(evolvedPet);
         try {
           await widgetService.updatePetWidget(evolvedPet);

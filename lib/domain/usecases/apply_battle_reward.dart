@@ -1,3 +1,4 @@
+import '../constants/daily_events.dart';
 import '../entities/pet.dart';
 
 /// 배틀 보상 적용 결과
@@ -53,7 +54,10 @@ class BattleReward {
     final multiplier = rewardMultipliers[multiplierIndex];
     final resolvedBase = baseExp ??
         baseExpFor(isVictory: isVictory, isDominantVictory: isDominantVictory);
-    final eventMultiplier = pet.todayEvent == 'adventure' ? 2.0 : 1.0;
+    // adventure 이벤트: 배틀 EXP 2배 (호출 전 자정 리셋이 어제 이벤트를 지움)
+    final eventMultiplier = pet.todayEvent == DailyEvents.adventure
+        ? DailyEvents.adventureBattleExpMultiplier.toDouble()
+        : 1.0;
     final expGain = (resolvedBase * multiplier * eventMultiplier).round();
 
     var currentExp = pet.exp + expGain;

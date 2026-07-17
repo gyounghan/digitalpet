@@ -225,6 +225,18 @@ class PetModel extends Pet {
   @override
   final int todaySleepCount;
 
+  @HiveField(53)
+  @override
+  final int todayFeedAchievedCount;
+
+  @HiveField(54)
+  @override
+  final int todaySleepAchievedCount;
+
+  @HiveField(55)
+  @override
+  final int todayExerciseAchievedCount;
+
   PetModel({
     required this.id,
     this.name = '펫',
@@ -279,6 +291,9 @@ class PetModel extends Pet {
     this.todaySetExpClaimed = 0,
     this.totalSetsRewarded = 0,
     this.todaySleepCount = 0,
+    this.todayFeedAchievedCount = 0,
+    this.todaySleepAchievedCount = 0,
+    this.todayExerciseAchievedCount = 0,
   }) : super(
          id: id,
          name: name,
@@ -333,6 +348,9 @@ class PetModel extends Pet {
          todaySetExpClaimed: todaySetExpClaimed,
          totalSetsRewarded: totalSetsRewarded,
          todaySleepCount: todaySleepCount,
+         todayFeedAchievedCount: todayFeedAchievedCount,
+         todaySleepAchievedCount: todaySleepAchievedCount,
+         todayExerciseAchievedCount: todayExerciseAchievedCount,
        );
 
   /// JSON에서 PetModel 생성
@@ -401,6 +419,10 @@ class PetModel extends Pet {
       todaySetExpClaimed: json['todaySetExpClaimed'] as int? ?? 0,
       totalSetsRewarded: json['totalSetsRewarded'] as int? ?? 0,
       todaySleepCount: json['todaySleepCount'] as int? ?? 0,
+      todayFeedAchievedCount: json['todayFeedAchievedCount'] as int? ?? 0,
+      todaySleepAchievedCount: json['todaySleepAchievedCount'] as int? ?? 0,
+      todayExerciseAchievedCount:
+          json['todayExerciseAchievedCount'] as int? ?? 0,
     );
   }
 
@@ -462,6 +484,9 @@ class PetModel extends Pet {
       'todaySetExpClaimed': todaySetExpClaimed,
       'totalSetsRewarded': totalSetsRewarded,
       'todaySleepCount': todaySleepCount,
+      'todayFeedAchievedCount': todayFeedAchievedCount,
+      'todaySleepAchievedCount': todaySleepAchievedCount,
+      'todayExerciseAchievedCount': todayExerciseAchievedCount,
     };
   }
 
@@ -525,6 +550,9 @@ class PetModel extends Pet {
       todaySetExpClaimed: pet.todaySetExpClaimed,
       totalSetsRewarded: pet.totalSetsRewarded,
       todaySleepCount: pet.todaySleepCount,
+      todayFeedAchievedCount: pet.todayFeedAchievedCount,
+      todaySleepAchievedCount: pet.todaySleepAchievedCount,
+      todayExerciseAchievedCount: pet.todayExerciseAchievedCount,
     );
   }
 
@@ -586,6 +614,9 @@ class PetModel extends Pet {
       todaySetExpClaimed: todaySetExpClaimed,
       totalSetsRewarded: totalSetsRewarded,
       todaySleepCount: todaySleepCount,
+      todayFeedAchievedCount: todayFeedAchievedCount,
+      todaySleepAchievedCount: todaySleepAchievedCount,
+      todayExerciseAchievedCount: todayExerciseAchievedCount,
     );
   }
 
@@ -647,6 +678,9 @@ class PetModel extends Pet {
     int? todaySetExpClaimed,
     int? totalSetsRewarded,
     int? todaySleepCount,
+    int? todayFeedAchievedCount,
+    int? todaySleepAchievedCount,
+    int? todayExerciseAchievedCount,
   }) {
     return PetModel(
       id: id ?? this.id,
@@ -708,6 +742,12 @@ class PetModel extends Pet {
       todaySetExpClaimed: todaySetExpClaimed ?? this.todaySetExpClaimed,
       totalSetsRewarded: totalSetsRewarded ?? this.totalSetsRewarded,
       todaySleepCount: todaySleepCount ?? this.todaySleepCount,
+      todayFeedAchievedCount:
+          todayFeedAchievedCount ?? this.todayFeedAchievedCount,
+      todaySleepAchievedCount:
+          todaySleepAchievedCount ?? this.todaySleepAchievedCount,
+      todayExerciseAchievedCount:
+          todayExerciseAchievedCount ?? this.todayExerciseAchievedCount,
     );
   }
 }

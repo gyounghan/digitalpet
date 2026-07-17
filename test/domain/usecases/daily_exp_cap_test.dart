@@ -69,6 +69,9 @@ Pet _pet({
   int exerciseAchievedCount = 0,
   int todaySetExpClaimed = 0,
   int totalSetsRewarded = 0,
+  int todayFeedAchievedCount = 0,
+  int todaySleepAchievedCount = 0,
+  int todayExerciseAchievedCount = 0,
 }) {
   final now = DateTime.now().millisecondsSinceEpoch;
   final today = _today();
@@ -92,6 +95,9 @@ Pet _pet({
     exerciseAchievedCount: exerciseAchievedCount,
     todaySetExpClaimed: todaySetExpClaimed,
     totalSetsRewarded: totalSetsRewarded,
+    todayFeedAchievedCount: todayFeedAchievedCount,
+    todaySleepAchievedCount: todaySleepAchievedCount,
+    todayExerciseAchievedCount: todayExerciseAchievedCount,
   );
 }
 
@@ -290,6 +296,145 @@ void main() {
       final reset = yesterday.resetDailyGoals();
       expect(reset.todaySetExpClaimed, 0, reason: '반감 카운터는 매일 리셋');
       expect(reset.totalSetsRewarded, 8, reason: '누적 워터마크는 보존');
+    });
+  });
+
+  group('카테고리당 하루 최대 3회 달성 캡', () {
+    test('4회분 진행해도 하루 3회까지만 지급, 초과 진행분은 이월', () async {
+      // Lv1 목표: feed 1회, sleep 300분, 운동 3000보 — 각 4회분 진행
+      final petRepo = _FakePetRepository()
+        ..setPet(_pet(
+          level: 1,
+          exp: 0,
+          todayFeedCount: 4,
+          todaySleepMinutes: 1200,
+          totalSteps: 12000,
+        ));
+      final apply = _makeApply(petRepo);
+
+      final result = await apply('p');
+
+      expect(result.feedAchievedCount, 3, reason: '하루 캡 3회');
+      expect(result.sleepAchievedCount, 3);
+      expect(result.exerciseAchievedCount, 3);
+      expect(result.todayFeedAchievedCount, 3);
+      expect(result.todaySleepAchievedCount, 3);
+      expect(result.todayExerciseAchievedCount, 3);
+      // 초과 진행분은 차감되지 않고 이월
+      expect(result.todayFeedCount, 1);
+      expect(result.todaySleepMinutes, 300);
+      expect(result.exerciseProgressSteps, 3000);
+    });
+
+    test('오늘 이미 3회 달성한 카테고리는 진행분이 있어도 추가 지급 없음', () async {
+      final petRepo = _FakePetRepository()
+        ..setPet(_pet(
+          level: 1,
+          exp: 0,
+          todayFeedCount: 2,
+          feedAchievedCount: 3,
+          sleepAchievedCount: 3,
+          exerciseAchievedCount: 3,
+          totalSetsRewarded: 3,
+          todayFeedAchievedCount: 3,
+          todaySleepAchievedCount: 3,
+          todayExerciseAchievedCount: 3,
+        ));
+      final apply = _makeApply(petRepo);
+
+      final result = await apply('p');
+
+      expect(result.exp, 0, reason: '캡 도달 후 EXP 미지급');
+      expect(result.feedAchievedCount, 3, reason: '누적 카운트 불변');
+      expect(result.todayFeedCount, 2, reason: '진행분은 이월 보존');
+    });
+
+    test('자정 리셋 후 이월 진행분이 다시 지급된다', () async {
+      // 어제 캡을 다 쓴 상태에서 자정이 지남 (lastGoalResetDate 과거)
+      final petRepo = _FakePetRepository()
+        ..setPet(_pet(
+          level: 1,
+          exp: 0,
+          todayFeedCount: 2,
+          feedAchievedCount: 3,
+          sleepAchievedCount: 3,
+          exerciseAchievedCount: 3,
+          totalSetsRewarded: 3,
+          todayFeedAchievedCount: 3,
+          todaySleepAchievedCount: 3,
+          todayExerciseAchievedCount: 3,
+        ).copyWith(lastGoalResetDate: '2020-01-01'));
+      final apply = _makeApply(petRepo);
+
+      final result = await apply('p');
+
+      // 리셋으로 todayFeedAchievedCount=0 → 이월된 2회분 지급 (캡 3 이내)
+      expect(result.feedAchievedCount, 5);
+      expect(result.todayFeedAchievedCount, 2);
+      expect(result.todayFeedCount, 0);
+      expect(result.exp, 40, reason: '이월 2회 × 20 EXP');
+    });
+
+    test('resetDailyGoals: 오늘 달성 카운터 3종 리셋', () {
+      final pet = _pet(
+        todayFeedAchievedCount: 3,
+        todaySleepAchievedCount: 2,
+        todayExerciseAchievedCount: 1,
+      ).copyWith(lastGoalResetDate: '2020-01-01');
+
+      final reset = pet.resetDailyGoals();
+      expect(reset.todayFeedAchievedCount, 0);
+      expect(reset.todaySleepAchievedCount, 0);
+      expect(reset.todayExerciseAchievedCount, 0);
+    });
+  });
+
+  group('resetDailyGoals — todayEvent 이월 방지', () {
+    test('어제 부여된 이벤트는 리셋에서 제거된다', () {
+      final pet = _pet().copyWith(
+        lastGoalResetDate: '2020-01-01',
+        todayEvent: 'adventure',
+        lastEventDate: '2020-01-01',
+      );
+
+      final reset = pet.resetDailyGoals();
+      expect(reset.todayEvent, '',
+          reason: '어제 adventure ×2가 오늘 배틀에 적용되면 안 됨');
+    });
+
+    test('오늘 부여된 이벤트는 리셋 후에도 유지된다', () {
+      final pet = _pet().copyWith(
+        lastGoalResetDate: '2020-01-01',
+        todayEvent: 'sunny',
+        lastEventDate: _today(),
+      );
+
+      final reset = pet.resetDailyGoals();
+      expect(reset.todayEvent, 'sunny');
+    });
+  });
+
+  group('변화 없으면 lastUpdated를 밀지 않는다 (서버 sync 회수 경로 보존)', () {
+    test('달성·세트·레벨업이 전혀 없으면 pet이 저장되지 않는다', () async {
+      final original = _pet(level: 5, exp: 10);
+      final petRepo = _FakePetRepository()..setPet(original);
+      final apply = _makeApply(petRepo);
+
+      final result = await apply('p');
+
+      expect(result.lastUpdated, original.lastUpdated,
+          reason: 'no-op 호출이 lastUpdated를 갱신하면 서버 우선 분기가 죽는다');
+    });
+
+    test('미소화 EXP가 레벨업 임계를 넘으면 no-op이어도 레벨업 처리', () async {
+      // feed(+5)/login(+3) 등이 쌓아둔 exp가 임계(Lv1=50)를 넘은 상태
+      final petRepo = _FakePetRepository()..setPet(_pet(level: 1, exp: 60));
+      final apply = _makeApply(petRepo);
+
+      final result = await apply('p');
+
+      expect(result.level, 2);
+      expect(result.exp, 10);
     });
   });
 }

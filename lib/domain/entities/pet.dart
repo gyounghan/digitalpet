@@ -193,7 +193,7 @@ class Pet {
   final int exerciseAchievedCount;
 
   /// 포만감 목표 마지막 달성 날짜 (YYYY-MM-DD)
-  /// 오늘 이미 카운트됐는지 판정 (중복 증가 방지)
+  /// 홈 카드의 "오늘 달성" 표시용 (지급 게이트는 todayXxxAchievedCount가 담당)
   final String lastFeedAchievedDate;
 
   /// 수면 목표 마지막 달성 날짜 (YYYY-MM-DD)
@@ -225,6 +225,15 @@ class Pet {
   /// 세트 완성 총량(min(달성 카운트 3종))과 비교해 신규 세트를 판정.
   /// 자정에도 리셋하지 않는다(중복 지급 방지용 워터마크).
   final int totalSetsRewarded;
+
+  /// 오늘 포만감 목표 달성 횟수 (하루 최대 3회 캡 판정용, 자정 리셋)
+  final int todayFeedAchievedCount;
+
+  /// 오늘 수면 목표 달성 횟수 (하루 최대 3회 캡 판정용, 자정 리셋)
+  final int todaySleepAchievedCount;
+
+  /// 오늘 운동 목표 달성 횟수 (하루 최대 3회 캡 판정용, 자정 리셋)
+  final int todayExerciseAchievedCount;
 
   /// 펫의 현재 기분 상태 (6종)
   /// hunger(포만감), stamina(스태미나), happiness(행복) + 시간대로 자동 계산.
@@ -308,6 +317,9 @@ class Pet {
     this.lastActivitySyncTime = 0,
     this.todaySetExpClaimed = 0,
     this.totalSetsRewarded = 0,
+    this.todayFeedAchievedCount = 0,
+    this.todaySleepAchievedCount = 0,
+    this.todayExerciseAchievedCount = 0,
   });
 
   /// Pet 객체 복사본 생성
@@ -366,6 +378,9 @@ class Pet {
     int? lastActivitySyncTime,
     int? todaySetExpClaimed,
     int? totalSetsRewarded,
+    int? todayFeedAchievedCount,
+    int? todaySleepAchievedCount,
+    int? todayExerciseAchievedCount,
   }) {
     return Pet(
       id: id ?? this.id,
@@ -425,6 +440,12 @@ class Pet {
           lastActivitySyncTime ?? this.lastActivitySyncTime,
       todaySetExpClaimed: todaySetExpClaimed ?? this.todaySetExpClaimed,
       totalSetsRewarded: totalSetsRewarded ?? this.totalSetsRewarded,
+      todayFeedAchievedCount:
+          todayFeedAchievedCount ?? this.todayFeedAchievedCount,
+      todaySleepAchievedCount:
+          todaySleepAchievedCount ?? this.todaySleepAchievedCount,
+      todayExerciseAchievedCount:
+          todayExerciseAchievedCount ?? this.todayExerciseAchievedCount,
     );
   }
 
@@ -535,8 +556,9 @@ class Pet {
 
   /// 레벨에 필요한 경험치 (RPG 후반 가파른 곡선)
   ///
-  /// 일일 캡(카테고리당 1회 EXP)을 기준으로 한 페이스 가이드:
-  ///   카테고리 3개 × 20 EXP = 60 EXP/일 (티어 보너스 없을 때)
+  /// 일일 캡(카테고리당 하루 최대 3회 EXP)을 기준으로 한 페이스 가이드:
+  ///   보통 사용자 기준 카테고리 3개 × 1회 × 20 EXP = 60 EXP/일
+  ///   (열심히 하면 카테고리당 최대 3회 × 20 = 180 EXP/일 + 세트 보너스)
   /// - Lv  1 →  2 : 50 EXP   (1일)
   /// - Lv  5 → 도달 ~ 4일
   /// - Lv 10 → 도달 ~ 12일
@@ -570,6 +592,10 @@ class Pet {
   /// 목표 진행도(todayFeedCount, todaySleepHours/Minutes)는 달성 시에만
   /// 차감되므로 일일 리셋 대상이 아니다. 아래는 날짜가 바뀌어야 리셋되는
   /// 보조 카운터들뿐이다.
+  ///
+  /// todayEvent는 오늘 부여된 것(lastEventDate == 오늘)만 유지 —
+  /// 어제 이벤트(예: adventure 배틀 EXP 2배)가 자정 이월 적용되는 것을 방지.
+  /// 새 이벤트는 LoginBonusUseCase가 새 날 첫 접속 시 추첨한다.
   Pet resetDailyGoals() {
     return copyWith(
       todayFedMealSlots: 0,
@@ -581,6 +607,10 @@ class Pet {
       todaySyncedExerciseMinutes: 0,
       todaySetExpClaimed: 0,
       todayBattleCount: 0,
+      todayFeedAchievedCount: 0,
+      todaySleepAchievedCount: 0,
+      todayExerciseAchievedCount: 0,
+      todayEvent: lastEventDate == todayDateString ? todayEvent : '',
       lastGoalResetDate: todayDateString,
     );
   }

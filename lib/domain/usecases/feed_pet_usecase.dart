@@ -1,5 +1,6 @@
 import '../entities/pet.dart';
 import '../repositories/pet_repository.dart';
+import '../constants/daily_events.dart';
 import '../constants/species_growth_config.dart';
 
 /// 반려동물에게 먹이 주기 유스케이스
@@ -42,7 +43,13 @@ class FeedPetUseCase {
     if (_hasFedInMealSlot(pet, currentMealSlot)) return pet;
 
     final m = SpeciesGrowthConfig.getGainMultipliers(pet.evolutionType);
-    final newHunger = (pet.hunger + (hungerRecoveryAmount * m.hunger).round()).clamp(0, 100);
+    // tasty 이벤트: 식사 회복 +5 (resetDailyGoals가 어제 이벤트를 지우므로
+    // 이 시점의 todayEvent는 항상 오늘 것)
+    final eventBonus =
+        pet.todayEvent == DailyEvents.tasty ? DailyEvents.tastyFeedBonus : 0;
+    final newHunger =
+        (pet.hunger + (hungerRecoveryAmount * m.hunger).round() + eventBonus)
+            .clamp(0, 100);
     final newFeedCount = (pet.todayFeedCount + 1).clamp(0, 3);
     final newFedMealSlots = pet.todayFedMealSlots | (1 << (currentMealSlot - 1));
     final newExp = pet.exp + (feedExpReward * m.exp).round();
