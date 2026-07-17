@@ -23,12 +23,13 @@ class AppStrings {
   static const String shakeBonusComplete = '흔들기 완료';
   static const String napModeRunning = '낮잠 모드 진행 중';
 
-  // 알림 메시지
+  // 알림 메시지 — 펫 1인칭 + 가벼운 제안 톤 (PM_REVIEW.md 톤 가이드)
+  // 죄책감 유발("안 볼거야?", "굶고 있어요")·명령형·재촉 표현 금지
   static const String notificationTitle = '내 펫';
-  static const String notificationInactive = '오늘 나 안 볼거야?';
-  static const String notificationHungry = '나 너무 배고파...';
-  static const String notificationBored = '나 심심해...';
-  static const String notificationFeedTime = '밥 먹을 시간이에요! 🍽️';
+  static const String notificationInactive = '보고 싶었어! 오늘 이야기 들려줄래?';
+  static const String notificationHungry = '배가 살짝 고파졌어. 간식 있을까?';
+  static const String notificationBored = '몸이 근질근질해! 같이 산책 갈까?';
+  static const String notificationFeedTime = '맛있는 밥 시간이야, 같이 먹자 🍽️';
 
   // 진화 단계 카테고리 라벨 (털뭉치 → 유아기 → 성장기 → 성숙기)
   static const Map<int, String> stageLabels = {

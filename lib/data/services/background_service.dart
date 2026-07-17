@@ -253,7 +253,7 @@ void callbackDispatcher() {
         final message = await checkNotificationUseCase(petId);
         if (message != null) {
           await notificationService.showNotification(
-            title: '내 펫',
+            title: AppStrings.notificationTitle,
             body: message,
           );
         }
