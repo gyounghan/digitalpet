@@ -25,10 +25,21 @@ class HealthDataSource {
   static bool _initialized = false;
 
   /// 권한 요청용 데이터 타입 목록
-  /// 걸음 수 동기화를 우선 보장하기 위해 STEPS만 필수 요청
+  /// STEPS(걸음) + WORKOUT(운동 시간) — WORKOUT을 요청하지 않으면
+  /// getActivityData의 운동 조회가 항상 실패해 exerciseMinutes가 0이 된다
   static final List<HealthDataType> _requiredHealthDataTypes = [
     HealthDataType.STEPS,
+    HealthDataType.WORKOUT,
   ];
+
+  /// 걸음 수만이라도 허용되면 초기화 성공으로 간주할 필수 타입
+  /// (WORKOUT을 거부해도 걸음 동기화는 유지)
+  static final List<HealthDataType> _essentialHealthDataTypes = [
+    HealthDataType.STEPS,
+  ];
+
+  static List<HealthDataAccess> _readAccessFor(List<HealthDataType> types) =>
+      List<HealthDataAccess>.filled(types.length, HealthDataAccess.READ);
 
   /// Health 초기화
   ///
@@ -68,7 +79,7 @@ class HealthDataSource {
     //    안전성을 위한 핵심 분기. hasPermissions가 true면 _initialized = true.
     try {
       final has = await health.hasPermissions(_requiredHealthDataTypes,
-          permissions: [HealthDataAccess.READ]);
+          permissions: _readAccessFor(_requiredHealthDataTypes));
       if (has == true) {
         if (kDebugMode) {
           debugPrint(
@@ -77,6 +88,24 @@ class HealthDataSource {
         }
         _initialized = true;
         return;
+      }
+
+      // WORKOUT은 미허용이지만 STEPS는 허용된 상태 — 백그라운드에서는
+      // 걸음 동기화만이라도 유지하도록 성공으로 간주
+      if (skipRequest) {
+        final hasSteps = await health.hasPermissions(
+          _essentialHealthDataTypes,
+          permissions: _readAccessFor(_essentialHealthDataTypes),
+        );
+        if (hasSteps == true) {
+          if (kDebugMode) {
+            debugPrint(
+              'HealthDataSource: STEPS만 허용됨 → 걸음 전용 모드로 초기화',
+            );
+          }
+          _initialized = true;
+          return;
+        }
       }
     } catch (e) {
       if (kDebugMode) {
@@ -97,21 +126,35 @@ class HealthDataSource {
     // 3) 권한 요청 (포그라운드에서만)
     final requested = await health.requestAuthorization(
       _requiredHealthDataTypes,
-      permissions: [HealthDataAccess.READ],
+      permissions: _readAccessFor(_requiredHealthDataTypes),
     );
     if (kDebugMode) {
       debugPrint(
-        'HealthDataSource: health requestAuthorization(STEPS/READ) -> $requested',
+        'HealthDataSource: health requestAuthorization(STEPS+WORKOUT/READ) '
+        '-> $requested',
       );
     }
     if (!requested) {
-      if (kDebugMode) {
-        debugPrint(
-          'HealthDataSource: requestAuthorization returned false. '
-          'Health Connect 앱이 설치되어 있는지, 권한이 허용되어 있는지 확인하세요.',
-        );
+      // WORKOUT만 거부됐고 STEPS는 허용됐으면 걸음 전용으로 계속 동작
+      bool hasSteps = false;
+      try {
+        hasSteps = await health.hasPermissions(
+              _essentialHealthDataTypes,
+              permissions: _readAccessFor(_essentialHealthDataTypes),
+            ) ==
+            true;
+      } catch (_) {
+        hasSteps = false;
       }
-      throw Exception('Health data permission denied');
+      if (!hasSteps) {
+        if (kDebugMode) {
+          debugPrint(
+            'HealthDataSource: requestAuthorization returned false. '
+            'Health Connect 앱이 설치되어 있는지, 권한이 허용되어 있는지 확인하세요.',
+          );
+        }
+        throw Exception('Health data permission denied');
+      }
     }
 
     _initialized = true;

@@ -43,7 +43,11 @@ class CheckNotificationUseCase {
     
     // 2. Pet 조회
     final pet = await petRepository.getPet(petId);
-    
+
+    // 죽은 펫에게는 알림을 보내지 않는다
+    // (사망 시 스탯이 0에 동결되어 배고픔 조건이 영구 성립하는 모순 방지)
+    if (pet.isDead) return null;
+
     // 3. 마지막 접속 시간 확인
     final lastAccessTime = await notificationRepository.getLastAccessTime();
     final currentTime = DateTime.now().millisecondsSinceEpoch;
