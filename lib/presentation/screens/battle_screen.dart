@@ -13,6 +13,7 @@ import '../../core/utils/pet_image_helper.dart';
 import '../../domain/entities/battle_history.dart';
 import '../../domain/entities/battle_style.dart';
 import '../../domain/entities/pet.dart';
+import '../../domain/usecases/battle_result_narrator.dart';
 import '../../domain/usecases/battle_with_activity_usecase.dart'
     show BattleTurn, BattleWithActivityUseCase;
 import '../../data/datasources/battle_socket_datasource.dart';
@@ -32,6 +33,9 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
   bool? battleResult;
   bool isLoading = false;
   int expGained = 0;
+
+  /// 결과 카드 해설 — 승패보다 "오늘의 활동이 어떻게 기여했는지"를 보여준다
+  BattleNarration? narration;
 
   List<BattleTurn> turns = [];
   int currentTurnIndex = -1;
@@ -136,6 +140,16 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
         setState(() {
           battleResult = isVictory;
           expGained = reward.expGained;
+          narration = BattleResultNarrator.narrate(
+            isVictory: isVictory,
+            isDominantVictory: isDominant,
+            playerHpRemaining: ourPetHp,
+            playerMaxHp: ourMaxHp,
+            hunger: pet.hunger,
+            happiness: pet.happiness,
+            stamina: pet.stamina,
+            todaySteps: pet.todaySyncedSteps,
+          );
           isLoading = false;
         });
         ref
@@ -209,6 +223,9 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
     });
 
     try {
+      // 해설용 전투 시점 컨디션 (보상 반영 전 스탯)
+      final prePet =
+          ref.read(petNotifierProvider(HomeScreen.defaultPetId)).valueOrNull;
       final battleUseCase = ref.read(battleWithActivityUseCaseProvider);
       final result =
           await battleUseCase(HomeScreen.defaultPetId, style: _battleStyle);
@@ -253,6 +270,19 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
       setState(() {
         battleResult = result.isVictory;
         expGained = result.expGained;
+        narration = BattleResultNarrator.narrate(
+          isVictory: result.isVictory,
+          isDominantVictory: result.isDominantVictory,
+          playerHpRemaining: result.turns.isNotEmpty
+              ? result.turns.last.playerHpRemaining
+              : result.playerMaxHp,
+          playerMaxHp: result.playerMaxHp,
+          hunger: prePet?.hunger ?? 50,
+          happiness: prePet?.happiness ?? 50,
+          stamina: prePet?.stamina ?? 50,
+          todaySteps: prePet?.todaySyncedSteps ?? 0,
+          affinityAdvantage: result.affinityAdvantage,
+        );
         isLoading = false;
       });
     } catch (_) {
@@ -285,6 +315,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
     setState(() {
       battleResult = null;
       expGained = 0;
+      narration = null;
     });
   }
 
@@ -715,14 +746,51 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
           ),
         ),
         const SizedBox(height: 4),
+        // 성장 확인 해설 — 승패 문구 대신 오늘의 활동이 어떻게 기여했는지
         Text(
-          win ? AppStrings.battleVictory : AppStrings.battleDefeat,
+          narration?.headline ??
+              (win ? AppStrings.battleVictory : AppStrings.battleDefeat),
           style: const TextStyle(
             fontSize: 12.5,
             fontWeight: FontWeight.w600,
             color: DesignTokens.ink3,
           ),
         ),
+        if (narration != null && narration!.lines.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          AppCard(
+            theme: theme,
+            variant: AppCardVariant.flat,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (final line in narration!.lines) ...[
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Icons.chat_bubble_outline,
+                          size: 13, color: theme.primaryDeep),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          line,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            height: 1.45,
+                            fontWeight: FontWeight.w600,
+                            color: DesignTokens.ink2,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (line != narration!.lines.last) const SizedBox(height: 7),
+                ],
+              ],
+            ),
+          ),
+        ],
         const SizedBox(height: 16),
         Row(
           children: [
