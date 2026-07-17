@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
+import '../../core/constants/server_config.dart';
 import '../../domain/usecases/battle_with_activity_usecase.dart' show BattleTurn;
 
 /// 배틀 소켓 이벤트 콜백
@@ -16,8 +17,8 @@ class BattleSocketDatasource {
   io.Socket? _socket;
   bool _isConnected = false;
 
-  /// 서버 URL (개발: localhost:3000, 프로덕션: 실제 서버)
-  static const String defaultServerUrl = 'http://10.0.2.2:3000';
+  /// 서버 URL — ServerConfig 단일 소스 (--dart-define=SERVER_URL로 교체)
+  static const String defaultServerUrl = ServerConfig.baseUrl;
 
   /// 이벤트 콜백
   OnMatchedCallback? onMatched;

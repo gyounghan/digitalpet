@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import '../../core/constants/server_config.dart';
 import '../../domain/entities/evolution_type.dart';
 
 /// 랭킹 엔트리 도메인 모델
@@ -86,8 +87,8 @@ class RankingResponseDto {
 /// NestJS 서버의 /ranking 엔드포인트와 통신.
 /// 모든 호출에 5초 타임아웃 + 오프라인 내성 (실패 시 null 반환).
 class RankingRemoteDatasource {
-  /// 서버 기본 URL (battle_socket_datasource.dart, pet_remote_datasource.dart와 동일)
-  static const String defaultBaseUrl = 'http://10.0.2.2:3000';
+  /// 서버 기본 URL — ServerConfig 단일 소스 (--dart-define=SERVER_URL로 교체)
+  static const String defaultBaseUrl = ServerConfig.baseUrl;
 
   final String baseUrl;
   final http.Client _client;
