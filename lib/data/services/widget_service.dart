@@ -173,8 +173,30 @@ class WidgetService {
     }
   }
   
+  /// 홈 화면에 위젯 추가(핀) 요청 — 온보딩 위젯 유도 단계에서 사용
+  ///
+  /// Android 8.0+ 이며 런처가 지원할 때만 시스템 추가 다이얼로그가 뜬다.
+  /// 반환: 요청을 띄웠으면 true, 미지원/실패면 false (호출부가 안내 문구 표시)
+  Future<bool> requestPinWidget() async {
+    try {
+      final supported = await HomeWidget.isRequestPinWidgetSupported();
+      if (supported != true) return false;
+      await HomeWidget.requestPinWidget(
+        name: 'PetWidgetProvider',
+        androidName: 'PetWidgetProvider',
+        qualifiedAndroidName: 'com.example.pocketfriend.PetWidgetProvider',
+      );
+      return true;
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('WidgetService.requestPinWidget failed: $e');
+      }
+      return false;
+    }
+  }
+
   /// 위젯 초기화
-  /// 
+  ///
   /// 앱 시작 시 위젯을 초기화하고 권한을 요청
   Future<void> initialize() async {
     try {

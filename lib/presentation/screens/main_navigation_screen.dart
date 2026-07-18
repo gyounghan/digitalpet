@@ -5,8 +5,10 @@ import 'home_screen.dart';
 import 'care_screen.dart';
 import 'me_screen.dart';
 import 'battle_screen.dart';
+import 'onboarding_screen.dart';
 import 'ranking_screen.dart';
 import '../providers/pet_provider.dart';
+import '../../data/datasources/app_prefs_datasource.dart';
 import '../../core/constants/feature_flags.dart';
 import '../../core/theme/species_theme.dart';
 import '../../main.dart' show runDeferredStartupTasks;
@@ -63,11 +65,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _startPeriodicUpdate();
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      // 첫 프레임 이후 무거운 초기화 (WorkManager, 위젯)
-      // 동기화 권한 안내는 홈 상단 배너(SyncPermissionBanner)가 필요 시 자동 노출.
-      await runDeferredStartupTasks();
-    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _runStartupFlow());
   }
 
   @override
@@ -75,6 +73,29 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
     WidgetsBinding.instance.removeObserver(this);
     _periodicUpdateTimer?.cancel();
     super.dispose();
+  }
+
+  /// 첫 프레임 이후 시작 흐름
+  ///
+  /// 1. 첫 실행이면 온보딩(이름→권한→첫 목표→위젯)을 먼저 띄운다 —
+  ///    권한 다이얼로그가 온보딩 위에 무작위로 겹치지 않도록,
+  ///    무거운 deferred 초기화는 온보딩이 닫힌 뒤에 실행한다.
+  /// 2. 이후 무거운 초기화 (WorkManager, 위젯). 동기화 권한 안내는
+  ///    홈 상단 배너(SyncPermissionBanner)가 필요 시 자동 노출.
+  Future<void> _runStartupFlow() async {
+    final prefs = AppPrefsDatasource();
+    final onboardingDone = await prefs.isOnboardingDone();
+    if (!onboardingDone) {
+      if (!mounted) return;
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          fullscreenDialog: true,
+          builder: (_) => const OnboardingScreen(),
+        ),
+      );
+      await prefs.setOnboardingDone();
+    }
+    await runDeferredStartupTasks();
   }
 
   /// 포그라운드 주기 갱신
