@@ -1,8 +1,7 @@
 import '../entities/pet.dart';
 import '../entities/evolution_type.dart';
-import '../entities/mission.dart';
-import '../constants/mission_catalog.dart';
 import '../repositories/pet_repository.dart';
+import 'evolution_axis_scores.dart';
 
 /// 반려동물 진화 유스케이스 (사신수 진화 트리)
 ///
@@ -99,43 +98,10 @@ class EvolvePetUseCase {
   /// 단순 카운트 비교는 종이 한쪽으로 쏠린다. 그래서 사용자가 실제로
   /// 다르게 행동하는 "원천 지표"를 정규화해 두 축으로 판정한다.
   ///
-  /// 두 축은 서로 독립적인 "원천 지표"만 사용한다(한 지표가 두 축에 겹치면
-  /// 대각선으로 종이 쏠리므로). 모든 지표는 누적값으로 통일한다(오늘값 혼용 금지).
-  ///
-  /// 활발 ↔ 차분: 실제 움직임(걸음·운동) vs 정적 휴식(수면·idle)
-  ///   moveScore = totalSteps/2000 + totalExerciseMinutes/10
-  ///   restScore = sleepAchievedCount + totalIdleHours/6
-  /// 규칙 ↔ 자유: 꾸준한 접속(연속 로그인) vs 자유로운 식사(급식 달성)
-  ///   regularScore = consecutiveLoginDays
-  ///   freeScore    = feedAchievedCount
-  ///   (수면은 위 차분 축에만 반영해 축을 독립시킴)
-  ///
-  /// 여기에 **완료한 미션([MissionCatalog])의 축별 가중치**를 더한다 —
-  /// "어떻게 키웠나(활동)" + "어떤 미션을 했나"가 함께 종을 결정한다.
-  ///
-  /// 활발 && 규칙 → tiger (백호, 전투형)
-  /// 활발 && 자유 → bird  (주작, 기동형)
-  /// 차분 && 규칙 → turtle (현무, 방어형)
-  /// 차분 && 자유 → snake  (청룡, 마법형)
+  /// 점수 공식·축 정의는 [EvolutionAxisScores]가 단일 소스 —
+  /// 종 결정 연출(SpeciesRevealNarrator)의 판정 근거 문구와 항상 일치한다.
   EvolutionType _determineEvolutionType(Pet pet) {
-    final moveScore = pet.totalSteps / 2000.0 +
-        pet.totalExerciseMinutes / 10.0 +
-        MissionCatalog.axisBonus(pet, MissionAxis.active);
-    final restScore = pet.sleepAchievedCount.toDouble() +
-        pet.totalIdleHours / 6.0 +
-        MissionCatalog.axisBonus(pet, MissionAxis.calm);
-    final isActive = moveScore >= restScore;
-
-    final regularScore = pet.consecutiveLoginDays.toDouble() +
-        MissionCatalog.axisBonus(pet, MissionAxis.regular);
-    final freeScore = pet.feedAchievedCount.toDouble() +
-        MissionCatalog.axisBonus(pet, MissionAxis.free);
-    final isRegular = regularScore >= freeScore;
-
-    if (isActive && isRegular) return EvolutionType.tiger;
-    if (isActive && !isRegular) return EvolutionType.bird;
-    if (!isActive && isRegular) return EvolutionType.turtle;
-    return EvolutionType.snake;
+    return EvolutionAxisScores.fromPet(pet).resultType;
   }
 
   /// 3단계 등급 결정 (종별 조건 — 종 대칭 · 누적 성취 게이팅)

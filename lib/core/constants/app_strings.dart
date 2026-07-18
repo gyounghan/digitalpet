@@ -65,6 +65,32 @@ class AppStrings {
   static const String evolutionEvolving = '진화 중...';
   static const String evolutionEvolveNow = '지금 진화하기';
 
+  // 종 결정 연출 (SpeciesRevealScreen — 서사 본문은 SpeciesRevealNarrator가 생성)
+  static const String speciesRevealBadge = '사신수 각성';
+  static const String speciesRevealConfirm = '만나러 가기';
+
+  // 온보딩 (OnboardingScreen — 이름 짓기 → 권한 → 첫 목표 → 위젯 유도)
+  static const String onboardWelcomeTitle = '작은 친구가 깨어났어요';
+  static const String onboardWelcomeBody =
+      '함께 걷고, 먹고, 잘수록 무럭무럭 자라요.\n어떤 모습으로 클지는 당신의 하루에 달렸어요.';
+  static const String onboardNameHint = '이름을 지어주세요';
+  static const String onboardNameButton = '이름 지어주기';
+  static const String onboardPermissionTitle = '같이 걸어줄래?';
+  static const String onboardPermissionBody =
+      '걸음을 알아야 내가 자랄 수 있어.\n걸음 측정 권한만 켜주면 돼!';
+  static const String onboardPermissionButton = '걸음 측정 켜기';
+  static const String onboardPermissionSkip = '나중에 할게';
+  static const String onboardGoalTitle = '오늘 우리의 첫 목표';
+  static const String onboardGoalBody = '가볍게 시작해요. 셋 다 채우면 첫 보상이 기다려요!';
+  static const String onboardGoalButton = '좋아, 해볼게';
+  static const String onboardWidgetTitle = '홈 화면에서도 만나요';
+  static const String onboardWidgetBody =
+      '위젯을 두면 앱을 열지 않아도\n내 기분이 보여요. 폰은 덜 보고, 나는 자주 보고!';
+  static const String onboardWidgetButton = '위젯 추가하기';
+  static const String onboardWidgetSkip = '나중에';
+  static const String onboardWidgetUnsupported =
+      '이 기기에서는 홈 화면 편집에서 직접 추가해 주세요.';
+
   // 긴 잠/깨우기 (사망·부활 리프레이밍 — 돌아온 유저를 벌하지 않는다)
   static const String longSleepTitle = '깊은 잠에 빠졌어요';
   static const String longSleepHint = '오래 혼자 있으면 긴 잠에 들어요.\n깨워주면 다시 함께할 수 있어요!';

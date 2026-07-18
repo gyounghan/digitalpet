@@ -12,8 +12,10 @@ import '../../domain/usecases/calculate_daily_goals_score_usecase.dart';
 import '../../domain/usecases/today_goal_progress.dart';
 import '../../core/utils/pet_image_helper.dart';
 import '../../data/services/ad_service.dart';
+import '../../data/datasources/app_prefs_datasource.dart';
 import '../widgets/long_sleep_widget.dart';
 import '../widgets/sync_permission_banner.dart';
+import 'species_reveal_screen.dart';
 
 /// 홈 화면 — "펫이 주인공, 정보는 행동 가능한 것만"
 ///
@@ -32,6 +34,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   /// 액션 직후 잠깐 재생하는 모션 (밥먹기 등). null이면 mood 기반 대기 모션.
   PixelMotion? _transientMotion;
   Timer? _transientTimer;
+
+  /// 종 결정 연출 중복 방지 — 플래그 확인/연출이 끝났으면 true
+  bool _speciesRevealHandled = false;
+  bool _speciesRevealChecking = false;
 
   @override
   void dispose() {
@@ -109,11 +115,50 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             if (pet.isDead) {
               return _buildDeadPetContent(context, ref, pet);
             }
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) _maybeShowSpeciesReveal(pet);
+            });
             return _buildPetContent(context, ref, pet);
           },
         ),
       ),
     );
+  }
+
+  /// 종 결정(2단계 진화) 풀스크린 연출 — 기기당 1회만
+  ///
+  /// 진화는 [PetNotifier._updateAndEvolve] 어디서든(백그라운드 포함) 일어날 수
+  /// 있으므로, "전이 감지"가 아니라 "stage 2 도달 + 미노출 플래그"로 판정한다.
+  /// 이 기능 추가 전에 이미 성장기(stage 3+)를 지난 펫은 뒤늦은 연출을
+  /// 생략하고 플래그만 세운다.
+  Future<void> _maybeShowSpeciesReveal(Pet pet) async {
+    if (_speciesRevealHandled || _speciesRevealChecking) return;
+    if (pet.evolutionStage < 2 || pet.evolutionType == null) return;
+
+    _speciesRevealChecking = true;
+    try {
+      final prefs = AppPrefsDatasource();
+      if (await prefs.isSpeciesRevealShown()) {
+        _speciesRevealHandled = true;
+        return;
+      }
+      await prefs.setSpeciesRevealShown();
+      _speciesRevealHandled = true;
+
+      if (pet.evolutionStage > 2) return;
+      if (!mounted) return;
+      await Navigator.of(context).push(
+        PageRouteBuilder(
+          fullscreenDialog: true,
+          transitionDuration: const Duration(milliseconds: 450),
+          pageBuilder: (_, __, ___) => SpeciesRevealScreen(pet: pet),
+          transitionsBuilder: (_, animation, __, child) =>
+              FadeTransition(opacity: animation, child: child),
+        ),
+      );
+    } finally {
+      _speciesRevealChecking = false;
+    }
   }
 
   Widget _buildPetContent(BuildContext context, WidgetRef ref, Pet pet) {
