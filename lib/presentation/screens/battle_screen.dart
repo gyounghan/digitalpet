@@ -5,6 +5,9 @@ import '../providers/pet_provider.dart';
 import '../widgets/app_design.dart';
 import '../widgets/pet_motion_thumb.dart';
 import '../widgets/pixel_motion_animation.dart';
+import '../widgets/pixel_pet_image.dart';
+import '../../core/pixel/pet_pixel_data.dart';
+import '../../core/pixel/skill_effect_data.dart';
 import '../../core/theme/species_theme.dart';
 import '../../core/constants/app_strings.dart';
 import '../../domain/entities/battle_history.dart';
@@ -621,15 +624,25 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
                 ),
                 Expanded(
                   child: Center(
-                    child: _arenaSprite(
-                      type: _opponentType,
-                      stage: pet.evolutionStage as int,
-                      grade: '',
-                      variant: 0,
-                      theme: oppTheme,
-                      motion: _opponentTurnMotion(),
-                      size: 140,
-                      flip: true,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        _arenaSprite(
+                          type: _opponentType,
+                          stage: pet.evolutionStage as int,
+                          grade: '',
+                          variant: 0,
+                          theme: oppTheme,
+                          motion: _opponentTurnMotion(),
+                          size: 140,
+                          flip: true,
+                        ),
+                        ..._panelEffectOverlay(
+                            minePanel: false,
+                            ownTheme: oppTheme,
+                            attackerTheme: myTheme,
+                            size: 120),
+                      ],
                     ),
                   ),
                 ),
@@ -656,14 +669,24 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
               children: [
                 Expanded(
                   child: Center(
-                    child: _arenaSprite(
-                      type: pet.evolutionType,
-                      stage: pet.evolutionStage as int,
-                      grade: (pet.evolutionGrade as String?) ?? '',
-                      variant: colorVariantFor(pet),
-                      theme: myTheme,
-                      motion: _myTurnMotion(),
-                      size: 160,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        _arenaSprite(
+                          type: pet.evolutionType,
+                          stage: pet.evolutionStage as int,
+                          grade: (pet.evolutionGrade as String?) ?? '',
+                          variant: colorVariantFor(pet),
+                          theme: myTheme,
+                          motion: _myTurnMotion(),
+                          size: 160,
+                        ),
+                        ..._panelEffectOverlay(
+                            minePanel: true,
+                            ownTheme: myTheme,
+                            attackerTheme: oppTheme,
+                            size: 135),
+                      ],
                     ),
                   ),
                 ),
@@ -713,6 +736,44 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
     );
     if (!flip) return sprite;
     return Transform.flip(flipX: true, child: sprite);
+  }
+
+  /// 현재 턴에 이 패널 위에 얹을 스킬 이펙트 (0~1개)
+  ///
+  /// - 자기 스킬이 방어자세면 자기 패널에 방패 이펙트 (자기 테마색)
+  /// - 아니면 상대 스킬의 공격 이펙트 (공격자 테마색)
+  List<Widget> _panelEffectOverlay({
+    required bool minePanel,
+    required SpeciesTheme ownTheme,
+    required SpeciesTheme attackerTheme,
+    required double size,
+  }) {
+    if (currentTurnIndex < 0 || currentTurnIndex >= turns.length) return [];
+    final turn = turns[currentTurnIndex];
+    final ownSkill = minePanel ? turn.playerSkillName : turn.opponentSkillName;
+    final incoming = minePanel ? turn.opponentSkillName : turn.playerSkillName;
+
+    List<PixelSprite>? frames;
+    SpeciesTheme effectTheme;
+    if (isSelfSkillEffect(ownSkill)) {
+      frames = skillEffectForSkillName(ownSkill);
+      effectTheme = ownTheme;
+    } else if (!isSelfSkillEffect(incoming)) {
+      frames = skillEffectForSkillName(incoming);
+      effectTheme = attackerTheme;
+    } else {
+      return [];
+    }
+    if (frames == null) return [];
+    return [
+      _SkillEffectBurst(
+        // 턴마다 새 키 → 이펙트 재생을 처음부터 다시 시작
+        key: ValueKey('fx-$minePanel-$currentTurnIndex'),
+        frames: frames,
+        size: size,
+        dotColor: effectTheme.primaryDeep,
+      ),
+    ];
   }
 
   /// 이름 + Lv + HP 바 한 줄 (아레나 상/하단 공용)
@@ -1117,4 +1178,62 @@ class _BattleStats {
   final int victories;
   final int defeats;
   _BattleStats({required this.victories, required this.defeats});
+}
+
+/// 스킬 이펙트 1회 재생 — 3프레임을 순서대로 보여주고 마지막 프레임에서 정지.
+/// 턴이 바뀌면 호출부가 새 key로 다시 만들어 처음부터 재생된다.
+class _SkillEffectBurst extends StatefulWidget {
+  final List<PixelSprite> frames;
+  final double size;
+  final Color dotColor;
+
+  const _SkillEffectBurst({
+    super.key,
+    required this.frames,
+    required this.size,
+    required this.dotColor,
+  });
+
+  @override
+  State<_SkillEffectBurst> createState() => _SkillEffectBurstState();
+}
+
+class _SkillEffectBurstState extends State<_SkillEffectBurst>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    )..forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, _) {
+        final idx = (_controller.value * widget.frames.length)
+            .floor()
+            .clamp(0, widget.frames.length - 1);
+        return PixelSpriteView(
+          sprite: widget.frames[idx],
+          width: widget.size,
+          height: widget.size,
+          dotColor: widget.dotColor,
+          // 반짝이('+')는 종과 무관한 스파크 노랑
+          accentColor: const Color(0xFFFFC94D),
+        );
+      },
+    );
+  }
 }
