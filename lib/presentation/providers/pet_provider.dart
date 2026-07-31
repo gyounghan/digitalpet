@@ -790,12 +790,19 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
       }
       
       // 5. 상태가 변경되었으면 업데이트
+      // 걸음/운동/수면 진행치도 비교에 포함 — 스탯이 그대로여도(예: stamina 100,
+      // 1000보 미만 delta) 목표 카드가 stale하게 남던 문제 방지.
       final currentPet = state.valueOrNull;
-      if (currentPet == null || 
+      if (currentPet == null ||
           activityUpdatedPet.hunger != currentPet.hunger ||
           activityUpdatedPet.happiness != currentPet.happiness ||
           activityUpdatedPet.stamina != currentPet.stamina ||
           activityUpdatedPet.exp != currentPet.exp ||
+          activityUpdatedPet.totalSteps != currentPet.totalSteps ||
+          activityUpdatedPet.totalExerciseMinutes !=
+              currentPet.totalExerciseMinutes ||
+          activityUpdatedPet.todaySleepMinutes !=
+              currentPet.todaySleepMinutes ||
           activityUpdatedPet.name != currentPet.name) {
         // _updateAndEvolve()가 위젯 업데이트를 포함하므로 중복 호출 불필요
         final evolvedPet = await _updateAndEvolve(activityUpdatedPet);
