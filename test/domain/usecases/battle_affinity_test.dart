@@ -1,4 +1,7 @@
+import 'dart:math';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pocketfriend/domain/entities/battle_style.dart';
 import 'package:pocketfriend/domain/entities/evolution_type.dart';
 import 'package:pocketfriend/domain/usecases/battle_with_activity_usecase.dart';
 
@@ -115,6 +118,70 @@ void main() {
     test('충전 없거나 감소율 0이면 원본 피해 그대로 통과', () {
       expect(BattleWithActivityUseCase.applyDamageShield(70, 0.5, 0).damage, 70);
       expect(BattleWithActivityUseCase.applyDamageShield(70, 0.0, 3).damage, 70);
+    });
+  });
+
+  group('BattleWithActivityUseCase.generateOpponentStats (AI 미러링)', () {
+    BattleStats avgOpponent(BattleStats player, {int level = 10, int n = 500}) {
+      int atk = 0, def = 0, hp = 0;
+      final random = Random(42);
+      for (int i = 0; i < n; i++) {
+        final o = BattleWithActivityUseCase.generateOpponentStats(
+            player, level, EvolutionType.tiger, random);
+        atk += o.attack;
+        def += o.defense;
+        hp += o.hp;
+      }
+      return BattleStats(attack: atk ~/ n, defense: def ~/ n, hp: hp ~/ n);
+    }
+
+    test('상대 스탯은 플레이어 육성을 따라 스케일한다 (절대치 고정 아님)', () {
+      final weak = BattleStats(attack: 15, defense: 15, hp: 60);
+      final strong = BattleStats(attack: 45, defense: 45, hp: 110);
+      final vsWeak = avgOpponent(weak);
+      final vsStrong = avgOpponent(strong);
+      // 강한 플레이어의 상대가 확실히 더 강해야 함 (예전엔 레벨만 반영돼 동일)
+      expect(vsStrong.attack, greaterThan(vsWeak.attack + 15));
+      expect(vsStrong.defense, greaterThan(vsWeak.defense + 15));
+      expect(vsStrong.hp, greaterThan(vsWeak.hp + 25));
+    });
+
+    test('미러는 완전 복제가 아니다 — 골격 혼합으로 잘 키운 플레이어가 평균 우위', () {
+      final strong = BattleStats(attack: 45, defense: 45, hp: 110);
+      final o = avgOpponent(strong);
+      // 골격(레벨10 ≈ atk 23)이 15% 섞여 상대 평균은 플레이어보다 낮다
+      expect(o.attack, lessThan(strong.attack));
+      expect(o.hp, lessThan(strong.hp));
+    });
+
+    test('변동 범위: 혼합 기대값의 ±15% 안에 있다', () {
+      final player = BattleStats(attack: 30, defense: 30, hp: 90);
+      const level = 10;
+      // 골격 atk = 5 + 10 + 6 + 2(tiger) = 23, 혼합 = 23×0.15 + 30×0.85 = 28.95
+      const blendedAtk = 23 * 0.15 + 30 * 0.85;
+      final random = Random(7);
+      for (int i = 0; i < 300; i++) {
+        final o = BattleWithActivityUseCase.generateOpponentStats(
+            player, level, EvolutionType.tiger, random);
+        expect(o.attack, greaterThanOrEqualTo((blendedAtk * 0.85).floor()));
+        expect(o.attack, lessThanOrEqualTo((blendedAtk * 1.15).ceil()));
+      }
+    });
+  });
+
+  group('BattleStyle — EV 중립 검증 (atk-def/2 공식 기준)', () {
+    test('공격형·방어형의 (ATK증감 - DEF증감/2) 기대값이 균형형과 같다', () {
+      // 데미지 교환 EV = atk×atkMul - (def×defMul)/2 를 스탯 30/30 기준으로 비교
+      double ev(BattleStyle s) => 30 * s.attackMultiplier - (30 * s.defenseMultiplier) / 2;
+      // 내 공격 이득(atk 증가분)과 내 피격 손실(def 감소분/2)이 상쇄 → net 0
+      double net(BattleStyle s) =>
+          (30 * s.attackMultiplier - 30) - (30 - 30 * s.defenseMultiplier) / 2;
+      expect(net(BattleStyle.attacker), closeTo(net(BattleStyle.balanced), 0.01));
+      expect(net(BattleStyle.defender), closeTo(net(BattleStyle.balanced), 0.01));
+      // EV 함수 자체도 대칭 확인 (attacker와 defender가 balanced 대비 등거리)
+      final base = ev(BattleStyle.balanced);
+      expect(ev(BattleStyle.attacker) - base,
+          closeTo(base - ev(BattleStyle.defender), 0.01));
     });
   });
 }

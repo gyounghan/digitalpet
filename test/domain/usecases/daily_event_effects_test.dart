@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pocketfriend/domain/constants/daily_events.dart';
+import 'package:pocketfriend/domain/constants/meal_times.dart';
 import 'package:pocketfriend/domain/entities/activity_data.dart';
 import 'package:pocketfriend/domain/entities/pet.dart';
 import 'package:pocketfriend/domain/entities/phone_usage.dart';
@@ -161,16 +162,7 @@ void main() {
   group('tasty — 식사 hunger 회복 +5', () {
     // FeedPetUseCase는 현재 시각의 식사 시간대에서만 동작하므로
     // 식사 시간대(6:30-10 / 11-14:30 / 17-21)일 때만 검증한다.
-    bool isInMealTime() {
-      final now = DateTime.now();
-      final minutes = now.hour * 60 + now.minute;
-      for (final range in FeedPetUseCase.mealTimeRanges) {
-        final start = range['startHour']! * 60 + range['startMin']!;
-        final end = range['endHour']! * 60 + range['endMin']!;
-        if (minutes >= start && minutes < end) return true;
-      }
-      return false;
-    }
+    bool isInMealTime() => MealTimes.slotAt(DateTime.now()) != 0;
 
     test('이벤트 없음: 밥주기 → hunger +20 / tasty: +25', () async {
       if (!isInMealTime()) return; // 시간대 밖이면 건너뜀

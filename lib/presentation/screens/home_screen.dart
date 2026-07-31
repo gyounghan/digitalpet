@@ -383,7 +383,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           icon: const Icon(Icons.restaurant, size: 18),
           label: Text(AppStrings.feed),
           style: ElevatedButton.styleFrom(
-            backgroundColor: theme.primary,
+            backgroundColor: theme.primaryDeep,
             foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(vertical: 13),
             shape: RoundedRectangleBorder(

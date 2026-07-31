@@ -28,32 +28,25 @@ subprojects {
         }
     }
 
-    // home_widget 0.9.0이 JVM 11로 빌드된 의존성을 쓰는데 자체 타깃이 1.8이라
-    // "Cannot inline bytecode built with JVM target 11" 오류가 나던 문제 해결.
-    // 다른 플러그인의 compileOptions는 AGP가 finalize 전 읽기를 금지하므로
-    // (targetCompatibility is not yet finalized) 문제가 된 home_widget에만
-    // 읽기 없이 11을 직접 지정한다.
-    if (project.name == "home_widget") {
-        val forceJvm11: Project.() -> Unit = {
-            extensions.findByType(com.android.build.gradle.BaseExtension::class.java)
-                ?.compileOptions
-                ?.apply {
-                    sourceCompatibility = JavaVersion.VERSION_11
-                    targetCompatibility = JavaVersion.VERSION_11
-                }
-            tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile::class.java)
-                .configureEach {
-                    kotlinOptions {
-                        jvmTarget = "11"
-                    }
-                }
-        }
-        // evaluationDependsOn(":app") 여파로 이미 평가된 프로젝트에는
-        // afterEvaluate 등록이 불가하므로 즉시 적용한다.
-        if (project.state.executed) {
-            project.forceJvm11()
-        } else {
-            afterEvaluate { forceJvm11() }
+    // 모든 모듈의 Java/Kotlin 컴파일 타깃을 JVM 17로 통일.
+    // - home_widget 0.9.0: 기본 1.8 타깃으로 JVM 11 바이트코드 인라인 실패
+    // - device_info_plus: Java 17 ↔ Kotlin 타깃 불일치
+    // 플러그인마다 제각각인 타깃을 최고치(17)로 맞춰 둘 다 해결한다.
+    val forceJvm17: (Project) -> Unit = { p ->
+        p.extensions.findByType(com.android.build.gradle.BaseExtension::class.java)
+            ?.compileOptions {
+                sourceCompatibility = JavaVersion.VERSION_17
+                targetCompatibility = JavaVersion.VERSION_17
+            }
+    }
+    // 이미 평가 완료된 프로젝트(:app)는 compileOptions가 finalize되어 수정 불가.
+    // :app은 자체 build.gradle.kts에서 직접 17로 설정하므로 건너뛴다.
+    if (!project.state.executed) {
+        project.afterEvaluate { forceJvm17(this) }
+    }
+    tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
         }
     }
 }

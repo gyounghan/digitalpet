@@ -4,14 +4,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/pet_provider.dart';
 import '../widgets/app_design.dart';
 import '../widgets/pet_motion_thumb.dart';
-import '../widgets/pixel_pet_image.dart';
 import '../widgets/pixel_motion_animation.dart';
+import '../widgets/pixel_pet_image.dart';
+import '../../core/pixel/pet_pixel_data.dart';
+import '../../core/pixel/skill_effect_data.dart';
 import '../../core/theme/species_theme.dart';
 import '../../core/constants/app_strings.dart';
 import '../../core/constants/feature_flags.dart';
-import '../../core/utils/pet_image_helper.dart';
 import '../../domain/entities/battle_history.dart';
 import '../../domain/entities/battle_style.dart';
+import '../../domain/entities/evolution_type.dart';
 import '../../domain/entities/pet.dart';
 import '../../domain/usecases/battle_result_narrator.dart';
 import '../../domain/usecases/battle_with_activity_usecase.dart'
@@ -20,8 +22,11 @@ import '../../data/datasources/battle_socket_datasource.dart';
 import 'home_screen.dart';
 
 /// 배틀 화면
-/// 상단 내 펫 카드(단색 deep) + 스타일 선택 + 모드 버튼 + 최근 전적
-/// (전적 요약은 최근 전적 섹션 타이틀에 표시 — 별도 카드 없음)
+///
+/// - 대기 상태: 내 펫 카드(단색 deep) + 스타일 선택 + 모드 버튼 + 최근 전적
+///   (전적 요약은 최근 전적 섹션 타이틀에 표시 — 별도 카드 없음)
+/// - 배틀 중/결과: 다마고치식 풀스크린 아레나 (상단 상대 ↔ 하단 내 펫,
+///   중앙 턴 로그/결과 밴드) — 다른 정보는 모두 숨긴다.
 class BattleScreen extends ConsumerStatefulWidget {
   const BattleScreen({super.key});
 
@@ -47,6 +52,15 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
   bool isMatchmaking = false;
   String? opponentName;
   int? opponentLevel;
+
+  /// 상대 종 (AI: 결과에서, 온라인: 매칭 정보에서) — 아레나 스프라이트용
+  EvolutionType? _opponentType;
+  bool _affinityAdvantage = false;
+  bool _affinityDisadvantage = false;
+
+  /// 턴 내 액션 박자 — 0: 내 공격, 1: 상대 반격, -1: 동시 표시(온라인)
+  int _actionPhase = -1;
+
   BattleSocketDatasource? _socket;
 
   /// 선택된 배틀 스타일 (기본 균형형)
@@ -56,6 +70,14 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
   void dispose() {
     _socket?.disconnect();
     super.dispose();
+  }
+
+  static EvolutionType? _parseType(String? name) {
+    if (name == null || name.isEmpty) return null;
+    for (final t in EvolutionType.values) {
+      if (t.name == name) return t;
+    }
+    return null;
   }
 
   Future<void> _startOnlineBattle(Pet pet) async {
@@ -85,6 +107,10 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
       battleResult = null;
       turns = [];
       currentTurnIndex = -1;
+      _actionPhase = -1;
+      _opponentType = null;
+      _affinityAdvantage = false;
+      _affinityDisadvantage = false;
     });
 
     // 실전 스탯 = 도감 스탯 × 배틀 스타일 배수 (AI 대전과 동일 공식)
@@ -104,6 +130,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
           isMatchmaking = false;
           opponentName = opponent['petName'] as String? ?? '???';
           opponentLevel = opponent['level'] as int? ?? 1;
+          _opponentType = _parseType(opponent['evolutionType'] as String?);
           ourMaxHp = maxHp;
           ourPetHp = maxHp;
           opponentMaxHp = opponent['maxHp'] as int? ?? 100;
@@ -183,6 +210,8 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
           isLoading = false;
           isMatchmaking = false;
         });
+        // 몰수승 보상은 위에서 applyOnlineBattleRewardUseCase가 로컬 지급 —
+        // 여기서는 갱신된 펫 상태만 다시 읽는다
         ref
             .read(petNotifierProvider(HomeScreen.defaultPetId).notifier)
             .refresh();
@@ -243,7 +272,13 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
       }
 
       if (result.turns.isNotEmpty) {
+        final oppType = _parseType(result.opponentTypeName);
         setState(() {
+          _opponentType = oppType;
+          opponentName = '야생의 ${SpeciesTheme.labelFor(oppType)}';
+          opponentLevel = result.opponentLevel;
+          _affinityAdvantage = result.affinityAdvantage;
+          _affinityDisadvantage = result.affinityDisadvantage;
           ourMaxHp = result.playerMaxHp;
           opponentMaxHp = result.opponentMaxHp;
           ourPetHp = result.playerMaxHp;
@@ -251,15 +286,29 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
         });
 
         for (int i = 0; i < result.turns.length; i++) {
-          await Future.delayed(const Duration(milliseconds: 800));
+          await Future.delayed(const Duration(milliseconds: 500));
           final turn = result.turns[i];
           if (!mounted) return;
+          // 1박자: 내 공격 — 상대 HP만 깎이고 상대 피격 연출
           setState(() {
             turns.add(turn);
             currentTurnIndex = i;
-            ourPetHp = turn.playerHpRemaining;
+            _actionPhase = 0;
             opponentPetHp = turn.opponentHpRemaining;
           });
+          await Future.delayed(const Duration(milliseconds: 900));
+          if (!mounted) return;
+          // 2박자: 상대 반격 (상대가 이미 KO면 생략)
+          if (turn.opponentDamage > 0) {
+            setState(() {
+              _actionPhase = 1;
+              ourPetHp = turn.playerHpRemaining;
+            });
+            await Future.delayed(const Duration(milliseconds: 900));
+            if (!mounted) return;
+          } else {
+            setState(() => ourPetHp = turn.playerHpRemaining);
+          }
         }
       }
 
@@ -307,6 +356,12 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
 
     setState(() {
       isLoading = true;
+      isMatchmaking = false;
+      _opponentType = null;
+      _affinityAdvantage = false;
+      _affinityDisadvantage = false;
+      opponentName = null;
+      opponentLevel = null;
     });
     await _simulateTurns();
   }
@@ -316,21 +371,52 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
       battleResult = null;
       expGained = 0;
       narration = null;
+      turns = [];
+      currentTurnIndex = -1;
+      _actionPhase = -1;
+      _opponentType = null;
+      _affinityAdvantage = false;
+      _affinityDisadvantage = false;
+      opponentName = null;
+      opponentLevel = null;
     });
   }
 
-  /// 현재 턴 상황에 따른 내 펫 도트 모션
+  /// 내 펫 도트 모션
   ///
-  /// - 상대 공격을 피함(피해 0) → dodge
-  /// - 주고받은 피해가 크거나 같음 → attack
-  /// - 더 큰 피해를 입음 → hurt
+  /// - 결과 확정: 승리 → joy(웃음), 패배 → hurt(쓰러짐)
+  /// - 내 공격 박자(phase 0): attack / 상대 반격 박자(phase 1): hurt
+  /// - 온라인(phase -1, 동시 표시): 피해 비교로 attack/hurt/dodge
   PixelMotion? _myTurnMotion() {
+    if (battleResult != null) {
+      return battleResult! ? PixelMotion.joy : PixelMotion.hurt;
+    }
     if (currentTurnIndex < 0 || currentTurnIndex >= turns.length) return null;
     final turn = turns[currentTurnIndex];
+    if (_actionPhase == 0) return PixelMotion.attack;
+    if (_actionPhase == 1) return PixelMotion.hurt;
     if (turn.opponentDamage == 0) return PixelMotion.dodge;
     if (turn.playerDamage >= turn.opponentDamage) return PixelMotion.attack;
     return PixelMotion.hurt;
   }
+
+  /// 상대 펫 모션 — 내 모션의 미러 (결과 시 승패 반대)
+  PixelMotion? _opponentTurnMotion() {
+    if (battleResult != null) {
+      return battleResult! ? PixelMotion.hurt : PixelMotion.joy;
+    }
+    if (currentTurnIndex < 0 || currentTurnIndex >= turns.length) return null;
+    final turn = turns[currentTurnIndex];
+    if (_actionPhase == 0) return PixelMotion.hurt;
+    if (_actionPhase == 1) return PixelMotion.attack;
+    if (turn.playerDamage == 0) return PixelMotion.dodge;
+    if (turn.opponentDamage >= turn.playerDamage) return PixelMotion.attack;
+    return PixelMotion.hurt;
+  }
+
+  /// 배틀 진행/결과 중인지 — 이때는 풀스크린 아레나만 보여준다
+  bool get _inArena =>
+      (isLoading && !isMatchmaking) || battleResult != null;
 
   @override
   Widget build(BuildContext context) {
@@ -345,13 +431,16 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
             child: Text('오류: $e',
                 style: const TextStyle(color: DesignTokens.bad)),
           ),
-          data: (pet) => _buildContent(pet),
+          data: (pet) =>
+              _inArena ? _buildBattleArena(pet) : _buildLobby(pet),
         ),
       ),
     );
   }
 
-  Widget _buildContent(dynamic pet) {
+  // ── 로비 (배틀 전) ─────────────────────────────────────────
+
+  Widget _buildLobby(dynamic pet) {
     final theme = SpeciesTheme.forType(pet.evolutionType);
 
     return Column(
@@ -363,17 +452,12 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
             children: [
               _buildMyPetCard(pet, theme),
               const SizedBox(height: 10),
-              if (battleResult == null) ...[
-                if (!isLoading) ...[
-                  _buildStyleSelector(theme),
-                  const SizedBox(height: 10),
-                  _buildModeButtons(pet, theme),
-                ] else if (isMatchmaking)
-                  _buildMatchingCard(theme)
-                else
-                  _buildArenaCard(pet, theme),
-              ] else
-                _buildResultCard(theme),
+              if (!isLoading) ...[
+                _buildStyleSelector(theme),
+                const SizedBox(height: 10),
+                _buildModeButtons(pet, theme),
+              ] else if (isMatchmaking)
+                _buildMatchingCard(theme),
               const SizedBox(height: 18),
               // 전적 요약(N승 N패)을 섹션 타이틀 우측에 함께 표시
               FutureBuilder<_BattleStats>(
@@ -623,194 +707,280 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
     );
   }
 
-  Widget _buildArenaCard(dynamic pet, SpeciesTheme theme) {
-    return AppCard(
-      theme: theme,
-      variant: AppCardVariant.flat,
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (currentTurnIndex >= 0)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: AppPill(
-                text: 'R${(currentTurnIndex + 1)}',
-                theme: theme,
-                variant: AppPillVariant.solid,
-              ),
-            ),
-          _FighterRow(
-            name: '${pet.name} (나)',
-            level: pet.level,
-            hp: ourPetHp,
-            maxHp: ourMaxHp,
-            imagePath:
-                getEvolutionImagePath(pet.evolutionType, pet.evolutionStage),
-            mine: true,
-            theme: theme,
-            motion: _myTurnMotion(),
-          ),
-          const SizedBox(height: 8),
-          _FighterRow(
-            name: opponentName ?? '상대',
-            level: opponentLevel ?? pet.level,
-            hp: opponentPetHp,
-            maxHp: opponentMaxHp,
-            imagePath: null,
-            mine: false,
-            theme: theme,
-          ),
-          if (currentTurnIndex >= 0 && currentTurnIndex < turns.length) ...[
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: theme.primarySoft,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '${pet.name}: ${turns[currentTurnIndex].playerSkillName}!',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: theme.primaryDeep,
-                    ),
-                  ),
-                  if (turns[currentTurnIndex].playerDamage > 0)
-                    Text(
-                      '→ -${turns[currentTurnIndex].playerDamage} 대미지!',
-                      style: const TextStyle(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w700,
-                        color: DesignTokens.bad,
-                      ),
-                    ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '상대: ${turns[currentTurnIndex].opponentSkillName}!',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: DesignTokens.ink2,
-                    ),
-                  ),
-                  if (turns[currentTurnIndex].opponentDamage > 0)
-                    Text(
-                      '→ -${turns[currentTurnIndex].opponentDamage} 대미지!',
-                      style: const TextStyle(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w700,
-                        color: DesignTokens.bad,
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ],
-          const SizedBox(height: 12),
-          Center(
-            child: CircularProgressIndicator(color: theme.primary),
-          ),
-        ],
-      ),
-    );
-  }
+  // ── 아레나 (배틀 중 — 다마고치식 상하 2분할 풀스크린) ────────
 
-  Widget _buildResultCard(SpeciesTheme theme) {
-    final win = battleResult == true;
+  Widget _buildBattleArena(dynamic pet) {
+    final myTheme = SpeciesTheme.forType(pet.evolutionType);
+    final oppTheme = SpeciesTheme.forType(_opponentType);
+
     return Column(
       children: [
-        Center(
-          child: AppPill(
-            text: win ? '승리' : '패배',
-            theme: theme,
-            variant: win ? AppPillVariant.solid : AppPillVariant.dark,
-            fontSize: 14,
-            padding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          // 패배 시에도 위로 경험치가 지급되므로 실제 획득량을 표시
-          expGained > 0 ? '+$expGained EXP' : '경험치 없음',
-          style: TextStyle(
-            fontSize: 28,
-            fontWeight: FontWeight.w900,
-            color: win ? theme.primaryDeep : DesignTokens.ink,
-            fontFeatures: const [FontFeature.tabularFigures()],
-          ),
-        ),
-        const SizedBox(height: 4),
-        // 성장 확인 해설 — 승패 문구 대신 오늘의 활동이 어떻게 기여했는지
-        Text(
-          narration?.headline ??
-              (win ? AppStrings.battleVictory : AppStrings.battleDefeat),
-          style: const TextStyle(
-            fontSize: 12.5,
-            fontWeight: FontWeight.w600,
-            color: DesignTokens.ink3,
-          ),
-        ),
-        if (narration != null && narration!.lines.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          AppCard(
-            theme: theme,
-            variant: AppCardVariant.flat,
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        // 상단: 상대 진영 (정보 위 → 스프라이트 아래, 마주보도록 반전)
+        Expanded(
+          child: Container(
+            width: double.infinity,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [oppTheme.gradStart, DesignTokens.bg],
+              ),
+            ),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                for (final line in narration!.lines) ...[
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(Icons.chat_bubble_outline,
-                          size: 13, color: theme.primaryDeep),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          line,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            height: 1.45,
-                            fontWeight: FontWeight.w600,
-                            color: DesignTokens.ink2,
-                          ),
-                        ),
-                      ),
-                    ],
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+                  child: _fighterInfoBar(
+                    name: opponentName ?? '상대',
+                    level: opponentLevel ?? (pet.level as int),
+                    hp: opponentPetHp,
+                    maxHp: opponentMaxHp,
+                    theme: oppTheme,
+                    mine: false,
                   ),
-                  if (line != narration!.lines.last) const SizedBox(height: 7),
-                ],
+                ),
+                Expanded(
+                  child: Center(
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        _arenaSprite(
+                          type: _opponentType,
+                          stage: pet.evolutionStage as int,
+                          grade: '',
+                          variant: 0,
+                          theme: oppTheme,
+                          motion: _opponentTurnMotion(),
+                          size: 140,
+                          flip: true,
+                        ),
+                        ..._panelEffectOverlay(
+                            minePanel: false,
+                            ownTheme: oppTheme,
+                            attackerTheme: myTheme,
+                            size: 120),
+                      ],
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
-        ],
-        const SizedBox(height: 16),
+        ),
+        // 중앙: 턴 로그 / 결과 밴드
+        battleResult == null
+            ? _buildTurnBand(myTheme)
+            : _buildResultBand(myTheme),
+        // 하단: 내 펫 진영 (스프라이트 위 → 정보 아래)
+        Expanded(
+          child: Container(
+            width: double.infinity,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.bottomCenter,
+                end: Alignment.topCenter,
+                colors: [myTheme.gradStart, DesignTokens.bg],
+              ),
+            ),
+            child: Column(
+              children: [
+                Expanded(
+                  child: Center(
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        _arenaSprite(
+                          type: pet.evolutionType,
+                          stage: pet.evolutionStage as int,
+                          grade: (pet.evolutionGrade as String?) ?? '',
+                          variant: colorVariantFor(pet),
+                          theme: myTheme,
+                          motion: _myTurnMotion(),
+                          size: 160,
+                        ),
+                        ..._panelEffectOverlay(
+                            minePanel: true,
+                            ownTheme: myTheme,
+                            attackerTheme: oppTheme,
+                            size: 135),
+                      ],
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
+                  child: _fighterInfoBar(
+                    name: '${pet.name} (나)',
+                    level: pet.level as int,
+                    hp: ourPetHp,
+                    maxHp: ourMaxHp,
+                    theme: myTheme,
+                    mine: true,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// 아레나 대형 도트 스프라이트 — 홈과 동일한 등급/개체변이 색 규칙 적용
+  Widget _arenaSprite({
+    required EvolutionType? type,
+    required int stage,
+    required String grade,
+    required int variant,
+    required SpeciesTheme theme,
+    required PixelMotion? motion,
+    required double size,
+    bool flip = false,
+  }) {
+    final key = motionSpriteKeyForStage(type, stage, grade);
+    if (key == null) {
+      return Icon(Icons.pets, size: size * 0.5, color: DesignTokens.ink3);
+    }
+    final (dotColor, accentColor) = dotColorsForKey(key, type, theme, variant);
+    final sprite = PixelMotionAnimation(
+      spriteKey: key,
+      motion: motion ?? PixelMotion.walk,
+      duration: const Duration(milliseconds: 600),
+      width: size,
+      height: size,
+      dotColor: dotColor,
+      accentColor: accentColor,
+    );
+    if (!flip) return sprite;
+    return Transform.flip(flipX: true, child: sprite);
+  }
+
+  /// 현재 박자에 이 패널 위에 얹을 스킬 이펙트 (0~1개)
+  ///
+  /// 박자별로 피격당하는 쪽 패널에만 표시해 "주고받는" 연출을 만든다:
+  /// - phase 0(내 공격): 상대 패널에 내 스킬 이펙트
+  /// - phase 1(상대 반격): 내 패널에 상대 스킬 이펙트
+  /// - phase -1(온라인 동시): 양쪽 모두 기존 방식
+  /// 방어자세는 공격 대신 시전자 자신 패널에 방패 이펙트.
+  /// 공격 이펙트는 왼쪽에서 날아와 오른쪽으로 스치는 슬라이드로 재생.
+  List<Widget> _panelEffectOverlay({
+    required bool minePanel,
+    required SpeciesTheme ownTheme,
+    required SpeciesTheme attackerTheme,
+    required double size,
+  }) {
+    if (currentTurnIndex < 0 || currentTurnIndex >= turns.length) return [];
+    final turn = turns[currentTurnIndex];
+    final ownSkill = minePanel ? turn.playerSkillName : turn.opponentSkillName;
+    final incoming = minePanel ? turn.opponentSkillName : turn.playerSkillName;
+
+    // 이 박자에 액션 중인 쪽: phase 0 = 나, phase 1 = 상대
+    final actorIsMe = _actionPhase == 0;
+    final panelIsActor = minePanel == actorIsMe;
+
+    List<PixelSprite>? frames;
+    SpeciesTheme effectTheme;
+    bool slide;
+    if (_actionPhase >= 0) {
+      final actingSkill = actorIsMe ? turn.playerSkillName : turn.opponentSkillName;
+      if (isSelfSkillEffect(actingSkill)) {
+        // 방어자세 — 시전자 자신 패널에 방패
+        if (!panelIsActor) return [];
+        frames = skillEffectForSkillName(actingSkill);
+        effectTheme = ownTheme;
+        slide = false;
+      } else {
+        // 공격 — 피격자 패널에 이펙트
+        if (panelIsActor) return [];
+        frames = skillEffectForSkillName(actingSkill);
+        effectTheme = attackerTheme;
+        slide = true;
+      }
+    } else {
+      // 온라인 동시 표시 (기존 방식)
+      if (isSelfSkillEffect(ownSkill)) {
+        frames = skillEffectForSkillName(ownSkill);
+        effectTheme = ownTheme;
+        slide = false;
+      } else if (!isSelfSkillEffect(incoming)) {
+        frames = skillEffectForSkillName(incoming);
+        effectTheme = attackerTheme;
+        slide = true;
+      } else {
+        return [];
+      }
+    }
+    if (frames == null) return [];
+    return [
+      _SkillEffectBurst(
+        // 턴·박자마다 새 키 → 이펙트 재생을 처음부터 다시 시작
+        key: ValueKey('fx-$minePanel-$currentTurnIndex-$_actionPhase'),
+        frames: frames,
+        size: size,
+        dotColor: effectTheme.primaryDeep,
+        // 왼쪽 바깥에서 날아와 펫을 스치고 오른쪽으로 빠지는 궤적
+        slideBeginDx: slide ? -size * 0.55 : 0,
+        slideEndDx: slide ? size * 0.25 : 0,
+      ),
+    ];
+  }
+
+  /// 이름 + Lv + HP 바 한 줄 (아레나 상/하단 공용)
+  Widget _fighterInfoBar({
+    required String name,
+    required int level,
+    required int hp,
+    required int maxHp,
+    required SpeciesTheme theme,
+    required bool mine,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
         Row(
           children: [
             Expanded(
-              child: _BigButton(
-                label: '홈으로',
+              child: Text(
+                name,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                  color: DesignTokens.ink,
+                ),
+              ),
+            ),
+            Text(
+              'Lv.$level',
+              style: const TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w700,
+                color: DesignTokens.ink2,
+                fontFeatures: [FontFeature.tabularFigures()],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        Row(
+          children: [
+            Expanded(
+              child: AppMeter(
+                value:
+                    maxHp > 0 ? (hp / maxHp * 100).clamp(0.0, 100.0) : 0.0,
                 theme: theme,
-                onTap: _resetBattle,
+                tone: mine ? AppMeterTone.themed : AppMeterTone.bad,
+                height: 12,
               ),
             ),
             const SizedBox(width: 8),
-            Expanded(
-              child: _BigButton(
-                label: '한번 더',
-                theme: theme,
-                primary: true,
-                onTap: () {
-                  _resetBattle();
-                  _startBattle();
-                },
+            Text(
+              '$hp/$maxHp',
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: DesignTokens.ink3,
+                fontFeatures: [FontFeature.tabularFigures()],
               ),
             ),
           ],
@@ -818,6 +988,233 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
       ],
     );
   }
+
+  /// 중앙 턴 로그 밴드 — 라운드/상성 + 양측 스킬 한 줄씩
+  Widget _buildTurnBand(SpeciesTheme theme) {
+    final turn = (currentTurnIndex >= 0 && currentTurnIndex < turns.length)
+        ? turns[currentTurnIndex]
+        : null;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      decoration: const BoxDecoration(
+        color: DesignTokens.surface,
+        border: Border(
+          top: BorderSide(color: DesignTokens.line, width: 1),
+          bottom: BorderSide(color: DesignTokens.line, width: 1),
+        ),
+      ),
+      child: turn == null
+          ? Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: CircularProgressIndicator(
+                      strokeWidth: 2, color: theme.primary),
+                ),
+                const SizedBox(width: 10),
+                const Text(
+                  '전투 시작!',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: DesignTokens.ink2,
+                  ),
+                ),
+              ],
+            )
+          : Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    AppPill(
+                      text: 'R${currentTurnIndex + 1}',
+                      theme: theme,
+                      variant: AppPillVariant.solid,
+                      fontSize: 10,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 2),
+                    ),
+                    if (_affinityAdvantage || _affinityDisadvantage) ...[
+                      const SizedBox(width: 6),
+                      AppPill(
+                        text: _affinityAdvantage ? '상성 유리' : '상성 불리',
+                        theme: theme,
+                        variant: _affinityAdvantage
+                            ? AppPillVariant.themed
+                            : AppPillVariant.outline,
+                        fontSize: 10,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 2),
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 6),
+                // 박자별로 액션 중인 쪽 한 줄만 (온라인 phase -1은 둘 다)
+                if (_actionPhase != 1)
+                  _skillLine(
+                    actor: '나',
+                    skillName: turn.playerSkillName,
+                    damage: turn.playerDamage,
+                    color: theme.primaryDeep,
+                  ),
+                if (_actionPhase == -1) const SizedBox(height: 2),
+                if (_actionPhase != 0)
+                  _skillLine(
+                    actor: '상대',
+                    skillName: turn.opponentSkillName,
+                    damage: turn.opponentDamage,
+                    color: DesignTokens.ink2,
+                  ),
+              ],
+            ),
+    );
+  }
+
+  Widget _skillLine({
+    required String actor,
+    required String skillName,
+    required int damage,
+    required Color color,
+  }) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Text(
+          '$actor: $skillName!',
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: color,
+          ),
+        ),
+        if (damage > 0) ...[
+          const SizedBox(width: 6),
+          Text(
+            '-$damage',
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+              color: DesignTokens.bad,
+              fontFeatures: [FontFeature.tabularFigures()],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  /// 중앙 결과 밴드 — 승패 + EXP + 버튼 (펫들은 그대로 보이게 유지)
+  Widget _buildResultBand(SpeciesTheme theme) {
+    final win = battleResult == true;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+      decoration: const BoxDecoration(
+        color: DesignTokens.surface,
+        border: Border(
+          top: BorderSide(color: DesignTokens.line, width: 1),
+          bottom: BorderSide(color: DesignTokens.line, width: 1),
+        ),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              AppPill(
+                text: win ? '승리' : '패배',
+                theme: theme,
+                variant: win ? AppPillVariant.solid : AppPillVariant.dark,
+                fontSize: 14,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                expGained > 0 ? '+$expGained EXP' : '경험치 없음',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w900,
+                  color: win ? theme.primaryDeep : DesignTokens.ink,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          // 성장 확인 해설 — 승패 문구 대신 오늘의 활동이 어떻게 기여했는지
+          Text(
+            narration?.headline ??
+                (win ? AppStrings.battleVictory : AppStrings.battleDefeat),
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: DesignTokens.ink3,
+            ),
+          ),
+          if (narration != null && narration!.lines.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            for (final line in narration!.lines) ...[
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.chat_bubble_outline,
+                      size: 13, color: theme.primaryDeep),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      line,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        height: 1.45,
+                        fontWeight: FontWeight.w600,
+                        color: DesignTokens.ink2,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              if (line != narration!.lines.last) const SizedBox(height: 6),
+            ],
+          ],
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _BigButton(
+                  label: '나가기',
+                  theme: theme,
+                  onTap: _resetBattle,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _BigButton(
+                  label: '한번 더',
+                  theme: theme,
+                  primary: true,
+                  onTap: () {
+                    _resetBattle();
+                    _startBattle();
+                  },
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── 전적 ───────────────────────────────────────────────────
 
   Widget _buildHistorySection(SpeciesTheme theme) {
     return FutureBuilder<List<BattleHistory>>(
@@ -915,7 +1312,9 @@ class _BigButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bg = primary ? theme.primary : DesignTokens.surface;
+    // 주요 버튼은 primaryDeep — primary는 종에 따라(특히 현무 라임색) 흰 글자
+    // 대비가 부족하다. 글로우 그림자는 흰 서피스 위에서 얼룩처럼 보여 제거.
+    final bg = primary ? theme.primaryDeep : DesignTokens.surface;
     final fg = primary ? Colors.white : DesignTokens.ink;
     return Material(
       color: bg,
@@ -955,130 +1354,79 @@ class _BigButton extends StatelessWidget {
   }
 }
 
-class _FighterRow extends StatelessWidget {
-  final String name;
-  final int level;
-  final int hp;
-  final int maxHp;
-  final String? imagePath;
-  final bool mine;
-  final SpeciesTheme theme;
-
-  /// 턴 진행 중 재생할 도트 모션 (베이비 스프라이트일 때만 적용)
-  final PixelMotion? motion;
-
-  const _FighterRow({
-    required this.name,
-    required this.level,
-    required this.hp,
-    required this.maxHp,
-    required this.theme,
-    required this.imagePath,
-    this.mine = false,
-    this.motion,
-  });
-
-  /// 파이터 아이콘 — 모션 데이터가 있는 스프라이트면 도트 모션, 아니면 정적 도트
-  Widget _buildSprite() {
-    final path = imagePath;
-    if (path == null) {
-      return const Icon(Icons.pets, color: DesignTokens.ink3);
-    }
-    final spriteKey = motionSpriteKeyFromAssetPath(path);
-    if (spriteKey != null && motion != null) {
-      final isFluff = spriteKey == 'fluff';
-      return Padding(
-        padding: const EdgeInsets.all(3),
-        child: PixelMotionAnimation(
-          spriteKey: spriteKey,
-          motion: motion!,
-          duration: const Duration(milliseconds: 600),
-          dotColor: isFluff ? SpeciesTheme.fluffBody : theme.primary,
-          accentColor: isFluff ? SpeciesTheme.fluffAccent : theme.spriteAccent,
-        ),
-      );
-    }
-    return Padding(
-      padding: const EdgeInsets.all(3),
-      child: PixelPetImage(
-        assetPath: path,
-        dotColor: theme.primary,
-        accentColor: theme.spriteAccent,
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: DesignTokens.surfaceSoft,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(11),
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: _buildSprite(),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        name,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w800,
-                          color: DesignTokens.ink,
-                        ),
-                      ),
-                    ),
-                    Text(
-                      'Lv.$level',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: DesignTokens.ink2,
-                        fontFeatures: [FontFeature.tabularFigures()],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 5),
-                // HP는 바 하나로만 표시 (수치 텍스트는 중복이라 제거)
-                AppMeter(
-                  value: maxHp > 0
-                      ? (hp / maxHp * 100).clamp(0.0, 100.0)
-                      : 0.0,
-                  theme: theme,
-                  tone: mine ? AppMeterTone.themed : AppMeterTone.bad,
-                  height: 10,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _BattleStats {
   final int victories;
   final int defeats;
   _BattleStats({required this.victories, required this.defeats});
+}
+
+/// 스킬 이펙트 1회 재생 — 3프레임을 순서대로 보여주고 마지막 프레임에서 정지.
+/// slideBeginDx→slideEndDx로 가로 슬라이드하며 "날아가는" 궤적을 만든다.
+/// 턴/박자가 바뀌면 호출부가 새 key로 다시 만들어 처음부터 재생된다.
+class _SkillEffectBurst extends StatefulWidget {
+  final List<PixelSprite> frames;
+  final double size;
+  final Color dotColor;
+
+  /// 가로 슬라이드 시작/끝 오프셋 (0이면 제자리 재생 — 방어자세 등)
+  final double slideBeginDx;
+  final double slideEndDx;
+
+  const _SkillEffectBurst({
+    super.key,
+    required this.frames,
+    required this.size,
+    required this.dotColor,
+    this.slideBeginDx = 0,
+    this.slideEndDx = 0,
+  });
+
+  @override
+  State<_SkillEffectBurst> createState() => _SkillEffectBurstState();
+}
+
+class _SkillEffectBurstState extends State<_SkillEffectBurst>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    )..forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, _) {
+        final t = Curves.easeOut.transform(_controller.value);
+        final idx = (_controller.value * widget.frames.length)
+            .floor()
+            .clamp(0, widget.frames.length - 1);
+        final dx =
+            widget.slideBeginDx + (widget.slideEndDx - widget.slideBeginDx) * t;
+        return Transform.translate(
+          offset: Offset(dx, 0),
+          child: PixelSpriteView(
+            sprite: widget.frames[idx],
+            width: widget.size,
+            height: widget.size,
+            dotColor: widget.dotColor,
+            // 반짝이('+')는 종과 무관한 스파크 노랑
+            accentColor: const Color(0xFFFFC94D),
+          ),
+        );
+      },
+    );
+  }
 }

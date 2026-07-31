@@ -110,7 +110,10 @@ class EvolvePetUseCase {
   /// "이 종이 된 방식대로 꾸준히 잘 키웠나"를 누적 달성 카운터로 판정 —
   /// 변동 스냅샷(happiness/stamina)이나 특정 종만 유리한 전투 게이트를 쓰지 않는다.
   ///
-  /// 축별 임계값(Lv10 ≈ 19일 기준 도달 가능):
+  /// 축별 임계값 — 실측 페이싱에 정렬:
+  /// 세트 클리어 유저는 일 ~140 EXP로 Lv10을 약 7일에 도달한다(시뮬레이션 실측).
+  /// 축당 하루 1~2달성이므로 임계값 8이면 "꾸준히 키운 유저"가 Lv10 도달
+  /// 시점(±수일)에 superior 판정을 받는다. 놓쳐도 단조 상향으로 이후 승격.
   ///   활발 exerciseAchievedCount>=[_supActive], 차분 sleepAchievedCount>=[_supCalm],
   ///   자유 feedAchievedCount>=[_supFree],       규칙 consecutiveLoginDays>=[_supRegular]
   ///
@@ -118,10 +121,10 @@ class EvolvePetUseCase {
   /// snake (차분+자유): 수면 && 급식 달성
   /// tiger (활발+규칙): 운동 && 연속접속
   /// turtle(차분+규칙): 수면 && 연속접속
-  static const int _supActive = 15;
-  static const int _supCalm = 15;
-  static const int _supFree = 15;
-  static const int _supRegular = 12;
+  static const int _supActive = 8;
+  static const int _supCalm = 8;
+  static const int _supFree = 8;
+  static const int _supRegular = 7;
 
   String _determineStage3Grade(Pet pet) {
     final bool superior;
@@ -150,8 +153,10 @@ class EvolvePetUseCase {
 
   /// 4단계 mythical 조건 충족 여부 (superior에서만 승격 가능 — 종 대칭)
   ///
-  /// superior와 같은 두 축을 더 높은 누적 임계값으로 요구한다
-  /// (Lv15 ≈ 48일 기준 "우수하게 키운 사용자"만 도달).
+  /// superior와 같은 두 축을 더 높은 누적 임계값으로 요구한다.
+  /// 세트 클리어 유저 Lv15 ≈ 17일(실측) 기준: 축 20은 하루 1달성이면 20일,
+  /// 2달성이면 10일 → Lv15 도달 직후~수일 내 사신수 진화가 가능해
+  /// "잘 키웠는데 일반종보다 한참 늦게 진화"하는 대기 구간을 없앤다.
   ///   활발 exerciseAchievedCount>=[_mythActive], 차분 sleepAchievedCount>=[_mythCalm],
   ///   자유 feedAchievedCount>=[_mythFree],       규칙 consecutiveLoginDays>=[_mythRegular]
   ///
@@ -159,10 +164,10 @@ class EvolvePetUseCase {
   /// snake(이무기→청룡): 수면 && 급식
   /// tiger(맹호→백호):   운동 && 연속접속
   /// turtle(영귀→현무):  수면 && 연속접속
-  static const int _mythActive = 40;
-  static const int _mythCalm = 40;
-  static const int _mythFree = 40;
-  static const int _mythRegular = 25;
+  static const int _mythActive = 20;
+  static const int _mythCalm = 20;
+  static const int _mythFree = 20;
+  static const int _mythRegular = 14;
 
   bool _meetsStage4Condition(Pet pet) {
     switch (pet.evolutionType) {

@@ -195,9 +195,9 @@ class _MeScreenState extends ConsumerState<MeScreen> {
                               : 'Lv.${_requiredLevelForStage(pet.evolutionStage)} 필요',
                     ),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: theme.primary,
+                      backgroundColor: theme.primaryDeep,
                       disabledBackgroundColor:
-                          theme.primary.withValues(alpha: 0.35),
+                          theme.primaryDeep.withValues(alpha: 0.35),
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
