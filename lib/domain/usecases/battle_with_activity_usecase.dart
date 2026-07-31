@@ -318,6 +318,7 @@ class BattleWithActivityUseCase {
       affinityDisadvantage: opponentAffinityMultiplier > 1.0,
       playerMaxHp: playerStats.hp,
       opponentMaxHp: opponentStats.hp,
+      opponentLevel: opponentLevel,
     );
   }
 
@@ -469,6 +470,9 @@ class BattleResult {
   final int playerMaxHp;
   final int opponentMaxHp;
 
+  /// AI 상대 레벨 (아레나 표시용)
+  final int opponentLevel;
+
   BattleResult({
     required this.isVictory,
     required this.isDominantVictory,
@@ -482,6 +486,7 @@ class BattleResult {
     this.limitReached = false,
     this.playerMaxHp = 100,
     this.opponentMaxHp = 100,
+    this.opponentLevel = 1,
   });
 
   factory BattleResult.empty(Pet pet, {bool limitReached = false}) => BattleResult(
