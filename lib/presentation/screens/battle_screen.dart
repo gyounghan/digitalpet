@@ -138,6 +138,10 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
           expGained = 50;
           isLoading = false;
         });
+        // 서버가 로컬 펫을 갱신하지 않으므로 몰수승 보상을 로컬에 직접 지급
+        ref
+            .read(petNotifierProvider(HomeScreen.defaultPetId).notifier)
+            .awardOnlineBattleReward(isVictory: true, exp: 50);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('상대가 연결을 끊었습니다. 승리!')),
         );

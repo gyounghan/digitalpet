@@ -29,6 +29,7 @@ import '../../data/datasources/health_datasource.dart';
 import '../../data/datasources/step_sensor_datasource.dart';
 import '../../core/constants/app_strings.dart';
 import '../../domain/usecases/battle_with_activity_usecase.dart';
+import '../../domain/usecases/award_battle_reward_usecase.dart';
 import '../../domain/usecases/can_feed_pet_usecase.dart';
 import '../../domain/repositories/battle_history_repository.dart';
 import '../../data/repositories/battle_history_repository_impl.dart';
@@ -269,6 +270,15 @@ final battleWithActivityUseCaseProvider = Provider<BattleWithActivityUseCase>((r
   );
 });
 
+/// AwardBattleRewardUseCase Provider
+/// 온라인 배틀 보상 로컬 지급 유스케이스 인스턴스를 제공
+final awardBattleRewardUseCaseProvider = Provider<AwardBattleRewardUseCase>((ref) {
+  return AwardBattleRewardUseCase(
+    petRepository: ref.watch(petRepositoryProvider),
+    battleHistoryRepository: ref.watch(battleHistoryRepositoryProvider),
+  );
+});
+
 /// CanFeedPetUseCase Provider
 /// Feed 가능 여부 체크 유스케이스 인스턴스를 제공
 final canFeedPetUseCaseProvider = Provider<CanFeedPetUseCase>((ref) {
@@ -385,6 +395,7 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
   final UpdatePetNameUseCase updatePetNameUseCase;
   final AlternativeFeedPetUseCase alternativeFeedPetUseCase;
   final AlternativeSleepPetUseCase alternativeSleepPetUseCase;
+  final AwardBattleRewardUseCase awardBattleRewardUseCase;
   final ShakeStepBonusUseCase shakeStepBonusUseCase;
   final CheckPetDeathUseCase checkPetDeathUseCase;
   final ResurrectPetUseCase resurrectPetUseCase;
@@ -411,6 +422,7 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
     required this.updatePetNameUseCase,
     required this.alternativeFeedPetUseCase,
     required this.alternativeSleepPetUseCase,
+    required this.awardBattleRewardUseCase,
     required this.shakeStepBonusUseCase,
     required this.checkPetDeathUseCase,
     required this.resurrectPetUseCase,
@@ -743,6 +755,27 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
     }
   }
 
+  /// 온라인 배틀 보상 지급
+  ///
+  /// 서버가 로컬 펫을 갱신하지 않는 결과(예: 상대 접속 끊김 승리)를
+  /// 로컬에 반영하고 전적을 남긴다.
+  Future<void> awardOnlineBattleReward({
+    required bool isVictory,
+    required int exp,
+  }) async {
+    if (state.isLoading || state.hasError) return;
+    if (state.valueOrNull?.isDead == true) return;
+
+    try {
+      final updatedPet =
+          await awardBattleRewardUseCase(petId, isVictory: isVictory, exp: exp);
+      final evolvedPet = await _updateAndEvolve(updatedPet);
+      state = AsyncValue.data(evolvedPet);
+    } catch (e, stackTrace) {
+      state = AsyncValue.error(e, stackTrace);
+    }
+  }
+
   /// 폰 흔들기 보너스
   ///
   /// 측정된 흔들기 횟수만큼 걸음수 보상을 펫에 반영한다.
@@ -940,6 +973,7 @@ final petNotifierProvider = StateNotifierProvider.family<PetNotifier, AsyncValue
     updatePetNameUseCase: ref.watch(updatePetNameUseCaseProvider),
     alternativeFeedPetUseCase: ref.watch(alternativeFeedPetUseCaseProvider),
     alternativeSleepPetUseCase: ref.watch(alternativeSleepPetUseCaseProvider),
+    awardBattleRewardUseCase: ref.watch(awardBattleRewardUseCaseProvider),
     shakeStepBonusUseCase: ref.watch(shakeStepBonusUseCaseProvider),
     checkPetDeathUseCase: ref.watch(checkPetDeathUseCaseProvider),
     resurrectPetUseCase: ref.watch(resurrectPetUseCaseProvider),
