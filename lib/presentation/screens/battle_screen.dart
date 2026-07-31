@@ -51,6 +51,9 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
   bool _affinityAdvantage = false;
   bool _affinityDisadvantage = false;
 
+  /// 턴 내 액션 박자 — 0: 내 공격, 1: 상대 반격, -1: 동시 표시(온라인)
+  int _actionPhase = -1;
+
   BattleSocketDatasource? _socket;
 
   /// 선택된 배틀 스타일 (기본 균형형)
@@ -77,6 +80,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
       battleResult = null;
       turns = [];
       currentTurnIndex = -1;
+      _actionPhase = -1;
       _opponentType = null;
       _affinityAdvantage = false;
       _affinityDisadvantage = false;
@@ -214,16 +218,29 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
         });
 
         for (int i = 0; i < result.turns.length; i++) {
-          // 턴 템포 — 스킬 로그/모션을 읽을 수 있는 속도
-          await Future.delayed(const Duration(milliseconds: 1300));
+          await Future.delayed(const Duration(milliseconds: 500));
           final turn = result.turns[i];
           if (!mounted) return;
+          // 1박자: 내 공격 — 상대 HP만 깎이고 상대 피격 연출
           setState(() {
             turns.add(turn);
             currentTurnIndex = i;
-            ourPetHp = turn.playerHpRemaining;
+            _actionPhase = 0;
             opponentPetHp = turn.opponentHpRemaining;
           });
+          await Future.delayed(const Duration(milliseconds: 900));
+          if (!mounted) return;
+          // 2박자: 상대 반격 (상대가 이미 KO면 생략)
+          if (turn.opponentDamage > 0) {
+            setState(() {
+              _actionPhase = 1;
+              ourPetHp = turn.playerHpRemaining;
+            });
+            await Future.delayed(const Duration(milliseconds: 900));
+            if (!mounted) return;
+          } else {
+            setState(() => ourPetHp = turn.playerHpRemaining);
+          }
         }
       }
 
@@ -263,6 +280,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
       expGained = 0;
       turns = [];
       currentTurnIndex = -1;
+      _actionPhase = -1;
       _opponentType = null;
       _affinityAdvantage = false;
       _affinityDisadvantage = false;
@@ -271,23 +289,33 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
     });
   }
 
-  /// 현재 턴 상황에 따른 내 펫 도트 모션
+  /// 내 펫 도트 모션
   ///
-  /// - 상대 공격을 피함(피해 0) → dodge
-  /// - 주고받은 피해가 크거나 같음 → attack
-  /// - 더 큰 피해를 입음 → hurt
+  /// - 결과 확정: 승리 → joy(웃음), 패배 → hurt(쓰러짐)
+  /// - 내 공격 박자(phase 0): attack / 상대 반격 박자(phase 1): hurt
+  /// - 온라인(phase -1, 동시 표시): 피해 비교로 attack/hurt/dodge
   PixelMotion? _myTurnMotion() {
+    if (battleResult != null) {
+      return battleResult! ? PixelMotion.joy : PixelMotion.hurt;
+    }
     if (currentTurnIndex < 0 || currentTurnIndex >= turns.length) return null;
     final turn = turns[currentTurnIndex];
+    if (_actionPhase == 0) return PixelMotion.attack;
+    if (_actionPhase == 1) return PixelMotion.hurt;
     if (turn.opponentDamage == 0) return PixelMotion.dodge;
     if (turn.playerDamage >= turn.opponentDamage) return PixelMotion.attack;
     return PixelMotion.hurt;
   }
 
-  /// 상대 펫 모션 — 내 모션의 미러
+  /// 상대 펫 모션 — 내 모션의 미러 (결과 시 승패 반대)
   PixelMotion? _opponentTurnMotion() {
+    if (battleResult != null) {
+      return battleResult! ? PixelMotion.hurt : PixelMotion.joy;
+    }
     if (currentTurnIndex < 0 || currentTurnIndex >= turns.length) return null;
     final turn = turns[currentTurnIndex];
+    if (_actionPhase == 0) return PixelMotion.hurt;
+    if (_actionPhase == 1) return PixelMotion.attack;
     if (turn.playerDamage == 0) return PixelMotion.dodge;
     if (turn.opponentDamage >= turn.playerDamage) return PixelMotion.attack;
     return PixelMotion.hurt;
@@ -738,10 +766,14 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
     return Transform.flip(flipX: true, child: sprite);
   }
 
-  /// 현재 턴에 이 패널 위에 얹을 스킬 이펙트 (0~1개)
+  /// 현재 박자에 이 패널 위에 얹을 스킬 이펙트 (0~1개)
   ///
-  /// - 자기 스킬이 방어자세면 자기 패널에 방패 이펙트 (자기 테마색)
-  /// - 아니면 상대 스킬의 공격 이펙트 (공격자 테마색)
+  /// 박자별로 피격당하는 쪽 패널에만 표시해 "주고받는" 연출을 만든다:
+  /// - phase 0(내 공격): 상대 패널에 내 스킬 이펙트
+  /// - phase 1(상대 반격): 내 패널에 상대 스킬 이펙트
+  /// - phase -1(온라인 동시): 양쪽 모두 기존 방식
+  /// 방어자세는 공격 대신 시전자 자신 패널에 방패 이펙트.
+  /// 공격 이펙트는 왼쪽에서 날아와 오른쪽으로 스치는 슬라이드로 재생.
   List<Widget> _panelEffectOverlay({
     required bool minePanel,
     required SpeciesTheme ownTheme,
@@ -753,25 +785,53 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
     final ownSkill = minePanel ? turn.playerSkillName : turn.opponentSkillName;
     final incoming = minePanel ? turn.opponentSkillName : turn.playerSkillName;
 
+    // 이 박자에 액션 중인 쪽: phase 0 = 나, phase 1 = 상대
+    final actorIsMe = _actionPhase == 0;
+    final panelIsActor = minePanel == actorIsMe;
+
     List<PixelSprite>? frames;
     SpeciesTheme effectTheme;
-    if (isSelfSkillEffect(ownSkill)) {
-      frames = skillEffectForSkillName(ownSkill);
-      effectTheme = ownTheme;
-    } else if (!isSelfSkillEffect(incoming)) {
-      frames = skillEffectForSkillName(incoming);
-      effectTheme = attackerTheme;
+    bool slide;
+    if (_actionPhase >= 0) {
+      final actingSkill = actorIsMe ? turn.playerSkillName : turn.opponentSkillName;
+      if (isSelfSkillEffect(actingSkill)) {
+        // 방어자세 — 시전자 자신 패널에 방패
+        if (!panelIsActor) return [];
+        frames = skillEffectForSkillName(actingSkill);
+        effectTheme = ownTheme;
+        slide = false;
+      } else {
+        // 공격 — 피격자 패널에 이펙트
+        if (panelIsActor) return [];
+        frames = skillEffectForSkillName(actingSkill);
+        effectTheme = attackerTheme;
+        slide = true;
+      }
     } else {
-      return [];
+      // 온라인 동시 표시 (기존 방식)
+      if (isSelfSkillEffect(ownSkill)) {
+        frames = skillEffectForSkillName(ownSkill);
+        effectTheme = ownTheme;
+        slide = false;
+      } else if (!isSelfSkillEffect(incoming)) {
+        frames = skillEffectForSkillName(incoming);
+        effectTheme = attackerTheme;
+        slide = true;
+      } else {
+        return [];
+      }
     }
     if (frames == null) return [];
     return [
       _SkillEffectBurst(
-        // 턴마다 새 키 → 이펙트 재생을 처음부터 다시 시작
-        key: ValueKey('fx-$minePanel-$currentTurnIndex'),
+        // 턴·박자마다 새 키 → 이펙트 재생을 처음부터 다시 시작
+        key: ValueKey('fx-$minePanel-$currentTurnIndex-$_actionPhase'),
         frames: frames,
         size: size,
         dotColor: effectTheme.primaryDeep,
+        // 왼쪽 바깥에서 날아와 펫을 스치고 오른쪽으로 빠지는 궤적
+        slideBeginDx: slide ? -size * 0.55 : 0,
+        slideEndDx: slide ? size * 0.25 : 0,
       ),
     ];
   }
@@ -907,19 +967,22 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
                   ],
                 ),
                 const SizedBox(height: 6),
-                _skillLine(
-                  actor: '나',
-                  skillName: turn.playerSkillName,
-                  damage: turn.playerDamage,
-                  color: theme.primaryDeep,
-                ),
-                const SizedBox(height: 2),
-                _skillLine(
-                  actor: '상대',
-                  skillName: turn.opponentSkillName,
-                  damage: turn.opponentDamage,
-                  color: DesignTokens.ink2,
-                ),
+                // 박자별로 액션 중인 쪽 한 줄만 (온라인 phase -1은 둘 다)
+                if (_actionPhase != 1)
+                  _skillLine(
+                    actor: '나',
+                    skillName: turn.playerSkillName,
+                    damage: turn.playerDamage,
+                    color: theme.primaryDeep,
+                  ),
+                if (_actionPhase == -1) const SizedBox(height: 2),
+                if (_actionPhase != 0)
+                  _skillLine(
+                    actor: '상대',
+                    skillName: turn.opponentSkillName,
+                    damage: turn.opponentDamage,
+                    color: DesignTokens.ink2,
+                  ),
               ],
             ),
     );
@@ -1181,17 +1244,24 @@ class _BattleStats {
 }
 
 /// 스킬 이펙트 1회 재생 — 3프레임을 순서대로 보여주고 마지막 프레임에서 정지.
-/// 턴이 바뀌면 호출부가 새 key로 다시 만들어 처음부터 재생된다.
+/// slideBeginDx→slideEndDx로 가로 슬라이드하며 "날아가는" 궤적을 만든다.
+/// 턴/박자가 바뀌면 호출부가 새 key로 다시 만들어 처음부터 재생된다.
 class _SkillEffectBurst extends StatefulWidget {
   final List<PixelSprite> frames;
   final double size;
   final Color dotColor;
+
+  /// 가로 슬라이드 시작/끝 오프셋 (0이면 제자리 재생 — 방어자세 등)
+  final double slideBeginDx;
+  final double slideEndDx;
 
   const _SkillEffectBurst({
     super.key,
     required this.frames,
     required this.size,
     required this.dotColor,
+    this.slideBeginDx = 0,
+    this.slideEndDx = 0,
   });
 
   @override
@@ -1207,7 +1277,7 @@ class _SkillEffectBurstState extends State<_SkillEffectBurst>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 900),
+      duration: const Duration(milliseconds: 800),
     )..forward();
   }
 
@@ -1222,16 +1292,22 @@ class _SkillEffectBurstState extends State<_SkillEffectBurst>
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, _) {
+        final t = Curves.easeOut.transform(_controller.value);
         final idx = (_controller.value * widget.frames.length)
             .floor()
             .clamp(0, widget.frames.length - 1);
-        return PixelSpriteView(
-          sprite: widget.frames[idx],
-          width: widget.size,
-          height: widget.size,
-          dotColor: widget.dotColor,
-          // 반짝이('+')는 종과 무관한 스파크 노랑
-          accentColor: const Color(0xFFFFC94D),
+        final dx =
+            widget.slideBeginDx + (widget.slideEndDx - widget.slideBeginDx) * t;
+        return Transform.translate(
+          offset: Offset(dx, 0),
+          child: PixelSpriteView(
+            sprite: widget.frames[idx],
+            width: widget.size,
+            height: widget.size,
+            dotColor: widget.dotColor,
+            // 반짝이('+')는 종과 무관한 스파크 노랑
+            accentColor: const Color(0xFFFFC94D),
+          ),
         );
       },
     );
