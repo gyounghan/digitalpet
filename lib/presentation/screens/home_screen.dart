@@ -396,8 +396,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  /// 오늘의 목표 카드 — 식사/걸음/수면 목표 진행 3줄 + 세트 보상 1줄.
+  /// 오늘의 목표 카드 — 식사/걸음/수면 목표 진행 3줄 + 보상 안내 1줄.
   ///
+  /// 목표 하나마다 개별 EXP, 셋 다 채우면 세트 EXP가 추가된다.
   /// "무엇을 채워야 세트가 완성되는지"를 보여주는 유일한 곳.
   /// [TodayGoalProgress]로 pet 데이터만으로 동기 계산 (FutureBuilder 불필요).
   /// 스탯(hunger 등) 상세 수치는 케어 화면으로 이동 — 홈은 기분 텍스트로 요약.
@@ -453,8 +454,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 const SizedBox(width: 5),
                 Text(
                   todaySets > 0
-                      ? '오늘 $todaySets세트 완성 · 다음 +$nextReward EXP'
-                      : '셋 다 채우면 +$nextReward EXP',
+                      ? '오늘 $todaySets세트 완성 · 다음 세트 +$nextReward EXP'
+                      : '하나마다 +${CalculateDailyGoalsScoreUseCase.expPerCategory} EXP · 세트 +$nextReward EXP',
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,

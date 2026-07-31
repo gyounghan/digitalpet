@@ -115,21 +115,21 @@ ApplyDailyGoalsScoreUseCase _makeApply(_FakePetRepository petRepo) {
 
 void main() {
   group('EXP 곡선 — RPG 후반 가파른 형태', () {
-    test('각 구간 임계값', () {
+    test('각 구간 임계값 (목표 고정 대신 EXP 곡선이 난이도 담당 — 상향판)', () {
       expect(Pet.getRequiredExpForLevel(1), 50);
       expect(Pet.getRequiredExpForLevel(3), 50);
-      expect(Pet.getRequiredExpForLevel(4), 100);
-      expect(Pet.getRequiredExpForLevel(7), 100);
-      expect(Pet.getRequiredExpForLevel(8), 200);
-      expect(Pet.getRequiredExpForLevel(12), 200);
-      expect(Pet.getRequiredExpForLevel(13), 350);
-      expect(Pet.getRequiredExpForLevel(17), 350);
-      expect(Pet.getRequiredExpForLevel(18), 550);
-      expect(Pet.getRequiredExpForLevel(22), 550);
-      expect(Pet.getRequiredExpForLevel(23), 800);
-      expect(Pet.getRequiredExpForLevel(27), 800);
-      expect(Pet.getRequiredExpForLevel(28), 1100);
-      expect(Pet.getRequiredExpForLevel(50), 1100);
+      expect(Pet.getRequiredExpForLevel(4), 120);
+      expect(Pet.getRequiredExpForLevel(7), 120);
+      expect(Pet.getRequiredExpForLevel(8), 250);
+      expect(Pet.getRequiredExpForLevel(12), 250);
+      expect(Pet.getRequiredExpForLevel(13), 450);
+      expect(Pet.getRequiredExpForLevel(17), 450);
+      expect(Pet.getRequiredExpForLevel(18), 700);
+      expect(Pet.getRequiredExpForLevel(22), 700);
+      expect(Pet.getRequiredExpForLevel(23), 1050);
+      expect(Pet.getRequiredExpForLevel(27), 1050);
+      expect(Pet.getRequiredExpForLevel(28), 1500);
+      expect(Pet.getRequiredExpForLevel(50), 1500);
     });
 
     test('단조 증가 (Lv1~30)', () {
@@ -143,34 +143,42 @@ void main() {
     });
   });
 
-  group('현실적 목표 곡선 — 비현실적 수치 제거', () {
-    test('운동 걸음 최대 8000보까지 (10000보 폐기)', () {
+  group('고정 목표 곡선 — 레벨이 올라도 목표치는 낮은 캡에서 고정', () {
+    test('운동 걸음 최대 4,000보 캡 (성장 난이도는 EXP 곡선이 담당)', () {
       expect(CalculateDailyGoalsScoreUseCase.getExerciseGoalSteps(1), 3000);
       expect(CalculateDailyGoalsScoreUseCase.getExerciseGoalSteps(5), 3000);
-      expect(CalculateDailyGoalsScoreUseCase.getExerciseGoalSteps(10), 4000);
-      expect(CalculateDailyGoalsScoreUseCase.getExerciseGoalSteps(15), 5000);
-      expect(CalculateDailyGoalsScoreUseCase.getExerciseGoalSteps(20), 6000);
-      expect(CalculateDailyGoalsScoreUseCase.getExerciseGoalSteps(30), 8000);
-      expect(CalculateDailyGoalsScoreUseCase.getExerciseGoalSteps(50) <= 8000,
-          true);
-    });
-
-    test('수면 목표 5~7시간 (3시간 같은 너무 짧은 값 제거)', () {
-      expect(CalculateDailyGoalsScoreUseCase.getSleepGoalHours(1), 5);
-      expect(CalculateDailyGoalsScoreUseCase.getSleepGoalHours(10), 5);
-      expect(CalculateDailyGoalsScoreUseCase.getSleepGoalHours(20), 6);
-      expect(CalculateDailyGoalsScoreUseCase.getSleepGoalHours(30), 7);
-      for (int lv = 1; lv <= 40; lv++) {
-        expect(CalculateDailyGoalsScoreUseCase.getSleepGoalHours(lv) >= 5,
-            true);
+      expect(CalculateDailyGoalsScoreUseCase.getExerciseGoalSteps(6), 4000);
+      for (int lv = 6; lv <= 50; lv++) {
+        expect(CalculateDailyGoalsScoreUseCase.getExerciseGoalSteps(lv), 4000,
+            reason: 'Lv$lv 걸음 목표는 4,000보 캡에서 고정');
       }
     });
 
-    test('운동 분 최대 30분 (현실적)', () {
+    test('수면 목표 5~6시간 캡 (7시간 상향 폐기)', () {
+      expect(CalculateDailyGoalsScoreUseCase.getSleepGoalHours(1), 5);
+      expect(CalculateDailyGoalsScoreUseCase.getSleepGoalHours(10), 5);
+      expect(CalculateDailyGoalsScoreUseCase.getSleepGoalHours(11), 6);
+      for (int lv = 11; lv <= 50; lv++) {
+        expect(CalculateDailyGoalsScoreUseCase.getSleepGoalHours(lv), 6,
+            reason: 'Lv$lv 수면 목표는 6시간 캡에서 고정');
+      }
+    });
+
+    test('식사 목표 1~2회 캡 (3회 상향 폐기 — 한 끼 놓쳐도 세트 가능)', () {
+      expect(CalculateDailyGoalsScoreUseCase.getFeedGoalCount(1), 1);
+      expect(CalculateDailyGoalsScoreUseCase.getFeedGoalCount(5), 1);
+      expect(CalculateDailyGoalsScoreUseCase.getFeedGoalCount(6), 2);
+      for (int lv = 6; lv <= 50; lv++) {
+        expect(CalculateDailyGoalsScoreUseCase.getFeedGoalCount(lv), 2,
+            reason: 'Lv$lv 식사 목표는 2회 캡에서 고정');
+      }
+    });
+
+    test('운동 분 최대 15분 캡', () {
       expect(CalculateDailyGoalsScoreUseCase.getExerciseGoalMinutes(5), 10);
-      expect(CalculateDailyGoalsScoreUseCase.getExerciseGoalMinutes(30), 30);
+      expect(CalculateDailyGoalsScoreUseCase.getExerciseGoalMinutes(6), 15);
       for (int lv = 1; lv <= 50; lv++) {
-        expect(CalculateDailyGoalsScoreUseCase.getExerciseGoalMinutes(lv) <= 30,
+        expect(CalculateDailyGoalsScoreUseCase.getExerciseGoalMinutes(lv) <= 15,
             true);
       }
     });
@@ -253,9 +261,9 @@ void main() {
       final result = await apply('p');
 
       // 9카테고리 달성 × 20 + (60+30+15) = 285
-      // → Lv1(50)→Lv2(50)→Lv3(50)→Lv4(100)→Lv5, 남은 35
+      // → Lv1(50)→Lv2(50)→Lv3(50)→Lv4(120)→Lv5, 남은 15
       expect(result.level, 5);
-      expect(result.exp, 35);
+      expect(result.exp, 15);
       expect(result.todaySetExpClaimed, 3);
       expect(result.totalSetsRewarded, 3);
     });
@@ -282,10 +290,10 @@ void main() {
 
       // 카테고리 3×20 + 카테고리 티어업(9→10) 3×50 + 세트 반감 0
       //   + 세트 마일스톤 50 = 260
-      // → Lv1(50)→Lv2(50)→Lv3(50)→Lv4(100)→Lv5, 남은 10
+      // → Lv1(50)→Lv2(50)→Lv3(50)→Lv4, 남은 110 (Lv4 필요 120 미달)
       expect(result.totalSetsRewarded, 10);
-      expect(result.level, 5);
-      expect(result.exp, 10);
+      expect(result.level, 4);
+      expect(result.exp, 110);
     });
 
     test('자정 리셋: todaySetExpClaimed=0, totalSetsRewarded 보존', () {

@@ -556,24 +556,27 @@ class Pet {
 
   /// 레벨에 필요한 경험치 (RPG 후반 가파른 곡선)
   ///
-  /// 일일 캡(카테고리당 하루 최대 3회 EXP)을 기준으로 한 페이스 가이드:
-  ///   보통 사용자 기준 카테고리 3개 × 1회 × 20 EXP = 60 EXP/일
-  ///   (열심히 하면 카테고리당 최대 3회 × 20 = 180 EXP/일 + 세트 보너스)
+  /// 성장 난이도는 목표치 상향이 아니라 이 곡선이 담당한다 — 목표치는
+  /// 낮은 캡에서 고정([CalculateDailyGoalsScoreUseCase] 참조)이므로,
+  /// 레벨이 올라도 "할 일"은 그대로고 레벨업 간격만 길어진다.
+  ///
+  /// 페이스 가이드 (고정 목표 기준 보통 사용자 ~100 EXP/일:
+  /// 카테고리 달성 2~3회 × 20 + 세트 보너스; 열심히 하면 ~200 EXP/일):
   /// - Lv  1 →  2 : 50 EXP   (1일)
-  /// - Lv  5 → 도달 ~ 4일
-  /// - Lv 10 → 도달 ~ 12일
+  /// - Lv  5 → 도달 ~ 3일
+  /// - Lv 10 → 도달 ~ 11일
   /// - Lv 15 → 도달 ~ 28일 (1개월)
-  /// - Lv 20 → 도달 ~ 58일 (2개월)
-  /// - Lv 25 → 도달 ~ 100일
-  /// - Lv 30 → 도달 ~ 170일
+  /// - Lv 20 → 도달 ~ 55일 (2개월)
+  /// - Lv 25 → 도달 ~ 97일 (3개월)
+  /// - Lv 30 → 도달 ~ 160일
   static int getRequiredExpForLevel(int level) {
     if (level <= 3) return 50;
-    if (level <= 7) return 100;
-    if (level <= 12) return 200;
-    if (level <= 17) return 350;
-    if (level <= 22) return 550;
-    if (level <= 27) return 800;
-    return 1100;
+    if (level <= 7) return 120;
+    if (level <= 12) return 250;
+    if (level <= 17) return 450;
+    if (level <= 22) return 700;
+    if (level <= 27) return 1050;
+    return 1500;
   }
 
   /// 오늘 날짜 문자열 반환 (YYYY-MM-DD)

@@ -226,6 +226,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     final stepsGoal = CalculateDailyGoalsScoreUseCase.getExerciseGoalSteps(1);
     final sleepGoal = CalculateDailyGoalsScoreUseCase.getSleepGoalHours(1);
     const setExp = CalculateDailyGoalsScoreUseCase.setExpBase;
+    const categoryExp = CalculateDailyGoalsScoreUseCase.expPerCategory;
 
     return _pageFrame(
       hero: _heroIcon(Icons.flag_rounded, theme),
@@ -253,7 +254,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 Icon(Icons.task_alt, size: 14, color: theme.primaryDeep),
                 const SizedBox(width: 5),
                 Text(
-                  '셋 다 채우면 +$setExp EXP',
+                  '하나마다 +$categoryExp EXP · 셋 다 채우면 +$setExp EXP',
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w800,

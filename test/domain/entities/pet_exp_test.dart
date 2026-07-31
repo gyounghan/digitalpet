@@ -8,34 +8,34 @@ void main() {
       expect(Pet.getRequiredExpForLevel(3), 50);
     });
 
-    test('레벨 4~7: 100', () {
-      expect(Pet.getRequiredExpForLevel(4), 100);
-      expect(Pet.getRequiredExpForLevel(7), 100);
+    test('레벨 4~7: 120', () {
+      expect(Pet.getRequiredExpForLevel(4), 120);
+      expect(Pet.getRequiredExpForLevel(7), 120);
     });
 
-    test('레벨 8~12: 200', () {
-      expect(Pet.getRequiredExpForLevel(8), 200);
-      expect(Pet.getRequiredExpForLevel(12), 200);
+    test('레벨 8~12: 250', () {
+      expect(Pet.getRequiredExpForLevel(8), 250);
+      expect(Pet.getRequiredExpForLevel(12), 250);
     });
 
-    test('레벨 13~17: 350', () {
-      expect(Pet.getRequiredExpForLevel(13), 350);
-      expect(Pet.getRequiredExpForLevel(17), 350);
+    test('레벨 13~17: 450', () {
+      expect(Pet.getRequiredExpForLevel(13), 450);
+      expect(Pet.getRequiredExpForLevel(17), 450);
     });
 
-    test('레벨 18~22: 550', () {
-      expect(Pet.getRequiredExpForLevel(18), 550);
-      expect(Pet.getRequiredExpForLevel(22), 550);
+    test('레벨 18~22: 700', () {
+      expect(Pet.getRequiredExpForLevel(18), 700);
+      expect(Pet.getRequiredExpForLevel(22), 700);
     });
 
-    test('레벨 23~27: 800', () {
-      expect(Pet.getRequiredExpForLevel(23), 800);
-      expect(Pet.getRequiredExpForLevel(27), 800);
+    test('레벨 23~27: 1050', () {
+      expect(Pet.getRequiredExpForLevel(23), 1050);
+      expect(Pet.getRequiredExpForLevel(27), 1050);
     });
 
-    test('레벨 28+: 1100', () {
-      expect(Pet.getRequiredExpForLevel(28), 1100);
-      expect(Pet.getRequiredExpForLevel(50), 1100);
+    test('레벨 28+: 1500', () {
+      expect(Pet.getRequiredExpForLevel(28), 1500);
+      expect(Pet.getRequiredExpForLevel(50), 1500);
     });
 
     test('레벨이 올라갈수록 필요 EXP 증가 (감소 없음)', () {

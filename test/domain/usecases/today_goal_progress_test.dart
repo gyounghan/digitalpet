@@ -47,11 +47,11 @@ void main() {
       expect(g.sleepGoalMinutes, 5 * 60);
     });
 
-    test('레벨 21+: 식사 3회 / 8000보 / 수면 7시간', () {
+    test('고레벨도 목표 캡 고정: 식사 2회 / 4000보 / 수면 6시간', () {
       final g = TodayGoalProgress.fromPet(makePet(level: 25));
-      expect(g.feedGoal, 3);
-      expect(g.stepsGoal, 8000);
-      expect(g.sleepGoalMinutes, 7 * 60);
+      expect(g.feedGoal, 2);
+      expect(g.stepsGoal, 4000);
+      expect(g.sleepGoalMinutes, 6 * 60);
     });
   });
 

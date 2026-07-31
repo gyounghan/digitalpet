@@ -11,10 +11,12 @@ import '../repositories/activity_repository.dart';
 /// (todayXxxAchievedCount로 추적, 자정 리셋 — 초과 진행분은 다음 날 소화).
 ///
 /// 현실적 목표 (보건 권장량 + 평균 사용자 수치 기반):
-/// - 포만감: 1~5=1회, 6~15=2회, 16+=3회 (식사 횟수)
-/// - 수면:   1~10=5시간, 11~20=6시간, 21+=7시간 (권장 최저 ~ 권장량)
-/// - 운동:   1~5=3,000보(10분), 6~10=4,000보(15분), 11~15=5,000보(20분),
-///           16~20=6,000보(25분), 21+=8,000보(30분) — 10,000보 같은 비현실적 수치 제거
+/// 레벨이 올라도 목표치는 거의 올리지 않는다 — 습관 앱에서 목표 상향은
+/// 이탈 요인이므로 낮은 캡에서 고정하고, 성장 난이도는 레벨별 필요
+/// 경험치([Pet.getRequiredExpForLevel])가 담당한다.
+/// - 포만감: 1~5=1회, 6+=2회 (캡)
+/// - 수면:   1~10=5시간, 11+=6시간 (캡 — 권장 최저 수준 유지)
+/// - 운동:   1~5=3,000보(10분), 6+=4,000보(15분) (캡)
 class CalculateDailyGoalsScoreUseCase {
   final PetRepository petRepository;
   final ActivityRepository activityRepository;
@@ -38,30 +40,22 @@ class CalculateDailyGoalsScoreUseCase {
 
   static int getFeedGoalCount(int level) {
     if (level <= 5) return 1;
-    if (level <= 15) return 2;
-    return 3;
+    return 2;
   }
 
   static int getSleepGoalHours(int level) {
     if (level <= 10) return 5;
-    if (level <= 20) return 6;
-    return 7;
+    return 6;
   }
 
   static int getExerciseGoalSteps(int level) {
     if (level <= 5) return 3000;
-    if (level <= 10) return 4000;
-    if (level <= 15) return 5000;
-    if (level <= 20) return 6000;
-    return 8000;
+    return 4000;
   }
 
   static int getExerciseGoalMinutes(int level) {
     if (level <= 5) return 10;
-    if (level <= 10) return 15;
-    if (level <= 15) return 20;
-    if (level <= 20) return 25;
-    return 30;
+    return 15;
   }
 
   CalculateDailyGoalsScoreUseCase({
