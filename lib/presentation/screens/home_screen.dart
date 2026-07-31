@@ -2,660 +2,595 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/pet_provider.dart';
-import '../widgets/status_bar.dart';
-import '../widgets/glass_card.dart';
 import '../widgets/pet_image_animation.dart';
-import '../widgets/pet_button.dart';
-import '../../core/theme/app_colors.dart';
+import '../widgets/pixel_motion_animation.dart';
+import '../widgets/app_design.dart';
+import '../../core/theme/species_theme.dart';
 import '../../core/constants/app_strings.dart';
 import '../../domain/entities/pet.dart';
-import '../../domain/usecases/alternative_feed_pet_usecase.dart';
-import '../../domain/usecases/alternative_sleep_pet_usecase.dart';
-import '../../domain/usecases/alternative_exercise_pet_usecase.dart';
+import '../../domain/usecases/calculate_daily_goals_score_usecase.dart';
+import '../../domain/usecases/today_goal_progress.dart';
 import '../../core/utils/pet_image_helper.dart';
+import '../../data/services/ad_service.dart';
+import '../../data/datasources/app_prefs_datasource.dart';
+import '../widgets/long_sleep_widget.dart';
+import '../widgets/sync_permission_banner.dart';
+import 'species_reveal_screen.dart';
 
-/// 홈 화면
-/// Pet의 상태를 표시하는 메인 화면
-/// Feed/Play/Sleep은 자동화되어 있어 수동 버튼이 없음
-/// design 폴더의 Home.tsx를 기반으로 재디자인
+/// 홈 화면 — "펫이 주인공, 정보는 행동 가능한 것만"
+///
+/// 상단 펫명(종·기분) + Lv/EXP 미터 + 펫 스테이지 + 밥주기 + 오늘의 목표 카드.
+/// 종/기분 라벨은 헤더 한 곳에만, 스탯 상세 수치는 케어 화면에서 확인한다.
 class HomeScreen extends ConsumerStatefulWidget {
-  /// 기본 Pet ID
-  /// 실제 앱에서는 사용자가 선택한 Pet ID를 사용
   static const String defaultPetId = 'default-pet';
-  
+
   const HomeScreen({super.key});
-  
+
   @override
   ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
-  Timer? _exerciseTimer;
-  int _exerciseRemainingSeconds = 0;
-  Timer? _napTimer;
-  int _napRemainingSeconds = 0;
-  
-  // Feed 버튼: 조건부 표시 (배고픔 상태 + 식사 시간대)
-  // Play: 걷기/운동량 기반 자동
-  // Sleep: 폰 미사용 감지 기반 자동
-  
-  /// 펫 상태를 한국어 텍스트로 변환
-  /// 
-  /// [mood] 펫의 기분 상태
-  /// 
-  /// 반환: 한국어 상태 텍스트
+  /// 액션 직후 잠깐 재생하는 모션 (밥먹기 등). null이면 mood 기반 대기 모션.
+  PixelMotion? _transientMotion;
+  Timer? _transientTimer;
+
+  /// 종 결정 연출 중복 방지 — 플래그 확인/연출이 끝났으면 true
+  bool _speciesRevealHandled = false;
+  bool _speciesRevealChecking = false;
+
+  @override
+  void dispose() {
+    _transientTimer?.cancel();
+    super.dispose();
+  }
+
+  /// 일시 모션 재생 — [duration] 후 mood 기반 대기 모션으로 복귀
+  void _playTransientMotion(
+    PixelMotion motion, {
+    Duration duration = const Duration(milliseconds: 2700),
+  }) {
+    _transientTimer?.cancel();
+    setState(() => _transientMotion = motion);
+    _transientTimer = Timer(duration, () {
+      if (mounted) setState(() => _transientMotion = null);
+    });
+  }
+
   String _getMoodText(PetMood mood) {
     switch (mood) {
       case PetMood.happy:
         return AppStrings.moodHappy;
-      case PetMood.sleepy:
-        return AppStrings.moodSleepy;
-      case PetMood.hungry:
-        return AppStrings.moodHungry;
-      case PetMood.bored:
-        return AppStrings.moodBored;
       case PetMood.normal:
         return AppStrings.moodNormal;
-      case PetMood.energetic:
-        return AppStrings.moodEnergetic;
+      case PetMood.hungry:
+        return AppStrings.moodHungry;
+      case PetMood.sleepy:
+        return AppStrings.moodSleepy;
       case PetMood.tired:
         return AppStrings.moodTired;
-      case PetMood.full:
-        return AppStrings.moodFull;
-      case PetMood.anxious:
-        return AppStrings.moodAnxious;
-      case PetMood.satisfied:
-        return AppStrings.moodSatisfied;
+      case PetMood.sad:
+        return AppStrings.moodSad;
+      case PetMood.dead:
+        return AppStrings.moodDead;
     }
   }
-  
-  /// 펫 상태에 따른 색상 반환
-  /// 
-  /// [mood] 펫의 기분 상태
-  /// 
-  /// 반환: 상태에 맞는 색상
-  Color _getMoodColor(PetMood mood) {
-    switch (mood) {
-      case PetMood.happy:
-        return AppColors.accentPink;
-      case PetMood.sleepy:
-        return AppColors.primary;
-      case PetMood.hungry:
-        return Colors.orange;
-      case PetMood.bored:
-        return Colors.grey;
-      case PetMood.normal:
-        return AppColors.textSecondary;
-      case PetMood.energetic:
-        return Colors.yellow.shade700;
-      case PetMood.tired:
-        return Colors.deepPurple;
-      case PetMood.full:
-        return Colors.green;
-      case PetMood.anxious:
-        return Colors.red.shade300;
-      case PetMood.satisfied:
-        return Colors.blue;
-    }
-  }
-  
-  @override
-  void dispose() {
-    _exerciseTimer?.cancel();
-    _napTimer?.cancel();
-    super.dispose();
-  }
 
-  /// 실내 운동 1분 타이머 시작
-  ///
-  /// 타이머가 0이 되면 대체 운동 보상을 적용
-  void _startIndoorExerciseTimer(WidgetRef ref) {
-    if (_exerciseTimer != null) {
-      return;
-    }
-
-    setState(() {
-      _exerciseRemainingSeconds = 60;
-    });
-
-    _exerciseTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (!mounted) {
-        timer.cancel();
-        _exerciseTimer = null;
-        return;
-      }
-
-      if (_exerciseRemainingSeconds <= 1) {
-        timer.cancel();
-        _exerciseTimer = null;
-        setState(() {
-          _exerciseRemainingSeconds = 0;
-        });
-        ref.read(petNotifierProvider(HomeScreen.defaultPetId).notifier).performAlternativeExercise();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('실내 운동 1분 완료! 대체 운동 보상이 적용됐어요.')),
-        );
-        return;
-      }
-
-      setState(() {
-        _exerciseRemainingSeconds -= 1;
-      });
-    });
-  }
-
-  /// 낮잠 모드 15분 시작
-  ///
-  /// 진행 중에는 전체 화면을 잠금 처리하여 다른 조작을 막는다.
-  void _startNapMode(WidgetRef ref) {
-    if (_napTimer != null) {
-      return;
-    }
-
-    _napRemainingSeconds = 15 * 60;
-    final remainingNotifier = ValueNotifier<int>(_napRemainingSeconds);
-
-    _napTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (!mounted) {
-        timer.cancel();
-        _napTimer = null;
-        remainingNotifier.dispose();
-        return;
-      }
-
-      if (_napRemainingSeconds <= 1) {
-        timer.cancel();
-        _napTimer = null;
-        _napRemainingSeconds = 0;
-        remainingNotifier.value = 0;
-        if (Navigator.of(context, rootNavigator: true).canPop()) {
-          Navigator.of(context, rootNavigator: true).pop();
-        }
-        ref.read(petNotifierProvider(HomeScreen.defaultPetId).notifier).performAlternativeSleep();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('낮잠 모드 15분 완료! 수면 보상이 적용됐어요.')),
-        );
-        remainingNotifier.dispose();
-        return;
-      }
-
-      _napRemainingSeconds -= 1;
-      remainingNotifier.value = _napRemainingSeconds;
-    });
-
-    showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) {
-        return PopScope(
-          canPop: false,
-          child: Material(
-            color: Colors.black.withValues(alpha: 0.85),
-            child: Center(
-              child: ValueListenableBuilder<int>(
-                valueListenable: remainingNotifier,
-                builder: (context, remaining, _) {
-                  final minutes = (remaining ~/ 60).toString().padLeft(2, '0');
-                  final seconds = (remaining % 60).toString().padLeft(2, '0');
-                  return Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.bedtime,
-                        color: AppColors.primary,
-                        size: 56,
-                      ),
-                      const SizedBox(height: 16),
-                      const Text(
-                        AppStrings.napModeRunning,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 22,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        '$minutes:$seconds',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 42,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 2,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        '낮잠 모드가 끝날 때까지 잠시 휴식해 주세요.',
-                        style: TextStyle(
-                          color: AppColors.textSecondary,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ],
-                  );
-                },
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  /// 대체 케어 바텀시트 표시
-  void _showAlternativeCareSheet(BuildContext context, WidgetRef ref, Pet pet) {
-    final alternativeFeedUseCase = ref.read(alternativeFeedPetUseCaseProvider);
-    final alternativeSleepUseCase = ref.read(alternativeSleepPetUseCaseProvider);
-    final alternativeExerciseUseCase = ref.read(alternativeExercisePetUseCaseProvider);
-
-    final canAlternativeFeed = alternativeFeedUseCase.canUse(pet);
-    final canAlternativeSleep = alternativeSleepUseCase.canUse(pet) && _napTimer == null;
-    final canAlternativeExercise = alternativeExerciseUseCase.canUse(pet) && _exerciseTimer == null;
-
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: AppColors.backgroundDarkSecondary,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (bottomSheetContext) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  AppStrings.alternativeCareTitle,
-                  style: TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                const Text(
-                  AppStrings.snackTimeGuide,
-                  style: TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 12,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                PetButton(
-                  variant: PetButtonVariant.secondary,
-                  icon: Icons.local_dining,
-                  disabled: !canAlternativeFeed,
-                  onPressed: canAlternativeFeed
-                      ? () {
-                          Navigator.of(bottomSheetContext).pop();
-                          ref.read(petNotifierProvider(HomeScreen.defaultPetId).notifier).performAlternativeFeed();
-                        }
-                      : null,
-                  child: Text(
-                    '${AppStrings.alternativeFeed} '
-                    '(${pet.todayAlternativeFeedCount}/${AlternativeFeedPetUseCase.maxAlternativeFeedsPerDay})',
-                  ),
-                ),
-                const SizedBox(height: 8),
-                PetButton(
-                  variant: PetButtonVariant.secondary,
-                  icon: Icons.bedtime,
-                  disabled: !canAlternativeSleep,
-                  onPressed: canAlternativeSleep
-                      ? () {
-                          Navigator.of(bottomSheetContext).pop();
-                          _startNapMode(ref);
-                        }
-                      : null,
-                  child: Text(
-                    '${AppStrings.alternativeSleep} '
-                    '(${pet.todayAlternativeSleepCount}/${AlternativeSleepPetUseCase.maxAlternativeSleepsPerDay})',
-                  ),
-                ),
-                const SizedBox(height: 8),
-                PetButton(
-                  variant: PetButtonVariant.secondary,
-                  icon: Icons.timer,
-                  disabled: !canAlternativeExercise,
-                  onPressed: canAlternativeExercise
-                      ? () {
-                          Navigator.of(bottomSheetContext).pop();
-                          _startIndoorExerciseTimer(ref);
-                        }
-                      : null,
-                  child: Text(
-                    '${AppStrings.alternativeExercise} '
-                    '(${pet.todayAlternativeExerciseCount}/${AlternativeExercisePetUseCase.maxAlternativeExercisesPerDay})',
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  
   @override
   Widget build(BuildContext context) {
-    // Pet 상태를 관리하는 Notifier 가져오기
     final petAsync = ref.watch(petNotifierProvider(HomeScreen.defaultPetId));
-    
+
     return Scaffold(
-      backgroundColor: AppColors.backgroundDark,
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: AppColors.backgroundGradient,
-        ),
-        child: SafeArea(
-          child: petAsync.when(
-            // 로딩 중
-            loading: () => const Center(
-              child: CircularProgressIndicator(
-                color: AppColors.primary,
-              ),
-            ),
-            // 에러 발생
-            error: (error, stackTrace) => Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(
-                        Icons.error_outline,
-                        size: 64,
-                        color: AppColors.danger,
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        '${AppStrings.error}: $error',
-                        style: const TextStyle(color: AppColors.danger),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 16),
-                      PetButton(
-                        variant: PetButtonVariant.primary,
-                        onPressed: () {
-                          ref
-                              .read(petNotifierProvider(HomeScreen.defaultPetId)
-                                  .notifier)
-                              .refresh();
-                        },
-                        child: Text(AppStrings.retry),
-                      ),
-                    ],
-                  ),
-                ),
-            // 데이터 로드 완료
-            data: (pet) => _buildPetContent(context, ref, pet),
-          ),
-        ),
-      ),
-    );
-  }
-  
-  /// Pet 콘텐츠 빌드
-  /// 
-  /// Pet 정보와 상태바, 액션 버튼을 표시
-  /// design 폴더의 Home.tsx 레이아웃을 정확히 매칭
-  Widget _buildPetContent(BuildContext context, WidgetRef ref, pet) {
-    final petName = pet.name;
-    
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return Center(
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              maxWidth: 390,
-            ),
-            child: Container(
-              width: double.infinity,
+      backgroundColor: DesignTokens.bg,
+      body: SafeArea(
+        child: petAsync.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, _) => Center(
+            child: Padding(
               padding: const EdgeInsets.all(24),
-              child: Column(
-                children: [
-            // 헤더
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                // 메뉴 버튼
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: AppColors.accentCyan, // 밝은 라일락 배경 (#E0D6F5)
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.1),
-                        blurRadius: 5,
-                        spreadRadius: 0,
-                        offset: const Offset(0, 1),
-                      ),
-                    ],
-                  ),
-                  child: IconButton(
-                    icon: Icon(
-                      Icons.menu,
-                      color: AppColors.primary, // 보라색 아이콘 (#A08CDB)
-                      size: 20,
-                    ),
-                    onPressed: () {
-                      // TODO: 네비게이션 메뉴
-                    },
-                  ),
-                ),
-                // Pet 이름, 레벨, 상태
-                GestureDetector(
-                  onTap: () => _showNameEditDialog(context, ref, pet),
-                  child: Column(
-                    children: [
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            petName,
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w500,
-                              color: AppColors.textPrimary,
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          Icon(
-                            Icons.edit,
-                            size: 14,
-                            color: AppColors.textSecondary,
-                          ),
-                        ],
-                      ),
-                    Text(
-                      '${AppStrings.level} ${pet.level}',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: AppColors.primary, // 보라색 (#A08CDB)
-                      ),
-                    ),
-                      const SizedBox(height: 4),
-                      // 펫의 현재 상태 표시
-                      Text(
-                        _getMoodText(pet.mood),
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: _getMoodColor(pet.mood),
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: AppColors.accentCyan,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.1),
-                            blurRadius: 5,
-                            spreadRadius: 0,
-                            offset: const Offset(0, 1),
-                          ),
-                        ],
-                      ),
-                      child: IconButton(
-                        icon: const Icon(
-                          Icons.health_and_safety,
-                          color: AppColors.primary,
-                          size: 20,
-                        ),
-                        onPressed: () => _showAlternativeCareSheet(context, ref, pet),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: AppColors.accentCyan,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.1),
-                            blurRadius: 5,
-                            spreadRadius: 0,
-                            offset: const Offset(0, 1),
-                          ),
-                        ],
-                      ),
-                      child: IconButton(
-                        icon: Icon(
-                          Icons.settings,
-                          color: AppColors.primary,
-                          size: 20,
-                        ),
-                        onPressed: () {
-                          // TODO: 설정 화면
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: 32),
-            // Pet Display (flex-1 역할 - 남은 공간 차지)
-            Expanded(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Center(
-                    child: PetImageAnimation(
-                      type: getPetImageTypeFromMood(pet.mood),
-                      duration: const Duration(milliseconds: 800),
+                  const Icon(Icons.error_outline,
+                      size: 56, color: DesignTokens.bad),
+                  const SizedBox(height: 12),
+                  Text(
+                    '${AppStrings.error}: $error',
+                    style: const TextStyle(color: DesignTokens.bad),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 12),
+                  ElevatedButton(
+                    onPressed: () => ref
+                        .read(petNotifierProvider(HomeScreen.defaultPetId)
+                            .notifier)
+                        .refresh(),
+                    child: Text(AppStrings.retry),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          data: (pet) {
+            if (pet.isDead) {
+              return _buildDeadPetContent(context, ref, pet);
+            }
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) _maybeShowSpeciesReveal(pet);
+            });
+            return _buildPetContent(context, ref, pet);
+          },
+        ),
+      ),
+    );
+  }
+
+  /// 종 결정(2단계 진화) 풀스크린 연출 — 기기당 1회만
+  ///
+  /// 진화는 [PetNotifier._updateAndEvolve] 어디서든(백그라운드 포함) 일어날 수
+  /// 있으므로, "전이 감지"가 아니라 "stage 2 도달 + 미노출 플래그"로 판정한다.
+  /// 이 기능 추가 전에 이미 성장기(stage 3+)를 지난 펫은 뒤늦은 연출을
+  /// 생략하고 플래그만 세운다.
+  Future<void> _maybeShowSpeciesReveal(Pet pet) async {
+    if (_speciesRevealHandled || _speciesRevealChecking) return;
+    if (pet.evolutionStage < 2 || pet.evolutionType == null) return;
+
+    _speciesRevealChecking = true;
+    try {
+      final prefs = AppPrefsDatasource();
+      if (await prefs.isSpeciesRevealShown()) {
+        _speciesRevealHandled = true;
+        return;
+      }
+      await prefs.setSpeciesRevealShown();
+      _speciesRevealHandled = true;
+
+      if (pet.evolutionStage > 2) return;
+      if (!mounted) return;
+      await Navigator.of(context).push(
+        PageRouteBuilder(
+          fullscreenDialog: true,
+          transitionDuration: const Duration(milliseconds: 450),
+          pageBuilder: (_, __, ___) => SpeciesRevealScreen(pet: pet),
+          transitionsBuilder: (_, animation, __, child) =>
+              FadeTransition(opacity: animation, child: child),
+        ),
+      );
+    } finally {
+      _speciesRevealChecking = false;
+    }
+  }
+
+  Widget _buildPetContent(BuildContext context, WidgetRef ref, Pet pet) {
+    final theme = SpeciesTheme.forType(pet.evolutionType);
+    final expPct = _calcExpPct(pet.exp, pet.level);
+
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 460),
+        child: Column(
+          children: [
+            _buildHeader(context, ref, pet),
+            _buildExpStrip(pet, theme, expPct),
+            const SizedBox(height: 4),
+            SyncPermissionBanner(theme: theme),
+            if (pet.todayEvent.isNotEmpty && pet.todayEvent != 'normal')
+              _buildEventBanner(pet, theme),
+            // 펫 스테이지는 내용(300)에 맞춰 높이를 잡는다 (카드가 과하게
+            // 늘어나지 않도록 Expanded 대신 Flexible — 남는 공간은 아래로).
+            Flexible(child: _buildPetStage(pet, theme)),
+            // Feed 버튼 + 현재 상태 3카드
+            _buildFeedButton(ref, pet, theme),
+            _buildTodayGoalsCard(pet, theme),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader(BuildContext context, WidgetRef ref, Pet pet) {
+    // 메뉴/설정 아이콘 제거 → 펫 이름/종/기분만 단순 표시
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(18, 10, 18, 6),
+      child: GestureDetector(
+        onTap: () => _showNameEditDialog(context, ref, pet),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          pet.name,
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w800,
+                            color: DesignTokens.ink,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      const Icon(Icons.edit,
+                          size: 14, color: DesignTokens.ink3),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${SpeciesTheme.labelFor(pet.evolutionType)} · ${_getMoodText(pet.mood)}',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: DesignTokens.ink3,
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 32),
-            // 상태 섹션
-            GlassCard(
-              gradient: true,
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                children: [
-                  StatusBar(
-                    label: AppStrings.hunger,
-                    value: pet.hunger,
-                    color: StatusBarColor.hunger,
-                    icon: Icons.restaurant,
-                  ),
-                  const SizedBox(height: 16),
-                  StatusBar(
-                    label: AppStrings.stamina,
-                    value: pet.stamina,
-                    color: StatusBarColor.stamina,
-                    icon: Icons.bedtime,
-                  ),
-                  const SizedBox(height: 16),
-                  StatusBar(
-                    label: AppStrings.happiness,
-                    value: pet.happiness,
-                    color: StatusBarColor.happiness,
-                    icon: Icons.directions_run,
-                  ),
-                ],
-              ),
-            ),
-            // Feed 버튼 (조건부 표시: 배고픔 상태 + 식사 시간대)
-            Consumer(
-              builder: (context, ref, _) {
-                final canFeedUseCase = ref.watch(canFeedPetUseCaseProvider);
-                final canFeed = canFeedUseCase.canFeed(pet);
-
-                if (!canFeed) {
-                  return const SizedBox(height: 12);
-                }
-
-                return Padding(
-                  padding: const EdgeInsets.only(top: 20),
-                  child: PetButton(
-                    variant: PetButtonVariant.primary,
-                    icon: Icons.restaurant,
-                    onPressed: () {
-                      ref.read(petNotifierProvider(HomeScreen.defaultPetId).notifier).feed();
-                    },
-                    child: Text(AppStrings.feed),
-                  ),
-                );
-              },
-            ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
+          ],
+        ),
+      ),
     );
   }
-  
-  /// 펫 이름 편집 다이얼로그 표시
-  /// 
-  /// [context] BuildContext
-  /// [ref] WidgetRef
-  /// [pet] 현재 Pet 엔티티
+
+  Widget _buildExpStrip(Pet pet, SpeciesTheme theme, int expPct) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(18, 0, 18, 8),
+      child: Row(
+        children: [
+          AppPill(
+            text: 'Lv.${pet.level}',
+            theme: theme,
+            variant: AppPillVariant.themed,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: AppMeter(
+              value: expPct.toDouble(),
+              theme: theme,
+              tone: AppMeterTone.themed,
+              height: 10,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEventBanner(Pet pet, SpeciesTheme theme) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(18, 0, 18, 8),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: theme.primarySoft,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.auto_awesome, size: 14, color: theme.primaryDeep),
+            const SizedBox(width: 6),
+            Text(
+              AppStrings.eventNames[pet.todayEvent] ?? pet.todayEvent,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: theme.primaryDeep,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPetStage(Pet pet, SpeciesTheme theme) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(18, 0, 18, 12),
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [theme.gradStart, theme.gradEnd],
+          ),
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: theme.primary.withValues(alpha: 0.08),
+              blurRadius: 24,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        // 종/기분 라벨은 상단 헤더에 이미 있으므로 카드는 순수 펫 무대로 둔다
+        child: Center(child: _buildPetSprite(pet, theme)),
+      ),
+    );
+  }
+
+  /// 도트 모션 스프라이트 키 (공통 규칙 — 성숙기 등급 분기 포함)
+  String? _motionSpriteKey(Pet pet) => motionSpriteKeyForStage(
+      pet.evolutionType, pet.evolutionStage, pet.evolutionGrade);
+
+  /// 펫 스테이지 스프라이트
+  ///
+  /// 모든 단계가 mood 기반 도트 모션 루프 + 액션 시 일시 모션(밥먹기).
+  Widget _buildPetSprite(Pet pet, SpeciesTheme theme) {
+    final spriteKey = _motionSpriteKey(pet);
+    if (spriteKey != null) {
+      final motion = _transientMotion ?? motionForMood(pet.mood);
+      // 털뭉치=베이지, 일반종=자연색(개체 변이), 사신수/그 외=테마색
+      final (dotColor, accentColor) = dotColorsForKey(
+          spriteKey, pet.evolutionType, theme, colorVariantFor(pet));
+      return SizedBox(
+        width: 300,
+        height: 300,
+        child: Align(
+          alignment: Alignment.bottomCenter,
+          child: PixelMotionAnimation(
+            spriteKey: spriteKey,
+            motion: motion,
+            width: 270,
+            height: 270,
+            dotColor: dotColor,
+            accentColor: accentColor,
+          ),
+        ),
+      );
+    }
+    return PetImageAnimation(
+      type: getPetImageTypeFromMood(pet.mood),
+      duration: const Duration(milliseconds: 800),
+      dotColor: theme.primary,
+      accentColor: theme.spriteAccent,
+      evolutionImagePath: getEvolutionMoodImagePath(
+            pet.evolutionType,
+            pet.evolutionStage,
+            pet.mood,
+          ) ??
+          getEvolutionImagePath(
+            pet.evolutionType,
+            pet.evolutionStage,
+          ),
+    );
+  }
+
+  Widget _buildFeedButton(WidgetRef ref, Pet pet, SpeciesTheme theme) {
+    final canFeedUseCase = ref.watch(canFeedPetUseCaseProvider);
+    final canFeed = canFeedUseCase.canFeed(pet);
+    if (!canFeed) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(18, 0, 18, 8),
+      child: SizedBox(
+        width: double.infinity,
+        child: ElevatedButton.icon(
+          onPressed: () {
+            ref
+                .read(petNotifierProvider(HomeScreen.defaultPetId).notifier)
+                .feed();
+            // 도트 모션이 있는 단계면 밥먹는 모션을 잠깐 재생
+            if (_motionSpriteKey(pet) != null) {
+              _playTransientMotion(PixelMotion.eat);
+            }
+          },
+          icon: const Icon(Icons.restaurant, size: 18),
+          label: Text(AppStrings.feed),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: theme.primaryDeep,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 13),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+            elevation: 0,
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 오늘의 목표 카드 — 식사/걸음/수면 목표 진행 3줄 + 세트 보상 1줄.
+  ///
+  /// "무엇을 채워야 세트가 완성되는지"를 보여주는 유일한 곳.
+  /// [TodayGoalProgress]로 pet 데이터만으로 동기 계산 (FutureBuilder 불필요).
+  /// 스탯(hunger 등) 상세 수치는 케어 화면으로 이동 — 홈은 기분 텍스트로 요약.
+  Widget _buildTodayGoalsCard(Pet pet, SpeciesTheme theme) {
+    final goals = TodayGoalProgress.fromPet(pet);
+    final todaySets = pet.todaySetExpClaimed;
+    final nextReward =
+        CalculateDailyGoalsScoreUseCase.setExpBase >> todaySets.clamp(0, 31);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(18, 0, 18, 14),
+      child: AppCard(
+        theme: theme,
+        variant: AppCardVariant.flat,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        radius: 16,
+        child: Column(
+          children: [
+            _goalRow(
+              icon: Icons.restaurant,
+              label: '식사',
+              valueText: '${goals.feedProgress}/${goals.feedGoal}회',
+              ratio: goals.feedRatio,
+              done: goals.feedDone,
+              theme: theme,
+            ),
+            const SizedBox(height: 8),
+            _goalRow(
+              icon: Icons.directions_run,
+              label: '걸음',
+              valueText:
+                  '${_formatSteps(goals.steps)}/${_formatSteps(goals.stepsGoal)}보',
+              ratio: goals.exerciseRatio,
+              done: goals.exerciseDone,
+              theme: theme,
+            ),
+            const SizedBox(height: 8),
+            _goalRow(
+              icon: Icons.bedtime,
+              label: '수면',
+              valueText:
+                  '${goals.sleepMinutes ~/ 60}/${goals.sleepGoalMinutes ~/ 60}시간',
+              ratio: goals.sleepRatio,
+              done: goals.sleepDone,
+              theme: theme,
+            ),
+            const SizedBox(height: 10),
+            // 세트 진행 (셋 다 채우면 1세트 — 반감 EXP 보상)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.task_alt, size: 13, color: theme.primaryDeep),
+                const SizedBox(width: 5),
+                Text(
+                  todaySets > 0
+                      ? '오늘 $todaySets세트 완성 · 다음 +$nextReward EXP'
+                      : '셋 다 채우면 +$nextReward EXP',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: theme.primaryDeep,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 목표 한 줄 — 아이콘 + 라벨 + 진행바 + 수치 (달성 시 체크·good 톤)
+  Widget _goalRow({
+    required IconData icon,
+    required String label,
+    required String valueText,
+    required double ratio,
+    required bool done,
+    required SpeciesTheme theme,
+  }) {
+    final color = done ? DesignTokens.good : theme.primaryDeep;
+    return Row(
+      children: [
+        Icon(done ? Icons.check_circle : icon, size: 15, color: color),
+        const SizedBox(width: 7),
+        SizedBox(
+          width: 34,
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: DesignTokens.ink2,
+            ),
+          ),
+        ),
+        Expanded(
+          child: AppMeter(
+            value: ratio * 100,
+            theme: theme,
+            tone: done ? AppMeterTone.good : AppMeterTone.themed,
+            height: 7,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          valueText,
+          style: const TextStyle(
+            fontSize: 10.5,
+            fontWeight: FontWeight.w700,
+            color: DesignTokens.ink3,
+            fontFeatures: [FontFeature.tabularFigures()],
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// 걸음 수 축약 표기 (3,200 → 3.2k)
+  String _formatSteps(int steps) {
+    if (steps < 1000) return '$steps';
+    final k = steps / 1000.0;
+    return k == k.roundToDouble() ? '${k.round()}k' : '${k.toStringAsFixed(1)}k';
+  }
+
+  /// 현재 레벨의 EXP 진행률 (%) — Pet.getRequiredExpForLevel 규칙과 동일
+  int _calcExpPct(int exp, int level) {
+    final needed = Pet.getRequiredExpForLevel(level);
+    if (needed <= 0) return 0;
+    return ((exp / needed) * 100).clamp(0, 100).round();
+  }
+
+  /// 긴 잠에 빠진 펫 — 무료 깨우기(30/30/30) 또는 광고 깨우기(완전 회복)
+  Widget _buildDeadPetContent(BuildContext context, WidgetRef ref, Pet pet) {
+    final notifier = ref.read(
+      petNotifierProvider(HomeScreen.defaultPetId).notifier,
+    );
+    void showWakeSuccess() {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text(AppStrings.wakeSuccess)),
+        );
+      }
+    }
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: LongSleepWidget(
+          pet: pet,
+          onWakeFree: () async {
+            await notifier.resurrect();
+            showWakeSuccess();
+          },
+          onWakeWithAd: () async {
+            final messenger = ScaffoldMessenger.of(context);
+            // 리워드 광고 시청 완료 시에만 완전 회복으로 깨움
+            await AdService().showRewardedAd(
+              onRewarded: () async {
+                await notifier.resurrect(fullRecovery: true);
+                showWakeSuccess();
+              },
+              onAdFailed: () {
+                messenger.showSnackBar(
+                  const SnackBar(content: Text(AppStrings.adLoadFailed)),
+                );
+              },
+            );
+          },
+        ),
+      ),
+    );
+  }
+
   void _showNameEditDialog(BuildContext context, WidgetRef ref, Pet pet) {
-    final TextEditingController nameController = TextEditingController(text: pet.name);
-    
+    final controller = TextEditingController(text: pet.name);
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          backgroundColor: AppColors.backgroundDark,
+          backgroundColor: DesignTokens.surface,
           title: const Text(
             '펫 이름 변경',
-            style: TextStyle(color: AppColors.textPrimary),
+            style: TextStyle(
+                color: DesignTokens.ink, fontWeight: FontWeight.w800),
           ),
           content: TextField(
-            controller: nameController,
-            style: const TextStyle(color: AppColors.textPrimary),
+            controller: controller,
             decoration: InputDecoration(
               hintText: '펫 이름을 입력하세요',
-              hintStyle: TextStyle(color: AppColors.textSecondary),
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: AppColors.primary),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: AppColors.primary, width: 2),
+                borderRadius: BorderRadius.circular(10),
               ),
             ),
             maxLength: 20,
@@ -664,23 +599,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: Text(
-                '취소',
-                style: TextStyle(color: AppColors.textSecondary),
-              ),
+              child: const Text('취소'),
             ),
             TextButton(
               onPressed: () {
-                final newName = nameController.text.trim();
+                final newName = controller.text.trim();
                 if (newName.isNotEmpty) {
-                  ref.read(petNotifierProvider(HomeScreen.defaultPetId).notifier).updateName(newName);
+                  ref
+                      .read(petNotifierProvider(HomeScreen.defaultPetId)
+                          .notifier)
+                      .updateName(newName);
                 }
                 Navigator.of(context).pop();
               },
-              child: Text(
-                '확인',
-                style: TextStyle(color: AppColors.primary),
-              ),
+              child: const Text('확인'),
             ),
           ],
         );
@@ -688,3 +620,4 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 }
+

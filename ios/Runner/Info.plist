@@ -45,5 +45,9 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSMotionUsageDescription</key>
+	<string>걸음수를 측정하여 펫의 상태에 반영합니다</string>
+	<key>NSHealthShareUsageDescription</key>
+	<string>건강 데이터를 읽어 펫의 활동에 반영합니다</string>
 </dict>
 </plist>

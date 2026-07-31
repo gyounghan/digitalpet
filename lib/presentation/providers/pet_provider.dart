@@ -1,10 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/entities/pet.dart';
 import '../../domain/repositories/pet_repository.dart';
 import '../../domain/repositories/notification_repository.dart';
 import '../../domain/usecases/update_pet_state_usecase.dart';
 import '../../domain/usecases/feed_pet_usecase.dart';
-import '../../domain/usecases/play_pet_usecase.dart';
 import '../../domain/usecases/sleep_pet_usecase.dart';
 import '../../domain/usecases/create_default_pet_usecase.dart';
 import '../../domain/usecases/evolve_pet_usecase.dart';
@@ -25,8 +26,11 @@ import '../../data/repositories/phone_usage_repository_impl.dart';
 import '../../data/datasources/phone_usage_datasource.dart';
 import '../../data/repositories/activity_repository_impl.dart';
 import '../../data/datasources/health_datasource.dart';
+import '../../data/datasources/step_sensor_datasource.dart';
 import '../../core/constants/app_strings.dart';
 import '../../domain/usecases/battle_with_activity_usecase.dart';
+import '../../domain/usecases/apply_online_battle_reward_usecase.dart';
+import '../../domain/usecases/award_battle_reward_usecase.dart';
 import '../../domain/usecases/can_feed_pet_usecase.dart';
 import '../../domain/repositories/battle_history_repository.dart';
 import '../../data/repositories/battle_history_repository_impl.dart';
@@ -36,7 +40,17 @@ import '../../domain/usecases/apply_daily_goals_score_usecase.dart';
 import '../../domain/usecases/update_pet_name_usecase.dart';
 import '../../domain/usecases/alternative_feed_pet_usecase.dart';
 import '../../domain/usecases/alternative_sleep_pet_usecase.dart';
-import '../../domain/usecases/alternative_exercise_pet_usecase.dart';
+import '../../domain/usecases/shake_step_bonus_usecase.dart';
+import '../../domain/usecases/check_pet_death_usecase.dart';
+import '../../domain/usecases/resurrect_pet_usecase.dart';
+import '../../domain/usecases/reset_pet_usecase.dart';
+import '../../domain/usecases/login_bonus_usecase.dart';
+import '../../domain/usecases/sync_pet_usecase.dart';
+import '../../domain/repositories/pet_remote_repository.dart';
+import '../../data/repositories/pet_remote_repository_impl.dart';
+import '../../data/datasources/pet_remote_datasource.dart';
+import '../../data/datasources/device_id_datasource.dart';
+import '../../data/datasources/ranking_remote_datasource.dart';
 import 'package:flutter/foundation.dart';
 
 /// PetLocalDataSource Provider
@@ -64,13 +78,6 @@ final updatePetStateUseCaseProvider = Provider<UpdatePetStateUseCase>((ref) {
 final feedPetUseCaseProvider = Provider<FeedPetUseCase>((ref) {
   final repository = ref.watch(petRepositoryProvider);
   return FeedPetUseCase(repository);
-});
-
-/// PlayPetUseCase Provider
-/// 놀아주기 유스케이스 인스턴스를 제공
-final playPetUseCaseProvider = Provider<PlayPetUseCase>((ref) {
-  final repository = ref.watch(petRepositoryProvider);
-  return PlayPetUseCase(repository);
 });
 
 /// SleepPetUseCase Provider
@@ -174,11 +181,57 @@ final healthDataSourceProvider = Provider<HealthDataSource>((ref) {
   return HealthDataSource();
 });
 
+/// StepSensorDatasource Provider
+/// Android 내장 걸음수 센서 인스턴스를 제공
+final stepSensorDatasourceProvider = Provider<StepSensorDatasource>((ref) {
+  return StepSensorDatasource();
+});
+
 /// ActivityRepository Provider
-/// 활동 데이터 저장소 인스턴스를 제공
+/// 걸음수: 내장 센서 우선 → Health Connect 폴백
+/// 운동 데이터: Health Connect에서만 조회
 final activityRepositoryProvider = Provider<ActivityRepository>((ref) {
-  final dataSource = ref.watch(healthDataSourceProvider);
-  return ActivityRepositoryImpl(dataSource);
+  final healthDataSource = ref.watch(healthDataSourceProvider);
+  final stepSensorDatasource = ref.watch(stepSensorDatasourceProvider);
+  return ActivityRepositoryImpl(
+    healthDataSource: healthDataSource,
+    stepSensorDatasource: stepSensorDatasource,
+  );
+});
+
+/// DeviceIdDatasource Provider
+final deviceIdDatasourceProvider = Provider<DeviceIdDatasource>((ref) {
+  return DeviceIdDatasource();
+});
+
+/// PetRemoteDatasource Provider
+final petRemoteDatasourceProvider = Provider<PetRemoteDatasource>((ref) {
+  return PetRemoteDatasource();
+});
+
+/// PetRemoteRepository Provider
+final petRemoteRepositoryProvider = Provider<PetRemoteRepository>((ref) {
+  final remoteDatasource = ref.watch(petRemoteDatasourceProvider);
+  final deviceIdDatasource = ref.watch(deviceIdDatasourceProvider);
+  return PetRemoteRepositoryImpl(
+    remoteDatasource: remoteDatasource,
+    deviceIdDatasource: deviceIdDatasource,
+  );
+});
+
+/// RankingRemoteDatasource Provider
+final rankingRemoteDatasourceProvider = Provider<RankingRemoteDatasource>((ref) {
+  return RankingRemoteDatasource();
+});
+
+/// SyncPetUseCase Provider
+final syncPetUseCaseProvider = Provider<SyncPetUseCase>((ref) {
+  final localRepository = ref.watch(petRepositoryProvider);
+  final remoteRepository = ref.watch(petRemoteRepositoryProvider);
+  return SyncPetUseCase(
+    localRepository: localRepository,
+    remoteRepository: remoteRepository,
+  );
 });
 
 /// UpdatePetFromActivityUseCase Provider
@@ -215,6 +268,29 @@ final battleWithActivityUseCaseProvider = Provider<BattleWithActivityUseCase>((r
     petRepository: petRepository,
     activityRepository: activityRepository,
     battleHistoryRepository: battleHistoryRepository,
+  );
+});
+
+/// ApplyOnlineBattleRewardUseCase Provider
+/// 온라인 배틀 결과 보상 적용 유스케이스 인스턴스를 제공
+final applyOnlineBattleRewardUseCaseProvider =
+    Provider<ApplyOnlineBattleRewardUseCase>((ref) {
+  final petRepository = ref.watch(petRepositoryProvider);
+  final activityRepository = ref.watch(activityRepositoryProvider);
+  final battleHistoryRepository = ref.watch(battleHistoryRepositoryProvider);
+  return ApplyOnlineBattleRewardUseCase(
+    petRepository: petRepository,
+    activityRepository: activityRepository,
+    battleHistoryRepository: battleHistoryRepository,
+  );
+});
+
+/// AwardBattleRewardUseCase Provider
+/// 온라인 배틀 보상 로컬 지급 유스케이스 인스턴스를 제공
+final awardBattleRewardUseCaseProvider = Provider<AwardBattleRewardUseCase>((ref) {
+  return AwardBattleRewardUseCase(
+    petRepository: ref.watch(petRepositoryProvider),
+    battleHistoryRepository: ref.watch(battleHistoryRepositoryProvider),
   );
 });
 
@@ -268,11 +344,38 @@ final alternativeSleepPetUseCaseProvider = Provider<AlternativeSleepPetUseCase>(
   return AlternativeSleepPetUseCase(repository);
 });
 
-/// AlternativeExercisePetUseCase Provider
-/// 대체 운동 유스케이스 인스턴스를 제공
-final alternativeExercisePetUseCaseProvider = Provider<AlternativeExercisePetUseCase>((ref) {
+/// ShakeStepBonusUseCase Provider
+/// 폰 흔들기 → 걸음 보너스 유스케이스 인스턴스를 제공
+final shakeStepBonusUseCaseProvider = Provider<ShakeStepBonusUseCase>((ref) {
   final repository = ref.watch(petRepositoryProvider);
-  return AlternativeExercisePetUseCase(repository);
+  return ShakeStepBonusUseCase(repository);
+});
+
+/// LoginBonusUseCase Provider
+final loginBonusUseCaseProvider = Provider<LoginBonusUseCase>((ref) {
+  final repository = ref.watch(petRepositoryProvider);
+  return LoginBonusUseCase(repository);
+});
+
+/// CheckPetDeathUseCase Provider
+/// 펫 사망 체크 유스케이스 인스턴스를 제공
+final checkPetDeathUseCaseProvider = Provider<CheckPetDeathUseCase>((ref) {
+  final repository = ref.watch(petRepositoryProvider);
+  return CheckPetDeathUseCase(repository);
+});
+
+/// ResurrectPetUseCase Provider
+/// 펫 부활 유스케이스 인스턴스를 제공
+final resurrectPetUseCaseProvider = Provider<ResurrectPetUseCase>((ref) {
+  final repository = ref.watch(petRepositoryProvider);
+  return ResurrectPetUseCase(repository);
+});
+
+/// ResetPetUseCase Provider
+/// 펫 초기화(새로 키우기) 유스케이스 인스턴스를 제공
+final resetPetUseCaseProvider = Provider<ResetPetUseCase>((ref) {
+  final createDefaultPetUseCase = ref.watch(createDefaultPetUseCaseProvider);
+  return ResetPetUseCase(createDefaultPetUseCase);
 });
 
 /// Pet Provider
@@ -293,7 +396,6 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
   final PetRepository repository;
   final UpdatePetStateUseCase updatePetStateUseCase;
   final FeedPetUseCase feedPetUseCase;
-  final PlayPetUseCase playPetUseCase;
   final SleepPetUseCase sleepPetUseCase;
   final CreateDefaultPetUseCase createDefaultPetUseCase;
   final EvolvePetUseCase evolvePetUseCase;
@@ -308,14 +410,19 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
   final UpdatePetNameUseCase updatePetNameUseCase;
   final AlternativeFeedPetUseCase alternativeFeedPetUseCase;
   final AlternativeSleepPetUseCase alternativeSleepPetUseCase;
-  final AlternativeExercisePetUseCase alternativeExercisePetUseCase;
+  final AwardBattleRewardUseCase awardBattleRewardUseCase;
+  final ShakeStepBonusUseCase shakeStepBonusUseCase;
+  final CheckPetDeathUseCase checkPetDeathUseCase;
+  final ResurrectPetUseCase resurrectPetUseCase;
+  final ResetPetUseCase resetPetUseCase;
+  final LoginBonusUseCase loginBonusUseCase;
+  final SyncPetUseCase syncPetUseCase;
   final String petId;
-  
+
   PetNotifier({
     required this.repository,
     required this.updatePetStateUseCase,
     required this.feedPetUseCase,
-    required this.playPetUseCase,
     required this.sleepPetUseCase,
     required this.createDefaultPetUseCase,
     required this.evolvePetUseCase,
@@ -330,7 +437,13 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
     required this.updatePetNameUseCase,
     required this.alternativeFeedPetUseCase,
     required this.alternativeSleepPetUseCase,
-    required this.alternativeExercisePetUseCase,
+    required this.awardBattleRewardUseCase,
+    required this.shakeStepBonusUseCase,
+    required this.checkPetDeathUseCase,
+    required this.resurrectPetUseCase,
+    required this.resetPetUseCase,
+    required this.loginBonusUseCase,
+    required this.syncPetUseCase,
     required this.petId,
   }) : super(const AsyncValue.loading()) {
     _loadPet();
@@ -361,24 +474,66 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
       // 5. 포그라운드 전환 처리 (다음 수면 계산 기준 시각 갱신)
       await phoneUsageRepository.onForeground();
 
-      // 6. 시간 경과에 따른 상태 업데이트
-      var updatedPet = await updatePetStateUseCase(petId);
+      // 6. 시간 경과에 따른 상태 업데이트 (여기까지 로컬 Hive I/O만 — 빠름)
+      final localPet = await updatePetStateUseCase(petId);
 
-      // 7. 활동 데이터 기반 상태 업데이트 (걷기/운동량)
-      try {
-        updatedPet = await updatePetFromActivityUseCase(petId);
-      } catch (e) {
-        // 헬스케어 권한이 없거나 에러 발생 시 무시 (앱 동작에 영향 없음)
-        if (kDebugMode) {
-          debugPrint('PetNotifier._loadPet: activity update failed: $e');
-        }
-      }
-
-      // 8. 일일 목표 점수 적용, 진화 체크, 위젯 업데이트를 한 번에 처리
-      final evolvedPet = await _updateAndEvolve(updatedPet);
+      // 로컬 상태로 홈을 먼저 렌더한다. 이후의 활동(헬스/센서 채널)과
+      // 서버 동기화(HTTP 5초 타임아웃)는 콜드 스타트 스피너를 길게 잡으므로
+      // 첫 페인트 이후 백그라운드로 미룬다.
+      final evolvedPet = await _updateAndEvolve(localPet);
       state = AsyncValue.data(evolvedPet);
+
+      // 7~9. 활동/접속보너스/서버동기화는 렌더를 막지 않고 뒤이어 반영
+      unawaited(_loadDeferredUpdates());
     } catch (e, stackTrace) {
       state = AsyncValue.error(e, stackTrace);
+    }
+  }
+
+  /// 첫 렌더를 막지 않는 후속 갱신 (네트워크/플랫폼 채널)
+  ///
+  /// 활동 데이터(헬스 커넥트·걸음수 센서), 접속 보너스, 서버 동기화를
+  /// 순서대로 반영한다. 각 단계는 독립적으로 실패를 무시하며, 완료 후
+  /// 진화 체크까지 마친 최신 상태로 [state]를 다시 내보낸다.
+  /// (이미 로컬 상태가 화면에 떠 있으므로 전부 실패해도 무방)
+  Future<void> _loadDeferredUpdates() async {
+    var pet = await repository.getPet(petId);
+
+    // 활동 데이터 기반 상태 업데이트 (걷기/운동량)
+    try {
+      pet = await updatePetFromActivityUseCase(petId);
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('PetNotifier._loadDeferredUpdates: activity failed: $e');
+      }
+    }
+
+    // 접속 보너스 + 일일 이벤트
+    try {
+      await loginBonusUseCase(petId);
+      pet = await repository.getPet(petId);
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('PetNotifier._loadDeferredUpdates: login bonus failed: $e');
+      }
+    }
+
+    // 서버 동기화 (앱 시작 시 pull - 실패해도 무시)
+    try {
+      pet = await syncPetUseCase(petId);
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('PetNotifier._loadDeferredUpdates: sync failed: $e');
+      }
+    }
+
+    try {
+      final evolvedPet = await _updateAndEvolve(pet);
+      state = AsyncValue.data(evolvedPet);
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('PetNotifier._loadDeferredUpdates: evolve failed: $e');
+      }
     }
   }
   
@@ -389,15 +544,27 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
     await _loadPet();
   }
 
-  /// 앱 포그라운드에서 1분 주기로 호출되는 경량 상태 업데이트
-  /// 
-  /// - 접속 시간/수면 기준 시간은 건드리지 않고
-  /// - 수치 감소 + 활동 반영만 처리
+  /// 앱 포그라운드에서 5분 주기로 호출되는 경량 상태 업데이트
+  ///
+  /// 동작:
+  /// - 수치 감소 + 활동(걸음/운동) 반영
+  /// - **lastForegroundTime을 now로 갱신** → 앱을 켜놓고 있는 동안은 sleep이
+  ///   카운트되지 않도록 보장. 사용자가 백그라운드로 보낸 시점부터만 sleep 인정.
   Future<void> onMinuteTick() async {
     if (state.isLoading || state.hasError) return;
 
     try {
       var updatedPet = await updatePetStateUseCase(petId);
+
+      // 포그라운드 동안 sleep 카운트 방지 — anchor를 현재로 밀어둠
+      try {
+        await phoneUsageRepository.onForeground();
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint(
+              'PetNotifier.onMinuteTick: phoneUsage.onForeground 실패: $e');
+        }
+      }
 
       try {
         updatedPet = await updatePetFromActivityUseCase(petId);
@@ -446,22 +613,34 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
   /// [pet] 업데이트할 Pet 엔티티 (이 Pet의 상태가 위젯에 반영됨)
   Future<Pet> _updateAndEvolve(Pet pet) async {
     // 1. 전달받은 Pet을 먼저 저장하여 최신 상태 보장
-    // 이렇게 하면 위젯 업데이트 시 전달받은 Pet의 상태가 반영됨
     await repository.updatePet(pet);
-    
-    // 2. 일일 목표 점수 적용 (저장된 Pet을 기반으로)
+
+    // 2. 사망 체크 (수치 감소 후)
+    final checkedPet = await checkPetDeathUseCase(petId);
+    if (checkedPet.isDead) {
+      try {
+        await widgetService.updatePetWidget(checkedPet);
+      } catch (e) {
+        // 위젯 업데이트 실패 무시
+      }
+      return checkedPet;
+    }
+
+    // 3. 일일 목표 점수 적용 (저장된 Pet을 기반으로)
     await applyDailyGoalsScoreUseCase(petId);
-    
-    // 3. 진화 체크 및 실행 (저장된 Pet을 기반으로)
+
+    // 4. 진화 체크 및 실행 (저장된 Pet을 기반으로)
     final evolvedPet = await evolvePetUseCase(petId);
-    
-    // 4. 위젯 업데이트 (앱 내 펫 상태와 동기화)
-    // evolvedPet은 최신 상태를 반영하므로 항상 위젯에 반영
+
+    // 5. 위젯 업데이트 (앱 내 펫 상태와 동기화)
     await widgetService.updatePetWidget(evolvedPet);
-    
-    // 5. 알림 체크 (상태 변경 후)
+
+    // 6. 알림 체크 (상태 변경 후)
     _checkAndShowNotification();
-    
+
+    // 7. 서버 동기화 (fire-and-forget, UI 블로킹하지 않음)
+    _syncToServer(evolvedPet);
+
     return evolvedPet;
   }
   
@@ -481,32 +660,60 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
       // 알림 발송 실패는 무시 (앱 동작에 영향 없음)
     }
   }
-  
+
+  /// 서버 동기화 (fire-and-forget)
+  /// UI를 블로킹하지 않고 비동기로 서버에 최신 데이터 전송
+  Future<void> _syncToServer(Pet pet) async {
+    try {
+      await syncPetUseCase.remoteRepository?.savePet(pet);
+    } catch (e) {
+      // 서버 unreachable은 silent fail
+      if (kDebugMode) {
+        debugPrint('PetNotifier._syncToServer failed: $e');
+      }
+    }
+  }
+
+
+  /// [디버그 전용] 임의의 Pet 상태를 즉시 주입해 렌더한다 (시나리오 점검용).
+  ///
+  /// [runEvolution]이 true면 주입 상태에서 진화 유스케이스를 안정될 때까지
+  /// 반복 실행해, 주입한 레벨·누적 카운터가 실제로 어떤 단계·등급·종을 만드는지
+  /// 눈으로 확인할 수 있게 한다(진화 게이팅 로직 시각 검증). false면 주입한
+  /// 값을 그대로 렌더한다(모든 스프라이트·색·mood 조합 직접 확인).
+  /// 릴리스 빌드에서는 호출되지 않는다(kDebugMode 진입 버튼 뒤에만 존재).
+  Future<Pet> debugApplyPet(Pet pet, {bool runEvolution = false}) async {
+    await repository.updatePet(pet);
+    var result = pet;
+    if (runEvolution) {
+      for (int i = 0; i < 5; i++) {
+        final next = await evolvePetUseCase(petId);
+        final stable = next.evolutionStage == result.evolutionStage &&
+            next.evolutionGrade == result.evolutionGrade &&
+            next.evolutionType == result.evolutionType;
+        result = next;
+        if (stable) break;
+      }
+    }
+    try {
+      await widgetService.updatePetWidget(result);
+    } catch (_) {
+      // 위젯 미설치 시 무시
+    }
+    state = AsyncValue.data(result);
+    return result;
+  }
+
   /// 먹이 주기
-  /// 
+  ///
   /// Feed 버튼 클릭 시 호출
   /// 상태 변경 후 자동으로 진화 체크 수행
   Future<void> feed() async {
     if (state.isLoading || state.hasError) return;
-    
+    if (state.valueOrNull?.isDead == true) return;
+
     try {
       final updatedPet = await feedPetUseCase(petId);
-      final evolvedPet = await _updateAndEvolve(updatedPet);
-      state = AsyncValue.data(evolvedPet);
-    } catch (e, stackTrace) {
-      state = AsyncValue.error(e, stackTrace);
-    }
-  }
-  
-  /// 놀아주기
-  /// 
-  /// Play 버튼 클릭 시 호출
-  /// 상태 변경 후 자동으로 진화 체크 수행
-  Future<void> play() async {
-    if (state.isLoading || state.hasError) return;
-    
-    try {
-      final updatedPet = await playPetUseCase(petId);
       final evolvedPet = await _updateAndEvolve(updatedPet);
       state = AsyncValue.data(evolvedPet);
     } catch (e, stackTrace) {
@@ -520,7 +727,8 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
   /// 상태 변경 후 자동으로 진화 체크 수행
   Future<void> sleep() async {
     if (state.isLoading || state.hasError) return;
-    
+    if (state.valueOrNull?.isDead == true) return;
+
     try {
       final updatedPet = await sleepPetUseCase(petId);
       final evolvedPet = await _updateAndEvolve(updatedPet);
@@ -535,6 +743,7 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
   /// 실제 식사 시간대 Feed가 어려운 사용자를 위한 저효율 대체 액션
   Future<void> performAlternativeFeed() async {
     if (state.isLoading || state.hasError) return;
+    if (state.valueOrNull?.isDead == true) return;
 
     try {
       final updatedPet = await alternativeFeedPetUseCase(petId);
@@ -550,6 +759,7 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
   /// 실제 수면 연동이 어려운 사용자를 위한 저효율 대체 액션
   Future<void> performAlternativeSleep() async {
     if (state.isLoading || state.hasError) return;
+    if (state.valueOrNull?.isDead == true) return;
 
     try {
       final updatedPet = await alternativeSleepPetUseCase(petId);
@@ -560,14 +770,39 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
     }
   }
 
-  /// 대체 운동
+  /// 온라인 배틀 보상 지급
   ///
-  /// 실내 운동 1분 완료 후 적용되는 저효율 대체 액션
-  Future<void> performAlternativeExercise() async {
+  /// 서버가 로컬 펫을 갱신하지 않는 결과(예: 상대 접속 끊김 승리)를
+  /// 로컬에 반영하고 전적을 남긴다.
+  Future<void> awardOnlineBattleReward({
+    required bool isVictory,
+    required int exp,
+  }) async {
     if (state.isLoading || state.hasError) return;
+    if (state.valueOrNull?.isDead == true) return;
 
     try {
-      final updatedPet = await alternativeExercisePetUseCase(petId);
+      final updatedPet =
+          await awardBattleRewardUseCase(petId, isVictory: isVictory, exp: exp);
+      final evolvedPet = await _updateAndEvolve(updatedPet);
+      state = AsyncValue.data(evolvedPet);
+    } catch (e, stackTrace) {
+      state = AsyncValue.error(e, stackTrace);
+    }
+  }
+
+  /// 폰 흔들기 보너스
+  ///
+  /// 측정된 흔들기 횟수만큼 걸음수 보상을 펫에 반영한다.
+  /// 하루 최대 1회 사용 가능.
+  ///
+  /// [shakeCount] 측정된 흔들기 횟수
+  Future<void> performShakeBonus(int shakeCount) async {
+    if (state.isLoading || state.hasError) return;
+    if (state.valueOrNull?.isDead == true) return;
+
+    try {
+      final updatedPet = await shakeStepBonusUseCase(petId, shakeCount);
       final evolvedPet = await _updateAndEvolve(updatedPet);
       state = AsyncValue.data(evolvedPet);
     } catch (e, stackTrace) {
@@ -589,10 +824,21 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
       // 2. 폰 사용 상태 업데이트 (포그라운드로 전환)
       await phoneUsageRepository.onForeground();
 
-      // 3. 시간 경과에 따른 상태 업데이트 (hunger, happiness, stamina 감소)
+      // 3. 접속 보너스 + 일일 이벤트 재판정
+      //    (콜드 스타트에서만 판정하면 앱을 종료하지 않는 사용자는
+      //     2·3회차 접속 보너스와 새 날 이벤트 추첨을 영영 받지 못한다)
+      try {
+        await loginBonusUseCase(petId);
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint('PetNotifier.onAppForeground: login bonus failed: $e');
+        }
+      }
+
+      // 4. 시간 경과에 따른 상태 업데이트 (hunger, happiness, stamina 감소)
       var activityUpdatedPet = await updatePetStateUseCase(petId);
 
-      // 4. 활동 데이터 기반 자동 Play 적용
+      // 5. 활동 데이터 기반 자동 Play 적용
       try {
         activityUpdatedPet = await updatePetFromActivityUseCase(petId);
       } catch (e) {
@@ -601,14 +847,21 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
           debugPrint('PetNotifier.onAppForeground: activity update failed: $e');
         }
       }
-      
-      // 5. 상태가 변경되었으면 업데이트
+
+      // 6. 상태가 변경되었으면 업데이트
+      // 걸음/운동/수면 진행치도 비교에 포함 — 스탯이 그대로여도(예: stamina 100,
+      // 1000보 미만 delta) 목표 카드가 stale하게 남던 문제 방지.
       final currentPet = state.valueOrNull;
-      if (currentPet == null || 
+      if (currentPet == null ||
           activityUpdatedPet.hunger != currentPet.hunger ||
           activityUpdatedPet.happiness != currentPet.happiness ||
           activityUpdatedPet.stamina != currentPet.stamina ||
           activityUpdatedPet.exp != currentPet.exp ||
+          activityUpdatedPet.totalSteps != currentPet.totalSteps ||
+          activityUpdatedPet.totalExerciseMinutes !=
+              currentPet.totalExerciseMinutes ||
+          activityUpdatedPet.todaySleepMinutes !=
+              currentPet.todaySleepMinutes ||
           activityUpdatedPet.name != currentPet.name) {
         // _updateAndEvolve()가 위젯 업데이트를 포함하므로 중복 호출 불필요
         final evolvedPet = await _updateAndEvolve(activityUpdatedPet);
@@ -642,10 +895,80 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
     }
   }
   
+  /// 긴 잠에서 깨우기
+  ///
+  /// [fullRecovery] false면 무료 깨우기(30/30/30),
+  /// true면 광고 시청 보상 완전 회복(100/100/100)
+  Future<void> resurrect({bool fullRecovery = false}) async {
+    if (state.isLoading || state.hasError) return;
+    if (state.valueOrNull?.isDead != true) return;
+
+    try {
+      final resurrectedPet =
+          await resurrectPetUseCase(petId, fullRecovery: fullRecovery);
+      final evolvedPet = await _updateAndEvolve(resurrectedPet);
+      state = AsyncValue.data(evolvedPet);
+    } catch (e, stackTrace) {
+      state = AsyncValue.error(e, stackTrace);
+    }
+  }
+
+  /// 펫 초기화 — 처음부터 새로 키우기 (광고 시청 후 호출)
+  ///
+  /// 기존 펫(레벨/진화/누적 기록 포함)을 버리고 기본 펫으로 교체한다.
+  /// 사망 여부와 무관하게 동작한다.
+  Future<void> restart() async {
+    if (state.isLoading) return;
+
+    try {
+      final freshPet = await resetPetUseCase(petId);
+      // 위젯 동기화 (설치 안 됐을 수 있으므로 실패는 무시)
+      try {
+        await widgetService.updatePetWidget(freshPet);
+      } catch (e) {
+        // 위젯 업데이트 실패 무시
+      }
+      state = AsyncValue.data(freshPet);
+      _syncToServer(freshPet);
+    } catch (e, stackTrace) {
+      state = AsyncValue.error(e, stackTrace);
+    }
+  }
+
+  /// 수동 진화 실행
+  ///
+  /// MeScreen 진화 버튼 클릭 시 호출
+  /// 진화 조건 충족 시 진화 실행 후 상태 갱신
+  Future<bool> evolve() async {
+    if (state.isLoading || state.hasError) return false;
+    final pet = state.valueOrNull;
+    if (pet == null || pet.isDead) return false;
+    if (!evolvePetUseCase.canEvolve(pet)) return false;
+
+    try {
+      final evolvedPet = await evolvePetUseCase(petId);
+      // 단계 진화뿐 아니라 등급 승격(stage3 normal→superior)도 성공으로 처리
+      // — 과거에는 등급만 바뀌면 화면·위젯이 갱신되지 않았다
+      if (evolvedPet.evolutionStage != pet.evolutionStage ||
+          evolvedPet.evolutionGrade != pet.evolutionGrade) {
+        state = AsyncValue.data(evolvedPet);
+        try {
+          await widgetService.updatePetWidget(evolvedPet);
+        } catch (e) {
+          // 위젯 업데이트 실패 무시
+        }
+        return true;
+      }
+      return false;
+    } catch (e) {
+      return false;
+    }
+  }
+
   /// 펫 이름 변경
-  /// 
+  ///
   /// [newName] 새로운 이름
-  /// 
+  ///
   /// 이름 변경 후 상태 업데이트 및 위젯 업데이트
   Future<void> updateName(String newName) async {
     if (state.isLoading || state.hasError) return;
@@ -669,7 +992,6 @@ final petNotifierProvider = StateNotifierProvider.family<PetNotifier, AsyncValue
     repository: ref.watch(petRepositoryProvider),
     updatePetStateUseCase: ref.watch(updatePetStateUseCaseProvider),
     feedPetUseCase: ref.watch(feedPetUseCaseProvider),
-    playPetUseCase: ref.watch(playPetUseCaseProvider),
     sleepPetUseCase: ref.watch(sleepPetUseCaseProvider),
     createDefaultPetUseCase: ref.watch(createDefaultPetUseCaseProvider),
     evolvePetUseCase: ref.watch(evolvePetUseCaseProvider),
@@ -684,7 +1006,13 @@ final petNotifierProvider = StateNotifierProvider.family<PetNotifier, AsyncValue
     updatePetNameUseCase: ref.watch(updatePetNameUseCaseProvider),
     alternativeFeedPetUseCase: ref.watch(alternativeFeedPetUseCaseProvider),
     alternativeSleepPetUseCase: ref.watch(alternativeSleepPetUseCaseProvider),
-    alternativeExercisePetUseCase: ref.watch(alternativeExercisePetUseCaseProvider),
+    awardBattleRewardUseCase: ref.watch(awardBattleRewardUseCaseProvider),
+    shakeStepBonusUseCase: ref.watch(shakeStepBonusUseCaseProvider),
+    checkPetDeathUseCase: ref.watch(checkPetDeathUseCaseProvider),
+    resurrectPetUseCase: ref.watch(resurrectPetUseCaseProvider),
+    resetPetUseCase: ref.watch(resetPetUseCaseProvider),
+    loginBonusUseCase: ref.watch(loginBonusUseCaseProvider),
+    syncPetUseCase: ref.watch(syncPetUseCaseProvider),
     petId: petId,
   );
 });

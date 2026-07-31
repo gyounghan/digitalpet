@@ -3,6 +3,7 @@ import 'package:home_widget/home_widget.dart';
 import '../../domain/entities/pet.dart';
 import '../../core/utils/pet_image_helper.dart';
 import '../../core/constants/app_strings.dart';
+import '../../presentation/widgets/pixel_pet_image.dart' show pixelKeyFromAssetPath;
 
 /// 홈 화면 위젯 서비스
 /// 펫 데이터를 홈 화면 위젯에 업데이트하는 서비스
@@ -26,7 +27,12 @@ class WidgetService {
   static const String _keyMoodText = 'moodText'; // 펫의 기분 상태 한국어 텍스트
   static const String _keyName = 'name'; // 펫의 이름
   static const String _keySyncTraceId = 'syncTraceId'; // 앱-위젯 동기화 추적 ID
-  
+  static const String _keyEvolutionType = 'evolutionType'; // 진화 종 (bird/snake/tiger/turtle)
+  static const String _keyEvolutionGrade = 'evolutionGrade'; // 등급 (normal/superior/mythical)
+  static const String _keyColorVariant = 'colorVariant'; // 일반종 개체 색 변이 (0~3)
+  static const String _keyEvolutionImage = 'evolutionImage'; // 진화 이미지 리소스명 (bird1, dragon2 등)
+  static const String _keyPixelKey = 'pixelKey'; // 위젯이 도트를 직접 렌더할 스프라이트 키
+
   /// 펫 데이터를 위젯에 업데이트
   /// 
   /// [pet] 업데이트할 펫 엔티티 (앱 내 현재 상태와 동일해야 함)
@@ -51,9 +57,41 @@ class WidgetService {
       await HomeWidget.saveWidgetData<String>(_keyLevel, pet.level.toString());
       await HomeWidget.saveWidgetData<String>(_keyExp, pet.exp.toString());
       await HomeWidget.saveWidgetData<String>(_keyEvolutionStage, pet.evolutionStage.toString());
+      await HomeWidget.saveWidgetData<String>(_keyEvolutionGrade, pet.evolutionGrade);
+      await HomeWidget.saveWidgetData<String>(_keyColorVariant, pet.colorVariant.toString());
       await HomeWidget.saveWidgetData<String>(_keyLastUpdated, pet.lastUpdated.toString());
       await HomeWidget.saveWidgetData<String>(_keyImageType, imageType);
-      
+
+      // 진화 이미지 정보 저장 (홈 화면과 동일한 이미지 표시를 위해)
+      // mood 이미지를 우선 사용하고, 없으면 기본 진화 이미지로 폴백
+      final evolutionImagePath =
+          getEvolutionMoodImagePath(pet.evolutionType, pet.evolutionStage, pet.mood)
+          ?? getEvolutionImagePath(pet.evolutionType, pet.evolutionStage);
+      if (evolutionImagePath != null) {
+        // 위젯 도트 렌더용 스프라이트 키 (파일명 stem, 예: 'bird_smile1',
+        // '기본이미지', 'dragon2') — 네이티브가 pet_pixel_data.json에서 조회
+        await HomeWidget.saveWidgetData<String>(
+          _keyPixelKey, pixelKeyFromAssetPath(evolutionImagePath),
+        );
+
+        // 폴백용 drawable 리소스명 (도트 JSON 조회 실패 시 네이티브가 사용)
+        // 'assets/bird_smile1.png' → 'bird_smile1', '기본이미지' → 'default_pet'
+        String resourceName = evolutionImagePath
+            .replaceFirst('assets/', '')
+            .replaceFirst('.png', '');
+        if (resourceName == '기본이미지') {
+          resourceName = 'default_pet';
+        }
+        await HomeWidget.saveWidgetData<String>(_keyEvolutionImage, resourceName);
+        await HomeWidget.saveWidgetData<String>(
+          _keyEvolutionType, pet.evolutionType?.name ?? '',
+        );
+      } else {
+        await HomeWidget.saveWidgetData<String>(_keyPixelKey, '');
+        await HomeWidget.saveWidgetData<String>(_keyEvolutionImage, '');
+        await HomeWidget.saveWidgetData<String>(_keyEvolutionType, '');
+      }
+
       // 펫의 기분 상태 저장 (hunger, happiness, stamina 기반으로 계산)
       final mood = pet.mood.name; // PetMood enum의 name (happy, sleepy, hungry, bored, normal 등)
       await HomeWidget.saveWidgetData<String>(_keyMood, mood);
@@ -120,29 +158,45 @@ class WidgetService {
     switch (mood) {
       case PetMood.happy:
         return AppStrings.moodHappy;
-      case PetMood.sleepy:
-        return AppStrings.moodSleepy;
-      case PetMood.hungry:
-        return AppStrings.moodHungry;
-      case PetMood.bored:
-        return AppStrings.moodBored;
       case PetMood.normal:
         return AppStrings.moodNormal;
-      case PetMood.energetic:
-        return AppStrings.moodEnergetic;
+      case PetMood.hungry:
+        return AppStrings.moodHungry;
+      case PetMood.sleepy:
+        return AppStrings.moodSleepy;
       case PetMood.tired:
         return AppStrings.moodTired;
-      case PetMood.full:
-        return AppStrings.moodFull;
-      case PetMood.anxious:
-        return AppStrings.moodAnxious;
-      case PetMood.satisfied:
-        return AppStrings.moodSatisfied;
+      case PetMood.sad:
+        return AppStrings.moodSad;
+      case PetMood.dead:
+        return AppStrings.moodDead;
     }
   }
   
+  /// 홈 화면에 위젯 추가(핀) 요청 — 온보딩 위젯 유도 단계에서 사용
+  ///
+  /// Android 8.0+ 이며 런처가 지원할 때만 시스템 추가 다이얼로그가 뜬다.
+  /// 반환: 요청을 띄웠으면 true, 미지원/실패면 false (호출부가 안내 문구 표시)
+  Future<bool> requestPinWidget() async {
+    try {
+      final supported = await HomeWidget.isRequestPinWidgetSupported();
+      if (supported != true) return false;
+      await HomeWidget.requestPinWidget(
+        name: 'PetWidgetProvider',
+        androidName: 'PetWidgetProvider',
+        qualifiedAndroidName: 'com.example.pocketfriend.PetWidgetProvider',
+      );
+      return true;
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('WidgetService.requestPinWidget failed: $e');
+      }
+      return false;
+    }
+  }
+
   /// 위젯 초기화
-  /// 
+  ///
   /// 앱 시작 시 위젯을 초기화하고 권한을 요청
   Future<void> initialize() async {
     try {

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -11,31 +12,27 @@ import 'data/datasources/health_datasource.dart';
 import 'data/services/notification_service.dart';
 import 'data/services/widget_service.dart';
 import 'data/services/background_service.dart';
+import 'data/datasources/device_id_datasource.dart';
+import 'data/datasources/step_sensor_datasource.dart';
 import 'presentation/screens/main_navigation_screen.dart';
 import 'core/theme/app_theme.dart';
 
+/// startup 정책:
+/// runApp 전에는 "UI 첫 페인트에 반드시 필요한" 작업만 await한다.
+///   - Hive 초기화 + 6개 Box open (병렬)
+///   - 알림 채널 init (다이얼로그 X)
+/// 나머지(권한 다이얼로그, WorkManager, 위젯, 광고 SDK)는 MainNavigationScreen의
+/// postFrame에서 deferredInit으로 실행한다. 다이얼로그가 main을 막거나
+/// MobileAds 초기화(1~5초)가 첫 진입을 지연시키지 않도록 분리.
 void main() async {
-  // Flutter 바인딩 초기화
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // Hive 초기화
-  await _initHive();
-  
-  // 알림 서비스 초기화
-  await _initNotifications();
-  
-  // 위젯 서비스 초기화
-  await _initWidget();
-  
-  // 헬스케어 데이터소스 초기화
-  // HealthDataSource._initialized는 static이므로 Provider의 lazy 초기화와 공유됨.
-  // 앱 시작 시 미리 권한을 요청하여 첫 동기화 지연을 방지한다.
-  await _initHealth();
 
-  // 백그라운드 작업 초기화
-  await _initBackgroundService();
-  
-  // 앱 실행
+  // Hive 및 6개 Box 열기 (디스크 I/O라 병렬화 효과 큼)
+  await _initHive();
+
+  // 알림 인스턴스 init만 — 권한 요청 다이얼로그는 postFrame에서
+  await _initNotificationsCore();
+
   runApp(
     const ProviderScope(
       child: MyApp(),
@@ -43,79 +40,86 @@ void main() async {
   );
 }
 
-/// Hive 초기화
-/// 
-/// 앱 시작 시 한 번만 호출하여 Hive와 Adapter를 준비
+/// Hive 초기화 — Adapter 등록 후 6개 Box를 병렬로 open
 Future<void> _initHive() async {
-  // Hive Flutter 초기화
   await Hive.initFlutter();
-  
-  // PetModelAdapter 등록
+
   Hive.registerAdapter(PetModelAdapter());
-  
-  // BattleHistoryModelAdapter 등록
   Hive.registerAdapter(BattleHistoryModelAdapter());
-  
-  // PetLocalDataSource 초기화 (Box 열기)
-  final dataSource = PetLocalDataSource();
-  await dataSource.init();
-  
-  // NotificationLocalDataSource 초기화 (Box 열기)
-  final notificationDataSource = NotificationLocalDataSource();
-  await notificationDataSource.init();
-  
-  // PhoneUsageDataSource 초기화 (Box 열기)
-  final phoneUsageDataSource = PhoneUsageDataSource();
-  await phoneUsageDataSource.init();
-  
-  // BattleHistoryDataSource 초기화 (Box 열기)
-  final battleHistoryDataSource = BattleHistoryDataSource();
-  await battleHistoryDataSource.init();
+
+  await Future.wait([
+    PetLocalDataSource().init(),
+    NotificationLocalDataSource().init(),
+    PhoneUsageDataSource().init(),
+    BattleHistoryDataSource().init(),
+    DeviceIdDatasource().init(),
+    StepSensorDatasource().init(),
+  ]);
 }
 
-/// 알림 서비스 초기화
-/// 
-/// 앱 시작 시 한 번만 호출하여 알림 서비스를 준비
-Future<void> _initNotifications() async {
-  final notificationService = NotificationService();
-  await notificationService.init();
-  await notificationService.requestPermission();
-}
-
-/// 위젯 서비스 초기화
-/// 
-/// 앱 시작 시 한 번만 호출하여 홈 화면 위젯 서비스를 준비
-Future<void> _initWidget() async {
-  final widgetService = WidgetService();
-  await widgetService.initialize();
-}
-
-/// 헬스케어 데이터소스 초기화
-/// 
-/// 앱 시작 시 한 번만 호출하여 헬스케어 권한을 요청하고 초기화
-/// 권한이 거부되면 에러를 무시하고 계속 진행 (활동 추적 기능만 비활성화)
-Future<void> _initHealth() async {
+/// 알림 채널만 등록. 권한 요청은 [runDeferredStartupTasks]에서.
+Future<void> _initNotificationsCore() async {
   try {
-    final healthDataSource = HealthDataSource();
-    await healthDataSource.init();
+    await NotificationService().init();
   } catch (e) {
-    // 헬스케어 권한이 거부되거나 초기화 실패 시 무시
-    // 앱은 정상적으로 동작하되 활동 추적 기능만 비활성화됨
-    debugPrint('main._initHealth: Health init failed: $e');
+    if (kDebugMode) {
+      debugPrint('main._initNotificationsCore: $e');
+    }
   }
 }
 
-/// 백그라운드 작업 서비스 초기화
-/// 
-/// 앱 시작 시 한 번만 호출하여 WorkManager를 초기화하고 백그라운드 작업을 등록
-Future<void> _initBackgroundService() async {
-  await BackgroundService.initialize();
+/// 첫 프레임 이후에 실행되는 무거운 초기화들.
+///
+/// - 알림 권한 요청 (다이얼로그)
+/// - Health Connect 권한 요청 (다이얼로그) + activityRecognition 권한
+/// - WorkManager 초기화 + 4개 Task 등록
+/// - 홈위젯 app group 설정
+///
+/// 광고 SDK는 [AdService.showRewardedAd] 첫 호출 시 lazy 초기화되므로
+/// 여기서도 제외 — 부활 등 실사용 시점까지 지연.
+Future<void> runDeferredStartupTasks() async {
+  // 권한 요청은 사용자 응답을 기다리므로 다른 작업과 병렬로 실행해도 안전.
+  // 각 future는 자체 try/catch로 에러를 흡수해 한쪽 실패가 다른 쪽을 막지 않게 한다.
+  await Future.wait([
+    _requestNotificationPermission(),
+    _initHealth(),
+    BackgroundService.initialize().catchError((e) {
+      if (kDebugMode) {
+        debugPrint('runDeferredStartupTasks: BackgroundService init failed: $e');
+      }
+    }),
+    WidgetService().initialize().catchError((e) {
+      if (kDebugMode) {
+        debugPrint('runDeferredStartupTasks: WidgetService init failed: $e');
+      }
+    }),
+  ]);
+}
+
+Future<void> _requestNotificationPermission() async {
+  try {
+    await NotificationService().requestPermission();
+  } catch (e) {
+    if (kDebugMode) {
+      debugPrint('runDeferredStartupTasks: notification permission failed: $e');
+    }
+  }
+}
+
+Future<void> _initHealth() async {
+  try {
+    await HealthDataSource().init();
+  } catch (e) {
+    if (kDebugMode) {
+      debugPrint('runDeferredStartupTasks: health init failed: $e');
+    }
+  }
 }
 
 /// 메인 앱 위젯
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
-  
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(

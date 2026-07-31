@@ -1,5 +1,6 @@
 import '../entities/pet.dart';
 import '../repositories/pet_repository.dart';
+import '../constants/species_growth_config.dart';
 
 /// 자동 펫 먹이주기 유스케이스
 /// 시간 기반으로 자동으로 hunger를 회복시키는 비즈니스 로직
@@ -80,7 +81,8 @@ class AutoFeedPetUseCase {
     }
 
     // 5. hunger 회복
-    final newHunger = (pet.hunger + hungerRecoveryAmount).clamp(0, 100);
+    final m = SpeciesGrowthConfig.getGainMultipliers(pet.evolutionType);
+    final newHunger = (pet.hunger + (hungerRecoveryAmount * m.hunger).round()).clamp(0, 100);
 
     // 6. 오늘의 Feed 횟수 및 식사 슬롯 기록 업데이트
     final newFeedCount = (pet.todayFeedCount + 1).clamp(0, maxAutoFeedsPerDay);

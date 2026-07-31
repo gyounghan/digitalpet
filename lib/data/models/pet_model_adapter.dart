@@ -49,7 +49,7 @@ class PetModelAdapter extends TypeAdapter<PetModel> {
       evolutionType: fields[12] != null
           ? EvolutionType.values.firstWhere(
               (e) => e.name == fields[12],
-              orElse: () => EvolutionType.balanced,
+              orElse: () => EvolutionType.turtle,
             )
           : null,
       todayFeedCount: fields[13] as int? ?? 0,
@@ -59,6 +59,39 @@ class PetModelAdapter extends TypeAdapter<PetModel> {
       todayAlternativeFeedCount: fields[19] as int? ?? 0,
       todayAlternativeSleepCount: fields[20] as int? ?? 0,
       todayAlternativeExerciseCount: fields[21] as int? ?? 0,
+      isDead: fields[23] as bool? ?? false,
+      deathDate: fields[24] as int?,
+      zeroStatStartDate: fields[25] as String?,
+      resurrectCount: fields[26] as int? ?? 0,
+      goalStartDate: fields[27] as String? ?? '',
+      goalStreakCount: fields[28] as int? ?? 0,
+      goalStartTotalSteps: fields[29] as int? ?? 0,
+      goalStartTotalExerciseMinutes: fields[30] as int? ?? 0,
+      battleVictoryCount: fields[31] as int? ?? 0,
+      todayEvent: fields[32] as String? ?? '',
+      lastEventDate: fields[33] as String? ?? '',
+      consecutiveLoginDays: fields[34] as int? ?? 0,
+      lastLoginDate: fields[35] as String? ?? '',
+      todayBattleCount: fields[36] as int? ?? 0,
+      todayLoginCount: fields[37] as int? ?? 0,
+      lastLoginTime: fields[38] as int? ?? 0,
+      evolutionGrade: fields[39] as String? ?? '',
+      todaySleepMinutes: fields[40] as int? ?? 0,
+      feedAchievedCount: fields[41] as int? ?? 0,
+      sleepAchievedCount: fields[42] as int? ?? 0,
+      exerciseAchievedCount: fields[43] as int? ?? 0,
+      lastFeedAchievedDate: fields[44] as String? ?? '',
+      lastSleepAchievedDate: fields[45] as String? ?? '',
+      lastExerciseAchievedDate: fields[46] as String? ?? '',
+      lastExerciseGoalSteps: fields[47] as int? ?? 0,
+      lastExerciseGoalMinutes: fields[48] as int? ?? 0,
+      lastActivitySyncTime: fields[49] as int? ?? 0,
+      todaySetExpClaimed: fields[50] as int? ?? 0,
+      totalSetsRewarded: fields[51] as int? ?? 0,
+      todaySleepCount: fields[52] as int? ?? 0,
+      todayFeedAchievedCount: fields[53] as int? ?? 0,
+      todaySleepAchievedCount: fields[54] as int? ?? 0,
+      todayExerciseAchievedCount: fields[55] as int? ?? 0,
     );
   }
 
@@ -67,7 +100,7 @@ class PetModelAdapter extends TypeAdapter<PetModel> {
     // Hive에 데이터 쓰기
     // 필드 개수와 각 필드를 순서대로 저장
     writer
-      ..writeByte(23) // 필드 개수 (id, name 포함)
+      ..writeByte(56) // 필드 개수 (HiveField 0-55)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -113,7 +146,73 @@ class PetModelAdapter extends TypeAdapter<PetModel> {
       ..writeByte(21)
       ..write(obj.todayAlternativeExerciseCount)
       ..writeByte(22)
-      ..write(obj.lastStatusDecayUpdated);
+      ..write(obj.lastStatusDecayUpdated)
+      ..writeByte(23)
+      ..write(obj.isDead)
+      ..writeByte(24)
+      ..write(obj.deathDate)
+      ..writeByte(25)
+      ..write(obj.zeroStatStartDate)
+      ..writeByte(26)
+      ..write(obj.resurrectCount)
+      ..writeByte(27)
+      ..write(obj.goalStartDate)
+      ..writeByte(28)
+      ..write(obj.goalStreakCount)
+      ..writeByte(29)
+      ..write(obj.goalStartTotalSteps)
+      ..writeByte(30)
+      ..write(obj.goalStartTotalExerciseMinutes)
+      ..writeByte(31)
+      ..write(obj.battleVictoryCount)
+      ..writeByte(32)
+      ..write(obj.todayEvent)
+      ..writeByte(33)
+      ..write(obj.lastEventDate)
+      ..writeByte(34)
+      ..write(obj.consecutiveLoginDays)
+      ..writeByte(35)
+      ..write(obj.lastLoginDate)
+      ..writeByte(36)
+      ..write(obj.todayBattleCount)
+      ..writeByte(37)
+      ..write(obj.todayLoginCount)
+      ..writeByte(38)
+      ..write(obj.lastLoginTime)
+      ..writeByte(39)
+      ..write(obj.evolutionGrade)
+      ..writeByte(40)
+      ..write(obj.todaySleepMinutes)
+      ..writeByte(41)
+      ..write(obj.feedAchievedCount)
+      ..writeByte(42)
+      ..write(obj.sleepAchievedCount)
+      ..writeByte(43)
+      ..write(obj.exerciseAchievedCount)
+      ..writeByte(44)
+      ..write(obj.lastFeedAchievedDate)
+      ..writeByte(45)
+      ..write(obj.lastSleepAchievedDate)
+      ..writeByte(46)
+      ..write(obj.lastExerciseAchievedDate)
+      ..writeByte(47)
+      ..write(obj.lastExerciseGoalSteps)
+      ..writeByte(48)
+      ..write(obj.lastExerciseGoalMinutes)
+      ..writeByte(49)
+      ..write(obj.lastActivitySyncTime)
+      ..writeByte(50)
+      ..write(obj.todaySetExpClaimed)
+      ..writeByte(51)
+      ..write(obj.totalSetsRewarded)
+      ..writeByte(52)
+      ..write(obj.todaySleepCount)
+      ..writeByte(53)
+      ..write(obj.todayFeedAchievedCount)
+      ..writeByte(54)
+      ..write(obj.todaySleepAchievedCount)
+      ..writeByte(55)
+      ..write(obj.todayExerciseAchievedCount);
   }
 
   @override

@@ -43,3 +43,9 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Android Gradle build artifacts
+/android/build/
+
+# 임시/단독 산출물
+pocketfriend_standalone_.html

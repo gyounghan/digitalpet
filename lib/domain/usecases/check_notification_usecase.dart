@@ -6,11 +6,11 @@ import '../../core/constants/app_strings.dart';
 /// 알림 체크 유스케이스
 /// Pet의 상태를 확인하여 알림 발송이 필요한지 판단하는 비즈니스 로직
 /// 
-/// 알림 조건:
-/// - hunger < 30 + 식사 시간대 → "밥 먹을 시간이에요! 🍽️"
-/// - hunger < 30 (식사 시간대 아님) → "나 너무 배고파..."
-/// - happiness < 30 → "나 심심해..."
-/// - 6시간 미접속 → "오늘 나 안 볼거야?"
+/// 알림 조건 (문구는 AppStrings — 펫 1인칭 제안 톤):
+/// - hunger < 30 + 식사 시간대 → notificationFeedTime
+/// - hunger < 30 (식사 시간대 아님) → notificationHungry
+/// - happiness < 30 → notificationBored
+/// - 6시간 미접속 → notificationInactive
 /// 
 /// 제한:
 /// - 하루 최대 3회 알림 발송
@@ -43,7 +43,11 @@ class CheckNotificationUseCase {
     
     // 2. Pet 조회
     final pet = await petRepository.getPet(petId);
-    
+
+    // 죽은 펫에게는 알림을 보내지 않는다
+    // (사망 시 스탯이 0에 동결되어 배고픔 조건이 영구 성립하는 모순 방지)
+    if (pet.isDead) return null;
+
     // 3. 마지막 접속 시간 확인
     final lastAccessTime = await notificationRepository.getLastAccessTime();
     final currentTime = DateTime.now().millisecondsSinceEpoch;

@@ -6,9 +6,11 @@ import '../../domain/usecases/auto_feed_pet_usecase.dart';
 import '../../domain/usecases/update_pet_from_activity_usecase.dart';
 import '../../domain/usecases/update_pet_state_usecase.dart';
 import '../../domain/usecases/check_notification_usecase.dart';
+import '../../domain/usecases/check_pet_death_usecase.dart';
 import '../../domain/usecases/evolve_pet_usecase.dart';
 import '../../domain/usecases/calculate_daily_goals_score_usecase.dart';
 import '../../domain/usecases/apply_daily_goals_score_usecase.dart';
+import '../models/pet_model_adapter.dart';
 import '../../core/constants/notification_constants.dart';
 import '../../core/constants/app_strings.dart';
 import '../../data/repository/pet_repository_impl.dart';
@@ -17,6 +19,7 @@ import '../../data/repositories/phone_usage_repository_impl.dart';
 import '../../data/datasources/phone_usage_datasource.dart';
 import '../../data/repositories/activity_repository_impl.dart';
 import '../../data/datasources/health_datasource.dart';
+import '../../data/datasources/step_sensor_datasource.dart';
 import '../../data/repository/notification_repository_impl.dart';
 import '../../data/datasource/notification_local_datasource.dart';
 import 'notification_service.dart';
@@ -39,12 +42,13 @@ class BackgroundService {
       isInDebugMode: false,
     );
     
-    // 주기적 백그라운드 작업 등록 (30분마다 실행)
-    // WorkManager 최소 단위는 15분이나, 배터리 소모를 줄이기 위해 30분 사용
+    // 주기적 백그라운드 작업 등록 (WorkManager 최소 단위인 15분마다 실행)
+    // 걸음수/운동 데이터를 최대한 자주 동기화하여 앱 미접속 시에도 누적되도록 한다.
     await Workmanager().registerPeriodicTask(
       taskName,
       taskName,
-      frequency: const Duration(minutes: 30),
+      frequency: const Duration(minutes: 15),
+      existingWorkPolicy: ExistingPeriodicWorkPolicy.keep,
       constraints: Constraints(
         requiresBatteryNotLow: false,
         requiresCharging: false,
@@ -145,7 +149,14 @@ void callbackDispatcher() {
       // 일반 백그라운드 작업 실행
       // Hive 초기화 (백그라운드에서도 필요)
       await Hive.initFlutter();
-      
+
+      // 어댑터 등록 — WorkManager isolate는 main()을 거치지 않으므로 여기서
+      // 직접 등록해야 한다. 누락 시 openBox<PetModel>이 unknown typeId로 throw
+      // → 최외곽 catch가 삼켜 백그라운드 작업 전체가 조용히 no-op이 된다.
+      if (!Hive.isAdapterRegistered(0)) {
+        Hive.registerAdapter(PetModelAdapter());
+      }
+
       // Repository 및 UseCase 인스턴스 생성
       final petDataSource = PetLocalDataSource();
       await petDataSource.init();
@@ -156,8 +167,21 @@ void callbackDispatcher() {
       final phoneUsageRepository = PhoneUsageRepositoryImpl(phoneUsageDataSource);
       
       final healthDataSource = HealthDataSource();
-      await healthDataSource.init();
-      final activityRepository = ActivityRepositoryImpl(healthDataSource);
+      // 백그라운드 isolate에서는 권한 다이얼로그를 띄울 수 없으므로 skipRequest
+      // — 이미 grant되어 있으면 그대로 동작, 없으면 throw → catch에서 무시
+      try {
+        await healthDataSource.init(skipRequest: true);
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint('BackgroundService: health 초기화 스킵 (권한 미보유): $e');
+        }
+      }
+      final stepSensorDatasource = StepSensorDatasource();
+      await stepSensorDatasource.init();
+      final activityRepository = ActivityRepositoryImpl(
+        healthDataSource: healthDataSource,
+        stepSensorDatasource: stepSensorDatasource,
+      );
       
       final notificationDataSource = NotificationLocalDataSource();
       await notificationDataSource.init();
@@ -206,7 +230,20 @@ void callbackDispatcher() {
       
       // 1. 시간 경과에 따른 상태 업데이트 (hunger, happiness, stamina 감소)
       var pet = await updatePetStateUseCase(petId);
-      
+
+      // 1-1. 사망 판정 (수치 감소 후) — 앱을 열지 않아도 사망 조건이 진행되도록
+      //      백그라운드에서도 체크. 사망 시 자동 케어를 중단하고 위젯만 동기화.
+      final checkPetDeathUseCase = CheckPetDeathUseCase(petRepository);
+      final deathCheckedPet = await checkPetDeathUseCase(petId);
+      if (deathCheckedPet.isDead) {
+        try {
+          await widgetService.updatePetWidget(deathCheckedPet);
+        } catch (e) {
+          // 위젯 업데이트 실패는 무시
+        }
+        return true;
+      }
+
       // 2. 자동 Sleep 적용 (폰 미사용 시간 기반)
       pet = await autoSleepUseCase(petId, isInBackground: true);
       
@@ -216,7 +253,7 @@ void callbackDispatcher() {
         final message = await checkNotificationUseCase(petId);
         if (message != null) {
           await notificationService.showNotification(
-            title: '내 펫',
+            title: AppStrings.notificationTitle,
             body: message,
           );
         }
@@ -229,9 +266,17 @@ void callbackDispatcher() {
       
       // 5. 활동 데이터 기반 상태 업데이트 (걷기/운동량)
       try {
+        final beforeSteps = pet.totalSteps;
         pet = await updateFromActivityUseCase(petId);
+        if (kDebugMode) {
+          final delta = pet.totalSteps - beforeSteps;
+          debugPrint(
+            'BackgroundService: activity synced '
+            'totalSteps=${pet.totalSteps} (+$delta), '
+            'todaySyncedSteps=${pet.todaySyncedSteps}',
+          );
+        }
       } catch (e) {
-        // 헬스케어 권한이 없거나 에러 발생 시 무시
         if (kDebugMode) {
           debugPrint('BackgroundService: updateFromActivityUseCase failed: $e');
         }
@@ -263,9 +308,12 @@ void callbackDispatcher() {
 /// 식사 시간대에 펫의 배고픔 상태를 확인하고 알림 발송
 Future<void> _checkMealTimeNotification() async {
   try {
-    // Hive 초기화
+    // Hive 초기화 + 어댑터 등록 (백그라운드 isolate는 main()을 거치지 않음)
     await Hive.initFlutter();
-    
+    if (!Hive.isAdapterRegistered(0)) {
+      Hive.registerAdapter(PetModelAdapter());
+    }
+
     // Repository 및 UseCase 인스턴스 생성
     final petDataSource = PetLocalDataSource();
     await petDataSource.init();
@@ -284,6 +332,12 @@ Future<void> _checkMealTimeNotification() async {
     // 식사 시간대 작업에서는 "배고픔 + 식사 시간" 조건을 직접 평가하여
     // 미접속 알림 우선순위 때문에 식사 알림이 가려지지 않게 처리
     final pet = await petRepository.getPet(petId);
+
+    // 죽은 펫에게 배고픔 알림 금지 + 하루 알림 횟수 제한 준수
+    if (pet.isDead) return;
+    final todayCount = await notificationRepository.getTodayNotificationCount();
+    if (todayCount >= NotificationConstants.maxNotificationsPerDay) return;
+
     if (pet.hunger < NotificationConstants.hungerThreshold) {
       await notificationService.showNotification(
         title: AppStrings.notificationTitle,

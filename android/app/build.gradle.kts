@@ -11,13 +11,13 @@ android {
     ndkVersion = "27.0.12077973"
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
         isCoreLibraryDesugaringEnabled = true
     }
 
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_11.toString()
+        jvmTarget = JavaVersion.VERSION_17.toString()
     }
 
     defaultConfig {
@@ -45,10 +45,17 @@ flutter {
     source = "../.."
 }
 
-// androidx.health.connect:connect-client 버전 오버라이드 제거
-// health 13.1.4가 사용하는 1.1.0-alpha11 버전을 그대로 사용
-// 만약 AGP 8.8.0과 호환되지 않으면 더 낮은 health 패키지 버전 사용 필요
+// androidx.glance:glance-appwidget 1.3.0-alpha01이 AGP 9.1을 요구하는 문제를
+// 회피하기 위해 stable 1.1.1로 강제. 위젯 기능은 그대로 동작.
+configurations.all {
+    resolutionStrategy {
+        force("androidx.glance:glance-appwidget:1.1.1")
+        force("androidx.glance:glance:1.1.1")
+    }
+}
 
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+    // StepCacheWorker(백그라운드 걸음 캐시)용 — CoroutineWorker 포함
+    implementation("androidx.work:work-runtime-ktx:2.9.1")
 }

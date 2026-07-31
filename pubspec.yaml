@@ -41,6 +41,9 @@ dependencies:
   # 로컬 저장소
   hive: ^2.2.3
   hive_flutter: ^1.1.0
+
+  # 네이티브(Kotlin)가 캐시한 걸음 센서 값을 백그라운드 isolate에서 읽기 위한 브리지
+  shared_preferences: ^2.3.0
   
   # 알림
   flutter_local_notifications: ^17.0.0
@@ -51,13 +54,20 @@ dependencies:
   # 백그라운드 작업
   workmanager: ^0.9.0
   
-  # 헬스케어 데이터
+  # 헬스케어 데이터 (Android: Health Connect, iOS: HealthKit)
+  # 걸음수와 운동 데이터를 OS 헬스 플랫폼에서 단일 소스로 조회
   health: 13.1.4
+
+  # 가속도계 센서 (폰 흔들기 감지)
+  sensors_plus: ^6.1.0
   
   # 현지화
   flutter_localizations:
     sdk: flutter
   permission_handler: ^12.0.1
+  google_mobile_ads: ^6.0.0
+  socket_io_client: ^3.1.4
+  http: ^1.2.0
 
 dev_dependencies:
   flutter_test:
