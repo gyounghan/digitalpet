@@ -79,7 +79,11 @@ class BattleWithActivityUseCase {
   final BattleHistoryRepository battleHistoryRepository;
 
   static const int maxBattlesPerDay = 3;
-  static const int maxTurns = 7;
+
+  /// 배틀은 한쪽 HP가 0이 될 때까지(KO) 진행한다.
+  /// maxTurns는 무한 루프 방지용 안전 상한 — 도달 시 남은 HP로 판정승.
+  /// (데미지 최저 1 보장이라 통상 5~10턴 내 KO, 상한 도달은 극단 케이스뿐)
+  static const int maxTurns = 30;
   // 상성은 "한쪽만" 보정한다: 유리한 쪽 +20%만, 불리한 쪽은 페널티 없음(×1.0).
   // 예전 유리×1.3 + 불리×0.7 조합은 데미지비 ~1.86배로 스탯·스킬을 압도해
   // 상성이 승패를 사실상 결정했다 → 상성을 "edge"로만 남기고 육성/스킬을 주역으로.

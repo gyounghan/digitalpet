@@ -113,7 +113,7 @@ class _SyncPermissionBannerState extends State<SyncPermissionBanner> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
-                  color: theme.primary,
+                  color: theme.primaryDeep,
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: _requesting

@@ -211,7 +211,8 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
         });
 
         for (int i = 0; i < result.turns.length; i++) {
-          await Future.delayed(const Duration(milliseconds: 800));
+          // 턴 템포 — 스킬 로그/모션을 읽을 수 있는 속도
+          await Future.delayed(const Duration(milliseconds: 1300));
           final turn = result.turns[i];
           if (!mounted) return;
           setState(() {
@@ -1071,7 +1072,9 @@ class _BigButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bg = primary ? theme.primary : DesignTokens.surface;
+    // 주요 버튼은 primaryDeep — primary는 종에 따라(특히 현무 라임색) 흰 글자
+    // 대비가 부족하다. 글로우 그림자는 흰 서피스 위에서 얼룩처럼 보여 제거.
+    final bg = primary ? theme.primaryDeep : DesignTokens.surface;
     final fg = primary ? Colors.white : DesignTokens.ink;
     return Material(
       color: bg,
@@ -1086,15 +1089,6 @@ class _BigButton extends StatelessWidget {
             border: primary
                 ? null
                 : Border.all(color: DesignTokens.line2, width: 1),
-            boxShadow: primary
-                ? [
-                    BoxShadow(
-                      color: theme.primarySoft,
-                      blurRadius: 16,
-                      offset: const Offset(0, 6),
-                    ),
-                  ]
-                : null,
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
