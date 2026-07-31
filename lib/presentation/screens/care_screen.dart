@@ -523,6 +523,21 @@ class _CareScreenState extends ConsumerState<CareScreen> {
       remainingNotifier.value = _napRemainingSeconds;
     });
 
+    // 낮잠 포기 — 타이머 정리 후 다이얼로그 닫기 (보상 없음, 사용 횟수 미차감)
+    void giveUpNap() {
+      _napTimer?.cancel();
+      _napTimer = null;
+      _napRemainingSeconds = 0;
+      if (Navigator.of(context, rootNavigator: true).canPop()) {
+        Navigator.of(context, rootNavigator: true).pop();
+      }
+      remainingNotifier.dispose();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('낮잠 모드를 포기했어요. (보상 없음)')),
+      );
+      setState(() {});
+    }
+
     showDialog<void>(
       context: context,
       barrierDismissible: false,
@@ -532,39 +547,63 @@ class _CareScreenState extends ConsumerState<CareScreen> {
           child: Material(
             color: Colors.black.withValues(alpha: 0.85),
             child: Center(
-              child: ValueListenableBuilder<int>(
-                valueListenable: remainingNotifier,
-                builder: (context, remaining, _) {
-                  final minutes =
-                      (remaining ~/ 60).toString().padLeft(2, '0');
-                  final seconds = (remaining % 60).toString().padLeft(2, '0');
-                  return Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.bedtime,
-                          color: Colors.white, size: 56),
-                      const SizedBox(height: 16),
-                      const Text(
-                        AppStrings.napModeRunning,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 22,
-                          fontWeight: FontWeight.w700,
-                        ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ValueListenableBuilder<int>(
+                    valueListenable: remainingNotifier,
+                    builder: (context, remaining, _) {
+                      final minutes =
+                          (remaining ~/ 60).toString().padLeft(2, '0');
+                      final seconds =
+                          (remaining % 60).toString().padLeft(2, '0');
+                      return Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.bedtime,
+                              color: Colors.white, size: 56),
+                          const SizedBox(height: 16),
+                          const Text(
+                            AppStrings.napModeRunning,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 22,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            '$minutes:$seconds',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 42,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 2,
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 24),
+                  TextButton(
+                    onPressed: giveUpNap,
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.white70,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 8),
+                    ),
+                    child: const Text(
+                      '포기하기',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        decoration: TextDecoration.underline,
+                        decorationColor: Colors.white38,
                       ),
-                      const SizedBox(height: 12),
-                      Text(
-                        '$minutes:$seconds',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 42,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 2,
-                        ),
-                      ),
-                    ],
-                  );
-                },
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
