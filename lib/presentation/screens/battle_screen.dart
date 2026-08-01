@@ -857,12 +857,13 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
 
   /// 현재 박자에 이 패널 위에 얹을 스킬 이펙트 (0~1개)
   ///
-  /// 박자별로 피격당하는 쪽 패널에만 표시해 "주고받는" 연출을 만든다:
-  /// - phase 0(내 공격): 상대 패널에 내 스킬 이펙트
-  /// - phase 1(상대 반격): 내 패널에 상대 스킬 이펙트
-  /// - phase -1(온라인 동시): 양쪽 모두 기존 방식
-  /// 방어자세는 공격 대신 시전자 자신 패널에 방패 이펙트.
-  /// 공격 이펙트는 왼쪽에서 날아와 오른쪽으로 스치는 슬라이드로 재생.
+  /// 투사체 방향은 캐릭터가 바라보는 방향을 따른다
+  /// (위 캐릭은 오른쪽을, 아래 캐릭은 왼쪽을 봄):
+  /// - 위 캐릭 공격: 위 패널에서 오른쪽으로 나감 / 아래 패널로 왼쪽에서 날아옴
+  /// - 아래 캐릭 공격: 아래 패널에서 왼쪽으로 나감 / 위 패널로 오른쪽에서 날아옴
+  /// 즉 공격 박자마다 공격자 패널(나감)·피격자 패널(들어옴) 양쪽에 표시된다.
+  /// 방어자세는 시전자 자신 패널에 방패 (제자리).
+  /// phase -1(온라인 동시)은 피격자 패널의 들어오는 투사체만.
   List<Widget> _panelEffectOverlay({
     required bool minePanel,
     required SpeciesTheme ownTheme,
@@ -874,38 +875,44 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
     final ownSkill = minePanel ? turn.playerSkillName : turn.opponentSkillName;
     final incoming = minePanel ? turn.opponentSkillName : turn.playerSkillName;
 
-    // 이 박자에 액션 중인 쪽: phase 0 = 나, phase 1 = 상대
+    // 이 박자에 액션 중인 쪽: phase 0 = 나(아래), phase 1 = 상대(위)
     final actorIsMe = _actionPhase == 0;
     final panelIsActor = minePanel == actorIsMe;
 
+    // 패널별 "들어오는" 방향: 위 패널은 오른쪽에서, 아래 패널은 왼쪽에서
+    final incomingBegin = minePanel ? -size * 0.55 : size * 0.55;
+    // 패널별 "나가는" 방향: 위 패널은 오른쪽으로, 아래 패널은 왼쪽으로
+    final outgoingEnd = minePanel ? -size * 0.6 : size * 0.6;
+
     List<PixelSprite>? frames;
     SpeciesTheme effectTheme;
-    bool slide;
+    double beginDx = 0;
+    double endDx = 0;
     if (_actionPhase >= 0) {
       final actingSkill = actorIsMe ? turn.playerSkillName : turn.opponentSkillName;
+      frames = skillEffectForSkillName(actingSkill);
       if (isSelfSkillEffect(actingSkill)) {
-        // 방어자세 — 시전자 자신 패널에 방패
+        // 방어자세 — 시전자 자신 패널에 제자리 방패
         if (!panelIsActor) return [];
-        frames = skillEffectForSkillName(actingSkill);
         effectTheme = ownTheme;
-        slide = false;
+      } else if (panelIsActor) {
+        // 공격자 패널 — 캐릭터에서 바라보는 방향으로 나가는 투사체
+        effectTheme = ownTheme;
+        endDx = outgoingEnd;
       } else {
-        // 공격 — 피격자 패널에 이펙트
-        if (panelIsActor) return [];
-        frames = skillEffectForSkillName(actingSkill);
+        // 피격자 패널 — 바깥에서 캐릭터 쪽으로 들어오는 투사체
         effectTheme = attackerTheme;
-        slide = true;
+        beginDx = incomingBegin;
       }
     } else {
-      // 온라인 동시 표시 (기존 방식)
+      // 온라인 동시 표시 — 피격자 패널의 들어오는 투사체만
       if (isSelfSkillEffect(ownSkill)) {
         frames = skillEffectForSkillName(ownSkill);
         effectTheme = ownTheme;
-        slide = false;
       } else if (!isSelfSkillEffect(incoming)) {
         frames = skillEffectForSkillName(incoming);
         effectTheme = attackerTheme;
-        slide = true;
+        beginDx = incomingBegin;
       } else {
         return [];
       }
@@ -918,9 +925,8 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
         frames: frames,
         size: size,
         dotColor: effectTheme.primaryDeep,
-        // 왼쪽 바깥에서 날아와 펫을 스치고 오른쪽으로 빠지는 궤적
-        slideBeginDx: slide ? -size * 0.55 : 0,
-        slideEndDx: slide ? size * 0.25 : 0,
+        slideBeginDx: beginDx,
+        slideEndDx: endDx,
       ),
     ];
   }
