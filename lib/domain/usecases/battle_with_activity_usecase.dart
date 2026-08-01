@@ -104,9 +104,13 @@ class BattleWithActivityUseCase {
     required this.battleHistoryRepository,
   });
 
+  /// 회피(빗나감) 확률 — 공격마다 독립 판정, 양측 동일 (EV 중립)
+  static const double dodgeChance = 0.12;
+
   Future<BattleResult> call(
     String petId, {
     BattleStyle style = BattleStyle.balanced,
+    Random? random,
   }) async {
     var pet = await petRepository.getPet(petId);
 
@@ -124,7 +128,7 @@ class BattleWithActivityUseCase {
     }
 
     final todayActivity = await activityRepository.getTodayActivityData();
-    final random = Random();
+    random ??= Random();
 
     final playerType = pet.evolutionType;
     // 전투 스탯은 Pet 엔티티의 영구 성장 + 컨디션 보정 getter를 단일 소스로 사용
@@ -193,26 +197,31 @@ class BattleWithActivityUseCase {
       if (playerSkill.type == SkillType.special) playerSpecialCooldown = specialCooldown;
       if (playerSpecialCooldown > 0) playerSpecialCooldown--;
 
-      // 플레이어 공격
-      var rawDamage = (playerAtk * playerSkill.damageMultiplier - opponentDef ~/ 2 + random.nextInt(5) - 2).round();
-      rawDamage = (rawDamage * affinityMultiplier).round();
-      final oppShield =
-          applyDamageShield(rawDamage, opponentDmgReduction, opponentDmgReductionTurns);
-      rawDamage = oppShield.damage;
-      opponentDmgReduction = oppShield.reduction;
-      opponentDmgReductionTurns = oppShield.charges;
-      final playerDamage = max(1, rawDamage);
-      opponentHp = max(0, opponentHp - playerDamage);
+      // 플레이어 공격 — 회피 판정 성공 시 데미지 0, 디버프/실드 소모 없음
+      int playerDamage = 0;
+      final opponentDodged = random.nextDouble() < dodgeChance;
+      if (!opponentDodged) {
+        var rawDamage = (playerAtk * playerSkill.damageMultiplier - opponentDef ~/ 2 + random.nextInt(5) - 2).round();
+        rawDamage = (rawDamage * affinityMultiplier).round();
+        final oppShield =
+            applyDamageShield(rawDamage, opponentDmgReduction, opponentDmgReductionTurns);
+        rawDamage = oppShield.damage;
+        opponentDmgReduction = oppShield.reduction;
+        opponentDmgReductionTurns = oppShield.charges;
+        playerDamage = max(1, rawDamage);
+        opponentHp = max(0, opponentHp - playerDamage);
 
-      // 플레이어 스킬 효과 적용 (상대에게)
-      if (playerSkill.defenseDebuff > 0) {
-        opponentDef = max(0, opponentStats.defense - playerSkill.defenseDebuff);
-        opponentDefDebuffTurns = playerSkill.debuffDuration;
+        // 플레이어 스킬 효과 적용 (상대에게)
+        if (playerSkill.defenseDebuff > 0) {
+          opponentDef = max(0, opponentStats.defense - playerSkill.defenseDebuff);
+          opponentDefDebuffTurns = playerSkill.debuffDuration;
+        }
+        if (playerSkill.attackDebuff > 0) {
+          opponentAtk = max(0, opponentStats.attack - playerSkill.attackDebuff);
+          opponentAtkDebuffTurns = playerSkill.debuffDuration;
+        }
       }
-      if (playerSkill.attackDebuff > 0) {
-        opponentAtk = max(0, opponentStats.attack - playerSkill.attackDebuff);
-        opponentAtkDebuffTurns = playerSkill.debuffDuration;
-      }
+      // 방어자세는 자기 버프라 상대 회피와 무관하게 적용
       if (playerSkill.damageReduction > 0) {
         playerDmgReduction = playerSkill.damageReduction;
         playerDmgReductionTurns = playerSkill.reductionDuration;
@@ -223,26 +232,29 @@ class BattleWithActivityUseCase {
       if (opponentSkill.type == SkillType.special) opponentSpecialCooldown = specialCooldown;
       if (opponentSpecialCooldown > 0) opponentSpecialCooldown--;
 
-      // 상대 공격
+      // 상대 공격 — 동일한 회피 판정 (내가 피할 수도 있음)
       int opponentDamage = 0;
       if (opponentHp > 0) {
-        var rawOppDmg = (opponentAtk * opponentSkill.damageMultiplier - playerDef ~/ 2 + random.nextInt(5) - 2).round();
-        rawOppDmg = (rawOppDmg * opponentAffinityMultiplier).round();
-        final playerShield =
-            applyDamageShield(rawOppDmg, playerDmgReduction, playerDmgReductionTurns);
-        rawOppDmg = playerShield.damage;
-        playerDmgReduction = playerShield.reduction;
-        playerDmgReductionTurns = playerShield.charges;
-        opponentDamage = max(1, rawOppDmg);
-        playerHp = max(0, playerHp - opponentDamage);
+        final playerDodged = random.nextDouble() < dodgeChance;
+        if (!playerDodged) {
+          var rawOppDmg = (opponentAtk * opponentSkill.damageMultiplier - playerDef ~/ 2 + random.nextInt(5) - 2).round();
+          rawOppDmg = (rawOppDmg * opponentAffinityMultiplier).round();
+          final playerShield =
+              applyDamageShield(rawOppDmg, playerDmgReduction, playerDmgReductionTurns);
+          rawOppDmg = playerShield.damage;
+          playerDmgReduction = playerShield.reduction;
+          playerDmgReductionTurns = playerShield.charges;
+          opponentDamage = max(1, rawOppDmg);
+          playerHp = max(0, playerHp - opponentDamage);
 
-        if (opponentSkill.defenseDebuff > 0) {
-          playerDef = max(0, playerStats.defense - opponentSkill.defenseDebuff);
-          playerDefDebuffTurns = opponentSkill.debuffDuration;
-        }
-        if (opponentSkill.attackDebuff > 0) {
-          playerAtk = max(0, playerStats.attack - opponentSkill.attackDebuff);
-          playerAtkDebuffTurns = opponentSkill.debuffDuration;
+          if (opponentSkill.defenseDebuff > 0) {
+            playerDef = max(0, playerStats.defense - opponentSkill.defenseDebuff);
+            playerDefDebuffTurns = opponentSkill.debuffDuration;
+          }
+          if (opponentSkill.attackDebuff > 0) {
+            playerAtk = max(0, playerStats.attack - opponentSkill.attackDebuff);
+            playerAtkDebuffTurns = opponentSkill.debuffDuration;
+          }
         }
         if (opponentSkill.damageReduction > 0) {
           opponentDmgReduction = opponentSkill.damageReduction;

@@ -298,8 +298,8 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
           });
           await Future.delayed(const Duration(milliseconds: 900));
           if (!mounted) return;
-          // 2박자: 상대 반격 (상대가 이미 KO면 생략)
-          if (turn.opponentDamage > 0) {
+          // 2박자: 상대 반격 (상대가 이미 KO면 생략 — 회피로 데미지 0인 건 진행)
+          if (turn.opponentHpRemaining > 0) {
             setState(() {
               _actionPhase = 1;
               ourPetHp = turn.playerHpRemaining;
@@ -394,7 +394,10 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
     if (currentTurnIndex < 0 || currentTurnIndex >= turns.length) return null;
     final turn = turns[currentTurnIndex];
     if (_actionPhase == 0) return PixelMotion.attack;
-    if (_actionPhase == 1) return PixelMotion.hurt;
+    if (_actionPhase == 1) {
+      // 상대 공격이 빗나갔으면(데미지 0) 피하기, 아니면 아파하기
+      return turn.opponentDamage == 0 ? PixelMotion.dodge : PixelMotion.hurt;
+    }
     if (turn.opponentDamage == 0) return PixelMotion.dodge;
     if (turn.playerDamage >= turn.opponentDamage) return PixelMotion.attack;
     return PixelMotion.hurt;
@@ -407,7 +410,10 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
     }
     if (currentTurnIndex < 0 || currentTurnIndex >= turns.length) return null;
     final turn = turns[currentTurnIndex];
-    if (_actionPhase == 0) return PixelMotion.hurt;
+    if (_actionPhase == 0) {
+      // 내 공격이 빗나갔으면(데미지 0) 상대가 피하기, 아니면 아파하기
+      return turn.playerDamage == 0 ? PixelMotion.dodge : PixelMotion.hurt;
+    }
     if (_actionPhase == 1) return PixelMotion.attack;
     if (turn.playerDamage == 0) return PixelMotion.dodge;
     if (turn.opponentDamage >= turn.playerDamage) return PixelMotion.attack;
@@ -1108,8 +1114,8 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
             color: color,
           ),
         ),
-        if (damage > 0) ...[
-          const SizedBox(width: 6),
+        const SizedBox(width: 6),
+        if (damage > 0)
           Text(
             '-$damage',
             style: const TextStyle(
@@ -1118,8 +1124,16 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
               color: DesignTokens.bad,
               fontFeatures: [FontFeature.tabularFigures()],
             ),
+          )
+        else
+          const Text(
+            '빗나감!',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+              color: DesignTokens.ink3,
+            ),
           ),
-        ],
       ],
     );
   }
