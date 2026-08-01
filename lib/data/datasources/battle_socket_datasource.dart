@@ -10,6 +10,8 @@ typedef OnTurnCallback = void Function(BattleTurn turn);
 typedef OnResultCallback = void Function(Map<String, dynamic> result);
 typedef OnTimeoutCallback = void Function();
 typedef OnOpponentDisconnectedCallback = void Function();
+typedef OnRoomCreatedCallback = void Function(String roomCode);
+typedef OnRoomErrorCallback = void Function(String message);
 
 /// 배틀 서버 WebSocket 연결 관리
 /// NestJS 서버의 /battle 네임스페이스에 Socket.IO로 연결
@@ -27,6 +29,10 @@ class BattleSocketDatasource {
   OnTimeoutCallback? onTimeout;
   OnOpponentDisconnectedCallback? onOpponentDisconnected;
   VoidCallback? onQueued;
+
+  /// 친구 대전(방 코드) 콜백 — docs/battle_server_protocol.md 참조
+  OnRoomCreatedCallback? onRoomCreated;
+  OnRoomErrorCallback? onRoomError;
 
   bool get isConnected => _isConnected;
 
@@ -94,6 +100,16 @@ class BattleSocketDatasource {
       onOpponentDisconnected?.call();
     });
 
+    _socket!.on('battle:room_created', (data) {
+      final map = data as Map<String, dynamic>;
+      onRoomCreated?.call(map['roomCode'] as String? ?? '');
+    });
+
+    _socket!.on('battle:room_error', (data) {
+      final map = data as Map<String, dynamic>;
+      onRoomError?.call(map['message'] as String? ?? '방 처리에 실패했습니다');
+    });
+
     _socket!.connect();
   }
 
@@ -114,7 +130,90 @@ class BattleSocketDatasource {
     required int def,
     required int hp,
   }) {
-    _socket?.emit('battle:join', {
+    _socket?.emit('battle:join', _petPayload(
+      deviceId: deviceId,
+      petName: petName,
+      level: level,
+      evolutionStage: evolutionStage,
+      evolutionType: evolutionType,
+      atk: atk,
+      def: def,
+      hp: hp,
+    ));
+  }
+
+  /// 매칭 취소
+  void cancelQueue() {
+    _socket?.emit('battle:cancel');
+  }
+
+  /// 친구 대전 방 생성 — 서버가 battle:room_created(roomCode)로 응답하고,
+  /// 친구가 참가하면 양쪽에 battle:matched가 온다 (이후 흐름은 매칭과 동일)
+  void createRoom({
+    String? deviceId,
+    required String petName,
+    required int level,
+    required int evolutionStage,
+    String? evolutionType,
+    required int atk,
+    required int def,
+    required int hp,
+  }) {
+    _socket?.emit('battle:create_room', _petPayload(
+      deviceId: deviceId,
+      petName: petName,
+      level: level,
+      evolutionStage: evolutionStage,
+      evolutionType: evolutionType,
+      atk: atk,
+      def: def,
+      hp: hp,
+    ));
+  }
+
+  /// 친구 대전 방 참가 — 코드가 틀리거나 방이 없으면 battle:room_error
+  void joinRoom({
+    required String roomCode,
+    String? deviceId,
+    required String petName,
+    required int level,
+    required int evolutionStage,
+    String? evolutionType,
+    required int atk,
+    required int def,
+    required int hp,
+  }) {
+    _socket?.emit('battle:join_room', {
+      'roomCode': roomCode,
+      ..._petPayload(
+        deviceId: deviceId,
+        petName: petName,
+        level: level,
+        evolutionStage: evolutionStage,
+        evolutionType: evolutionType,
+        atk: atk,
+        def: def,
+        hp: hp,
+      ),
+    });
+  }
+
+  /// 친구 대전 방 나가기 (대기 취소)
+  void leaveRoom() {
+    _socket?.emit('battle:leave_room');
+  }
+
+  Map<String, dynamic> _petPayload({
+    String? deviceId,
+    required String petName,
+    required int level,
+    required int evolutionStage,
+    String? evolutionType,
+    required int atk,
+    required int def,
+    required int hp,
+  }) {
+    return {
       'deviceId': deviceId,
       'petName': petName,
       'level': level,
@@ -123,12 +222,7 @@ class BattleSocketDatasource {
       'atk': atk,
       'def': def,
       'hp': hp,
-    });
-  }
-
-  /// 매칭 취소
-  void cancelQueue() {
-    _socket?.emit('battle:cancel');
+    };
   }
 
   /// 연결 해제

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/pet_provider.dart';
 import '../widgets/app_design.dart';
@@ -61,6 +62,10 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
   /// 턴 내 액션 박자 — 0: 내 공격, 1: 상대 반격, -1: 동시 표시(온라인)
   int _actionPhase = -1;
 
+  /// 친구 대전(방 코드) 모드 여부 / 생성된 초대 코드
+  bool isFriendMode = false;
+  String? friendRoomCode;
+
   BattleSocketDatasource? _socket;
 
   /// 선택된 배틀 스타일 (기본 균형형)
@@ -80,7 +85,15 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
     return null;
   }
 
-  Future<void> _startOnlineBattle(Pet pet) async {
+  /// 소켓 기반 대전 시작 — 온라인 매칭 / 친구방 생성 / 코드 참가 공용
+  ///
+  /// [friendRoom] true면 방을 만들어 초대 코드를 받고,
+  /// [joinCode]가 있으면 해당 방에 참가한다. 둘 다 없으면 랜덤 매칭.
+  Future<void> _startOnlineBattle(
+    Pet pet, {
+    bool friendRoom = false,
+    String? joinCode,
+  }) async {
     // 매칭 대기/진행 중 재진입 차단 (빠른 더블탭 시 소켓 중복 큐잉 방지)
     if (isLoading || isMatchmaking) return;
 
@@ -104,6 +117,8 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
     setState(() {
       isLoading = true;
       isMatchmaking = true;
+      isFriendMode = friendRoom || joinCode != null;
+      friendRoomCode = null;
       battleResult = null;
       turns = [];
       currentTurnIndex = -1;
@@ -124,10 +139,22 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
     _socket!.onQueued = () {
       if (mounted) setState(() {});
     };
+    _socket!.onRoomCreated = (roomCode) {
+      if (mounted) setState(() => friendRoomCode = roomCode);
+    };
+    _socket!.onRoomError = (message) {
+      if (mounted) {
+        _cancelOnlineMatch();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message)),
+        );
+      }
+    };
     _socket!.onMatched = (roomId, opponent) {
       if (mounted) {
         setState(() {
           isMatchmaking = false;
+          friendRoomCode = null;
           opponentName = opponent['petName'] as String? ?? '???';
           opponentLevel = opponent['level'] as int? ?? 1;
           _opponentType = _parseType(opponent['evolutionType'] as String?);
@@ -222,25 +249,110 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
     };
 
     await _socket!.connect();
-    _socket!.joinQueue(
-      deviceId: deviceId,
-      petName: pet.name,
-      level: pet.level,
-      evolutionStage: pet.evolutionStage,
-      evolutionType: pet.evolutionType?.name,
-      atk: styledAtk,
-      def: styledDef,
-      hp: maxHp,
-    );
+
+    // 서버 미기동/주소 오류 시 무한 대기 방지 — 6초 내 연결 실패면 안내 후 종료
+    Future.delayed(const Duration(seconds: 6), () {
+      if (!mounted) return;
+      if (isMatchmaking && !(_socket?.isConnected ?? false)) {
+        _cancelOnlineMatch();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('서버에 연결할 수 없습니다. 잠시 후 다시 시도해주세요.')),
+        );
+      }
+    });
+
+    if (joinCode != null) {
+      _socket!.joinRoom(
+        roomCode: joinCode,
+        deviceId: deviceId,
+        petName: pet.name,
+        level: pet.level,
+        evolutionStage: pet.evolutionStage,
+        evolutionType: pet.evolutionType?.name,
+        atk: styledAtk,
+        def: styledDef,
+        hp: maxHp,
+      );
+    } else if (friendRoom) {
+      _socket!.createRoom(
+        deviceId: deviceId,
+        petName: pet.name,
+        level: pet.level,
+        evolutionStage: pet.evolutionStage,
+        evolutionType: pet.evolutionType?.name,
+        atk: styledAtk,
+        def: styledDef,
+        hp: maxHp,
+      );
+    } else {
+      _socket!.joinQueue(
+        deviceId: deviceId,
+        petName: pet.name,
+        level: pet.level,
+        evolutionStage: pet.evolutionStage,
+        evolutionType: pet.evolutionType?.name,
+        atk: styledAtk,
+        def: styledDef,
+        hp: maxHp,
+      );
+    }
   }
 
   void _cancelOnlineMatch() {
+    if (isFriendMode) _socket?.leaveRoom();
     _socket?.cancelQueue();
     _socket?.disconnect();
     setState(() {
       isLoading = false;
       isMatchmaking = false;
+      isFriendMode = false;
+      friendRoomCode = null;
     });
+  }
+
+  /// 초대 코드 입력 다이얼로그 → 친구 방 참가
+  void _showJoinRoomDialog(Pet pet) {
+    final controller = TextEditingController();
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: DesignTokens.surface,
+          title: const Text(
+            '초대 코드로 참가',
+            style: TextStyle(
+                color: DesignTokens.ink, fontWeight: FontWeight.w800),
+          ),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            textCapitalization: TextCapitalization.characters,
+            decoration: InputDecoration(
+              hintText: '친구에게 받은 코드 입력',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('취소'),
+            ),
+            TextButton(
+              onPressed: () {
+                final code = controller.text.trim().toUpperCase();
+                Navigator.of(dialogContext).pop();
+                if (code.isNotEmpty) {
+                  _startOnlineBattle(pet, joinCode: code);
+                }
+              },
+              child: const Text('참가'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   Future<void> _simulateTurns() async {
@@ -659,49 +771,125 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
   }
 
   Widget _buildModeButtons(dynamic pet, SpeciesTheme theme) {
-    return Row(
+    return Column(
       children: [
-        Expanded(
-          child: _BigButton(
-            label: 'AI 대전',
-            icon: Icons.smart_toy,
-            theme: theme,
-            onTap: _startBattle,
-          ),
-        ),
-        // 실시간 온라인 대련은 MVP에서 숨김 (FeatureFlags 참조)
-        if (FeatureFlags.enableRealtimeBattle) ...[
-          const SizedBox(width: 8),
-          Expanded(
-            child: _BigButton(
-              label: '온라인 대전',
-              icon: Icons.wifi,
-              theme: theme,
-              onTap: () => _startOnlineBattle(pet),
+        Row(
+          children: [
+            Expanded(
+              child: _BigButton(
+                label: 'AI 대전',
+                icon: Icons.smart_toy,
+                theme: theme,
+                onTap: _startBattle,
+              ),
             ),
-          ),
-        ],
+            // 실시간 온라인 대련은 MVP에서 숨김 (FeatureFlags 참조)
+            if (FeatureFlags.enableRealtimeBattle) ...[
+              const SizedBox(width: 8),
+              Expanded(
+                child: _BigButton(
+                  label: '온라인 대전',
+                  icon: Icons.wifi,
+                  theme: theme,
+                  onTap: () => _startOnlineBattle(pet),
+                ),
+              ),
+            ],
+          ],
+        ),
+        // 친구 대전은 매칭 풀이 필요 없으므로 플래그와 무관하게 노출
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: _BigButton(
+                label: '친구방 만들기',
+                icon: Icons.group_add,
+                theme: theme,
+                onTap: () => _startOnlineBattle(pet, friendRoom: true),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _BigButton(
+                label: '코드로 참가',
+                icon: Icons.pin,
+                theme: theme,
+                onTap: () => _showJoinRoomDialog(pet),
+              ),
+            ),
+          ],
+        ),
       ],
     );
   }
 
   Widget _buildMatchingCard(SpeciesTheme theme) {
+    final code = friendRoomCode;
     return AppCard(
       theme: theme,
       variant: AppCardVariant.tinted,
       padding: const EdgeInsets.all(24),
       child: Column(
         children: [
-          CircularProgressIndicator(color: theme.primary),
-          const SizedBox(height: 12),
-          Text(
-            '비슷한 레벨의 상대를 찾고 있어요...',
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              color: theme.primaryDeep,
+          if (code != null) ...[
+            // 방 생성 완료 — 초대 코드를 크게 보여주고 복사 지원
+            Text(
+              '초대 코드',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: theme.primaryDeep,
+              ),
             ),
-          ),
+            const SizedBox(height: 6),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  code,
+                  style: const TextStyle(
+                    fontSize: 30,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 4,
+                    color: DesignTokens.ink,
+                    fontFeatures: [FontFeature.tabularFigures()],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                IconButton(
+                  icon: Icon(Icons.copy, size: 20, color: theme.primaryDeep),
+                  onPressed: () {
+                    Clipboard.setData(ClipboardData(text: code));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('초대 코드를 복사했어요')),
+                    );
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              '친구가 "코드로 참가"에 이 코드를 입력하면 시작돼요',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: DesignTokens.ink3,
+              ),
+            ),
+          ] else ...[
+            CircularProgressIndicator(color: theme.primary),
+            const SizedBox(height: 12),
+            Text(
+              isFriendMode ? '방에 연결하는 중...' : '비슷한 레벨의 상대를 찾고 있어요...',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: theme.primaryDeep,
+              ),
+            ),
+          ],
           const SizedBox(height: 16),
           _BigButton(
             label: '취소',
