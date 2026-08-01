@@ -272,6 +272,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
         atk: styledAtk,
         def: styledDef,
         hp: maxHp,
+        todaySteps: pet.todaySyncedSteps,
       );
     } else if (friendRoom) {
       _socket!.createRoom(
@@ -283,6 +284,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
         atk: styledAtk,
         def: styledDef,
         hp: maxHp,
+        todaySteps: pet.todaySyncedSteps,
       );
     } else {
       _socket!.joinQueue(
@@ -294,6 +296,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
         atk: styledAtk,
         def: styledDef,
         hp: maxHp,
+        todaySteps: pet.todaySyncedSteps,
       );
     }
   }
@@ -670,6 +673,16 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
                         _statBadge('ATK', myAtk),
                         const SizedBox(width: 10),
                         _statBadge('DEF', myDef),
+                        const SizedBox(width: 10),
+                        // 회피율 — 오늘 걸음수 연동 (많이 걸을수록 민첩)
+                        Text(
+                          '회피 ${(BattleWithActivityUseCase.dodgeChanceForSteps(pet.todaySyncedSteps as int? ?? 0) * 100).round()}%',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
                       ],
                     ),
                   ],

@@ -134,9 +134,23 @@ void main() {
     }
   });
 
-  test('회피 확률은 0~1 사이 상수', () {
-    expect(BattleWithActivityUseCase.dodgeChance, greaterThan(0.0));
-    expect(BattleWithActivityUseCase.dodgeChance, lessThan(0.3),
-        reason: '과한 회피율은 배틀을 복권으로 만든다');
+  group('회피 확률 — 오늘 걸음수 연동', () {
+    test('0보 = 기본 5%, 10,000보 = 최대 15%, 초과분 클램프', () {
+      expect(BattleWithActivityUseCase.dodgeChanceForSteps(0),
+          closeTo(0.05, 0.0001));
+      expect(BattleWithActivityUseCase.dodgeChanceForSteps(5000),
+          closeTo(0.10, 0.0001));
+      expect(BattleWithActivityUseCase.dodgeChanceForSteps(10000),
+          closeTo(0.15, 0.0001));
+      expect(BattleWithActivityUseCase.dodgeChanceForSteps(50000),
+          closeTo(0.15, 0.0001), reason: '1만 보 초과분은 보너스 없음');
+    });
+
+    test('만보 유저는 AI(10%)보다 회피 우위, 방치 유저는 열세', () {
+      expect(BattleWithActivityUseCase.dodgeChanceForSteps(10000),
+          greaterThan(BattleWithActivityUseCase.aiDodgeChance));
+      expect(BattleWithActivityUseCase.dodgeChanceForSteps(0),
+          lessThan(BattleWithActivityUseCase.aiDodgeChance));
+    });
   });
 }

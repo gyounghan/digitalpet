@@ -104,8 +104,22 @@ class BattleWithActivityUseCase {
     required this.battleHistoryRepository,
   });
 
-  /// 회피(빗나감) 확률 — 공격마다 독립 판정, 양측 동일 (EV 중립)
-  static const double dodgeChance = 0.12;
+  /// 회피(빗나감) 확률 — 공격마다 독립 판정.
+  ///
+  /// 플레이어는 "오늘 걸음수"에 비례해 민첩해진다:
+  ///   기본 5% + (오늘 걸음 / 10,000보) × 10% (최대 15%)
+  /// AI 상대는 평균 활동을 가정한 고정 10% — 많이 걸은 날은 회피 우위,
+  /// 방치한 날은 회피 열세가 되어 활동이 배틀에 직접 반영된다.
+  static const double baseDodgeChance = 0.05;
+  static const double maxStepsDodgeBonus = 0.10;
+  static const int dodgeBonusMaxSteps = 10000;
+  static const double aiDodgeChance = 0.10;
+
+  /// 오늘 걸음수 → 플레이어 회피 확률
+  static double dodgeChanceForSteps(int todaySteps) =>
+      baseDodgeChance +
+      maxStepsDodgeBonus *
+          (todaySteps / dodgeBonusMaxSteps).clamp(0.0, 1.0);
 
   Future<BattleResult> call(
     String petId, {
@@ -160,6 +174,9 @@ class BattleWithActivityUseCase {
     final playerSkills = _skillSets[playerType] ?? _defaultSkills;
     final opponentSkills = _skillSets[opponentType] ?? _defaultSkills;
 
+    // 내 회피 확률 — 오늘 걸음수 연동
+    final playerDodgeChance = dodgeChanceForSteps(todayActivity.steps);
+
     // 배틀 시뮬레이션
     int playerHp = playerStats.hp;
     int opponentHp = opponentStats.hp;
@@ -199,7 +216,7 @@ class BattleWithActivityUseCase {
 
       // 플레이어 공격 — 회피 판정 성공 시 데미지 0, 디버프/실드 소모 없음
       int playerDamage = 0;
-      final opponentDodged = random.nextDouble() < dodgeChance;
+      final opponentDodged = random.nextDouble() < aiDodgeChance;
       if (!opponentDodged) {
         var rawDamage = (playerAtk * playerSkill.damageMultiplier - opponentDef ~/ 2 + random.nextInt(5) - 2).round();
         rawDamage = (rawDamage * affinityMultiplier).round();
@@ -232,10 +249,10 @@ class BattleWithActivityUseCase {
       if (opponentSkill.type == SkillType.special) opponentSpecialCooldown = specialCooldown;
       if (opponentSpecialCooldown > 0) opponentSpecialCooldown--;
 
-      // 상대 공격 — 동일한 회피 판정 (내가 피할 수도 있음)
+      // 상대 공격 — 내 회피는 오늘 걸음수에 비례
       int opponentDamage = 0;
       if (opponentHp > 0) {
-        final playerDodged = random.nextDouble() < dodgeChance;
+        final playerDodged = random.nextDouble() < playerDodgeChance;
         if (!playerDodged) {
           var rawOppDmg = (opponentAtk * opponentSkill.damageMultiplier - playerDef ~/ 2 + random.nextInt(5) - 2).round();
           rawOppDmg = (rawOppDmg * opponentAffinityMultiplier).round();

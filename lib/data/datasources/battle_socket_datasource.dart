@@ -129,6 +129,7 @@ class BattleSocketDatasource {
     required int atk,
     required int def,
     required int hp,
+    int todaySteps = 0,
   }) {
     _socket?.emit('battle:join', _petPayload(
       deviceId: deviceId,
@@ -139,6 +140,7 @@ class BattleSocketDatasource {
       atk: atk,
       def: def,
       hp: hp,
+      todaySteps: todaySteps,
     ));
   }
 
@@ -158,6 +160,7 @@ class BattleSocketDatasource {
     required int atk,
     required int def,
     required int hp,
+    int todaySteps = 0,
   }) {
     _socket?.emit('battle:create_room', _petPayload(
       deviceId: deviceId,
@@ -168,6 +171,7 @@ class BattleSocketDatasource {
       atk: atk,
       def: def,
       hp: hp,
+      todaySteps: todaySteps,
     ));
   }
 
@@ -182,6 +186,7 @@ class BattleSocketDatasource {
     required int atk,
     required int def,
     required int hp,
+    int todaySteps = 0,
   }) {
     _socket?.emit('battle:join_room', {
       'roomCode': roomCode,
@@ -194,6 +199,7 @@ class BattleSocketDatasource {
         atk: atk,
         def: def,
         hp: hp,
+        todaySteps: todaySteps,
       ),
     });
   }
@@ -212,6 +218,7 @@ class BattleSocketDatasource {
     required int atk,
     required int def,
     required int hp,
+    int todaySteps = 0,
   }) {
     return {
       'deviceId': deviceId,
@@ -222,6 +229,8 @@ class BattleSocketDatasource {
       'atk': atk,
       'def': def,
       'hp': hp,
+      // 회피율 계산용 (기본5% + steps/10000×10%) — 서버 문서 참조
+      'todaySteps': todaySteps,
     };
   }
 
