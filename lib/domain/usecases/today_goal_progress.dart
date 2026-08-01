@@ -47,18 +47,30 @@ class TodayGoalProgress {
     // 운동은 걸음(steps)만으로 판정 (Calculate와 동일 정책)
     final exerciseReached = pet.exerciseProgressSteps >= stepsGoal;
 
+    final feedDone =
+        pet.lastFeedAchievedDate == today || pet.todayFeedCount >= feedGoal;
+    final exerciseDone =
+        pet.lastExerciseAchievedDate == today || exerciseReached;
+    final sleepDone = pet.lastSleepAchievedDate == today ||
+        pet.todaySleepMinutes >= sleepGoalMinutes;
+
+    // 달성 시 Apply 유스케이스가 진행도를 목표만큼 차감(다음 목표로 이월)하므로
+    // 달성 직후 원본 수치는 목표보다 작다(예: 식사 1/1 달성 → 0). 카드 표시는
+    // 달성 상태면 최소 목표치로 보정해 "1/1회"처럼 보이게 한다. 초과분은 그대로.
+    int displayFloor(bool done, int value, int goal) =>
+        done && value < goal ? goal : value;
+
     return TodayGoalProgress(
-      feedProgress: pet.todayFeedCount,
+      feedProgress: displayFloor(feedDone, pet.todayFeedCount, feedGoal),
       feedGoal: feedGoal,
-      feedDone:
-          pet.lastFeedAchievedDate == today || pet.todayFeedCount >= feedGoal,
-      steps: pet.exerciseProgressSteps,
+      feedDone: feedDone,
+      steps: displayFloor(exerciseDone, pet.exerciseProgressSteps, stepsGoal),
       stepsGoal: stepsGoal,
-      exerciseDone: pet.lastExerciseAchievedDate == today || exerciseReached,
-      sleepMinutes: pet.todaySleepMinutes,
+      exerciseDone: exerciseDone,
+      sleepMinutes:
+          displayFloor(sleepDone, pet.todaySleepMinutes, sleepGoalMinutes),
       sleepGoalMinutes: sleepGoalMinutes,
-      sleepDone: pet.lastSleepAchievedDate == today ||
-          pet.todaySleepMinutes >= sleepGoalMinutes,
+      sleepDone: sleepDone,
     );
   }
 

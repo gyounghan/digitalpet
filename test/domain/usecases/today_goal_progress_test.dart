@@ -144,5 +144,32 @@ void main() {
       ));
       expect(g.feedRatio, 1.0);
     });
+
+    test('달성 후 차감 상태의 표시값은 목표치로 보정 (0/1 방지)', () {
+      // Apply가 진행도를 차감해 원본은 0이지만 오늘 달성한 상태
+      final today = makePet().todayDateString;
+      final g = TodayGoalProgress.fromPet(makePet(
+        level: 1, // 식사 1회 / 3000보 / 수면 5h
+        lastFeedAchievedDate: today,
+        lastSleepAchievedDate: today,
+        lastExerciseAchievedDate: today,
+      ));
+      expect(g.feedProgress, 1, reason: '0/1이 아니라 1/1로 표시');
+      expect(g.steps, 3000);
+      expect(g.sleepMinutes, 5 * 60);
+    });
+
+    test('달성 상태여도 목표 초과 진행분은 그대로 표시', () {
+      final today = makePet().todayDateString;
+      final g = TodayGoalProgress.fromPet(makePet(
+        level: 1,
+        todayFeedCount: 5,
+        totalSteps: 12000,
+        lastFeedAchievedDate: today,
+        lastExerciseAchievedDate: today,
+      ));
+      expect(g.feedProgress, 5);
+      expect(g.steps, 12000);
+    });
   });
 }
