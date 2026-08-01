@@ -879,10 +879,15 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
     final actorIsMe = _actionPhase == 0;
     final panelIsActor = minePanel == actorIsMe;
 
-    // 패널별 "들어오는" 방향: 위 패널은 오른쪽에서, 아래 패널은 왼쪽에서
-    final incomingBegin = minePanel ? -size * 0.55 : size * 0.55;
-    // 패널별 "나가는" 방향: 위 패널은 오른쪽으로, 아래 패널은 왼쪽으로
-    final outgoingEnd = minePanel ? -size * 0.6 : size * 0.6;
+    // 이동 범위를 크게 — 나가는 투사체는 화면 밖으로 멀리 날아가고,
+    // 들어오는 투사체는 바깥 멀리서 날아와 캐릭터 "가장자리"에서 멈춘다
+    // (몸에 닿으면 사라져야 하므로 중앙까지 오지 않음 — 끝에서 페이드아웃).
+    // 위 패널: 오른쪽 방향 / 아래 패널: 왼쪽 방향.
+    final dir = minePanel ? -1.0 : 1.0;
+    final incomingBegin = dir * size * 1.8;
+    final incomingEnd = dir * size * 0.55;
+    final outgoingBegin = dir * size * 0.25;
+    final outgoingEnd = dir * size * 1.9;
 
     List<PixelSprite>? frames;
     SpeciesTheme effectTheme;
@@ -896,13 +901,15 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
         if (!panelIsActor) return [];
         effectTheme = ownTheme;
       } else if (panelIsActor) {
-        // 공격자 패널 — 캐릭터에서 바라보는 방향으로 나가는 투사체
+        // 공격자 패널 — 캐릭터 가장자리에서 바라보는 방향으로 멀리 날아나감
         effectTheme = ownTheme;
+        beginDx = outgoingBegin;
         endDx = outgoingEnd;
       } else {
-        // 피격자 패널 — 바깥에서 캐릭터 쪽으로 들어오는 투사체
+        // 피격자 패널 — 바깥 멀리서 날아와 캐릭터 가장자리에서 멈춤
         effectTheme = attackerTheme;
         beginDx = incomingBegin;
+        endDx = incomingEnd;
       }
     } else {
       // 온라인 동시 표시 — 피격자 패널의 들어오는 투사체만
@@ -913,6 +920,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
         frames = skillEffectForSkillName(incoming);
         effectTheme = attackerTheme;
         beginDx = incomingBegin;
+        endDx = incomingEnd;
       } else {
         return [];
       }
@@ -1412,6 +1420,9 @@ class _SkillEffectBurstState extends State<_SkillEffectBurst>
 
   @override
   Widget build(BuildContext context) {
+    // 슬라이드하는 투사체는 도착 지점(몸에 닿는/화면 밖) 부근에서 사라진다.
+    // 제자리 이펙트(방어자세)는 박자 끝까지 유지.
+    final slides = widget.slideBeginDx != widget.slideEndDx;
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, _) {
@@ -1421,15 +1432,21 @@ class _SkillEffectBurstState extends State<_SkillEffectBurst>
             .clamp(0, widget.frames.length - 1);
         final dx =
             widget.slideBeginDx + (widget.slideEndDx - widget.slideBeginDx) * t;
-        return Transform.translate(
-          offset: Offset(dx, 0),
-          child: PixelSpriteView(
-            sprite: widget.frames[idx],
-            width: widget.size,
-            height: widget.size,
-            dotColor: widget.dotColor,
-            // 반짝이('+')는 종과 무관한 스파크 노랑
-            accentColor: const Color(0xFFFFC94D),
+        final opacity = slides && _controller.value > 0.7
+            ? (1 - (_controller.value - 0.7) / 0.3).clamp(0.0, 1.0)
+            : 1.0;
+        return Opacity(
+          opacity: opacity,
+          child: Transform.translate(
+            offset: Offset(dx, 0),
+            child: PixelSpriteView(
+              sprite: widget.frames[idx],
+              width: widget.size,
+              height: widget.size,
+              dotColor: widget.dotColor,
+              // 반짝이('+')는 종과 무관한 스파크 노랑
+              accentColor: const Color(0xFFFFC94D),
+            ),
           ),
         );
       },
