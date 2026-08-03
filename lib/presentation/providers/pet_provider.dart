@@ -581,7 +581,16 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
           updatedPet.happiness != currentPet.happiness ||
           updatedPet.stamina != currentPet.stamina ||
           updatedPet.totalSteps != currentPet.totalSteps ||
-          updatedPet.totalExerciseMinutes != currentPet.totalExerciseMinutes) {
+          updatedPet.totalExerciseMinutes != currentPet.totalExerciseMinutes ||
+          updatedPet.exp != currentPet.exp ||
+          updatedPet.level != currentPet.level ||
+          updatedPet.evolutionStage != currentPet.evolutionStage ||
+          updatedPet.evolutionType != currentPet.evolutionType ||
+          updatedPet.evolutionGrade != currentPet.evolutionGrade ||
+          // 진화 조건이 이미 충족된 상태면 스탯 변화가 없어도 반드시
+          // _updateAndEvolve를 태워 자동 진화 + 화면 갱신을 보장한다
+          // (예전엔 밥주기 등 다음 액션까지 진화가 지연되던 버그)
+          evolvePetUseCase.canEvolve(updatedPet)) {
         final evolvedPet = await _updateAndEvolve(updatedPet);
         state = AsyncValue.data(evolvedPet);
       } else {
@@ -857,12 +866,18 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
           activityUpdatedPet.happiness != currentPet.happiness ||
           activityUpdatedPet.stamina != currentPet.stamina ||
           activityUpdatedPet.exp != currentPet.exp ||
+          activityUpdatedPet.level != currentPet.level ||
+          activityUpdatedPet.evolutionStage != currentPet.evolutionStage ||
+          activityUpdatedPet.evolutionType != currentPet.evolutionType ||
+          activityUpdatedPet.evolutionGrade != currentPet.evolutionGrade ||
           activityUpdatedPet.totalSteps != currentPet.totalSteps ||
           activityUpdatedPet.totalExerciseMinutes !=
               currentPet.totalExerciseMinutes ||
           activityUpdatedPet.todaySleepMinutes !=
               currentPet.todaySleepMinutes ||
-          activityUpdatedPet.name != currentPet.name) {
+          activityUpdatedPet.name != currentPet.name ||
+          // 진화 조건 충족 상태면 반드시 _updateAndEvolve로 자동 진화 + 갱신
+          evolvePetUseCase.canEvolve(activityUpdatedPet)) {
         // _updateAndEvolve()가 위젯 업데이트를 포함하므로 중복 호출 불필요
         final evolvedPet = await _updateAndEvolve(activityUpdatedPet);
         state = AsyncValue.data(evolvedPet);
