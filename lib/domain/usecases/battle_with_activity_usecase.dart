@@ -106,20 +106,19 @@ class BattleWithActivityUseCase {
 
   /// 회피(빗나감) 확률 — 공격마다 독립 판정.
   ///
-  /// 플레이어는 "오늘 걸음수"에 비례해 민첩해진다:
-  ///   기본 5% + (오늘 걸음 / 10,000보) × 10% (최대 15%)
-  /// AI 상대는 평균 활동을 가정한 고정 10% — 많이 걸은 날은 회피 우위,
-  /// 방치한 날은 회피 열세가 되어 활동이 배틀에 직접 반영된다.
+  /// 플레이어는 "기력(stamina)"에 비례해 민첩해진다:
+  ///   기본 5% + (기력 / 100) × 10% (최대 15%)
+  /// 잘 재우고 쉬게 해 기력을 채운 펫이 잘 피한다 — 수면 케어가 배틀의
+  /// 회피 축으로 직결된다 (포만/행복은 컨디션 배수로 ATK/DEF에 이미 반영).
+  /// AI 상대는 평균 컨디션을 가정한 고정 10% — 기력 관리로 우위/열세가 갈린다.
   static const double baseDodgeChance = 0.05;
-  static const double maxStepsDodgeBonus = 0.10;
-  static const int dodgeBonusMaxSteps = 10000;
+  static const double maxStaminaDodgeBonus = 0.10;
   static const double aiDodgeChance = 0.10;
 
-  /// 오늘 걸음수 → 플레이어 회피 확률
-  static double dodgeChanceForSteps(int todaySteps) =>
+  /// 기력(0~100) → 플레이어 회피 확률
+  static double dodgeChanceForStamina(int stamina) =>
       baseDodgeChance +
-      maxStepsDodgeBonus *
-          (todaySteps / dodgeBonusMaxSteps).clamp(0.0, 1.0);
+      maxStaminaDodgeBonus * (stamina / 100).clamp(0.0, 1.0);
 
   Future<BattleResult> call(
     String petId, {
@@ -174,8 +173,8 @@ class BattleWithActivityUseCase {
     final playerSkills = _skillSets[playerType] ?? _defaultSkills;
     final opponentSkills = _skillSets[opponentType] ?? _defaultSkills;
 
-    // 내 회피 확률 — 오늘 걸음수 연동
-    final playerDodgeChance = dodgeChanceForSteps(todayActivity.steps);
+    // 내 회피 확률 — 기력 연동 (잘 쉰 펫이 잘 피한다)
+    final playerDodgeChance = dodgeChanceForStamina(pet.stamina);
 
     // 배틀 시뮬레이션
     int playerHp = playerStats.hp;
