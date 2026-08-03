@@ -29,7 +29,7 @@ class PixelSprite {
 - 세 레이어는 서로 겹치지 않는다 (테스트로 보장).
 
 색은 런타임에 주입한다:
-- `dark` → `darkColor` (기본 `0xFF33383F`)
+- `dark` → `darkColor` (기본 `SpeciesTheme.dotDark` = `0xFF14161A`)
 - `body` → `dotColor` (종별 테마색 `SpeciesTheme.primary`)
 - `accent` → `accentColor` (종별 보조색 `SpeciesTheme.spriteAccent`,
   미지정 시 `dotColor`와 동일 → 하위 호환)

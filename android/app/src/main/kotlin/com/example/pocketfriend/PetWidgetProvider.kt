@@ -444,7 +444,7 @@ class PetWidgetProvider : AppWidgetProvider() {
                     0xFF9A7B4E.toInt() to 0xFFD8C39A.toInt(),
                     0xFF8B93A0.toInt() to 0xFFCED4DC.toInt(),
                     0xFFCBBB98.toInt() to 0xFFEDE4CF.toInt(),
-                    0xFF5A5652.toInt() to 0xFF9A948C.toInt(),
+                    0xFF6E6862.toInt() to 0xFF9A948C.toInt(),
                 )
                 "snake" -> listOf(
                     0xFF5E9B49.toInt() to 0xFFE7DFBF.toInt(),
@@ -456,7 +456,7 @@ class PetWidgetProvider : AppWidgetProvider() {
                     0xFFE0913F.toInt() to 0xFFF3E4C8.toInt(),
                     0xFFB9BEC6.toInt() to 0xFFEDEFF3.toInt(),
                     0xFFCBA13E.toInt() to 0xFFF0E4BE.toInt(),
-                    0xFF5A544E.toInt() to 0xFF9A9288.toInt(),
+                    0xFF6E6760.toInt() to 0xFF9A9288.toInt(),
                 )
                 "turtle" -> listOf(
                     0xFF6E8F52.toInt() to 0xFF9C7A4C.toInt(),

@@ -99,6 +99,13 @@ class SpeciesTheme {
     spriteAccent: Color(0xFFF2E3C2),
   );
 
+  /// 도트 스프라이트 아웃라인/눈 색 (전 종 공통)
+  ///
+  /// 근흑색 — 백호(청회색 몸)·흑 계열 변이처럼 어두운 몸통에서도 눈이
+  /// 또렷해야 해서 기존 0xFF33383F보다 어둡게 잡았다.
+  /// ⚠️ 위젯 네이티브(WidgetPixelRenderer.kt DARK_COLOR)와 동일하게 유지할 것.
+  static const Color dotDark = Color(0xFF14161A);
+
   /// 털뭉치(stage 1) 도트 몸통색 — 연한 크림 베이지 (종 미결정 상태)
   static const Color fluffBody = Color(0xFFF4E9CE);
 
@@ -117,7 +124,7 @@ class SpeciesTheme {
           (Color(0xFF9A7B4E), Color(0xFFD8C39A)), // 갈색 수리
           (Color(0xFF8B93A0), Color(0xFFCED4DC)), // 회색 새
           (Color(0xFFCBBB98), Color(0xFFEDE4CF)), // 흰/베이지 새
-          (Color(0xFF5A5652), Color(0xFF9A948C)), // 검은 새
+          (Color(0xFF6E6862), Color(0xFF9A948C)), // 검은 새 (눈 대비 위해 소폭 밝게)
         ],
       EvolutionType.snake => const [
           (Color(0xFF5E9B49), Color(0xFFE7DFBF)), // 초록 뱀
@@ -129,7 +136,7 @@ class SpeciesTheme {
           (Color(0xFFE0913F), Color(0xFFF3E4C8)), // 주황 호랑이
           (Color(0xFFB9BEC6), Color(0xFFEDEFF3)), // 회백 호랑이
           (Color(0xFFCBA13E), Color(0xFFF0E4BE)), // 황금 호랑이
-          (Color(0xFF5A544E), Color(0xFF9A9288)), // 흑 호랑이
+          (Color(0xFF6E6760), Color(0xFF9A9288)), // 흑 호랑이 (눈 대비 위해 소폭 밝게)
         ],
       EvolutionType.turtle => const [
           (Color(0xFF6E8F52), Color(0xFF9C7A4C)), // 올리브 거북

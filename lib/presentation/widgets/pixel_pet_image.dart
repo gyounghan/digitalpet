@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/pixel/pet_pixel_data.dart';
+import '../../core/theme/species_theme.dart';
 
 /// 에셋 경로 → 도트 스프라이트 키 변환
 ///
@@ -52,7 +53,7 @@ class PixelPetImage extends StatelessWidget {
     this.width,
     this.height,
     required this.dotColor,
-    this.darkColor = const Color(0xFF33383F),
+    this.darkColor = SpeciesTheme.dotDark,
     this.accentColor,
     this.fallback,
   });
@@ -95,7 +96,7 @@ class PixelSpriteView extends StatelessWidget {
     this.width,
     this.height,
     required this.dotColor,
-    this.darkColor = const Color(0xFF33383F),
+    this.darkColor = SpeciesTheme.dotDark,
     this.accentColor,
   });
 

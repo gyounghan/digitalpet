@@ -138,7 +138,7 @@ class PixelMotionAnimation extends StatefulWidget {
     this.width,
     this.height,
     required this.dotColor,
-    this.darkColor = const Color(0xFF33383F),
+    this.darkColor = SpeciesTheme.dotDark,
     this.accentColor,
   });
 

@@ -127,8 +127,8 @@ object WidgetMotionData {
 
 /// [WidgetSprite]를 3계조 색으로 Bitmap에 렌더 (앱 _PixelSpritePainter와 동일 규칙)
 object WidgetPixelRenderer {
-    /// 아웃라인/눈 색 (앱 darkColor 기본값과 동일)
-    private const val DARK_COLOR = 0xFF33383F.toInt()
+    /// 아웃라인/눈 색 (앱 SpeciesTheme.dotDark와 동일 — 어두운 몸통 대비 확보)
+    private const val DARK_COLOR = 0xFF14161A.toInt()
 
     /// 도트가 맞닿는 경계의 안티에일리어싱 흰 실선을 없애기 위한 미세 오버랩 비율
     private const val SEAM_OVERLAP_RATIO = 0.06f
