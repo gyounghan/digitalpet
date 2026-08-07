@@ -13,6 +13,33 @@
         android:layout_width="80dp"
         android:layout_height="80dp"
         android:layout_marginBottom="2dp">
+
+        <!-- 도트 모션 3프레임 순환 — 런처가 자체 재생 (앱 프로세스 불필요) -->
+        <ViewFlipper
+            android:id="@+id/pet_flipper"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:autoStart="true"
+            android:flipInterval="300"
+            android:visibility="gone">
+            <ImageView
+                android:id="@+id/pet_frame_0"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scaleType="fitCenter" />
+            <ImageView
+                android:id="@+id/pet_frame_1"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scaleType="fitCenter" />
+            <ImageView
+                android:id="@+id/pet_frame_2"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scaleType="fitCenter" />
+        </ViewFlipper>
+
+        <!-- 정지 이미지 (모션 데이터가 없는 경우 폴백) -->
         <ImageView
             android:id="@+id/pet_image"
             android:layout_width="match_parent"
@@ -30,7 +57,7 @@
             android:visibility="gone" />
     </FrameLayout>
 
-    <!-- 레벨 표시 -->
+    <!-- 레벨 표시 (밝은 배경화면에서도 읽히도록 그림자) -->
     <TextView
         android:id="@+id/pet_level"
         android:layout_width="wrap_content"
@@ -38,6 +65,10 @@
         android:text="Lv.1"
         android:textColor="@android:color/white"
         android:textSize="10sp"
+        android:shadowColor="#CC000000"
+        android:shadowRadius="3"
+        android:shadowDx="0"
+        android:shadowDy="1"
         android:layout_marginBottom="2dp" />
 
     <!-- 상태 표시 -->
@@ -48,6 +79,10 @@
         android:text="졸림"
         android:textColor="@android:color/white"
         android:textSize="11sp"
+        android:shadowColor="#CC000000"
+        android:shadowRadius="3"
+        android:shadowDx="0"
+        android:shadowDy="1"
         android:gravity="center" />
 
 </LinearLayout>

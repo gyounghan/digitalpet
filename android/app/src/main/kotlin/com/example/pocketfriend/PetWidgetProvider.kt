@@ -44,14 +44,23 @@ class PetWidgetProvider : AppWidgetProvider() {
         appWidgetIds: IntArray
     ) {
         Log.d("PetWidgetProvider", "onUpdate called with ${appWidgetIds.size} widget(s)")
-        
-        // 각 위젯 인스턴스에 대해 업데이트 수행
+
+        // 각 위젯 인스턴스에 대해 업데이트 수행.
+        // 도트 모션(ViewFlipper)이 적용되면 런처가 자체 재생하므로 Handler 루프가
+        // 필요 없다 — 도트가 없는 레거시 drawable 경로에서만 주기 갱신을 돈다.
+        var needsLegacyAnimation = false
         for (appWidgetId in appWidgetIds) {
-            updateAppWidget(context, appWidgetManager, appWidgetId)
+            val usedDotMotion = updateAppWidget(context, appWidgetManager, appWidgetId)
+            if (!usedDotMotion) {
+                needsLegacyAnimation = true
+            }
         }
-        
-        // 애니메이션을 위한 주기적 업데이트 시작
-        startAnimationUpdates(context, appWidgetManager, appWidgetIds)
+
+        if (needsLegacyAnimation) {
+            startAnimationUpdates(context, appWidgetManager, appWidgetIds)
+        } else {
+            stopAnimationUpdates()
+        }
     }
     
     override fun onEnabled(context: Context) {
@@ -125,12 +134,14 @@ class PetWidgetProvider : AppWidgetProvider() {
     
     /// 위젯 업데이트
     ///
-    /// home_widget 패키지에서 저장한 데이터를 읽어서 위젯에 표시
+    /// home_widget 패키지에서 저장한 데이터를 읽어서 위젯에 표시.
+    /// 반환: 도트 모션(ViewFlipper 자체 재생)이 적용됐는지 —
+    /// true면 Handler 주기 갱신이 필요 없다.
     private fun updateAppWidget(
         context: Context,
         appWidgetManager: AppWidgetManager,
         appWidgetId: Int
-    ) {
+    ): Boolean {
         try {
             val level = getWidgetString(context, "level", "1")?.toIntOrNull() ?: 1
             val hunger = getWidgetString(context, "hunger", "100")?.toIntOrNull() ?: 100
@@ -155,10 +166,12 @@ class PetWidgetProvider : AppWidgetProvider() {
 
             val views = RemoteViews(context.packageName, R.layout.pet_widget)
 
-            // 이미지 결정: 앱과 동일한 도트 PNG 우선, 없으면 drawable(진화/mood)
-            if (!tryApplyDotImage(context, views, resolvedMood)) {
+            // 이미지 결정: 앱과 동일한 도트 모션 우선, 없으면 drawable(진화/mood)
+            val usedDotMotion = tryApplyDotImage(context, views, resolvedMood)
+            if (!usedDotMotion) {
                 val imageResourceId =
                     resolveWidgetImageResourceId(context, evolutionImage, imageType)
+                views.setViewVisibility(R.id.pet_flipper, android.view.View.GONE)
                 if (imageResourceId != 0) {
                     views.setImageViewResource(R.id.pet_image, imageResourceId)
                     views.setViewVisibility(R.id.pet_image, android.view.View.VISIBLE)
@@ -176,7 +189,7 @@ class PetWidgetProvider : AppWidgetProvider() {
             val displayMoodText = resolveMoodText(moodText, resolvedMood)
             views.setTextViewText(R.id.pet_mood, displayMoodText)
 
-            Log.d("PetWidgetProvider", "Displaying - syncTraceId: $syncTraceId, level: $level, moodText: $displayMoodText")
+            Log.d("PetWidgetProvider", "Displaying - syncTraceId: $syncTraceId, level: $level, moodText: $displayMoodText, dotMotion: $usedDotMotion")
 
             val intent = android.content.Intent(context, MainActivity::class.java)
             val pendingIntent = android.app.PendingIntent.getActivity(
@@ -188,8 +201,10 @@ class PetWidgetProvider : AppWidgetProvider() {
             views.setOnClickPendingIntent(R.id.widget_container, pendingIntent)
 
             appWidgetManager.updateAppWidget(appWidgetId, views)
+            return usedDotMotion
         } catch (e: Exception) {
             Log.e("PetWidgetProvider", "Error updating widget", e)
+            return false
         }
     }
     
@@ -218,10 +233,15 @@ class PetWidgetProvider : AppWidgetProvider() {
 
             val views = RemoteViews(context.packageName, R.layout.pet_widget)
 
-            // 이미지 결정: 앱과 동일한 도트 PNG 우선(정적), 없으면 drawable
-            if (!tryApplyDotImage(context, views, resolvedMood)) {
+            // 이미지 결정: 앱과 동일한 도트 모션 우선, 없으면 drawable.
+            // 도트 모션(ViewFlipper)이 적용되면 런처가 자체 재생하므로
+            // 이 Handler 루프는 더 필요 없다 — 즉시 중지해 재렌더 낭비/
+            // 플리퍼 리셋을 막는다.
+            val usedDotMotion = tryApplyDotImage(context, views, resolvedMood)
+            if (!usedDotMotion) {
                 val imageResourceId =
                     resolveWidgetImageResourceId(context, evolutionImage, imageType)
+                views.setViewVisibility(R.id.pet_flipper, android.view.View.GONE)
                 if (imageResourceId != 0) {
                     views.setImageViewResource(R.id.pet_image, imageResourceId)
                     views.setViewVisibility(R.id.pet_image, android.view.View.VISIBLE)
@@ -249,6 +269,10 @@ class PetWidgetProvider : AppWidgetProvider() {
             views.setOnClickPendingIntent(R.id.widget_container, pendingIntent)
 
             appWidgetManager.updateAppWidget(appWidgetId, views)
+
+            if (usedDotMotion) {
+                stopAnimationUpdates()
+            }
         } catch (e: Exception) {
             Log.e("PetWidgetProvider", "Error updating widget for animation", e)
         }
@@ -347,8 +371,9 @@ class PetWidgetProvider : AppWidgetProvider() {
 
     /// 앱과 동일한 도트 픽셀을 위젯에서 **직접 렌더**해 표시
     ///
-    /// Flutter가 저장한 스프라이트 키(pixelKey)로 `pet_pixel_data.json`에서
-    /// 좌표를 찾아, 종별 색(evolutionType/stage)으로 Bitmap을 그린다.
+    /// 모션 프레임이 2장 이상이면 ViewFlipper에 담아 런처가 자체 순환 재생
+    /// (움직이는 위젯 — 앱 프로세스·배터리 비용 없음). 1장이거나 정적
+    /// 도트(pixelKey)만 있으면 정지 이미지로 표시한다.
     /// 키/좌표가 없으면 false를 반환해 기존 drawable 리소스로 폴백한다.
     /// (앱과 100% 동일한 도트 데이터·렌더 규칙 — 좌표는 스크립트가 자동 동기화)
     private fun tryApplyDotImage(context: Context, views: RemoteViews, mood: String): Boolean {
@@ -356,38 +381,53 @@ class PetWidgetProvider : AppWidgetProvider() {
         val stage = getWidgetString(context, "evolutionStage", "1")?.toIntOrNull() ?: 1
         val grade = getWidgetString(context, "evolutionGrade", "") ?: ""
         val variant = getWidgetString(context, "colorVariant", "0")?.toIntOrNull() ?: 0
-
-        val sprite =
-            resolveWidgetSprite(context, evolutionType, stage, grade, mood) ?: return false
         val (dotColor, accentColor) = resolveDotColors(evolutionType, stage, grade, variant)
 
+        // 1) 모션 프레임 (털뭉치~성숙기 전 스테이지)
+        val motionKey = motionSpriteKey(evolutionType, stage, grade)
+        if (motionKey != null) {
+            val frames = WidgetMotionData.frames(context, motionKey, motionForMood(mood))
+            val bitmaps = frames.mapNotNull { frame ->
+                runCatching {
+                    WidgetPixelRenderer.render(frame, dotColor, accentColor, DOT_RENDER_SIZE_PX)
+                }.getOrNull()
+            }
+            if (bitmaps.size >= 2) {
+                val frameIds = listOf(R.id.pet_frame_0, R.id.pet_frame_1, R.id.pet_frame_2)
+                frameIds.forEachIndexed { index, viewId ->
+                    // 프레임이 모자라면 마지막 장으로 채워 플리퍼 빈칸을 없앤다
+                    views.setImageViewBitmap(viewId, bitmaps[minOf(index, bitmaps.size - 1)])
+                }
+                views.setViewVisibility(R.id.pet_flipper, android.view.View.VISIBLE)
+                views.setViewVisibility(R.id.pet_image, android.view.View.GONE)
+                views.setViewVisibility(R.id.pet_image_text, android.view.View.GONE)
+                return true
+            }
+            if (bitmaps.size == 1) {
+                return applyStaticDotBitmap(views, bitmaps.first())
+            }
+        }
+
+        // 2) 정적 mood 도트 (pixelKey — 모션 없는 단계 폴백)
+        val pixelKey = getWidgetString(context, "pixelKey", null)
+        if (pixelKey.isNullOrBlank()) return false
+        val sprite = WidgetPixelData.sprite(context, pixelKey) ?: return false
         val bitmap = runCatching {
             WidgetPixelRenderer.render(sprite, dotColor, accentColor, DOT_RENDER_SIZE_PX)
         }.getOrNull() ?: return false
+        return applyStaticDotBitmap(views, bitmap)
+    }
 
+    /// 정지 도트 비트맵을 표시 상태로 적용
+    private fun applyStaticDotBitmap(
+        views: RemoteViews,
+        bitmap: android.graphics.Bitmap,
+    ): Boolean {
+        views.setViewVisibility(R.id.pet_flipper, android.view.View.GONE)
         views.setImageViewBitmap(R.id.pet_image, bitmap)
         views.setViewVisibility(R.id.pet_image, android.view.View.VISIBLE)
         views.setViewVisibility(R.id.pet_image_text, android.view.View.GONE)
         return true
-    }
-
-    /// 앱 홈과 동일한 스프라이트 선택.
-    /// 모션 스테이지(털뭉치·유아기·성장기)는 mood에 맞는 도트 모션 대표 프레임을,
-    /// 그 외(사신수 등)는 Flutter가 저장한 정적 mood 도트(pixelKey)를 쓴다.
-    private fun resolveWidgetSprite(
-        context: Context,
-        evolutionType: String?,
-        stage: Int,
-        grade: String,
-        mood: String,
-    ): WidgetSprite? {
-        val motionKey = motionSpriteKey(evolutionType, stage, grade)
-        if (motionKey != null) {
-            WidgetMotionData.sprite(context, motionKey, motionForMood(mood))?.let { return it }
-        }
-        val pixelKey = getWidgetString(context, "pixelKey", null)
-        if (pixelKey.isNullOrBlank()) return null
-        return WidgetPixelData.sprite(context, pixelKey)
     }
 
     /// 앱 motionSpriteKeyForStage와 동일한 규칙.

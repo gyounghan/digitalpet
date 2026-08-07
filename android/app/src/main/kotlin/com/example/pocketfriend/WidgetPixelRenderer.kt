@@ -72,20 +72,24 @@ object WidgetPixelData {
 /// (`pet_motion_data.dart`)과 동시에 굽는 `assets/pet_motion_data.json`.
 ///
 /// 스프라이트 키('fluff'/'dragon1'/'dragon2') → 모션 이름('walk'/'joy'/…) →
-/// 대표 프레임(가운데) 스프라이트. 위젯은 정지 이미지라 프레임 1장만 담는다.
+/// 프레임 3장("f" 배열). 위젯은 RemoteViews ViewFlipper로 프레임을 순환 재생.
 /// 앱 홈이 그리는 도트 모션과 100% 동일 좌표 — 스크립트가 자동 동기화.
 object WidgetMotionData {
     private const val TAG = "WidgetMotionData"
     private const val ASSET_NAME = "pet_motion_data.json"
 
     @Volatile
-    private var cache: Map<String, Map<String, WidgetSprite>>? = null
+    private var cache: Map<String, Map<String, List<WidgetSprite>>>? = null
 
-    /// 스프라이트 키 + 모션 이름으로 대표 프레임 조회
+    /// 스프라이트 키 + 모션 이름으로 전체 프레임 조회 (없으면 빈 리스트)
+    fun frames(context: Context, key: String, motion: String): List<WidgetSprite> =
+        load(context)[key]?.get(motion) ?: emptyList()
+
+    /// 대표 프레임(첫 장) 조회 — 정지 이미지 폴백용
     fun sprite(context: Context, key: String, motion: String): WidgetSprite? =
-        load(context)[key]?.get(motion)
+        frames(context, key, motion).firstOrNull()
 
-    private fun load(context: Context): Map<String, Map<String, WidgetSprite>> {
+    private fun load(context: Context): Map<String, Map<String, List<WidgetSprite>>> {
         cache?.let { return it }
         val parsed = runCatching { parse(context) }.getOrElse {
             Log.e(TAG, "모션 JSON 파싱 실패", it)
@@ -95,24 +99,27 @@ object WidgetMotionData {
         return parsed
     }
 
-    private fun parse(context: Context): Map<String, Map<String, WidgetSprite>> {
+    private fun parse(context: Context): Map<String, Map<String, List<WidgetSprite>>> {
         val text = context.assets.open(ASSET_NAME)
             .bufferedReader(Charsets.UTF_8).use { it.readText() }
         val root = JSONObject(text)
-        val result = HashMap<String, Map<String, WidgetSprite>>(root.length())
+        val result = HashMap<String, Map<String, List<WidgetSprite>>>(root.length())
         for (key in root.keys()) {
             val obj = root.getJSONObject(key)
             val size = obj.getInt("size")
-            val motions = HashMap<String, WidgetSprite>()
+            val motions = HashMap<String, List<WidgetSprite>>()
             for (motion in obj.keys()) {
                 if (motion == "size") continue
-                val frame = obj.getJSONObject(motion)
-                motions[motion] = WidgetSprite(
-                    size = size,
-                    dark = toRows(frame.getJSONArray("d")),
-                    body = toRows(frame.getJSONArray("b")),
-                    accent = toRows(frame.getJSONArray("a")),
-                )
+                val frameArray = obj.getJSONObject(motion).getJSONArray("f")
+                motions[motion] = List(frameArray.length()) { index ->
+                    val frame = frameArray.getJSONObject(index)
+                    WidgetSprite(
+                        size = size,
+                        dark = toRows(frame.getJSONArray("d")),
+                        body = toRows(frame.getJSONArray("b")),
+                        accent = toRows(frame.getJSONArray("a")),
+                    )
+                }
             }
             result[key] = motions
         }
