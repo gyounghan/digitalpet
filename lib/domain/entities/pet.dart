@@ -226,13 +226,13 @@ class Pet {
   /// 자정에도 리셋하지 않는다(중복 지급 방지용 워터마크).
   final int totalSetsRewarded;
 
-  /// 오늘 포만감 목표 달성 횟수 (하루 최대 3회 캡 판정용, 자정 리셋)
+  /// 오늘 포만감 목표 달성 횟수 (홈 카드 누적식 표시용, 자정 리셋)
   final int todayFeedAchievedCount;
 
-  /// 오늘 수면 목표 달성 횟수 (하루 최대 3회 캡 판정용, 자정 리셋)
+  /// 오늘 수면 목표 달성 횟수 (홈 카드 누적식 표시용, 자정 리셋)
   final int todaySleepAchievedCount;
 
-  /// 오늘 운동 목표 달성 횟수 (하루 최대 3회 캡 판정용, 자정 리셋)
+  /// 오늘 운동 목표 달성 횟수 (홈 카드 누적식 표시용, 자정 리셋)
   final int todayExerciseAchievedCount;
 
   /// 펫의 현재 기분 상태 (6종)

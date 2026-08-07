@@ -6,9 +6,12 @@ import '../repositories/activity_repository.dart';
 ///
 /// "오늘"의 누적이 아니라 **현재 진행 중인 목표**의 진행도를 계산한다.
 /// 포만감/수면/운동 각각 독립된 카운터를 가지며, 목표를 달성하면
-/// 즉시 다음 목표로 리셋된다(차감). 진행도는 자정에 리셋되지 않고 이월되며,
-/// **달성(EXP 지급) 횟수만 카테고리당 하루 최대 3회로 캡**된다
-/// (todayXxxAchievedCount로 추적, 자정 리셋 — 초과 진행분은 다음 날 소화).
+/// 즉시 다음 목표로 리셋된다(차감). 진행도는 자정에 리셋되지 않고 이월된다.
+///
+/// 달성(EXP 지급) 횟수에 하루 캡은 없다 — 입력 자체가 현실적으로 유한하다:
+/// 급식은 식사 슬롯 3회, 수면은 실시간, 걸음은 실제 걷기. 세트 보너스는
+/// 반감(setExpBase >> N)이 자연 상한 역할을 한다.
+/// (todayXxxAchievedCount는 홈 카드 누적식 표시용으로 계속 기록·자정 리셋)
 ///
 /// 현실적 목표 (보건 권장량 + 평균 사용자 수치 기반):
 /// 레벨이 올라도 목표치는 거의 올리지 않는다 — 습관 앱에서 목표 상향은
@@ -32,11 +35,6 @@ class CalculateDailyGoalsScoreUseCase {
   /// 세트 마일스톤(10세트 누적 완성) 시 추가 보너스 경험치
   /// 반감과 무관하게 누적 세트 워터마크 기반으로 부여 → RPG 마일스톤 보상
   static const int tierUpBonusExp = 50;
-
-  /// 카테고리당 하루 최대 달성(EXP 지급) 횟수
-  /// 오늘 이미 달성한 횟수(todayXxxAchievedCount)를 차감한 잔여만 지급 —
-  /// 장기 백그라운드 후 폭발적 지급도 함께 방지된다.
-  static const int maxAchievementsPerDay = 3;
 
   static int getFeedGoalCount(int level) {
     if (level <= 5) return 1;
@@ -83,30 +81,17 @@ class CalculateDailyGoalsScoreUseCase {
     final currentExerciseSteps = pet.exerciseProgressSteps;
     final currentExerciseMinutes = pet.exerciseProgressMinutes;
 
-    // 달성 가능 횟수 계산 — 하루 캡(3회)에서 오늘 이미 달성한 횟수를 차감
-    final feedRemainingToday =
-        (maxAchievementsPerDay - pet.todayFeedAchievedCount).clamp(0, maxAchievementsPerDay);
-    final sleepRemainingToday =
-        (maxAchievementsPerDay - pet.todaySleepAchievedCount).clamp(0, maxAchievementsPerDay);
-    final exerciseRemainingToday =
-        (maxAchievementsPerDay - pet.todayExerciseAchievedCount).clamp(0, maxAchievementsPerDay);
-
-    final feedAchievements = feedGoalCount > 0
-        ? (pet.todayFeedCount ~/ feedGoalCount)
-            .clamp(0, feedRemainingToday)
-        : 0;
-    final sleepAchievements = sleepGoalMinutes > 0
-        ? (pet.todaySleepMinutes ~/ sleepGoalMinutes)
-            .clamp(0, sleepRemainingToday)
-        : 0;
+    // 달성 횟수 — 하루 캡 없음. 진행분을 목표 단위로 나눈 만큼 전부 인정
+    // (급식 슬롯·실시간 수면·실제 걸음이라는 물리적 상한이 남용을 막는다)
+    final feedAchievements =
+        feedGoalCount > 0 ? pet.todayFeedCount ~/ feedGoalCount : 0;
+    final sleepAchievements =
+        sleepGoalMinutes > 0 ? pet.todaySleepMinutes ~/ sleepGoalMinutes : 0;
 
     // 운동 목표는 걸음(steps)만으로 판정한다. (걸음과 운동분은 별도 원천이라
     // max로 묶으면 안 쓴 축이 남아 이중 카운트되던 문제 → 걸음 단일화)
-    final stepsAchievements = exerciseGoalSteps > 0
-        ? (currentExerciseSteps ~/ exerciseGoalSteps)
-            .clamp(0, exerciseRemainingToday)
-        : 0;
-    final exerciseAchievements = stepsAchievements;
+    final exerciseAchievements =
+        exerciseGoalSteps > 0 ? currentExerciseSteps ~/ exerciseGoalSteps : 0;
 
     // UI용: "현재 진행 중인 목표"에 대한 표시값
     final feedProgressDisplay = pet.todayFeedCount % feedGoalCount;

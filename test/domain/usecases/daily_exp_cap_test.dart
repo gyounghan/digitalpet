@@ -307,8 +307,8 @@ void main() {
     });
   });
 
-  group('카테고리당 하루 최대 3회 달성 캡', () {
-    test('4회분 진행해도 하루 3회까지만 지급, 초과 진행분은 이월', () async {
+  group('달성 횟수 하루 캡 없음 — 진행분만큼 전부 지급', () {
+    test('4회분 진행하면 4회 전부 지급·차감된다', () async {
       // Lv1 목표: feed 1회, sleep 300분, 운동 3000보 — 각 4회분 진행
       final petRepo = _FakePetRepository()
         ..setPet(_pet(
@@ -322,19 +322,20 @@ void main() {
 
       final result = await apply('p');
 
-      expect(result.feedAchievedCount, 3, reason: '하루 캡 3회');
-      expect(result.sleepAchievedCount, 3);
-      expect(result.exerciseAchievedCount, 3);
-      expect(result.todayFeedAchievedCount, 3);
-      expect(result.todaySleepAchievedCount, 3);
-      expect(result.todayExerciseAchievedCount, 3);
-      // 초과 진행분은 차감되지 않고 이월
-      expect(result.todayFeedCount, 1);
-      expect(result.todaySleepMinutes, 300);
-      expect(result.exerciseProgressSteps, 3000);
+      expect(result.feedAchievedCount, 4, reason: '캡 없이 4회 인정');
+      expect(result.sleepAchievedCount, 4);
+      expect(result.exerciseAchievedCount, 4);
+      expect(result.todayFeedAchievedCount, 4);
+      expect(result.todaySleepAchievedCount, 4);
+      expect(result.todayExerciseAchievedCount, 4);
+      // 진행분은 전부 차감된다
+      expect(result.todayFeedCount, 0);
+      expect(result.todaySleepMinutes, 0);
+      expect(result.exerciseProgressSteps, 0);
     });
 
-    test('오늘 이미 3회 달성한 카테고리는 진행분이 있어도 추가 지급 없음', () async {
+    test('오늘 이미 3회 달성했어도 추가 진행분은 계속 지급된다', () async {
+      // Lv1 feed 목표 1회 — 진행 2회분이면 2회 추가 달성
       final petRepo = _FakePetRepository()
         ..setPet(_pet(
           level: 1,
@@ -352,13 +353,14 @@ void main() {
 
       final result = await apply('p');
 
-      expect(result.exp, 0, reason: '캡 도달 후 EXP 미지급');
-      expect(result.feedAchievedCount, 3, reason: '누적 카운트 불변');
-      expect(result.todayFeedCount, 2, reason: '진행분은 이월 보존');
+      expect(result.feedAchievedCount, 5, reason: '3회 이후에도 계속 인정');
+      expect(result.todayFeedAchievedCount, 5);
+      expect(result.todayFeedCount, 0, reason: '지급된 진행분은 차감');
+      expect(result.exp, 40, reason: '추가 2회 × 20 EXP');
     });
 
-    test('자정 리셋 후 이월 진행분이 다시 지급된다', () async {
-      // 어제 캡을 다 쓴 상태에서 자정이 지남 (lastGoalResetDate 과거)
+    test('자정 리셋 후에도 이월 진행분이 그대로 지급된다', () async {
+      // 어제 진행분이 남은 상태에서 자정이 지남 (lastGoalResetDate 과거)
       final petRepo = _FakePetRepository()
         ..setPet(_pet(
           level: 1,
@@ -376,7 +378,7 @@ void main() {
 
       final result = await apply('p');
 
-      // 리셋으로 todayFeedAchievedCount=0 → 이월된 2회분 지급 (캡 3 이내)
+      // 리셋으로 todayFeedAchievedCount=0 → 이월된 2회분 지급
       expect(result.feedAchievedCount, 5);
       expect(result.todayFeedAchievedCount, 2);
       expect(result.todayFeedCount, 0);
