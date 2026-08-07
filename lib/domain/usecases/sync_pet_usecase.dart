@@ -36,19 +36,22 @@ class SyncPetUseCase {
       return localPet;
     }
     
-    // 3. 서버 Pet 조회
+    // 3. 서버 Pet 조회 (HTTP 타임아웃 최대 5초 소요 가능)
     final remotePet = await remoteRepository!.getPet(petId);
-    
-    // 4. 타임스탬프 비교하여 최신 데이터 선택
+
+    // 4. 원격 조회가 걸린 시간 동안 로컬이 변했을 수 있다(급식 등) —
+    //    낡은 스냅샷으로 비교·저장하면 그 사이 기록이 되돌아가므로 재조회
+    final currentLocal = await localRepository.getPet(petId);
+
     if (remotePet == null) {
       // 서버에 없으면 로컬 데이터를 서버에 업로드
-      await remoteRepository!.savePet(localPet);
-      return localPet;
+      await remoteRepository!.savePet(currentLocal);
+      return currentLocal;
     }
-    
-    // 5. 최신 데이터 선택 (타임스탬프 비교)
-    final latestPet = localPet.lastUpdated > remotePet.lastUpdated
-        ? localPet
+
+    // 5. 최신 데이터 선택 (타임스탬프 비교 — 동률이면 로컬 우선)
+    final latestPet = currentLocal.lastUpdated >= remotePet.lastUpdated
+        ? currentLocal
         : remotePet;
     
     // 6. 로컬과 서버 모두 최신 데이터로 업데이트

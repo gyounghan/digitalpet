@@ -485,11 +485,12 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
   /// 진화 체크까지 마친 최신 상태로 [state]를 다시 내보낸다.
   /// (이미 로컬 상태가 화면에 떠 있으므로 전부 실패해도 무방)
   Future<void> _loadDeferredUpdates() async {
-    var pet = await repository.getPet(petId);
+    // 각 유스케이스는 내부에서 자체 저장하므로 중간 반환값을 들고 다니지
+    // 않는다 — 마지막에 저장소 최신 상태를 다시 읽어 반영 (스냅샷 역행 방지)
 
     // 활동 데이터 기반 상태 업데이트 (걷기/운동량)
     try {
-      pet = await updatePetFromActivityUseCase(petId);
+      await updatePetFromActivityUseCase(petId);
     } catch (e) {
       if (kDebugMode) {
         debugPrint('PetNotifier._loadDeferredUpdates: activity failed: $e');
@@ -499,7 +500,6 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
     // 접속 보너스 + 일일 이벤트
     try {
       await loginBonusUseCase(petId);
-      pet = await repository.getPet(petId);
     } catch (e) {
       if (kDebugMode) {
         debugPrint('PetNotifier._loadDeferredUpdates: login bonus failed: $e');
@@ -508,7 +508,7 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
 
     // 서버 동기화 (앱 시작 시 pull - 실패해도 무시)
     try {
-      pet = await syncPetUseCase(petId);
+      await syncPetUseCase(petId);
     } catch (e) {
       if (kDebugMode) {
         debugPrint('PetNotifier._loadDeferredUpdates: sync failed: $e');
@@ -516,7 +516,10 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
     }
 
     try {
-      final evolvedPet = await _updateAndEvolve(pet);
+      // 위 단계들(서버 타임아웃 포함 수 초)이 도는 동안 사용자가 급식 등을
+      // 했을 수 있다 — 최종 반영은 저장소의 최신 상태를 다시 읽어 수행
+      final fresh = await repository.getPet(petId);
+      final evolvedPet = await _updateAndEvolve(fresh);
       state = AsyncValue.data(evolvedPet);
     } catch (e) {
       if (kDebugMode) {
@@ -609,8 +612,17 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
   /// 
   /// [pet] 업데이트할 Pet 엔티티 (이 Pet의 상태가 위젯에 반영됨)
   Future<Pet> _updateAndEvolve(Pet pet) async {
-    // 1. 전달받은 Pet을 먼저 저장하여 최신 상태 보장
-    await repository.updatePet(pet);
+    // 1. 전달받은 Pet을 저장하되, 저장소에 더 새로운 데이터가 있으면
+    //    덮어쓰지 않는다. _loadDeferredUpdates처럼 수 초 걸리는 경로가
+    //    시작 시점의 스냅샷을 들고 있다가 여기서 저장하면, 그 사이 사용자의
+    //    급식/수면 기록이 되돌아간다(급식 직후 버튼이 다시 살아나던 버그).
+    //    모든 유스케이스는 내부에서 자체 저장하므로 여기서 잃는 변경은 없다.
+    final stored = await repository.getPet(petId);
+    if (stored.lastUpdated > pet.lastUpdated) {
+      pet = stored;
+    } else {
+      await repository.updatePet(pet);
+    }
 
     // 2. 사망 체크 (수치 감소 후)
     final checkedPet = await checkPetDeathUseCase(petId);
@@ -630,7 +642,12 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
     final evolvedPet = await evolvePetUseCase(petId);
 
     // 5. 위젯 업데이트 (앱 내 펫 상태와 동기화)
-    await widgetService.updatePetWidget(evolvedPet);
+    //    위젯 미설치 등으로 실패해도 급식 같은 액션이 에러로 뒤집히면 안 된다
+    try {
+      await widgetService.updatePetWidget(evolvedPet);
+    } catch (e) {
+      // 위젯 업데이트 실패 무시
+    }
 
     // 6. 알림 체크 (상태 변경 후)
     _checkAndShowNotification();
