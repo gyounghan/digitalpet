@@ -42,7 +42,6 @@ OUTPUT_PATH = os.path.join("lib", "core", "pixel", "pet_motion_data.dart")
 WIDGET_JSON_PATH = os.path.join(
     "android", "app", "src", "main", "assets", "pet_motion_data.json"
 )
-WIDGET_FRAME_INDEX = 1
 
 # 아트를 덤프할 때 사용한 원본/크롭/배치 파라미터 — accent 자동 태깅에 재사용
 # path: 원본 PNG / crop: 비율 크롭 (fx0,fy0,fx1,fy1) 또는 None
@@ -755,17 +754,18 @@ SPECIES_ART = {
         "eyes": [(6, 15, 2, 2), (18, 9, 2, 2)],
         "mouth": (2, 17),
     },
-    # 털뭉치(stage 1) — 아기 같은 동글동글 크림 뭉치 + 둥근 귀 + 큰 두 눈 + 작은 입
+    # 털뭉치(stage 1) — 아기 같은 동글동글 크림 뭉치 + 뾰족 귀(정적 이미지와
+    # 동일한 실루엣 — 귀가 없으면 머리가 잘린 것처럼 보인다) + 큰 두 눈 + 작은 입
     "fluff": {
         "body": [
             "........................................",
             "........................................",
             "........................................",
             "........................................",
-            "........................................",
-            "........................................",
-            "........................................",
-            "........................................",
+            "...........oo..............oo...........",
+            "..........oooo............oooo..........",
+            "..........oooo............oooo..........",
+            "..........oooo............oooo..........",
             "..........oooo..oooooooo..oooo..........",
             ".........oooooooooooooooooooooo.........",
             ".........oooooooooooooooooooooo.........",
@@ -1614,25 +1614,26 @@ def main() -> int:
 
 
 def write_widget_json(sprite_frames):
-    """홈 위젯용 모션 JSON — 스프라이트 키 → 모션 → 대표 프레임 1장.
+    """홈 위젯용 모션 JSON — 스프라이트 키 → 모션 → 프레임 3장 전부.
 
-    앱(pet_motion_data.dart)과 동일한 좌표를 쓰되, 위젯은 정지 이미지라
-    모션별 대표 프레임 하나만 담는다. 행 마스크는 부호없는 hex 문자열.
-
-    대표 프레임은 기본 가운데(index 1)지만, 털뭉치 walk는 가운데가 '눈웃음
-    폴짝'이라 큰 눈망울이 안 보이므로 눈 뜬 첫 프레임(index 0)을 쓴다.
+    앱(pet_motion_data.dart)과 동일한 좌표. 위젯은 RemoteViews ViewFlipper로
+    프레임을 순환 재생하므로 모션별 전 프레임("f" 배열)을 담는다.
+    행 마스크는 부호없는 hex 문자열.
     """
     root = {}
     for key, motions in sprite_frames.items():
         size = art_size(key)
         entry = {"size": size}
-        idx = 0 if key == "fluff" else WIDGET_FRAME_INDEX
         for motion_name, frames in motions.items():
-            dark, body, accent = frames[min(idx, len(frames) - 1)]
             entry[motion_name] = {
-                "d": ["%X" % v for v in dark],
-                "b": ["%X" % v for v in body],
-                "a": ["%X" % v for v in accent],
+                "f": [
+                    {
+                        "d": ["%X" % v for v in dark],
+                        "b": ["%X" % v for v in body],
+                        "a": ["%X" % v for v in accent],
+                    }
+                    for dark, body, accent in frames
+                ]
             }
         root[key] = entry
     os.makedirs(os.path.dirname(WIDGET_JSON_PATH), exist_ok=True)
