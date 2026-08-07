@@ -46,9 +46,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   /// 일시 모션 재생 — [duration] 후 mood 기반 대기 모션으로 복귀
+  /// (모션 1사이클 900ms — 기본 5400ms = 6회 반복. 900의 배수로 맞춰야
+  ///  사이클 중간에 뚝 끊기지 않는다)
   void _playTransientMotion(
     PixelMotion motion, {
-    Duration duration = const Duration(milliseconds: 2700),
+    Duration duration = const Duration(milliseconds: 5400),
   }) {
     _transientTimer?.cancel();
     setState(() => _transientMotion = motion);
