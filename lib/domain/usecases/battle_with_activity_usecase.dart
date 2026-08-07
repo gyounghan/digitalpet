@@ -154,8 +154,11 @@ class BattleWithActivityUseCase {
 
     // AI 상대 생성 (종 랜덤)
     // 미러 기준은 스타일 적용 "전" 스탯 — 스타일 선택은 플레이어만의 edge로 남긴다.
+    // 털뭉치(종 미결정)는 털뭉치끼리 만난다 — 상대도 종 없음(상성·종 보너스 중립)
     final opponentLevel = max(1, pet.level - 2 + random.nextInt(4));
-    final opponentType = EvolutionType.values[random.nextInt(EvolutionType.values.length)];
+    final opponentType = playerType == null
+        ? null
+        : EvolutionType.values[random.nextInt(EvolutionType.values.length)];
     final baseStats = BattleStats(
       attack: pet.battleAtk,
       defense: pet.battleDef,
@@ -321,7 +324,7 @@ class BattleWithActivityUseCase {
       updatedPet: updatedPet,
       turns: turns,
       playerTypeName: playerType?.name ?? '',
-      opponentTypeName: opponentType.name,
+      opponentTypeName: opponentType?.name ?? '',
       // 유리 = 내가 상대에게 +20%, 불리 = 상대가 나에게 +20%(한쪽 보정 모델)
       affinityAdvantage: affinityMultiplier > 1.0,
       affinityDisadvantage: opponentAffinityMultiplier > 1.0,
@@ -381,13 +384,14 @@ class BattleWithActivityUseCase {
   /// 상성(+20%)·스킬·배틀 스타일이 그 안에서 승부를 흔든다.
   /// 인스턴스 상태를 쓰지 않으므로 static — 시뮬레이션/테스트에서 직접 호출 가능.
   static BattleStats generateOpponentStats(
-      BattleStats player, int level, EvolutionType type, Random random) {
+      BattleStats player, int level, EvolutionType? type, Random random) {
     int attackBonus = 0, defenseBonus = 0, hpBonus = 0;
     switch (type) {
       case EvolutionType.bird: attackBonus = 3; break;
       case EvolutionType.snake: hpBonus = 10; defenseBonus = 2; break;
       case EvolutionType.tiger: attackBonus = 2; defenseBonus = 2; break;
       case EvolutionType.turtle: defenseBonus = 3; hpBonus = 10; break;
+      case null: break; // 털뭉치 — 종 보너스 없음
     }
 
     // 레벨 기준 골격 (옛 랜덤 보너스의 기대값을 상수화: atk/def +6, hp +10)
