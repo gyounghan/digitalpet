@@ -9,12 +9,14 @@ import '../../core/theme/species_theme.dart';
 import '../../core/constants/app_strings.dart';
 import '../../domain/entities/pet.dart';
 import '../../domain/usecases/calculate_daily_goals_score_usecase.dart';
+import '../../domain/usecases/pet_transition_events.dart';
 import '../../domain/usecases/today_goal_progress.dart';
 import '../../core/utils/pet_image_helper.dart';
 import '../../data/services/ad_service.dart';
 import '../../data/datasources/app_prefs_datasource.dart';
 import '../widgets/long_sleep_widget.dart';
 import '../widgets/sync_permission_banner.dart';
+import 'evolution_reveal_screen.dart';
 import 'species_reveal_screen.dart';
 
 /// 홈 화면 — "펫이 주인공, 정보는 행동 가능한 것만"
@@ -39,10 +41,98 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   bool _speciesRevealHandled = false;
   bool _speciesRevealChecking = false;
 
+  /// 진화 연출(3·4단계) 재진입 방지
+  bool _evolutionRevealChecking = false;
+
+  /// 목표 달성 순간 플래시 중인 카테고리 — 해당 줄을 금색 "목표 달성!"으로
+  /// 잠깐 강조해 누적식 표시(자연스러운 다음 목표 전환)에 티를 낸다
+  final Set<GoalCategory> _flashingGoals = {};
+  final Map<GoalCategory, Timer> _goalFlashTimers = {};
+
   @override
   void dispose() {
     _transientTimer?.cancel();
+    for (final timer in _goalFlashTimers.values) {
+      timer.cancel();
+    }
     super.dispose();
+  }
+
+  /// 펫 상태 전이에서 목표 달성·세트 완성 이벤트를 뽑아 축하 연출 시작
+  void _onPetTransition(AsyncValue<Pet>? prev, AsyncValue<Pet> next) {
+    final prevPet = prev?.valueOrNull;
+    final nextPet = next.valueOrNull;
+    if (prevPet == null || nextPet == null) return;
+
+    final events = PetTransitionEvents.diff(prevPet, nextPet);
+    if (!events.hasAny) return;
+
+    for (final category in events.achievedNow) {
+      _goalFlashTimers[category]?.cancel();
+      _flashingGoals.add(category);
+      _goalFlashTimers[category] =
+          Timer(const Duration(milliseconds: 2600), () {
+        if (mounted) setState(() => _flashingGoals.remove(category));
+      });
+    }
+    if (events.achievedNow.isNotEmpty) setState(() {});
+
+    if (events.setsCompleted > 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: DesignTokens.ink,
+          duration: const Duration(milliseconds: 3200),
+          content: Row(
+            children: [
+              const Icon(Icons.celebration,
+                  size: 18, color: DesignTokens.gold),
+              const SizedBox(width: 8),
+              Text(
+                '오늘 목표 세트 완성! +${events.setRewardExp} EXP',
+                style: const TextStyle(fontWeight: FontWeight.w800),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+  }
+
+  /// 3·4단계 진화 연출 — 기기에 기록된 "마지막으로 본 단계"보다 높아졌으면
+  /// 풀스크린으로 즉시 보여준다 (상호작용·틱·화면 진입 어느 경로든 커버)
+  Future<void> _maybeShowEvolutionReveal(Pet pet) async {
+    if (_evolutionRevealChecking) return;
+    _evolutionRevealChecking = true;
+    try {
+      final prefs = AppPrefsDatasource();
+      final seenStage = await prefs.getEvolutionSeenStage();
+
+      // 기준 없음(최초 실행) 또는 새 펫(단계 하락) — 기준만 갱신
+      if (seenStage == null || pet.evolutionStage < seenStage) {
+        await prefs.setEvolutionSeenStage(pet.evolutionStage);
+        return;
+      }
+      if (pet.evolutionStage == seenStage) return;
+
+      await prefs.setEvolutionSeenStage(pet.evolutionStage);
+      if (!PetTransitionEvents.shouldRevealEvolution(
+          seenStage: seenStage, pet: pet)) {
+        return; // 2단계 전이는 종 결정 연출이 전담 — 기록만
+      }
+      if (!mounted) return;
+      await Navigator.of(context).push(
+        PageRouteBuilder(
+          fullscreenDialog: true,
+          transitionDuration: const Duration(milliseconds: 450),
+          pageBuilder: (_, __, ___) => EvolutionRevealScreen(pet: pet),
+          transitionsBuilder: (_, animation, __, child) =>
+              FadeTransition(opacity: animation, child: child),
+        ),
+      );
+    } finally {
+      _evolutionRevealChecking = false;
+    }
   }
 
   /// 일시 모션 재생 — [duration] 후 mood 기반 대기 모션으로 복귀
@@ -80,6 +170,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(
+        petNotifierProvider(HomeScreen.defaultPetId), _onPetTransition);
     final petAsync = ref.watch(petNotifierProvider(HomeScreen.defaultPetId));
 
     return Scaffold(
@@ -117,8 +209,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             if (pet.isDead) {
               return _buildDeadPetContent(context, ref, pet);
             }
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) _maybeShowSpeciesReveal(pet);
+            WidgetsBinding.instance.addPostFrameCallback((_) async {
+              if (!mounted) return;
+              await _maybeShowSpeciesReveal(pet);
+              if (mounted) await _maybeShowEvolutionReveal(pet);
             });
             return _buildPetContent(context, ref, pet);
           },
@@ -425,6 +519,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               valueText: '${goals.feedProgress}/${goals.feedGoal}회',
               ratio: goals.feedRatio,
               done: goals.feedDone,
+              flash: _flashingGoals.contains(GoalCategory.feed),
               theme: theme,
             ),
             const SizedBox(height: 8),
@@ -435,6 +530,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   '${_formatSteps(goals.steps)}/${_formatSteps(goals.stepsGoal)}보',
               ratio: goals.exerciseRatio,
               done: goals.exerciseDone,
+              flash: _flashingGoals.contains(GoalCategory.exercise),
               theme: theme,
             ),
             const SizedBox(height: 8),
@@ -445,6 +541,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   '${goals.sleepMinutes ~/ 60}/${goals.sleepGoalMinutes ~/ 60}시간',
               ratio: goals.sleepRatio,
               done: goals.sleepDone,
+              flash: _flashingGoals.contains(GoalCategory.sleep),
               theme: theme,
             ),
             const SizedBox(height: 10),
@@ -474,6 +571,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   /// 목표 한 줄 — 아이콘 + 라벨 + 진행바 + 수치 (달성 시 체크·good 톤)
+  ///
+  /// [flash]가 true인 동안(달성 직후 2.6초) 줄 전체를 금색으로 강조하고
+  /// 수치 대신 "목표 달성!"을 보여준다 — 누적식 표시가 다음 목표로 확장될 때
+  /// 달성 순간이 묻히지 않도록.
   Widget _goalRow({
     required IconData icon,
     required String label,
@@ -481,42 +582,74 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     required double ratio,
     required bool done,
     required SpeciesTheme theme,
+    bool flash = false,
   }) {
-    final color = done ? DesignTokens.good : theme.primaryDeep;
-    return Row(
-      children: [
-        Icon(done ? Icons.check_circle : icon, size: 15, color: color),
-        const SizedBox(width: 7),
-        SizedBox(
-          width: 34,
-          child: Text(
-            label,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: DesignTokens.ink2,
+    final color = flash
+        ? DesignTokens.gold
+        : (done ? DesignTokens.good : theme.primaryDeep);
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 350),
+      curve: Curves.easeOut,
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+      decoration: BoxDecoration(
+        color: flash
+            ? DesignTokens.gold.withValues(alpha: 0.13)
+            : Colors.transparent,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            flash ? Icons.celebration : (done ? Icons.check_circle : icon),
+            size: 15,
+            color: color,
+          ),
+          const SizedBox(width: 7),
+          SizedBox(
+            width: 34,
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: DesignTokens.ink2,
+              ),
             ),
           ),
-        ),
-        Expanded(
-          child: AppMeter(
-            value: ratio * 100,
-            theme: theme,
-            tone: done ? AppMeterTone.good : AppMeterTone.themed,
-            height: 7,
+          Expanded(
+            child: AppMeter(
+              value: flash ? 100 : ratio * 100,
+              theme: theme,
+              tone: done || flash ? AppMeterTone.good : AppMeterTone.themed,
+              height: 7,
+            ),
           ),
-        ),
-        const SizedBox(width: 8),
-        Text(
-          valueText,
-          style: const TextStyle(
-            fontSize: 10.5,
-            fontWeight: FontWeight.w700,
-            color: DesignTokens.ink3,
-            fontFeatures: [FontFeature.tabularFigures()],
+          const SizedBox(width: 8),
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 250),
+            child: flash
+                ? Text(
+                    AppStrings.goalAchievedFlash,
+                    key: const ValueKey('flash'),
+                    style: const TextStyle(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w800,
+                      color: DesignTokens.gold,
+                    ),
+                  )
+                : Text(
+                    valueText,
+                    key: const ValueKey('value'),
+                    style: const TextStyle(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w700,
+                      color: DesignTokens.ink3,
+                      fontFeatures: [FontFeature.tabularFigures()],
+                    ),
+                  ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 

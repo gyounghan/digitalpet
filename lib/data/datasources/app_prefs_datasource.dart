@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 class AppPrefsDatasource {
   static const String _keyOnboardingDone = 'onboarding_done';
   static const String _keySpeciesRevealShown = 'species_reveal_shown';
+  static const String _keyEvolutionSeenStage = 'evolution_seen_stage';
 
   /// 온보딩(이름 짓기 → 권한 → 첫 목표 → 위젯 유도) 완료 여부
   Future<bool> isOnboardingDone() async {
@@ -28,5 +29,20 @@ class AppPrefsDatasource {
   Future<void> setSpeciesRevealShown() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_keySpeciesRevealShown, true);
+  }
+
+  /// 진화 연출을 마지막으로 보여준(기록한) 진화 단계
+  ///
+  /// null이면 기준 없음(기능 도입 전 설치 or 최초 실행) — 뒤늦은 연출 대신
+  /// 현재 단계를 기록만 한다. 펫이 죽고 새로 시작하면 낮은 단계로 다시
+  /// 기록되어 다음 진화 때 연출이 재개된다.
+  Future<int?> getEvolutionSeenStage() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(_keyEvolutionSeenStage);
+  }
+
+  Future<void> setEvolutionSeenStage(int stage) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_keyEvolutionSeenStage, stage);
   }
 }

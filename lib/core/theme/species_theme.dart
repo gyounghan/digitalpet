@@ -189,4 +189,7 @@ class DesignTokens {
   static const Color good = Color(0xFF2E9B6B);
   static const Color warn = Color(0xFFE2843A);
   static const Color bad = Color(0xFFD9484F);
+
+  /// 목표 달성·보상 축하 강조색 (라이트 카드 위 금색)
+  static const Color gold = Color(0xFFD99A0B);
 }

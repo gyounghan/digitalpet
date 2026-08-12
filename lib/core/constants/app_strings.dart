@@ -69,6 +69,14 @@ class AppStrings {
   static const String speciesRevealBadge = '사신수 각성';
   static const String speciesRevealConfirm = '만나러 가기';
 
+  // 진화 연출 (EvolutionRevealScreen — 3·4단계 전이)
+  static const String evolutionRevealBadge = '진화';
+  static const String evolutionRevealBadgeMythical = '사신수 강림';
+  static const String evolutionRevealConfirm = '좋아, 멋져!';
+
+  // 목표 달성 순간 피드백 (홈 목표 카드)
+  static const String goalAchievedFlash = '목표 달성!';
+
   // 온보딩 (OnboardingScreen — 이름 짓기 → 권한 → 첫 목표 → 위젯 유도)
   static const String onboardWelcomeTitle = '작은 친구가 깨어났어요';
   static const String onboardWelcomeBody =

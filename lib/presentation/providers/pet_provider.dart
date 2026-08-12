@@ -638,8 +638,9 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
     // 3. 일일 목표 점수 적용 (저장된 Pet을 기반으로)
     await applyDailyGoalsScoreUseCase(petId);
 
-    // 4. 진화 체크 및 실행 (저장된 Pet을 기반으로)
-    final evolvedPet = await evolvePetUseCase(petId);
+    // 4. 진화 체크 및 실행 (저장된 Pet을 기반으로) — 레벨이 한 번에 여러
+    //    임계값을 넘은 경우도 최종 단계까지 진행 (한 단계씩 지연 방지)
+    final evolvedPet = await evolvePetUseCase.callUntilStable(petId);
 
     // 5. 위젯 업데이트 (앱 내 펫 상태와 동기화)
     //    위젯 미설치 등으로 실패해도 급식 같은 액션이 에러로 뒤집히면 안 된다

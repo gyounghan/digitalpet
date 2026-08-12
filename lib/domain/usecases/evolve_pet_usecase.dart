@@ -92,6 +92,27 @@ class EvolvePetUseCase {
     return evolvedPet;
   }
 
+  /// 진화가 더 진행되지 않을 때까지 반복 실행
+  ///
+  /// [call]은 한 번에 한 단계만 전이한다. 장기 미접속 후 레벨이 여러
+  /// 임계값을 한 번에 넘으면(예: stage1인데 Lv10) 단일 호출로는 중간
+  /// 단계에서 멈춰 "레벨은 진작 넘었는데 진화는 다음 상호작용에서 뜬금없이"
+  /// 되는 지연이 생긴다 — 안정될 때까지 돌려 최종 단계까지 즉시 진행.
+  Future<Pet> callUntilStable(String petId) async {
+    var pet = await call(petId);
+    // 최대 전이 사슬: stage1→2→3→4 (3회) — 안전 상한 3
+    for (var i = 0; i < 3; i++) {
+      final next = await call(petId);
+      if (next.evolutionStage == pet.evolutionStage &&
+          next.evolutionType == pet.evolutionType &&
+          next.evolutionGrade == pet.evolutionGrade) {
+        return next;
+      }
+      pet = next;
+    }
+    return pet;
+  }
+
   /// 2단계 진화 종 결정 (활발 × 규칙/자유 매트릭스)
   ///
   /// 세트 클리어 방식에선 포만감/수면/운동 달성 카운트가 함께 오르므로,

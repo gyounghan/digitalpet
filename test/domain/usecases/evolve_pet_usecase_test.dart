@@ -717,6 +717,47 @@ void main() {
     });
   });
 
+  group('EvolvePetUseCase.callUntilStable — 다단계 점프', () {
+    test('Lv10 + stage1 → 한 번에 stage3까지 진행 (중간 단계에서 안 멈춤)', () async {
+      final pet = _createPet(
+        level: 10,
+        evolutionStage: 1,
+        totalSteps: 50000,
+        consecutiveLoginDays: 10,
+      );
+      repository.setPet(pet);
+
+      final result = await useCase.callUntilStable('test-pet');
+      expect(result.evolutionStage, 3);
+      expect(result.evolutionType, isNotNull);
+      expect(result.evolutionGrade, isNotEmpty);
+    });
+
+    test('Lv15 + stage1 + 신수 조건 충족 → stage4 mythical까지 진행', () async {
+      // 활발(걸음)+자유(급식) → bird, superior/mythical 축도 동일 조건 충족
+      final pet = _createPet(
+        level: 15,
+        evolutionStage: 1,
+        totalSteps: 50000,
+        exerciseAchievedCount: 20,
+        feedAchievedCount: 20,
+      );
+      repository.setPet(pet);
+
+      final result = await useCase.callUntilStable('test-pet');
+      expect(result.evolutionStage, 4);
+      expect(result.evolutionGrade, 'mythical');
+    });
+
+    test('진화 조건 미달이면 그대로 안정', () async {
+      final pet = _createPet(level: 4, evolutionStage: 1);
+      repository.setPet(pet);
+
+      final result = await useCase.callUntilStable('test-pet');
+      expect(result.evolutionStage, 1);
+    });
+  });
+
   group('일반종 개체 색 변이 (colorVariant)', () {
     test('육성 스타일 우세 축 → 변이 0~3', () {
       // 0 활동형 (걸음 우세)
