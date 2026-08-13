@@ -7,6 +7,7 @@ import '../../core/theme/species_theme.dart';
 import '../../core/constants/app_strings.dart';
 import '../../domain/entities/pet.dart';
 import '../../domain/entities/mission.dart';
+import '../../domain/constants/meal_times.dart';
 import '../../domain/constants/mission_catalog.dart';
 import '../../domain/usecases/alternative_feed_pet_usecase.dart';
 import '../../domain/usecases/alternative_sleep_pet_usecase.dart';
@@ -32,7 +33,11 @@ class _CareScreenState extends ConsumerState<CareScreen> {
   int _shakeCount = 0;
   ShakeDetector? _shakeDetector;
   Timer? _napTimer;
-  int _napRemainingSeconds = 0;
+
+  /// 낮잠 종료 시각 — 틱 카운트가 아닌 시각 기준.
+  /// 낮잠 취지가 "폰 내려놓기"라 앱이 백그라운드로 가면 타이머 틱이 멈추는데,
+  /// 시각 기준이면 복귀 시 경과 시간이 그대로 인정된다.
+  DateTime? _napEndsAt;
 
   /// 미션 전체 펼침 여부 (기본: 진행 중 상위 3개만)
   bool _showAllMissions = false;
@@ -293,10 +298,22 @@ class _CareScreenState extends ConsumerState<CareScreen> {
 
   Widget _buildAltFeedRow(Pet pet, SpeciesTheme theme) {
     final useCase = ref.read(alternativeFeedPetUseCaseProvider);
-    // 대체 급식은 시간대 제한 없음 (횟수 제한만 적용)
+    // 정식 급식과 동일 규칙: 식사 시간대 + 슬롯 공유(시간대당 정식/간편 합쳐
+    // 1회) + 하루 3회. 버튼 활성과 실제 적용 조건이 항상 일치해야 한다.
     final enabled = useCase.canUse(pet);
     final used = pet.todayAlternativeFeedCount;
     final max = AlternativeFeedPetUseCase.maxAlternativeFeedsPerDay;
+
+    final String subtitle;
+    if (enabled) {
+      subtitle = '식사 시간대에 1회 · 오늘 $used/$max회 사용';
+    } else if (used >= max) {
+      subtitle = '오늘 모두 사용 ($used/$max)';
+    } else if (MealTimes.slotAt(DateTime.now()) == 0) {
+      subtitle = '식사 시간이 아니에요 (아침·점심·저녁)';
+    } else {
+      subtitle = '이 시간대는 이미 급식했어요';
+    }
 
     return AppListRow(
       theme: theme,
@@ -304,17 +321,20 @@ class _CareScreenState extends ConsumerState<CareScreen> {
       leading: Icon(Icons.local_dining,
           color: enabled ? theme.primaryDeep : DesignTokens.ink3, size: 20),
       title: '간편 급식',
-      subtitle: enabled
-          ? '시간대 제한 없음 · 오늘 $used/$max회 사용'
-          : '오늘 모두 사용 ($used/$max)',
+      subtitle: subtitle,
       trailing: _trailingPill(enabled, theme),
       onTap: enabled
-          ? () {
-              ref
+          ? () async {
+              final applied = await ref
                   .read(petNotifierProvider(HomeScreen.defaultPetId).notifier)
                   .performAlternativeFeed();
+              if (!mounted) return;
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('간편 급식 완료 · 포만감 +')),
+                SnackBar(
+                  content: Text(applied
+                      ? '간편 급식 완료 · 포만감 +'
+                      : '지금은 간편 급식을 할 수 없어요'),
+                ),
               );
             }
           : null,
@@ -408,18 +428,28 @@ class _CareScreenState extends ConsumerState<CareScreen> {
         if (Navigator.of(context, rootNavigator: true).canPop()) {
           Navigator.of(context, rootNavigator: true).pop();
         }
-        ref
-            .read(petNotifierProvider(HomeScreen.defaultPetId).notifier)
-            .performShakeBonus(finalCount);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              '${AppStrings.shakeBonusComplete}: $finalCount회 → '
-              '+${finalCount * ShakeStepBonusUseCase.stepsPerShake}걸음',
-            ),
-          ),
-        );
-        setState(() {});
+        // 적용 결과에 따라 메시지 구분 — 0회는 사용 횟수를 차감하지 않고,
+        // 한도 초과 등 no-op일 때 완료 메시지를 띄우지 않는다
+        Future<void> completeShake() async {
+          final applied = await ref
+              .read(petNotifierProvider(HomeScreen.defaultPetId).notifier)
+              .performShakeBonus(finalCount);
+          if (!mounted) return;
+          final String message;
+          if (applied) {
+            message = '${AppStrings.shakeBonusComplete}: $finalCount회 → '
+                '+${finalCount * ShakeStepBonusUseCase.stepsPerShake}걸음';
+          } else if (finalCount <= 0) {
+            message = '흔들기가 감지되지 않았어요. (횟수 차감 없음)';
+          } else {
+            message = '오늘 흔들기 보너스를 이미 사용했어요.';
+          }
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text(message)));
+          setState(() {});
+        }
+
+        completeShake();
         return;
       }
       _shakeRemainingSeconds -= 1;
@@ -489,43 +519,57 @@ class _CareScreenState extends ConsumerState<CareScreen> {
   void _startNapMode(WidgetRef ref) {
     if (_napTimer != null) return;
     setState(() {});
-    _napRemainingSeconds = 15 * 60;
-    final remainingNotifier = ValueNotifier<int>(_napRemainingSeconds);
+    _napEndsAt = DateTime.now().add(const Duration(minutes: 15));
+    final remainingNotifier = ValueNotifier<int>(15 * 60);
+
+    Future<void> completeNap() async {
+      if (Navigator.of(context, rootNavigator: true).canPop()) {
+        Navigator.of(context, rootNavigator: true).pop();
+      }
+      final applied = await ref
+          .read(petNotifierProvider(HomeScreen.defaultPetId).notifier)
+          .performAlternativeSleep();
+      if (!mounted) {
+        remainingNotifier.dispose();
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(applied
+              ? '낮잠 모드 15분 완료! 기력이 회복됐어요.'
+              : '오늘 낮잠 횟수를 모두 사용했어요.'),
+        ),
+      );
+      remainingNotifier.dispose();
+      setState(() {});
+    }
 
     _napTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (!mounted) {
         timer.cancel();
         _napTimer = null;
+        _napEndsAt = null;
         remainingNotifier.dispose();
         return;
       }
-      if (_napRemainingSeconds <= 1) {
+      // 백그라운드 다녀오면 틱이 밀려 있어도 시각 기준으로 즉시 완료 판정
+      final remaining = _napEndsAt!.difference(DateTime.now()).inSeconds;
+      if (remaining <= 0) {
         timer.cancel();
         _napTimer = null;
-        _napRemainingSeconds = 0;
+        _napEndsAt = null;
         remainingNotifier.value = 0;
-        if (Navigator.of(context, rootNavigator: true).canPop()) {
-          Navigator.of(context, rootNavigator: true).pop();
-        }
-        ref
-            .read(petNotifierProvider(HomeScreen.defaultPetId).notifier)
-            .performAlternativeSleep();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('낮잠 모드 15분 완료! 기력이 회복됐어요.')),
-        );
-        remainingNotifier.dispose();
-        setState(() {});
+        completeNap();
         return;
       }
-      _napRemainingSeconds -= 1;
-      remainingNotifier.value = _napRemainingSeconds;
+      remainingNotifier.value = remaining;
     });
 
     // 낮잠 포기 — 타이머 정리 후 다이얼로그 닫기 (보상 없음, 사용 횟수 미차감)
     void giveUpNap() {
       _napTimer?.cancel();
       _napTimer = null;
-      _napRemainingSeconds = 0;
+      _napEndsAt = null;
       if (Navigator.of(context, rootNavigator: true).canPop()) {
         Navigator.of(context, rootNavigator: true).pop();
       }

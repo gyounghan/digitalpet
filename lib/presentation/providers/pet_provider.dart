@@ -755,33 +755,46 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
 
   /// 대체 급식
   ///
-  /// 실제 식사 시간대 Feed가 어려운 사용자를 위한 저효율 대체 액션
-  Future<void> performAlternativeFeed() async {
-    if (state.isLoading || state.hasError) return;
-    if (state.valueOrNull?.isDead == true) return;
+  /// 실제 식사 시간대 Feed가 어려운 사용자를 위한 저효율 대체 액션.
+  /// 반환: 실제로 적용됐는지 (시간대 밖/슬롯 사용/한도 초과면 false) —
+  /// UI가 이 값으로 완료/불가 메시지를 구분한다.
+  Future<bool> performAlternativeFeed() async {
+    if (state.isLoading || state.hasError) return false;
+    final before = state.valueOrNull;
+    if (before == null || before.isDead) return false;
 
     try {
       final updatedPet = await alternativeFeedPetUseCase(petId);
+      final applied = updatedPet.todayAlternativeFeedCount !=
+          before.todayAlternativeFeedCount;
       final evolvedPet = await _updateAndEvolve(updatedPet);
       state = AsyncValue.data(evolvedPet);
+      return applied;
     } catch (e, stackTrace) {
       state = AsyncValue.error(e, stackTrace);
+      return false;
     }
   }
 
   /// 대체 수면
   ///
-  /// 실제 수면 연동이 어려운 사용자를 위한 저효율 대체 액션
-  Future<void> performAlternativeSleep() async {
-    if (state.isLoading || state.hasError) return;
-    if (state.valueOrNull?.isDead == true) return;
+  /// 실제 수면 연동이 어려운 사용자를 위한 저효율 대체 액션.
+  /// 반환: 실제로 적용됐는지 (일일 한도 초과면 false)
+  Future<bool> performAlternativeSleep() async {
+    if (state.isLoading || state.hasError) return false;
+    final before = state.valueOrNull;
+    if (before == null || before.isDead) return false;
 
     try {
       final updatedPet = await alternativeSleepPetUseCase(petId);
+      final applied = updatedPet.todayAlternativeSleepCount !=
+          before.todayAlternativeSleepCount;
       final evolvedPet = await _updateAndEvolve(updatedPet);
       state = AsyncValue.data(evolvedPet);
+      return applied;
     } catch (e, stackTrace) {
       state = AsyncValue.error(e, stackTrace);
+      return false;
     }
   }
 
@@ -789,18 +802,24 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
   ///
   /// 측정된 흔들기 횟수만큼 걸음수 보상을 펫에 반영한다.
   /// 하루 최대 1회 사용 가능.
+  /// 반환: 실제로 적용됐는지 (한도 초과/흔들기 0회면 false)
   ///
   /// [shakeCount] 측정된 흔들기 횟수
-  Future<void> performShakeBonus(int shakeCount) async {
-    if (state.isLoading || state.hasError) return;
-    if (state.valueOrNull?.isDead == true) return;
+  Future<bool> performShakeBonus(int shakeCount) async {
+    if (state.isLoading || state.hasError) return false;
+    final before = state.valueOrNull;
+    if (before == null || before.isDead) return false;
 
     try {
       final updatedPet = await shakeStepBonusUseCase(petId, shakeCount);
+      final applied = updatedPet.todayAlternativeExerciseCount !=
+          before.todayAlternativeExerciseCount;
       final evolvedPet = await _updateAndEvolve(updatedPet);
       state = AsyncValue.data(evolvedPet);
+      return applied;
     } catch (e, stackTrace) {
       state = AsyncValue.error(e, stackTrace);
+      return false;
     }
   }
   

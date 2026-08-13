@@ -177,4 +177,32 @@ void main() {
       expect(result.todayAlternativeFeedCount, 3);
     });
   });
+
+  group('AlternativeFeedPetUseCase.canUse — 버튼 활성 판정 (call과 동일 규칙)', () {
+    final useCase = AlternativeFeedPetUseCase(_FakePetRepository());
+
+    test('식사 시간대 + 슬롯 미사용 + 횟수 남음 → true', () {
+      expect(useCase.canUse(_pet(), now: lunch), isTrue);
+    });
+
+    test('식사 시간대 밖 → false (횟수가 남아도)', () {
+      expect(useCase.canUse(_pet(), now: offMeal), isFalse);
+    });
+
+    test('이 슬롯 이미 급식(정식/간편 공유) → false', () {
+      final slot = MealTimes.slotAt(lunch);
+      final pet = _pet(todayFedMealSlots: MealTimes.markFed(0, slot));
+      expect(useCase.canUse(pet, now: lunch), isFalse);
+      // 다른 슬롯(아침)이 사용된 경우엔 점심 사용 가능
+      final morningUsed =
+          _pet(todayFedMealSlots: MealTimes.markFed(0, MealTimes.slotAt(breakfast)));
+      expect(useCase.canUse(morningUsed, now: lunch), isTrue);
+    });
+
+    test('일일 3회 소진 → false', () {
+      expect(
+          useCase.canUse(_pet(todayAlternativeFeedCount: 3), now: lunch),
+          isFalse);
+    });
+  });
 }

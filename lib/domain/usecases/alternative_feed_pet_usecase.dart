@@ -64,8 +64,18 @@ class AlternativeFeedPetUseCase {
     return updatedPet;
   }
 
-  /// 대체 급식 가능 여부 확인 (일일 횟수 기준 — 시간대/슬롯은 CanFeedPetUseCase로 판정)
-  bool canUse(Pet pet) {
-    return pet.todayAlternativeFeedCount < maxAlternativeFeedsPerDay;
+  /// 대체 급식 가능 여부 확인 — [call]과 동일한 규칙 (횟수 + 시간대 + 슬롯)
+  ///
+  /// UI 버튼 활성 판정용. 여기서 true여야만 [call]이 실제로 적용되므로
+  /// "완료 토스트는 떴는데 효과가 없는" 불일치가 생기지 않는다.
+  /// [now] 테스트용 현재 시각 주입 (기본: DateTime.now())
+  bool canUse(Pet pet, {DateTime? now}) {
+    if (pet.isDead) return false;
+    if (pet.todayAlternativeFeedCount >= maxAlternativeFeedsPerDay) {
+      return false;
+    }
+    final slot = MealTimes.slotAt(now ?? DateTime.now());
+    if (slot == 0) return false;
+    return !MealTimes.hasFedInSlot(pet.todayFedMealSlots, slot);
   }
 }
