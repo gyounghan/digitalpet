@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../../core/constants/server_config.dart';
+import 'auth_session.dart';
 
 /// 서버 REST API 클라이언트
 ///
@@ -30,7 +31,7 @@ class PetRemoteDatasource {
       final response = await _client
           .post(
             Uri.parse('$baseUrl/pet/sync'),
-            headers: {'Content-Type': 'application/json'},
+            headers: AuthSession.headers(),
             body: jsonEncode(body),
           )
           .timeout(const Duration(seconds: 5));
@@ -52,7 +53,8 @@ class PetRemoteDatasource {
   Future<Map<String, dynamic>?> getPet(String deviceId) async {
     try {
       final response = await _client
-          .get(Uri.parse('$baseUrl/pet/$deviceId'))
+          .get(Uri.parse('$baseUrl/pet/$deviceId'),
+              headers: AuthSession.headers(json: false))
           .timeout(const Duration(seconds: 5));
 
       if (response.statusCode == 200) {
@@ -74,7 +76,7 @@ class PetRemoteDatasource {
       final response = await _client
           .post(
             Uri.parse('$baseUrl/pet/transfer-code'),
-            headers: {'Content-Type': 'application/json'},
+            headers: AuthSession.headers(),
             body: jsonEncode({'deviceId': deviceId}),
           )
           .timeout(const Duration(seconds: 5));
@@ -101,7 +103,7 @@ class PetRemoteDatasource {
       final response = await _client
           .post(
             Uri.parse('$baseUrl/pet/transfer'),
-            headers: {'Content-Type': 'application/json'},
+            headers: AuthSession.headers(),
             body: jsonEncode({
               'newDeviceId': newDeviceId,
               'transferCode': transferCode,
@@ -131,7 +133,7 @@ class PetRemoteDatasource {
       await _client
           .post(
             Uri.parse('$baseUrl/pet/battle-record'),
-            headers: {'Content-Type': 'application/json'},
+            headers: AuthSession.headers(),
             body: jsonEncode({'deviceId': deviceId, 'record': record}),
           )
           .timeout(const Duration(seconds: 5));

@@ -12,6 +12,7 @@ import 'data/datasources/health_datasource.dart';
 import 'data/services/notification_service.dart';
 import 'data/services/widget_service.dart';
 import 'data/services/background_service.dart';
+import 'data/datasources/auth_session.dart';
 import 'data/datasources/device_id_datasource.dart';
 import 'data/datasources/step_sensor_datasource.dart';
 import 'presentation/screens/main_navigation_screen.dart';
@@ -32,6 +33,9 @@ void main() async {
 
   // 알림 인스턴스 init만 — 권한 요청 다이얼로그는 postFrame에서
   await _initNotificationsCore();
+
+  // 로그인 세션 로드 — 첫 서버 동기화부터 Authorization 헤더가 붙도록
+  await AuthSession.load();
 
   runApp(
     const ProviderScope(

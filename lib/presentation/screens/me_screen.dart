@@ -1,3 +1,4 @@
+import 'dart:async' show unawaited;
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,6 +8,8 @@ import '../widgets/pet_motion_thumb.dart';
 import '../widgets/pixel_motion_animation.dart' show colorVariantFor;
 import '../../core/theme/species_theme.dart';
 import '../../core/constants/app_strings.dart';
+import '../../data/datasources/auth_remote_datasource.dart';
+import '../../data/datasources/auth_session.dart';
 import '../../data/services/ad_service.dart';
 import '../../domain/entities/pet.dart';
 import '../../domain/entities/evolution_type.dart';
@@ -207,6 +210,9 @@ class _MeScreenState extends ConsumerState<MeScreen> {
                     ),
                   ),
                 ),
+              const SizedBox(height: 14),
+              const SectionTitle(title: '계정'),
+              _buildAccountCard(theme),
               const SizedBox(height: 18),
               _buildRestartButton(),
               if (kDebugMode) ...[
@@ -219,6 +225,202 @@ class _MeScreenState extends ConsumerState<MeScreen> {
         ),
       ],
     );
+  }
+
+  /// 계정 카드 — 로그인하면 펫이 서버에 저장돼 기기를 바꿔도 유지된다
+  ///
+  /// 이메일 로그인/가입은 즉시 사용 가능. 카카오/네이버는 서버 검증이
+  /// 준비돼 있고 앱 SDK 키 등록 후 활성화한다 (server/README.md 참조).
+  Widget _buildAccountCard(SpeciesTheme theme) {
+    return AppCard(
+      theme: theme,
+      variant: AppCardVariant.flat,
+      padding: const EdgeInsets.all(14),
+      radius: 16,
+      child: AuthSession.isLoggedIn
+          ? Row(
+              children: [
+                Icon(Icons.verified_user, size: 20, color: theme.primaryDeep),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        AuthSession.nickname ?? '',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          color: DesignTokens.ink,
+                        ),
+                      ),
+                      Text(
+                        AuthSession.email ?? '연동됨 · 펫이 서버에 저장돼요',
+                        style: const TextStyle(
+                            fontSize: 11, color: DesignTokens.ink3),
+                      ),
+                    ],
+                  ),
+                ),
+                TextButton(
+                  onPressed: _handleLogout,
+                  child: const Text(
+                    '로그아웃',
+                    style:
+                        TextStyle(fontSize: 12, color: DesignTokens.ink3),
+                  ),
+                ),
+              ],
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  '계정을 연동하면 기기를 바꿔도\n펫·랭킹·전적이 그대로 유지돼요',
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    height: 1.5,
+                    color: DesignTokens.ink2,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: _showEmailAuthDialog,
+                    icon: const Icon(Icons.mail_outline, size: 17),
+                    label: const Text('이메일로 로그인 · 가입'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: theme.primaryDeep,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 0,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  '카카오 · 네이버 로그인은 준비 중이에요',
+                  style: TextStyle(fontSize: 11, color: DesignTokens.ink3),
+                ),
+              ],
+            ),
+    );
+  }
+
+  Future<void> _handleLogout() async {
+    await AuthSession.clear();
+    if (!mounted) return;
+    setState(() {});
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('로그아웃했어요. 펫은 이 기기에 그대로 있어요.')),
+    );
+  }
+
+  /// 이메일 로그인/가입 다이얼로그 — 성공 시 세션 저장 + 서버 펫 동기화
+  Future<void> _showEmailAuthDialog() async {
+    final emailController = TextEditingController();
+    final passwordController = TextEditingController();
+    final nicknameController = TextEditingController();
+    var isRegisterMode = false;
+    String? errorText;
+
+    final success = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) {
+          Future<void> submit() async {
+            setDialogState(() => errorText = null);
+            final datasource = AuthRemoteDatasource();
+            final result = isRegisterMode
+                ? await datasource.register(
+                    email: emailController.text.trim(),
+                    password: passwordController.text,
+                    nickname: nicknameController.text.trim().isEmpty
+                        ? null
+                        : nicknameController.text.trim(),
+                  )
+                : await datasource.login(
+                    email: emailController.text.trim(),
+                    password: passwordController.text,
+                  );
+            if (!dialogContext.mounted) return;
+            if (result.isSuccess) {
+              await AuthSession.save(
+                newToken: result.token!,
+                newNickname: result.user!.nickname,
+                newEmail: result.user!.email,
+              );
+              if (dialogContext.mounted) {
+                Navigator.of(dialogContext).pop(true);
+              }
+            } else {
+              setDialogState(() => errorText = result.error);
+            }
+          }
+
+          return AlertDialog(
+            title: Text(isRegisterMode ? '이메일 가입' : '이메일 로그인'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: const InputDecoration(labelText: '이메일'),
+                ),
+                TextField(
+                  controller: passwordController,
+                  obscureText: true,
+                  decoration: const InputDecoration(labelText: '비밀번호 (6자 이상)'),
+                ),
+                if (isRegisterMode)
+                  TextField(
+                    controller: nicknameController,
+                    decoration:
+                        const InputDecoration(labelText: '닉네임 (선택)'),
+                  ),
+                if (errorText != null) ...[
+                  const SizedBox(height: 10),
+                  Text(
+                    errorText!,
+                    style: const TextStyle(
+                        fontSize: 12, color: DesignTokens.bad),
+                  ),
+                ],
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => setDialogState(
+                    () => isRegisterMode = !isRegisterMode),
+                child: Text(isRegisterMode ? '로그인으로' : '처음이에요 (가입)'),
+              ),
+              ElevatedButton(
+                onPressed: submit,
+                child: Text(isRegisterMode ? '가입하기' : '로그인'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+
+    if (success == true && mounted) {
+      setState(() {});
+      // 서버에 저장된 펫이 있으면 동기화로 끌어온다 (기기 변경 시나리오)
+      unawaited(ref
+          .read(petNotifierProvider(HomeScreen.defaultPetId).notifier)
+          .refresh());
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text('${AuthSession.nickname}님, 연동 완료! 펫이 서버에 저장돼요.')),
+      );
+    }
   }
 
   /// 새로 키우기(초기화) 버튼 — 되돌릴 수 없는 동작이라 차분한 outlined 스타일
