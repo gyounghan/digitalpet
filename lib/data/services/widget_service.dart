@@ -130,7 +130,7 @@ class WidgetService {
           await HomeWidget.updateWidget(
             name: 'PetWidgetProvider',
             androidName: 'PetWidgetProvider',
-            qualifiedAndroidName: 'com.example.pocketfriend.PetWidgetProvider',
+            qualifiedAndroidName: 'com.godsaengmon.app.PetWidgetProvider',
             iOSName: 'PetWidget',
           );
           if (kDebugMode) {
@@ -184,7 +184,7 @@ class WidgetService {
       await HomeWidget.requestPinWidget(
         name: 'PetWidgetProvider',
         androidName: 'PetWidgetProvider',
-        qualifiedAndroidName: 'com.example.pocketfriend.PetWidgetProvider',
+        qualifiedAndroidName: 'com.godsaengmon.app.PetWidgetProvider',
       );
       return true;
     } catch (e) {

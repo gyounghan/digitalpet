@@ -1,4 +1,4 @@
-package com.example.pocketfriend
+package com.godsaengmon.app
 
 import android.Manifest
 import android.content.Context

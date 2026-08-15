@@ -212,7 +212,7 @@ There are both `lib/data/datasource/` (singular, legacy) and `lib/data/datasourc
 | 클래스 / 인터페이스 | `PascalCase` | `PetWidgetProvider`, `WidgetRepository` |
 | 함수 / 변수 | `camelCase` | `updateAppWidget()`, `animationHandler` |
 | 상수 (`const val`) | `SCREAMING_SNAKE_CASE` | `ANIMATION_UPDATE_INTERVAL` |
-| 패키지 | `lowercase.dot.separated` | `com.example.pocketfriend` |
+| 패키지 | `lowercase.dot.separated` | `com.godsaengmon.app` |
 | 파일 | 클래스명과 동일 | `PetWidgetProvider.kt` |
 | Boolean 변수 | `is` / `has` / `can` 접두어 | `isAnimating`, `hasPermission` |
 | 람다 파라미터 | 의미 있는 단어 (it 남용 금지) | `ids.forEach { id -> ... }` |

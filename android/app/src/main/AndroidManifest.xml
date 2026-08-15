@@ -21,7 +21,7 @@
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     
     <application
-        android:label="pocketfriend"
+        android:label="갓생몬"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:networkSecurityConfig="@xml/network_security_config">
@@ -87,7 +87,7 @@
                 <action android:name="es.antonborri.home_widget.UPDATE_WIDGET" />
                 <action android:name="es.antonborri.home_widget.action.UPDATE" />
                 <!-- 애니메이션 업데이트를 위한 커스텀 액션 -->
-                <action android:name="com.example.pocketfriend.ACTION_ANIMATION_UPDATE" />
+                <action android:name="com.godsaengmon.app.ACTION_ANIMATION_UPDATE" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"

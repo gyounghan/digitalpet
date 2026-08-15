@@ -1,4 +1,4 @@
-package com.example.pocketfriend
+package com.godsaengmon.app
 
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
@@ -30,7 +30,7 @@ class PetWidgetProvider : AppWidgetProvider() {
         private const val DOT_RENDER_SIZE_PX = 240
         
         /// 애니메이션 업데이트를 위한 Intent Action
-        private const val ACTION_ANIMATION_UPDATE = "com.example.pocketfriend.ACTION_ANIMATION_UPDATE"
+        private const val ACTION_ANIMATION_UPDATE = "com.godsaengmon.app.ACTION_ANIMATION_UPDATE"
         
         /// 애니메이션 핸들러 (싱글톤)
         private var animationHandler: Handler? = null

@@ -1,13 +1,10 @@
 # -*- coding: utf-8 -*-
-"""앱 런처 아이콘 생성 스크립트 — 털뭉치 도트를 그대로 아이콘으로.
+"""앱 런처 아이콘 생성 스크립트 — 발자국(paw) 도트 심볼.
 
-pet_motion_data.json의 fluff 모션 프레임(홈 화면에서 실제 보이는 도트)을
-파싱해 인앱 렌더와 동일한 3색(dark/body/accent)으로 찍고, 따뜻한
-그라데이션 배경 위에 올린다. 도트는 nearest-neighbor 확대로 또렷하게 유지.
-
-주의: 정적 pet_pixel_data.json의 '기본이미지'는 PNG 휘도 자동분류라
-밝은 베이지 몸통이 accent로 분류돼 색이 반전된다 — 모션 데이터
-(수제 ASCII 원본: 'o'몸통/'+'보조/'#'아웃라인)를 써야 인앱과 같다.
+앱명 '갓생몬' 리브랜딩에 맞춰 펫 스프라이트 대신 심볼형 아이콘을 쓴다:
+민트 그라데이션 배경 위에 크림색 동물 발자국 + 반짝이 2개.
+발자국은 타원/원 마스크에서 아웃라인을 자동 추출해 그리므로
+좌우 대칭과 둥근 실루엣이 보장된다. 도트는 nearest-neighbor 확대.
 
 생성물 (android/app/src/main/res/):
   - mipmap-{mdpi..xxxhdpi}/ic_launcher.png            레거시 (라운드 사각)
@@ -17,29 +14,22 @@ pet_motion_data.json의 fluff 모션 프레임(홈 화면에서 실제 보이는
   - assets/icon/app_icon_1024.png                      마스터 (iOS/스토어용)
 
 사용법:
-    python3 tool/generate_app_icon.py
+    python tool/generate_app_icon.py
 """
 
-import json
 import os
 
 from PIL import Image, ImageDraw
 
-# 아이콘에 쓸 모션/프레임 — joy(웃는 표정) 1번 프레임
-ICON_MOTION = "joy"
-ICON_FRAME = 1
+# 팔레트 — 인앱 도트 감성과 동일한 웜톤 (검정 대신 웜브라운 아웃라인)
+OUTLINE = (0x5A, 0x44, 0x30, 255)
+PAW = (0xFF, 0xF1, 0xD6, 255)      # 크림 (fluffBody 계열)
+SPARKLE = (0xFF, 0xFD, 0xF2, 255)  # 반짝이 — 거의 흰색
 
-# 인앱 렌더 색상과 동일하게 유지 (lib/core/theme/species_theme.dart)
-DARK = (0x14, 0x16, 0x1A, 255)    # SpeciesTheme.dotDark
-BODY = (0xF4, 0xE9, 0xCE, 255)    # SpeciesTheme.fluffBody
-ACCENT = (0xF2, 0xA0, 0xAE, 255)  # SpeciesTheme.fluffAccent
+# 배경 그라데이션 (위 → 아래) — 갓생/새 습관의 프레시 민트
+BG_TOP = (0xA8, 0xE6, 0xCF)
+BG_BOTTOM = (0x4C, 0xB8, 0x8A)
 
-# 배경 그라데이션 (위 → 아래, 따뜻한 살구톤 — 베이지 몸통이 도드라지게)
-BG_TOP = (0xFF, 0xC9, 0x7A)
-BG_BOTTOM = (0xF0, 0x8A, 0x5C)
-
-JSON_PATH = os.path.join(
-    "android", "app", "src", "main", "assets", "pet_motion_data.json")
 RES_DIR = os.path.join("android", "app", "src", "main", "res")
 
 # 밀도별 크기: (레거시 dp48, 어댑티브 레이어 dp108)
@@ -53,30 +43,70 @@ DENSITIES = {
 
 MASTER = 1024
 
+GRID = 24  # 발자국 스프라이트 도트 격자
 
-def load_fluff_sprite():
-    """털뭉치 모션 프레임을 크롭된 RGBA 이미지(1px=1도트)로 반환."""
-    data = json.load(open(JSON_PATH, encoding="utf-8"))
-    fluff = data["fluff"]
-    grid = fluff["size"]
-    frame = fluff[ICON_MOTION]["f"][ICON_FRAME]
-    im = Image.new("RGBA", (grid, grid), (0, 0, 0, 0))
+
+def _in_ellipse(x, y, cx, cy, rx, ry):
+    return ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2 <= 1.0
+
+
+def _paw_mask():
+    """메인 패드 1개 + 발가락 3개 — 원/타원 합집합."""
+    mask = [[False] * GRID for _ in range(GRID)]
+    shapes = [
+        (12.0, 16.0, 6.6, 5.0),   # 메인 패드
+        (5.5, 9.5, 3.0, 3.0),     # 왼쪽 발가락
+        (12.0, 6.9, 3.0, 3.0),    # 가운데 발가락
+        (18.5, 9.5, 3.0, 3.0),    # 오른쪽 발가락
+    ]
+    for y in range(GRID):
+        for x in range(GRID):
+            for cx, cy, rx, ry in shapes:
+                if _in_ellipse(x + 0.5, y + 0.5, cx, cy, rx, ry):
+                    mask[y][x] = True
+                    break
+    return mask
+
+
+def _outline_of(mask):
+    """4방향 이웃에 빈 칸이 있으면 아웃라인."""
+    edge = [[False] * GRID for _ in range(GRID)]
+    for y in range(GRID):
+        for x in range(GRID):
+            if not mask[y][x]:
+                continue
+            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                nx, ny = x + dx, y + dy
+                if not (0 <= nx < GRID and 0 <= ny < GRID) or not mask[ny][nx]:
+                    edge[y][x] = True
+                    break
+    return edge
+
+
+def _stamp_sparkle(px, cx, cy):
+    """+자 5도트 반짝이."""
+    for dx, dy in ((0, 0), (1, 0), (-1, 0), (0, 1), (0, -1)):
+        x, y = cx + dx, cy + dy
+        if 0 <= x < GRID and 0 <= y < GRID:
+            px[x, y] = SPARKLE
+
+
+def build_paw_sprite():
+    """발자국 스프라이트를 크롭된 RGBA 이미지(1px=1도트)로 반환."""
+    mask = _paw_mask()
+    edge = _outline_of(mask)
+    im = Image.new("RGBA", (GRID, GRID), (0, 0, 0, 0))
     px = im.load()
-    for y in range(grid):
-        # 행 마스크는 hex 문자열 (generate_motion_data.py 출력 형식)
-        dark = int(frame["d"][y], 16)
-        body = int(frame["b"][y], 16)
-        accent = int(frame["a"][y], 16)
-        for x in range(grid):
-            bit = 1 << x
-            if dark & bit:
-                px[x, y] = DARK
-            elif accent & bit:
-                px[x, y] = ACCENT
-            elif body & bit:
-                px[x, y] = BODY
-    bbox = im.getbbox()
-    return im.crop(bbox)
+    for y in range(GRID):
+        for x in range(GRID):
+            if edge[y][x]:
+                px[x, y] = OUTLINE
+            elif mask[y][x]:
+                px[x, y] = PAW
+    # 반짝이 — 발자국 주변 여백에 배치 (갓생 달성의 반짝임)
+    _stamp_sparkle(px, 21, 3)
+    _stamp_sparkle(px, 2, 13)
+    return im.crop(im.getbbox())
 
 
 def vertical_gradient(size, top, bottom):
@@ -93,7 +123,7 @@ def vertical_gradient(size, top, bottom):
 
 
 def paste_sprite(canvas, sprite, sprite_frac, y_offset_frac=0.0):
-    """canvas 중앙에 sprite를 nearest로 확대해 부드러운 그림자와 함께 배치.
+    """canvas 중앙에 sprite를 nearest로 확대해 배치.
 
     [sprite_frac] 캔버스 대비 스프라이트 최대 변 비율
     [y_offset_frac] 세로 중심 보정 (+면 아래로)
@@ -106,18 +136,6 @@ def paste_sprite(canvas, sprite, sprite_frac, y_offset_frac=0.0):
 
     cx = (size - scaled.width) // 2
     cy = (size - scaled.height) // 2 + int(size * y_offset_frac)
-
-    # 바닥 그림자 (살짝 어두운 타원)
-    shadow = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    sd = ImageDraw.Draw(shadow)
-    sw = int(scaled.width * 0.72)
-    sh = max(6, int(scaled.height * 0.10))
-    sy = cy + scaled.height - sh // 2
-    sd.ellipse(
-        [(size - sw) // 2, sy, (size + sw) // 2, sy + sh],
-        fill=(90, 45, 25, 70))
-    canvas.alpha_composite(shadow)
-
     canvas.alpha_composite(scaled, (cx, cy))
     return canvas
 
@@ -131,9 +149,9 @@ def rounded_mask(size, radius_frac):
 
 
 def build_legacy(sprite, size):
-    """레거시 아이콘 — 라운드 사각 배경 + 털뭉치."""
+    """레거시 아이콘 — 라운드 사각 배경 + 발자국."""
     im = vertical_gradient(size, BG_TOP, BG_BOTTOM)
-    im = paste_sprite(im, sprite, sprite_frac=0.74, y_offset_frac=0.02)
+    im = paste_sprite(im, sprite, sprite_frac=0.78)
     im.putalpha(rounded_mask(size, radius_frac=0.18))
     return im
 
@@ -143,13 +161,13 @@ def build_adaptive_background(size):
 
 
 def build_adaptive_foreground(sprite, size):
-    """어댑티브 전경 — 안전 영역(중앙 66dp/108dp) 안에 털뭉치만.
+    """어댑티브 전경 — 안전 영역(중앙 66dp/108dp) 안에 발자국만.
 
     0.55 × 108dp ≈ 59dp < 66dp 안전 영역 — 원형 마스크에서도 잘리지 않으면서
     최대한 크게 보이는 비율.
     """
     im = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    return paste_sprite(im, sprite, sprite_frac=0.55, y_offset_frac=0.01)
+    return paste_sprite(im, sprite, sprite_frac=0.55)
 
 
 ADAPTIVE_XML = """<?xml version="1.0" encoding="utf-8"?>
@@ -161,8 +179,8 @@ ADAPTIVE_XML = """<?xml version="1.0" encoding="utf-8"?>
 
 
 def main():
-    sprite = load_fluff_sprite()
-    print(f"털뭉치 스프라이트: {sprite.width}x{sprite.height} 도트")
+    sprite = build_paw_sprite()
+    print(f"발자국 스프라이트: {sprite.width}x{sprite.height} 도트")
 
     for density, (legacy_size, adaptive_size) in DENSITIES.items():
         mipmap_dir = os.path.join(RES_DIR, f"mipmap-{density}")
@@ -186,7 +204,7 @@ def main():
     # 마스터 1024 (iOS AppIcon/스토어 등록용 — 모서리 라운드 없이 풀블리드)
     os.makedirs(os.path.join("assets", "icon"), exist_ok=True)
     master = vertical_gradient(MASTER, BG_TOP, BG_BOTTOM)
-    master = paste_sprite(master, sprite, sprite_frac=0.74, y_offset_frac=0.02)
+    master = paste_sprite(master, sprite, sprite_frac=0.78)
     master_path = os.path.join("assets", "icon", "app_icon_1024.png")
     master.convert("RGB").save(master_path)
     print(f"  {master_path}")

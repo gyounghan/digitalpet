@@ -1,4 +1,4 @@
-package com.example.pocketfriend
+package com.godsaengmon.app
 
 import android.Manifest
 import android.content.Context
@@ -34,7 +34,7 @@ import io.flutter.plugin.common.MethodChannel
 class MainActivity : FlutterActivity(), SensorEventListener {
 
     companion object {
-        private const val CHANNEL = "com.example.pocketfriend/step_counter"
+        private const val CHANNEL = "com.godsaengmon.app/step_counter"
         private const val TAG = "StepCounter"
         private const val READ_TIMEOUT_MS = 4000L
     }

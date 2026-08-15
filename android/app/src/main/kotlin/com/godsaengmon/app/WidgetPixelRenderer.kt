@@ -1,4 +1,4 @@
-package com.example.pocketfriend
+package com.godsaengmon.app
 
 import android.content.Context
 import android.graphics.Bitmap

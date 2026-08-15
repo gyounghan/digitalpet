@@ -18,7 +18,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// 누적값([_prefsKeyCumulative])을 읽는다. 누적값은 단조 증가하므로
 /// 캐시가 다소 오래됐어도 과대 계산 없이 안전하다 (다음 동기화에서 따라잡음).
 class StepSensorDatasource {
-  static const _channel = MethodChannel('com.example.pocketfriend/step_counter');
+  static const _channel = MethodChannel('com.godsaengmon.app/step_counter');
   static const _boxName = 'step_sensor';
   static const _keyBaseline = 'baseline_steps';
   static const _keyBaselineDate = 'baseline_date';
