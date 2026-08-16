@@ -163,7 +163,7 @@ override fun onReceive(context: Context, intent: Intent) {
         "es.antonborri.home_widget.action.UPDATE" -> {
             // 위젯 업데이트 처리
         }
-        "com.godsaengmon.app.ACTION_ANIMATION_UPDATE" -> {
+        "com.han.godsaengmon.ACTION_ANIMATION_UPDATE" -> {
             // 애니메이션 업데이트
         }
         else -> super.onReceive(context, intent)

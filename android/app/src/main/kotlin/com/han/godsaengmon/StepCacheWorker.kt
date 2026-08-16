@@ -1,4 +1,4 @@
-package com.godsaengmon.app
+package com.han.godsaengmon
 
 import android.Manifest
 import android.content.Context

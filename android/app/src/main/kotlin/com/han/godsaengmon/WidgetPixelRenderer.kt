@@ -1,4 +1,4 @@
-package com.godsaengmon.app
+package com.han.godsaengmon
 
 import android.content.Context
 import android.graphics.Bitmap
