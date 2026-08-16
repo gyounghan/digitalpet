@@ -1,7 +1,8 @@
 import 'dart:async' show unawaited;
 import 'package:flutter/foundation.dart' show kDebugMode, debugPrint;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show PlatformException;
+import 'package:flutter/services.dart'
+    show MissingPluginException, PlatformException;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart' as kakao;
 import '../providers/pet_provider.dart';
@@ -291,7 +292,7 @@ class _MeScreenState extends ConsumerState<MeScreen> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
-                    onPressed: _showEmailAuthDialog,
+                    onPressed: () => _showEmailAuthDialog(theme),
                     icon: const Icon(Icons.mail_outline, size: 17),
                     label: const Text('이메일로 로그인 · 가입'),
                     style: ElevatedButton.styleFrom(
@@ -350,8 +351,25 @@ class _MeScreenState extends ConsumerState<MeScreen> {
     setState(() => _isKakaoLoading = true);
     final messenger = ScaffoldMessenger.of(context);
     try {
-      final accessToken = await _getKakaoAccessToken();
-      if (accessToken == null) return; // 사용자 취소 또는 SDK 실패 — 조용히 종료
+      final String? accessToken;
+      try {
+        accessToken = await _getKakaoAccessToken();
+      } on MissingPluginException {
+        // 카카오 플러그인 추가 후 풀 리빌드 없이 구 빌드에서 실행한 경우
+        messenger.showSnackBar(
+          const SnackBar(
+              content: Text('앱을 새로 빌드해야 카카오 로그인이 작동해요 (flutter run 재실행)')),
+        );
+        return;
+      } catch (e) {
+        // 콘솔 '카카오 로그인 활성화' OFF, 키 해시 미등록 등 — 원인을 그대로 노출
+        if (kDebugMode) debugPrint('kakao login failed: $e');
+        messenger.showSnackBar(
+          SnackBar(content: Text('카카오 로그인 실패: $e')),
+        );
+        return;
+      }
+      if (accessToken == null) return; // 사용자 취소 — 조용히 종료
 
       final result = await AuthRemoteDatasource().loginWithKakao(accessToken);
       if (!mounted) return;
@@ -383,25 +401,24 @@ class _MeScreenState extends ConsumerState<MeScreen> {
   }
 
   /// 카카오톡 앱이 있으면 앱 간편 로그인, 없으면 카카오계정 웹 로그인.
-  /// 사용자가 카카오톡에서 취소하면 null (웹 로그인을 강제하지 않는다).
+  /// 사용자가 취소하면 null. 그 외 실패는 예외를 그대로 던져
+  /// [_handleKakaoLogin]이 스낵바로 원인을 보여준다 (무음 실패 금지).
   Future<String?> _getKakaoAccessToken() async {
-    try {
-      if (await kakao.isKakaoTalkInstalled()) {
-        try {
-          final token = await kakao.UserApi.instance.loginWithKakaoTalk();
-          return token.accessToken;
-        } on PlatformException catch (e) {
-          if (e.code == 'CANCELED') return null;
-          // 카카오톡은 있지만 연결 안 된 계정 등 — 웹 로그인으로 폴백
-          final token = await kakao.UserApi.instance.loginWithKakaoAccount();
-          return token.accessToken;
-        }
+    if (await kakao.isKakaoTalkInstalled()) {
+      try {
+        final token = await kakao.UserApi.instance.loginWithKakaoTalk();
+        return token.accessToken;
+      } on PlatformException catch (e) {
+        if (e.code == 'CANCELED') return null;
+        // 카카오톡은 있지만 연결 안 된 계정 등 — 웹 로그인으로 폴백
       }
+    }
+    try {
       final token = await kakao.UserApi.instance.loginWithKakaoAccount();
       return token.accessToken;
-    } catch (e) {
-      if (kDebugMode) debugPrint('kakao login failed: $e');
-      return null;
+    } on PlatformException catch (e) {
+      if (e.code == 'CANCELED') return null; // 웹 로그인 창 닫음
+      rethrow;
     }
   }
 
@@ -415,19 +432,46 @@ class _MeScreenState extends ConsumerState<MeScreen> {
   }
 
   /// 이메일 로그인/가입 다이얼로그 — 성공 시 세션 저장 + 서버 펫 동기화
-  Future<void> _showEmailAuthDialog() async {
+  Future<void> _showEmailAuthDialog(SpeciesTheme theme) async {
     final emailController = TextEditingController();
     final passwordController = TextEditingController();
     final nicknameController = TextEditingController();
     var isRegisterMode = false;
+    var isSubmitting = false;
     String? errorText;
+
+    // 라이트 카드 위 filled 입력 필드 — 앱 카드 스타일과 톤 맞춤
+    InputDecoration fieldDecoration(String label, IconData icon) {
+      return InputDecoration(
+        labelText: label,
+        prefixIcon: Icon(icon, size: 19, color: DesignTokens.ink3),
+        labelStyle: const TextStyle(fontSize: 13, color: DesignTokens.ink3),
+        floatingLabelStyle: TextStyle(fontSize: 13, color: theme.primaryDeep),
+        filled: true,
+        fillColor: DesignTokens.surfaceSoft,
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: DesignTokens.line),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: theme.primaryDeep, width: 1.4),
+        ),
+      );
+    }
 
     final success = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (dialogContext, setDialogState) {
           Future<void> submit() async {
-            setDialogState(() => errorText = null);
+            if (isSubmitting) return;
+            setDialogState(() {
+              isSubmitting = true;
+              errorText = null;
+            });
             final datasource = AuthRemoteDatasource();
             final result = isRegisterMode
                 ? await datasource.register(
@@ -452,56 +496,190 @@ class _MeScreenState extends ConsumerState<MeScreen> {
                 Navigator.of(dialogContext).pop(true);
               }
             } else {
-              setDialogState(() => errorText = result.error);
+              setDialogState(() {
+                isSubmitting = false;
+                errorText = result.error ?? '잠시 후 다시 시도해 주세요';
+              });
             }
           }
 
-          return AlertDialog(
-            title: Text(isRegisterMode ? '이메일 가입' : '이메일 로그인'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: emailController,
-                  keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(labelText: '이메일'),
-                ),
-                TextField(
-                  controller: passwordController,
-                  obscureText: true,
-                  decoration: const InputDecoration(labelText: '비밀번호 (6자 이상)'),
-                ),
-                if (isRegisterMode)
-                  TextField(
-                    controller: nicknameController,
-                    decoration:
-                        const InputDecoration(labelText: '닉네임 (선택)'),
-                  ),
-                if (errorText != null) ...[
-                  const SizedBox(height: 10),
-                  Text(
-                    errorText!,
-                    style: const TextStyle(
-                        fontSize: 12, color: DesignTokens.bad),
-                  ),
-                ],
-              ],
+          return Dialog(
+            backgroundColor: DesignTokens.surface,
+            insetPadding: const EdgeInsets.symmetric(horizontal: 28),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
             ),
-            actions: [
-              TextButton(
-                onPressed: () => setDialogState(
-                    () => isRegisterMode = !isRegisterMode),
-                child: Text(isRegisterMode ? '로그인으로' : '처음이에요 (가입)'),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(22, 22, 22, 14),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: theme.primarySoft,
+                            borderRadius: BorderRadius.circular(13),
+                          ),
+                          child: Icon(
+                            isRegisterMode
+                                ? Icons.person_add_alt_1
+                                : Icons.mail_outline,
+                            size: 20,
+                            color: theme.primaryDeep,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                isRegisterMode ? '이메일로 가입' : '이메일로 로그인',
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w800,
+                                  color: DesignTokens.ink,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              const Text(
+                                '펫·랭킹·전적이 서버에 저장돼요',
+                                style: TextStyle(
+                                    fontSize: 11.5, color: DesignTokens.ink3),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 18),
+                    TextField(
+                      controller: emailController,
+                      enabled: !isSubmitting,
+                      keyboardType: TextInputType.emailAddress,
+                      autofillHints: const [AutofillHints.email],
+                      style: const TextStyle(
+                          fontSize: 14, color: DesignTokens.ink),
+                      decoration:
+                          fieldDecoration('이메일', Icons.alternate_email),
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: passwordController,
+                      enabled: !isSubmitting,
+                      obscureText: true,
+                      autofillHints: const [AutofillHints.password],
+                      onSubmitted: (_) => submit(),
+                      style: const TextStyle(
+                          fontSize: 14, color: DesignTokens.ink),
+                      decoration:
+                          fieldDecoration('비밀번호 (6자 이상)', Icons.lock_outline),
+                    ),
+                    if (isRegisterMode) ...[
+                      const SizedBox(height: 10),
+                      TextField(
+                        controller: nicknameController,
+                        enabled: !isSubmitting,
+                        style: const TextStyle(
+                            fontSize: 14, color: DesignTokens.ink),
+                        decoration: fieldDecoration(
+                            '닉네임 (선택)', Icons.emoji_emotions_outlined),
+                      ),
+                    ],
+                    if (errorText != null) ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: DesignTokens.bad.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.error_outline,
+                                size: 15, color: DesignTokens.bad),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                errorText!,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  height: 1.35,
+                                  fontWeight: FontWeight.w600,
+                                  color: DesignTokens.bad,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 18),
+                    ElevatedButton(
+                      onPressed: isSubmitting ? null : submit,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: theme.primaryDeep,
+                        foregroundColor: Colors.white,
+                        disabledBackgroundColor:
+                            theme.primaryDeep.withValues(alpha: 0.5),
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: isSubmitting
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : Text(
+                              isRegisterMode ? '가입하기' : '로그인',
+                              style: const TextStyle(
+                                  fontSize: 14, fontWeight: FontWeight.w800),
+                            ),
+                    ),
+                    const SizedBox(height: 4),
+                    TextButton(
+                      onPressed: isSubmitting
+                          ? null
+                          : () => setDialogState(() {
+                                isRegisterMode = !isRegisterMode;
+                                errorText = null;
+                              }),
+                      child: Text(
+                        isRegisterMode
+                            ? '이미 계정이 있어요 · 로그인'
+                            : '처음이에요 · 가입하기',
+                        style: const TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w600,
+                          color: DesignTokens.ink3,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              ElevatedButton(
-                onPressed: submit,
-                child: Text(isRegisterMode ? '가입하기' : '로그인'),
-              ),
-            ],
+            ),
           );
         },
       ),
     );
+
+    emailController.dispose();
+    passwordController.dispose();
+    nicknameController.dispose();
 
     if (success == true && mounted) {
       setState(() {});
