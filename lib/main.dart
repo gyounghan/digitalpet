@@ -2,6 +2,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart'
+    show KakaoSdk;
+import 'core/constants/auth_config.dart';
 import 'data/models/pet_model_adapter.dart';
 import 'data/models/battle_history_model_adapter.dart';
 import 'data/datasource/pet_local_datasource.dart';
@@ -27,6 +30,9 @@ import 'core/theme/app_theme.dart';
 /// MobileAds 초기화(1~5초)가 첫 진입을 지연시키지 않도록 분리.
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // 카카오 SDK — 동기 설정만 하므로 첫 페인트를 지연시키지 않는다
+  KakaoSdk.init(nativeAppKey: AuthConfig.kakaoNativeAppKey);
 
   // Hive 및 6개 Box 열기 (디스크 I/O라 병렬화 효과 큼)
   await _initHive();

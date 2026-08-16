@@ -1,7 +1,9 @@
 import 'dart:async' show unawaited;
-import 'package:flutter/foundation.dart' show kDebugMode;
+import 'package:flutter/foundation.dart' show kDebugMode, debugPrint;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show PlatformException;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart' as kakao;
 import '../providers/pet_provider.dart';
 import '../widgets/app_design.dart';
 import '../widgets/pet_motion_thumb.dart';
@@ -31,6 +33,7 @@ class MeScreen extends ConsumerStatefulWidget {
 class _MeScreenState extends ConsumerState<MeScreen> {
   bool _isEvolving = false;
   bool _isAdLoading = false;
+  bool _isKakaoLoading = false;
 
   Future<void> _handleEvolve() async {
     if (_isEvolving) return;
@@ -303,13 +306,103 @@ class _MeScreenState extends ConsumerState<MeScreen> {
                   ),
                 ),
                 const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: _isKakaoLoading ? null : _handleKakaoLogin,
+                    icon: _isKakaoLoading
+                        ? const SizedBox(
+                            width: 15,
+                            height: 15,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.black54,
+                            ),
+                          )
+                        : const Icon(Icons.chat_bubble, size: 16),
+                    label: Text(
+                        _isKakaoLoading ? '카카오 로그인 중...' : '카카오로 시작하기'),
+                    style: ElevatedButton.styleFrom(
+                      // 카카오 브랜드 가이드 — 옐로 배경 + 85% 블랙 텍스트
+                      backgroundColor: const Color(0xFFFEE500),
+                      foregroundColor: const Color(0xD9000000),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 0,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
                 const Text(
-                  '카카오 · 네이버 로그인은 준비 중이에요',
+                  '네이버 로그인은 준비 중이에요',
                   style: TextStyle(fontSize: 11, color: DesignTokens.ink3),
                 ),
               ],
             ),
     );
+  }
+
+  /// 카카오 로그인 — SDK로 access token 획득 → 서버 검증 → 세션 저장
+  Future<void> _handleKakaoLogin() async {
+    if (_isKakaoLoading) return;
+    setState(() => _isKakaoLoading = true);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final accessToken = await _getKakaoAccessToken();
+      if (accessToken == null) return; // 사용자 취소 또는 SDK 실패 — 조용히 종료
+
+      final result = await AuthRemoteDatasource().loginWithKakao(accessToken);
+      if (!mounted) return;
+      if (!result.isSuccess) {
+        messenger.showSnackBar(
+          SnackBar(content: Text(result.error ?? '카카오 로그인에 실패했어요')),
+        );
+        return;
+      }
+
+      await AuthSession.save(
+        newToken: result.token!,
+        newNickname: result.user!.nickname,
+        newEmail: result.user!.email,
+      );
+      if (!mounted) return;
+      setState(() {});
+      // 서버에 저장된 펫이 있으면 동기화로 끌어온다 (기기 변경 시나리오)
+      unawaited(ref
+          .read(petNotifierProvider(HomeScreen.defaultPetId).notifier)
+          .refresh());
+      messenger.showSnackBar(
+        SnackBar(
+            content: Text('${AuthSession.nickname}님, 연동 완료! 펫이 서버에 저장돼요.')),
+      );
+    } finally {
+      if (mounted) setState(() => _isKakaoLoading = false);
+    }
+  }
+
+  /// 카카오톡 앱이 있으면 앱 간편 로그인, 없으면 카카오계정 웹 로그인.
+  /// 사용자가 카카오톡에서 취소하면 null (웹 로그인을 강제하지 않는다).
+  Future<String?> _getKakaoAccessToken() async {
+    try {
+      if (await kakao.isKakaoTalkInstalled()) {
+        try {
+          final token = await kakao.UserApi.instance.loginWithKakaoTalk();
+          return token.accessToken;
+        } on PlatformException catch (e) {
+          if (e.code == 'CANCELED') return null;
+          // 카카오톡은 있지만 연결 안 된 계정 등 — 웹 로그인으로 폴백
+          final token = await kakao.UserApi.instance.loginWithKakaoAccount();
+          return token.accessToken;
+        }
+      }
+      final token = await kakao.UserApi.instance.loginWithKakaoAccount();
+      return token.accessToken;
+    } catch (e) {
+      if (kDebugMode) debugPrint('kakao login failed: $e');
+      return null;
+    }
   }
 
   Future<void> _handleLogout() async {
