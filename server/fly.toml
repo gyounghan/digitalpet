@@ -1,0 +1,28 @@
+# Fly.io 배포 설정 — 갓생몬 서버
+#
+# - 데이터는 영구 볼륨(/data)의 db.json — 재배포해도 계정·펫 유지
+# - Socket.IO 실시간 배틀 때문에 머신을 항상 1대 켜둔다 (auto stop 금지)
+# - JWT_SECRET은 secrets로 주입: fly secrets set JWT_SECRET=...
+
+app = "godsaengmon-server"
+primary_region = "nrt" # 도쿄 — 한국에서 지연 최소
+
+[build]
+
+[env]
+  DATA_FILE = "/data/db.json"
+
+[[mounts]]
+  source = "godsaengmon_data"
+  destination = "/data"
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = "off"
+  auto_start_machines = true
+  min_machines_running = 1
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"
