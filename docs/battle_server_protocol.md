@@ -24,7 +24,9 @@
   "atk": 25,
   "def": 20,
   "hp": 90,
-  "stamina": 80                 // 기력 — 회피율 계산용 (아래 배틀 규칙 참조)
+  "stamina": 80,             // 기력 — 회피율 계산용 (아래 배틀 규칙 참조)
+  "evolutionGrade": "",      // ''|normal|superior|mythical — 상대 화면 외형 재현용
+  "colorVariant": 0          // 일반종 색 변이 0~3 — 상대 화면 외형 재현용
 }
 ```
 
@@ -45,7 +47,7 @@
 | `battle:queued` | — | 큐 등록 확인 |
 | `battle:room_created` | `{ "roomCode": "ABC123" }` | 방 생성 완료 — 코드는 대문자 영숫자 4~6자 권장 |
 | `battle:room_error` | `{ "message": "존재하지 않는 코드입니다" }` | 방 없음/가득참/자기 방 참가 등 (한국어 메시지 그대로 노출됨) |
-| `battle:matched` | `{ "roomId": "...", "opponent": { "petName", "level", "evolutionType", "maxHp" } }` | 매칭 성사 — **친구 대전도 참가 완료 시 양쪽에 동일하게 전송** (이후 흐름은 랜덤 매칭과 완전히 동일) |
+| `battle:matched` | `{ "roomId": "...", "opponent": { "petName", "level", "evolutionType", "evolutionStage", "evolutionGrade", "colorVariant", "maxHp" } }` | 매칭 성사 — **친구 대전도 참가 완료 시 양쪽에 동일하게 전송** (이후 흐름은 랜덤 매칭과 완전히 동일). 외형 필드(stage/grade/variant)는 상대 화면이 실제 모습대로 그리는 데 필수 — 누락 시 털뭉치/빈 이미지로 보인다 |
 | `battle:turn` | 아래 참조 | 턴 결과 (서버가 시뮬레이션 후 순차 push) |
 | `battle:result` | `{ "isVictory": bool, "isDominantVictory": bool, "expGained": int }` | 최종 결과 — expGained는 기본 경험치(감쇠/이벤트 배수는 클라이언트가 적용) |
 | `battle:timeout` | — | 매칭 시간 초과 |

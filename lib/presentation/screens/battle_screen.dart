@@ -56,6 +56,13 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
 
   /// 상대 종 (AI: 결과에서, 온라인: 매칭 정보에서) — 아레나 스프라이트용
   EvolutionType? _opponentType;
+
+  /// 상대 외형 (온라인 매칭 정보에서) — null이면 내 단계를 미러링(AI 대전).
+  /// 예전엔 상대 스프라이트를 항상 내 단계로 그려서, 털뭉치 화면에 거북이가
+  /// 털뭉치로 보이는 문제가 있었다.
+  int? _opponentStage;
+  String _opponentGrade = '';
+  int _opponentVariant = 0;
   bool _affinityAdvantage = false;
   bool _affinityDisadvantage = false;
 
@@ -124,6 +131,9 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
       currentTurnIndex = -1;
       _actionPhase = -1;
       _opponentType = null;
+      _opponentStage = null;
+      _opponentGrade = '';
+      _opponentVariant = 0;
       _affinityAdvantage = false;
       _affinityDisadvantage = false;
     });
@@ -158,6 +168,11 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
           opponentName = opponent['petName'] as String? ?? '???';
           opponentLevel = opponent['level'] as int? ?? 1;
           _opponentType = _parseType(opponent['evolutionType'] as String?);
+          // 구버전 서버는 외형 필드를 안 내려준다 — 종이 있으면 유아기로 추정
+          _opponentStage = opponent['evolutionStage'] as int? ??
+              (_opponentType != null ? 2 : 1);
+          _opponentGrade = opponent['evolutionGrade'] as String? ?? '';
+          _opponentVariant = opponent['colorVariant'] as int? ?? 0;
           ourMaxHp = maxHp;
           ourPetHp = maxHp;
           opponentMaxHp = opponent['maxHp'] as int? ?? 100;
@@ -273,6 +288,8 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
         def: styledDef,
         hp: maxHp,
         stamina: pet.stamina,
+        evolutionGrade: pet.evolutionGrade,
+        colorVariant: pet.colorVariant,
       );
     } else if (friendRoom) {
       _socket!.createRoom(
@@ -285,6 +302,8 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
         def: styledDef,
         hp: maxHp,
         stamina: pet.stamina,
+        evolutionGrade: pet.evolutionGrade,
+        colorVariant: pet.colorVariant,
       );
     } else {
       _socket!.joinQueue(
@@ -297,6 +316,8 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
         def: styledDef,
         hp: maxHp,
         stamina: pet.stamina,
+        evolutionGrade: pet.evolutionGrade,
+        colorVariant: pet.colorVariant,
       );
     }
   }
@@ -473,6 +494,9 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
       isLoading = true;
       isMatchmaking = false;
       _opponentType = null;
+      _opponentStage = null;
+      _opponentGrade = '';
+      _opponentVariant = 0;
       _affinityAdvantage = false;
       _affinityDisadvantage = false;
       opponentName = null;
@@ -490,6 +514,9 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
       currentTurnIndex = -1;
       _actionPhase = -1;
       _opponentType = null;
+      _opponentStage = null;
+      _opponentGrade = '';
+      _opponentVariant = 0;
       _affinityAdvantage = false;
       _affinityDisadvantage = false;
       opponentName = null;
@@ -953,9 +980,10 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
                       children: [
                         _arenaSprite(
                           type: _opponentType,
-                          stage: pet.evolutionStage as int,
-                          grade: '',
-                          variant: 0,
+                          // 온라인: 매칭 정보의 상대 단계 / AI: 내 단계 미러링
+                          stage: _opponentStage ?? (pet.evolutionStage as int),
+                          grade: _opponentGrade,
+                          variant: _opponentVariant,
                           theme: oppTheme,
                           motion: _opponentTurnMotion(),
                           size: 140,

@@ -86,6 +86,10 @@ try {
     assert.equal(hostMatched.opponent.petName, '친구');
     assert.equal(guestMatched.opponent.petName, '방장');
     assert.equal(hostMatched.opponent.maxHp, 60);
+    // 상대 외형 재현 필드 — 빠지면 상대 화면에 털뭉치/빈 이미지로 그려진다
+    assert.equal(hostMatched.opponent.evolutionStage, 2);
+    assert.equal(hostMatched.opponent.evolutionGrade, '');
+    assert.equal(hostMatched.opponent.colorVariant, 0);
 
     const [hostTurn, guestTurn] = await withTimeout(
       Promise.all([

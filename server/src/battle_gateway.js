@@ -43,6 +43,11 @@ export function registerBattleGateway(io, store) {
         petName: opponentPayload.petName ?? '???',
         level: opponentPayload.level ?? 1,
         evolutionType: opponentPayload.evolutionType ?? null,
+        // 상대 화면이 실제 외형(단계·등급·색 변이)을 재현할 수 있게 그대로 전달
+        // (누락 시 클라이언트가 종만 보고 유아기로 추정해 잘못 그려진다)
+        evolutionStage: opponentPayload.evolutionStage ?? 1,
+        evolutionGrade: opponentPayload.evolutionGrade ?? '',
+        colorVariant: opponentPayload.colorVariant ?? 0,
         maxHp: opponentPayload.hp ?? 100,
       },
     };

@@ -130,6 +130,8 @@ class BattleSocketDatasource {
     required int def,
     required int hp,
     int stamina = 0,
+    String evolutionGrade = '',
+    int colorVariant = 0,
   }) {
     _socket?.emit('battle:join', _petPayload(
       deviceId: deviceId,
@@ -141,6 +143,8 @@ class BattleSocketDatasource {
       def: def,
       hp: hp,
       stamina: stamina,
+      evolutionGrade: evolutionGrade,
+      colorVariant: colorVariant,
     ));
   }
 
@@ -161,6 +165,8 @@ class BattleSocketDatasource {
     required int def,
     required int hp,
     int stamina = 0,
+    String evolutionGrade = '',
+    int colorVariant = 0,
   }) {
     _socket?.emit('battle:create_room', _petPayload(
       deviceId: deviceId,
@@ -172,6 +178,8 @@ class BattleSocketDatasource {
       def: def,
       hp: hp,
       stamina: stamina,
+      evolutionGrade: evolutionGrade,
+      colorVariant: colorVariant,
     ));
   }
 
@@ -187,6 +195,8 @@ class BattleSocketDatasource {
     required int def,
     required int hp,
     int stamina = 0,
+    String evolutionGrade = '',
+    int colorVariant = 0,
   }) {
     _socket?.emit('battle:join_room', {
       'roomCode': roomCode,
@@ -200,6 +210,8 @@ class BattleSocketDatasource {
         def: def,
         hp: hp,
         stamina: stamina,
+        evolutionGrade: evolutionGrade,
+        colorVariant: colorVariant,
       ),
     });
   }
@@ -219,6 +231,8 @@ class BattleSocketDatasource {
     required int def,
     required int hp,
     int stamina = 0,
+    String evolutionGrade = '',
+    int colorVariant = 0,
   }) {
     return {
       'deviceId': deviceId,
@@ -231,6 +245,9 @@ class BattleSocketDatasource {
       'hp': hp,
       // 회피율 계산용 (기본5% + stamina/100×10%) — 서버 문서 참조
       'stamina': stamina,
+      // 상대 화면 외형 재현용 — 서버가 battle:matched로 그대로 전달
+      'evolutionGrade': evolutionGrade,
+      'colorVariant': colorVariant,
     };
   }
 
