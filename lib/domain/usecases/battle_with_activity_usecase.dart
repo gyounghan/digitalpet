@@ -79,7 +79,8 @@ class BattleWithActivityUseCase {
   final ActivityRepository activityRepository;
   final BattleHistoryRepository battleHistoryRepository;
 
-  static const int maxBattlesPerDay = 3;
+  /// 하루 AI 대전 한도 (단일 소스: Pet.maxBattlesPerDay — 온라인 대전과 별도 적용)
+  static const int maxBattlesPerDay = Pet.maxBattlesPerDay;
 
   /// 배틀은 한쪽 HP가 0이 될 때까지(KO) 진행한다.
   /// maxTurns는 무한 루프 방지용 안전 상한 — 도달 시 남은 HP로 판정승.
@@ -136,7 +137,8 @@ class BattleWithActivityUseCase {
       await petRepository.updatePet(pet);
     }
 
-    if (pet.todayBattleCount >= maxBattlesPerDay) {
+    // 한도 = 기본 5회 + 광고 시청 추가분 (AI 대전 전용 카운트)
+    if (!pet.canBattleAi) {
       return BattleResult.empty(pet, limitReached: true);
     }
 

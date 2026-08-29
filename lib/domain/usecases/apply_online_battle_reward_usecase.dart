@@ -47,6 +47,7 @@ class ApplyOnlineBattleRewardUseCase {
       isDominantVictory: isDominantVictory,
       baseExp: baseExp,
       nowMs: now,
+      isOnline: true, // 온라인 대전은 별도 카운트·감쇠 트랙 사용
     );
     await petRepository.updatePet(reward.updatedPet);
 

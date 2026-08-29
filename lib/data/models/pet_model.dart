@@ -237,6 +237,18 @@ class PetModel extends Pet {
   @override
   final int todayExerciseAchievedCount;
 
+  @HiveField(56)
+  @override
+  final int todayOnlineBattleCount;
+
+  @HiveField(57)
+  @override
+  final int todayBattleAdBonus;
+
+  @HiveField(58)
+  @override
+  final int todayOnlineBattleAdBonus;
+
   PetModel({
     required this.id,
     this.name = '펫',
@@ -276,6 +288,9 @@ class PetModel extends Pet {
     this.consecutiveLoginDays = 0,
     this.lastLoginDate = '',
     this.todayBattleCount = 0,
+    this.todayOnlineBattleCount = 0,
+    this.todayBattleAdBonus = 0,
+    this.todayOnlineBattleAdBonus = 0,
     this.todayLoginCount = 0,
     this.lastLoginTime = 0,
     this.evolutionGrade = '',
@@ -333,6 +348,9 @@ class PetModel extends Pet {
          consecutiveLoginDays: consecutiveLoginDays,
          lastLoginDate: lastLoginDate,
          todayBattleCount: todayBattleCount,
+         todayOnlineBattleCount: todayOnlineBattleCount,
+         todayBattleAdBonus: todayBattleAdBonus,
+         todayOnlineBattleAdBonus: todayOnlineBattleAdBonus,
          todayLoginCount: todayLoginCount,
          lastLoginTime: lastLoginTime,
          evolutionGrade: evolutionGrade,
@@ -403,6 +421,10 @@ class PetModel extends Pet {
       consecutiveLoginDays: json['consecutiveLoginDays'] as int? ?? 0,
       lastLoginDate: json['lastLoginDate'] as String? ?? '',
       todayBattleCount: json['todayBattleCount'] as int? ?? 0,
+      todayOnlineBattleCount: json['todayOnlineBattleCount'] as int? ?? 0,
+      todayBattleAdBonus: json['todayBattleAdBonus'] as int? ?? 0,
+      todayOnlineBattleAdBonus:
+          json['todayOnlineBattleAdBonus'] as int? ?? 0,
       todayLoginCount: json['todayLoginCount'] as int? ?? 0,
       lastLoginTime: json['lastLoginTime'] as int? ?? 0,
       evolutionGrade: json['evolutionGrade'] as String? ?? '',
@@ -469,6 +491,9 @@ class PetModel extends Pet {
       'consecutiveLoginDays': consecutiveLoginDays,
       'lastLoginDate': lastLoginDate,
       'todayBattleCount': todayBattleCount,
+      'todayOnlineBattleCount': todayOnlineBattleCount,
+      'todayBattleAdBonus': todayBattleAdBonus,
+      'todayOnlineBattleAdBonus': todayOnlineBattleAdBonus,
       'todayLoginCount': todayLoginCount,
       'lastLoginTime': lastLoginTime,
       'evolutionGrade': evolutionGrade,
@@ -535,6 +560,9 @@ class PetModel extends Pet {
       consecutiveLoginDays: pet.consecutiveLoginDays,
       lastLoginDate: pet.lastLoginDate,
       todayBattleCount: pet.todayBattleCount,
+      todayOnlineBattleCount: pet.todayOnlineBattleCount,
+      todayBattleAdBonus: pet.todayBattleAdBonus,
+      todayOnlineBattleAdBonus: pet.todayOnlineBattleAdBonus,
       todayLoginCount: pet.todayLoginCount,
       lastLoginTime: pet.lastLoginTime,
       evolutionGrade: pet.evolutionGrade,
@@ -599,6 +627,9 @@ class PetModel extends Pet {
       consecutiveLoginDays: consecutiveLoginDays,
       lastLoginDate: lastLoginDate,
       todayBattleCount: todayBattleCount,
+      todayOnlineBattleCount: todayOnlineBattleCount,
+      todayBattleAdBonus: todayBattleAdBonus,
+      todayOnlineBattleAdBonus: todayOnlineBattleAdBonus,
       todayLoginCount: todayLoginCount,
       lastLoginTime: lastLoginTime,
       evolutionGrade: evolutionGrade,
@@ -663,6 +694,9 @@ class PetModel extends Pet {
     int? consecutiveLoginDays,
     String? lastLoginDate,
     int? todayBattleCount,
+    int? todayOnlineBattleCount,
+    int? todayBattleAdBonus,
+    int? todayOnlineBattleAdBonus,
     int? todayLoginCount,
     int? lastLoginTime,
     String? evolutionGrade,
@@ -721,6 +755,11 @@ class PetModel extends Pet {
       consecutiveLoginDays: consecutiveLoginDays ?? this.consecutiveLoginDays,
       lastLoginDate: lastLoginDate ?? this.lastLoginDate,
       todayBattleCount: todayBattleCount ?? this.todayBattleCount,
+      todayOnlineBattleCount:
+          todayOnlineBattleCount ?? this.todayOnlineBattleCount,
+      todayBattleAdBonus: todayBattleAdBonus ?? this.todayBattleAdBonus,
+      todayOnlineBattleAdBonus:
+          todayOnlineBattleAdBonus ?? this.todayOnlineBattleAdBonus,
       todayLoginCount: todayLoginCount ?? this.todayLoginCount,
       lastLoginTime: lastLoginTime ?? this.lastLoginTime,
       evolutionGrade: evolutionGrade ?? this.evolutionGrade,

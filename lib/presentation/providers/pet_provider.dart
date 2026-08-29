@@ -30,6 +30,7 @@ import '../../data/datasources/step_sensor_datasource.dart';
 import '../../core/constants/app_strings.dart';
 import '../../domain/usecases/battle_with_activity_usecase.dart';
 import '../../domain/usecases/apply_online_battle_reward_usecase.dart';
+import '../../domain/usecases/grant_extra_battle_usecase.dart';
 import '../../domain/usecases/can_feed_pet_usecase.dart';
 import '../../domain/repositories/battle_history_repository.dart';
 import '../../data/repositories/battle_history_repository_impl.dart';
@@ -282,6 +283,13 @@ final applyOnlineBattleRewardUseCaseProvider =
     activityRepository: activityRepository,
     battleHistoryRepository: battleHistoryRepository,
   );
+});
+
+/// GrantExtraBattleUseCase Provider
+/// 광고 시청 후 배틀 횟수 추가 유스케이스 인스턴스를 제공
+final grantExtraBattleUseCaseProvider = Provider<GrantExtraBattleUseCase>((ref) {
+  final petRepository = ref.watch(petRepositoryProvider);
+  return GrantExtraBattleUseCase(petRepository);
 });
 
 /// CanFeedPetUseCase Provider

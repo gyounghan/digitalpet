@@ -168,8 +168,17 @@ class Pet {
   /// 마지막 접속 날짜 (YYYY-MM-DD)
   final String lastLoginDate;
 
-  /// 오늘 배틀 횟수
+  /// 오늘 AI 대전 횟수
   final int todayBattleCount;
+
+  /// 오늘 온라인(랜덤 매칭·친구방) 대전 횟수 — AI 대전과 별도 한도
+  final int todayOnlineBattleCount;
+
+  /// 오늘 광고 시청으로 추가된 AI 대전 가능 횟수
+  final int todayBattleAdBonus;
+
+  /// 오늘 광고 시청으로 추가된 온라인 대전 가능 횟수
+  final int todayOnlineBattleAdBonus;
 
   /// 오늘 접속 횟수 (접속 보너스 계산용)
   final int todayLoginCount;
@@ -303,6 +312,9 @@ class Pet {
     this.consecutiveLoginDays = 0,
     this.lastLoginDate = '',
     this.todayBattleCount = 0,
+    this.todayOnlineBattleCount = 0,
+    this.todayBattleAdBonus = 0,
+    this.todayOnlineBattleAdBonus = 0,
     this.todayLoginCount = 0,
     this.lastLoginTime = 0,
     this.evolutionGrade = '',
@@ -364,6 +376,9 @@ class Pet {
     int? consecutiveLoginDays,
     String? lastLoginDate,
     int? todayBattleCount,
+    int? todayOnlineBattleCount,
+    int? todayBattleAdBonus,
+    int? todayOnlineBattleAdBonus,
     int? todayLoginCount,
     int? lastLoginTime,
     String? evolutionGrade,
@@ -422,6 +437,11 @@ class Pet {
       consecutiveLoginDays: consecutiveLoginDays ?? this.consecutiveLoginDays,
       lastLoginDate: lastLoginDate ?? this.lastLoginDate,
       todayBattleCount: todayBattleCount ?? this.todayBattleCount,
+      todayOnlineBattleCount:
+          todayOnlineBattleCount ?? this.todayOnlineBattleCount,
+      todayBattleAdBonus: todayBattleAdBonus ?? this.todayBattleAdBonus,
+      todayOnlineBattleAdBonus:
+          todayOnlineBattleAdBonus ?? this.todayOnlineBattleAdBonus,
       todayLoginCount: todayLoginCount ?? this.todayLoginCount,
       lastLoginTime: lastLoginTime ?? this.lastLoginTime,
       evolutionGrade: evolutionGrade ?? this.evolutionGrade,
@@ -610,6 +630,9 @@ class Pet {
       todaySyncedExerciseMinutes: 0,
       todaySetExpClaimed: 0,
       todayBattleCount: 0,
+      todayOnlineBattleCount: 0,
+      todayBattleAdBonus: 0,
+      todayOnlineBattleAdBonus: 0,
       todayFeedAchievedCount: 0,
       todaySleepAchievedCount: 0,
       todayExerciseAchievedCount: 0,
@@ -618,11 +641,44 @@ class Pet {
     );
   }
 
+  // ── 하루 배틀 한도 (AI·온라인 각각 별도 카운트) ──────────────
+  // 광고 1회 시청 = 해당 모드 가능 횟수 +1 (GrantExtraBattleUseCase).
+  // 자정이 지나 리셋 대기 중(needsGoalReset)이면 카운트·광고 추가분 모두
+  // 논리적으로 0으로 취급한다 (유스케이스는 체크 전에 resetDailyGoals 수행).
+
+  /// 하루 기본 배틀 한도 — AI 대전과 온라인(친구) 대전에 각각 적용
+  static const int maxBattlesPerDay = 5;
+
+  /// 오늘 남은 AI 대전 횟수 (기본 한도 + 광고 추가분 − 사용분)
+  int get remainingAiBattles {
+    if (needsGoalReset) return maxBattlesPerDay;
+    return (maxBattlesPerDay + todayBattleAdBonus - todayBattleCount)
+        .clamp(0, 1 << 30);
+  }
+
+  /// 오늘 남은 온라인(친구 포함) 대전 횟수
+  int get remainingOnlineBattles {
+    if (needsGoalReset) return maxBattlesPerDay;
+    return (maxBattlesPerDay +
+            todayOnlineBattleAdBonus -
+            todayOnlineBattleCount)
+        .clamp(0, 1 << 30);
+  }
+
+  /// AI 대전 가능 여부
+  bool get canBattleAi => remainingAiBattles > 0;
+
+  /// 온라인 대전 가능 여부
+  bool get canBattleOnline => remainingOnlineBattles > 0;
+
   /// 모든 수치가 0인지 확인
   bool get isAllStatsZero => hunger == 0 && happiness == 0 && stamina == 0;
 
-  /// 긴 잠(isDead) 진입 조건 충족 여부 (모든 수치 0이 5일 이상 지속)
-  /// CheckPetDeathUseCase.deathThresholdDays와 동일해야 한다
+  /// 긴 잠(isDead) 진입까지의 일수 — 모든 수치 0이 이 일수 이상 지속되면 긴 잠
+  /// (CheckPetDeathUseCase가 이 상수를 참조한다 — 단일 소스)
+  static const int deathThresholdDays = 3;
+
+  /// 긴 잠(isDead) 진입 조건 충족 여부 (모든 수치 0이 [deathThresholdDays]일 이상 지속)
   /// (필드명은 isDead지만 UX상 "사망"이 아니라 "긴 잠"으로 표현한다)
   bool get shouldDie {
     if (isDead) return false;
@@ -631,7 +687,7 @@ class Pet {
     try {
       final startDate = DateTime.parse(zeroStatStartDate!);
       final now = DateTime.now();
-      return now.difference(startDate).inDays >= 5;
+      return now.difference(startDate).inDays >= deathThresholdDays;
     } catch (e) {
       return false;
     }

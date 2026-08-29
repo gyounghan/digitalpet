@@ -120,8 +120,11 @@ class LoginBonusUseCase {
       lastLoginTime: currentTime,
       todayEvent: newEvent,
       lastEventDate: newEventDate,
-      // 새로운 날이면 배틀 카운트도 리셋
+      // 새로운 날이면 배틀 카운트(AI·온라인·광고 추가분)도 리셋
       todayBattleCount: isNewDay ? 0 : pet.todayBattleCount,
+      todayOnlineBattleCount: isNewDay ? 0 : pet.todayOnlineBattleCount,
+      todayBattleAdBonus: isNewDay ? 0 : pet.todayBattleAdBonus,
+      todayOnlineBattleAdBonus: isNewDay ? 0 : pet.todayOnlineBattleAdBonus,
       lastUpdated: currentTime,
     );
 

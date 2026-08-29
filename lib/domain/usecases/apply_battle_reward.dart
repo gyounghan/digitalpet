@@ -40,17 +40,23 @@ class BattleReward {
   /// 배틀 결과 보상을 [pet]에 적용한 새 Pet과 실제 획득 EXP를 반환한다.
   ///
   /// [baseExp]는 서버가 내려준 기본 경험치 — null이면 승패로부터 계산.
-  /// 배수 인덱스는 적용 전 [Pet.todayBattleCount] 기준이므로,
-  /// 호출 전에 자정 리셋([Pet.needsGoalReset])을 먼저 처리해야 한다.
+  /// [isOnline]이면 온라인 대전 카운트([Pet.todayOnlineBattleCount])를,
+  /// 아니면 AI 대전 카운트([Pet.todayBattleCount])를 증가·감쇠 기준으로 쓴다
+  /// (하루 한도가 모드별로 따로 걸리므로 감쇠도 모드별로 따로 적용).
+  /// 배수 인덱스는 적용 전 카운트 기준이므로, 호출 전에 자정 리셋
+  /// ([Pet.needsGoalReset])을 먼저 처리해야 한다.
   static BattleRewardOutcome apply(
     Pet pet, {
     required bool isVictory,
     required bool isDominantVictory,
     int? baseExp,
     required int nowMs,
+    bool isOnline = false,
   }) {
+    final modeBattleCount =
+        isOnline ? pet.todayOnlineBattleCount : pet.todayBattleCount;
     final multiplierIndex =
-        pet.todayBattleCount.clamp(0, rewardMultipliers.length - 1);
+        modeBattleCount.clamp(0, rewardMultipliers.length - 1);
     final multiplier = rewardMultipliers[multiplierIndex];
     final resolvedBase = baseExp ??
         baseExpFor(isVictory: isVictory, isDominantVictory: isDominantVictory);
@@ -84,7 +90,9 @@ class BattleReward {
           (pet.happiness + happinessBonus + levelUpStatBonus).clamp(0, 100),
       hunger: (pet.hunger + levelUpStatBonus).clamp(0, 100),
       stamina: (pet.stamina + levelUpStatBonus).clamp(0, 100),
-      todayBattleCount: pet.todayBattleCount + 1,
+      todayBattleCount: isOnline ? null : pet.todayBattleCount + 1,
+      todayOnlineBattleCount:
+          isOnline ? pet.todayOnlineBattleCount + 1 : null,
       battleVictoryCount:
           isVictory ? pet.battleVictoryCount + 1 : pet.battleVictoryCount,
       lastUpdated: nowMs,

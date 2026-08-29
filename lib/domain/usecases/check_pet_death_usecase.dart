@@ -8,13 +8,13 @@ import '../repositories/pet_repository.dart';
 /// 동작:
 /// 1. 이미 사망한 펫은 그대로 반환
 /// 2. 모든 수치가 0이면 zeroStatStartDate 기록 시작
-/// 3. 임계 일수(5일) 경과 시 사망 처리
+/// 3. 임계 일수(3일) 경과 시 사망 처리
 /// 4. 수치가 하나라도 0이 아니면 zeroStatStartDate 초기화
 class CheckPetDeathUseCase {
   final PetRepository petRepository;
 
-  /// 사망 판정까지의 일수
-  static const int deathThresholdDays = 5;
+  /// 사망 판정까지의 일수 (단일 소스: Pet.deathThresholdDays)
+  static const int deathThresholdDays = Pet.deathThresholdDays;
 
   CheckPetDeathUseCase(this.petRepository);
 
@@ -34,7 +34,7 @@ class CheckPetDeathUseCase {
         pet = pet.copyWith(zeroStatStartDate: pet.todayDateString);
         await petRepository.updatePet(pet);
       } else if (pet.shouldDie) {
-        // 임계 일수(5일) 경과 - 사망 처리
+        // 임계 일수(3일) 경과 - 사망 처리
         pet = pet.die();
         await petRepository.updatePet(pet);
       }

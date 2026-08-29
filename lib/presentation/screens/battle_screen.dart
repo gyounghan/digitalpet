@@ -20,6 +20,7 @@ import '../../domain/usecases/battle_result_narrator.dart';
 import '../../domain/usecases/battle_with_activity_usecase.dart'
     show BattleTurn, BattleWithActivityUseCase;
 import '../../data/datasources/battle_socket_datasource.dart';
+import '../../data/services/ad_service.dart';
 import 'home_screen.dart';
 
 /// 배틀 화면
@@ -112,12 +113,9 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
       return;
     }
 
-    // AI 대전과 동일한 하루 배틀 횟수 제한 (자정 리셋 반영)
-    final effectiveBattleCount = pet.needsGoalReset ? 0 : pet.todayBattleCount;
-    if (effectiveBattleCount >= BattleWithActivityUseCase.maxBattlesPerDay) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('오늘 배틀 횟수를 모두 사용했습니다 (3/3)')),
-      );
+    // 온라인 대전 전용 하루 한도 (AI 대전과 별도 카운트, 광고 추가분 반영)
+    if (!pet.canBattleOnline) {
+      _showExtraBattleDialog(online: true);
       return;
     }
 
@@ -379,6 +377,73 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
     );
   }
 
+  /// 하루 한도 소진 안내 — 광고를 보면 해당 모드 한 판 추가
+  void _showExtraBattleDialog({required bool online}) {
+    final modeLabel = online ? '온라인 대전' : 'AI 대전';
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: DesignTokens.surface,
+          title: Text(
+            '오늘 $modeLabel 횟수를 모두 썼어요',
+            style: const TextStyle(
+              color: DesignTokens.ink,
+              fontWeight: FontWeight.w800,
+              fontSize: 17,
+            ),
+          ),
+          content: const Text(
+            '광고를 보면 한 판 더 도전할 수 있어요.',
+            style: TextStyle(color: DesignTokens.ink2, fontSize: 13.5),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('다음에'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+                _watchAdForExtraBattle(online: online);
+              },
+              child: const Text('광고 보고 한 판 더'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  /// 리워드 광고 → 시청 완료 시에만 해당 모드 배틀 횟수 +1
+  Future<void> _watchAdForExtraBattle({required bool online}) async {
+    await AdService().showRewardedAd(
+      onRewarded: () async {
+        await ref.read(grantExtraBattleUseCaseProvider)(
+          HomeScreen.defaultPetId,
+          online: online,
+        );
+        await ref
+            .read(petNotifierProvider(HomeScreen.defaultPetId).notifier)
+            .refresh();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('${online ? '온라인' : 'AI'} 대전 1회가 추가됐어요!'),
+            ),
+          );
+        }
+      },
+      onAdFailed: () {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text(AppStrings.adLoadFailed)),
+          );
+        }
+      },
+    );
+  }
+
   Future<void> _simulateTurns() async {
     setState(() {
       turns = [];
@@ -400,9 +465,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
           isLoading = false;
         });
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('오늘 배틀 횟수를 모두 사용했습니다 (3/3)')),
-          );
+          _showExtraBattleDialog(online: false);
         }
         return;
       }
@@ -487,6 +550,12 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('펫이 깊은 잠에 빠져 있어요. 깨운 뒤 다시 시도해주세요.')),
       );
+      return;
+    }
+
+    // 하루 AI 대전 한도 — 소진 시 광고로 추가 (UseCase의 limitReached는 백스톱)
+    if (pet != null && !pet.canBattleAi) {
+      _showExtraBattleDialog(online: false);
       return;
     }
 
@@ -859,6 +928,17 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
               ),
             ),
           ],
+        ),
+        const SizedBox(height: 8),
+        // 남은 횟수 (모드별 별도 한도 — 소진 시 광고로 추가 가능)
+        Text(
+          '오늘 남은 횟수 · AI ${pet.remainingAiBattles}회 / 온라인 ${pet.remainingOnlineBattles}회',
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            fontSize: 11.5,
+            fontWeight: FontWeight.w600,
+            color: DesignTokens.ink3,
+          ),
         ),
       ],
     );

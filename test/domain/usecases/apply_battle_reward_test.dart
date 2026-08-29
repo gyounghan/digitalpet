@@ -75,6 +75,7 @@ Pet _pet({
   int happiness = 60,
   int stamina = 60,
   int todayBattleCount = 0,
+  int todayOnlineBattleCount = 0,
   int battleVictoryCount = 0,
   String todayEvent = '',
   bool isDead = false,
@@ -92,6 +93,7 @@ Pet _pet({
     lastUpdated: DateTime.now().millisecondsSinceEpoch,
     lastStatusDecayUpdated: DateTime.now().millisecondsSinceEpoch,
     todayBattleCount: todayBattleCount,
+    todayOnlineBattleCount: todayOnlineBattleCount,
     battleVictoryCount: battleVictoryCount,
     todayEvent: todayEvent,
     isDead: isDead,
@@ -153,6 +155,43 @@ void main() {
     });
   });
 
+  group('BattleReward.apply — AI/온라인 카운트 분리', () {
+    test('AI 대전(isOnline 기본값)은 todayBattleCount만 +1', () {
+      final r = BattleReward.apply(_pet(),
+          isVictory: true, isDominantVictory: false, nowMs: nowMs);
+      expect(r.updatedPet.todayBattleCount, 1);
+      expect(r.updatedPet.todayOnlineBattleCount, 0);
+    });
+
+    test('온라인 대전(isOnline: true)은 todayOnlineBattleCount만 +1', () {
+      final r = BattleReward.apply(_pet(),
+          isVictory: true,
+          isDominantVictory: false,
+          nowMs: nowMs,
+          isOnline: true);
+      expect(r.updatedPet.todayBattleCount, 0);
+      expect(r.updatedPet.todayOnlineBattleCount, 1);
+    });
+
+    test('감쇠 배수도 모드별 카운트 기준 — AI 3판 뒤 온라인 첫 판은 ×1.0', () {
+      final r = BattleReward.apply(_pet(todayBattleCount: 3),
+          isVictory: true,
+          isDominantVictory: false,
+          nowMs: nowMs,
+          isOnline: true);
+      expect(r.expGained, 50, reason: '온라인 트랙은 아직 0판이므로 감쇠 없음');
+    });
+
+    test('온라인 2번째 판은 온라인 카운트 기준 ×0.7', () {
+      final r = BattleReward.apply(_pet(todayOnlineBattleCount: 1),
+          isVictory: true,
+          isDominantVictory: false,
+          nowMs: nowMs,
+          isOnline: true);
+      expect(r.expGained, 35);
+    });
+  });
+
   group('BattleReward.apply — 펫 상태 갱신', () {
     test('승리: 행복 +5, 배틀 카운트 +1, 승수 +1', () {
       final r = BattleReward.apply(_pet(happiness: 60, battleVictoryCount: 2),
@@ -211,12 +250,14 @@ void main() {
       );
     });
 
-    test('보상을 펫에 저장하고 전적을 기록한다', () {
-      petRepo.setPet(_pet(todayBattleCount: 0));
+    test('보상을 펫에 저장하고 전적을 기록한다 (온라인 카운트만 증가)', () {
+      petRepo.setPet(_pet());
       return usecase('test-pet', isVictory: true, isDominantVictory: false)
           .then((reward) {
         expect(reward.expGained, 50);
-        expect(petRepo.currentPet!.todayBattleCount, 1);
+        expect(petRepo.currentPet!.todayOnlineBattleCount, 1);
+        expect(petRepo.currentPet!.todayBattleCount, 0,
+            reason: 'AI 대전 카운트는 소모되면 안 됨');
         expect(petRepo.currentPet!.battleVictoryCount, 1);
         expect(historyRepo.saved, hasLength(1));
         expect(historyRepo.saved.first.isVictory, isTrue);
@@ -236,20 +277,20 @@ void main() {
     test('자정이 지난 카운트는 리셋 후 1번째 배틀 배수(×1.0) 적용', () async {
       // 어제 3번 배틀한 상태 — 오늘 첫 배틀은 감쇠 없이 50
       petRepo.setPet(_pet(
-        todayBattleCount: 3,
+        todayOnlineBattleCount: 3,
         lastGoalResetDate: '2000-01-01',
       ));
       final reward =
           await usecase('test-pet', isVictory: true, isDominantVictory: false);
       expect(reward.expGained, 50);
-      expect(petRepo.currentPet!.todayBattleCount, 1);
+      expect(petRepo.currentPet!.todayOnlineBattleCount, 1);
     });
 
     test('서버 기본 경험치(baseExp)를 넘기면 그 값으로 계산', () async {
-      petRepo.setPet(_pet(todayBattleCount: 1));
+      petRepo.setPet(_pet(todayOnlineBattleCount: 1));
       final reward = await usecase('test-pet',
           isVictory: true, isDominantVictory: true, baseExp: 70);
-      expect(reward.expGained, 49); // 70 × 0.7
+      expect(reward.expGained, 49); // 70 × 0.7 (온라인 2번째 판)
     });
   });
 }
