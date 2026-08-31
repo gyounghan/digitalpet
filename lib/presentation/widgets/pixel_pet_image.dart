@@ -90,6 +90,10 @@ class PixelSpriteView extends StatelessWidget {
   final Color darkColor;
   final Color? accentColor;
 
+  /// 설화 영물 5색 팔레트용 보조색2·3 (null이면 accent로 폴백)
+  final Color? accent2Color;
+  final Color? accent3Color;
+
   const PixelSpriteView({
     super.key,
     required this.sprite,
@@ -98,10 +102,13 @@ class PixelSpriteView extends StatelessWidget {
     required this.dotColor,
     this.darkColor = SpeciesTheme.dotDark,
     this.accentColor,
+    this.accent2Color,
+    this.accent3Color,
   });
 
   @override
   Widget build(BuildContext context) {
+    final acc = accentColor ?? dotColor;
     return SizedBox(
       width: width,
       height: height,
@@ -112,7 +119,9 @@ class PixelSpriteView extends StatelessWidget {
             sprite: sprite,
             dotColor: dotColor,
             darkColor: darkColor,
-            accentColor: accentColor ?? dotColor,
+            accentColor: acc,
+            accent2Color: accent2Color ?? acc,
+            accent3Color: accent3Color ?? acc,
           ),
         ),
       ),
@@ -126,6 +135,8 @@ class _PixelSpritePainter extends CustomPainter {
   final Color dotColor;
   final Color darkColor;
   final Color accentColor;
+  final Color accent2Color;
+  final Color accent3Color;
 
   /// 도트 사이 간격 비율 (0이면 도트가 붙어 통짜 실루엣으로 보임)
   static const double gapRatio = 0.0;
@@ -139,6 +150,8 @@ class _PixelSpritePainter extends CustomPainter {
     required this.dotColor,
     required this.darkColor,
     required this.accentColor,
+    required this.accent2Color,
+    required this.accent3Color,
   });
 
   @override
@@ -151,30 +164,56 @@ class _PixelSpritePainter extends CustomPainter {
     final bodyPath = Path();
     final darkPath = Path();
     final accentPath = Path();
+    final accent2Path = Path();
+    final accent3Path = Path();
 
     for (var y = 0; y < n; y++) {
       final darkMask = sprite.dark[y];
       final bodyMask = sprite.body[y];
       final accentMask = y < sprite.accent.length ? sprite.accent[y] : 0;
-      if (darkMask == 0 && bodyMask == 0 && accentMask == 0) continue;
+      final a2Mask = y < sprite.accent2.length ? sprite.accent2[y] : 0;
+      final a3Mask = y < sprite.accent3.length ? sprite.accent3[y] : 0;
+      if (darkMask == 0 &&
+          bodyMask == 0 &&
+          accentMask == 0 &&
+          a2Mask == 0 &&
+          a3Mask == 0) {
+        continue;
+      }
       for (var x = 0; x < n; x++) {
         final bit = 1 << x;
         final isDark = (darkMask & bit) != 0;
         final isBody = (bodyMask & bit) != 0;
         final isAccent = (accentMask & bit) != 0;
-        if (!isDark && !isBody && !isAccent) continue;
+        final isA2 = (a2Mask & bit) != 0;
+        final isA3 = (a3Mask & bit) != 0;
+        if (!isDark && !isBody && !isAccent && !isA2 && !isA3) continue;
         final rect = Rect.fromLTWH(
           x * cell + inset,
           y * cell + inset,
           cell - inset * 2 + _seamOverlap,
           cell - inset * 2 + _seamOverlap,
         );
-        (isDark ? darkPath : (isAccent ? accentPath : bodyPath)).addRect(rect);
+        final Path target;
+        if (isDark) {
+          target = darkPath;
+        } else if (isA3) {
+          target = accent3Path;
+        } else if (isA2) {
+          target = accent2Path;
+        } else if (isAccent) {
+          target = accentPath;
+        } else {
+          target = bodyPath;
+        }
+        target.addRect(rect);
       }
     }
 
     canvas.drawPath(bodyPath, Paint()..color = dotColor);
     canvas.drawPath(accentPath, Paint()..color = accentColor);
+    canvas.drawPath(accent2Path, Paint()..color = accent2Color);
+    canvas.drawPath(accent3Path, Paint()..color = accent3Color);
     canvas.drawPath(darkPath, Paint()..color = darkColor);
   }
 
@@ -183,6 +222,8 @@ class _PixelSpritePainter extends CustomPainter {
     return oldDelegate.sprite != sprite ||
         oldDelegate.dotColor != dotColor ||
         oldDelegate.darkColor != darkColor ||
-        oldDelegate.accentColor != accentColor;
+        oldDelegate.accentColor != accentColor ||
+        oldDelegate.accent2Color != accent2Color ||
+        oldDelegate.accent3Color != accent3Color;
   }
 }

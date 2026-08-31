@@ -22,11 +22,18 @@ class PixelSprite {
   /// accentColor 미지정 시 body와 같은 색으로 렌더링)
   final List<int> accent;
 
+  /// 보조색2·3 도트 — 설화 영물(레퍼런스 5색 팔레트)만 사용.
+  /// 사신수·정적 스프라이트는 비어 있어 기존 3계조와 동일하게 렌더된다.
+  final List<int> accent2;
+  final List<int> accent3;
+
   const PixelSprite({
     required this.size,
     required this.dark,
     required this.body,
     this.accent = const [],
+    this.accent2 = const [],
+    this.accent3 = const [],
   });
 }
 

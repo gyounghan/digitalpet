@@ -40,16 +40,27 @@ def luminance(rgb):
 
 
 def content_mask(arr):
-    """비배경(펫) 마스크. 배경 = 코너 평균색 근방 또는 거의 흰색."""
-    h, w, _ = arr.shape
+    """비배경(펫) 마스크.
+
+    배경 = "코너색 근방인 밝은 영역 중 이미지 테두리에 연결된 것"만.
+    → 흰 토끼 몸통처럼 아웃라인으로 둘러싸인 내부 밝은 영역은 배경에서
+       제외돼 보존된다 (흰 피사체가 흰 배경에 사라지던 문제 해결).
+    """
     corners = np.concatenate([
         arr[:8, :8].reshape(-1, 3), arr[:8, -8:].reshape(-1, 3),
         arr[-8:, :8].reshape(-1, 3), arr[-8:, -8:].reshape(-1, 3),
     ]).mean(axis=0)
     dist = np.sqrt(((arr.astype(int) - corners) ** 2).sum(axis=2))
-    near_bg = dist < 32
-    near_white = arr.min(axis=2) > 232
-    return ~(near_bg | near_white)
+    light = (dist < 36) | (arr.min(axis=2) > 236)  # 배경 후보(밝은 영역)
+
+    # 테두리에 연결된 light 성분만 실제 배경
+    labeled, n = ndimage.label(light)
+    border = set(np.unique(np.concatenate([
+        labeled[0, :], labeled[-1, :], labeled[:, 0], labeled[:, -1],
+    ])))
+    border.discard(0)
+    bg = np.isin(labeled, list(border))
+    return ~bg
 
 
 def segment_three(mask, min_area_frac=0.0006):
@@ -101,58 +112,48 @@ def region_bbox(labeled, group):
     return xs.min(), xs.max(), ys.min(), ys.max(), sub
 
 
-def to_ascii(arr, sub, size, flip):
-    """크롭 영역을 size 격자 3계조 ASCII로 변환."""
+# 팔레트 인덱스(명암 오름차순) → ASCII 글자. dark→'#' … 최명→'%'
+PALETTE_CHARS = ["#", "o", "+", "&", "%"]
+
+
+def _prep_square(arr, sub, size, flip):
+    """크롭·반전·정사각 패딩 후 size 격자로 축소한 (alpha, rgb) 반환."""
     ys, xs = np.where(sub)
     y0, y1, x0, x1 = ys.min(), ys.max(), xs.min(), xs.max()
-    crop = arr[y0:y1 + 1, x0:x1 + 1].astype(float)
+    crop = arr[y0:y1 + 1, x0:x1 + 1].astype(np.uint8)
     cmask = sub[y0:y1 + 1, x0:x1 + 1]
-    # 투명 배경 RGBA로 (배경 셀 알파 0)
     rgba = np.dstack([crop, np.where(cmask, 255, 0)]).astype(np.uint8)
     im = Image.fromarray(rgba, "RGBA")
     if flip:
         im = im.transpose(Image.FLIP_LEFT_RIGHT)
-    # 정사각 패딩(중앙)
     side = max(im.width, im.height)
     sq = Image.new("RGBA", (side, side), (0, 0, 0, 0))
     sq.paste(im, ((side - im.width) // 2, (side - im.height) // 2))
     small = sq.resize((size, size), Image.BOX)
-    px = np.array(small)  # (size,size,4)
-    alpha = px[..., 3] > 96
-    rgb = px[..., :3]
+    px = np.array(small)
+    return px[..., 3] > 110, px[..., :3].astype(float)
 
-    # 비배경 셀 색으로 k=3 군집
-    cells = rgb[alpha].astype(float)
-    if len(cells) == 0:
-        return ["." * size for _ in range(size)], None
-    k = min(3, len(np.unique(cells.reshape(-1, 3), axis=0)))
-    if k < 1:
-        k = 1
-    centroids, labels = kmeans2(cells, k, minit="++", seed=42)
-    counts = np.bincount(labels, minlength=k)
-    lums = luminance(centroids)
-    # 'o' = 최대 군집(본체), 나머지 중 어두운 것 '#', 밝은 것 '+'
-    body_c = int(np.argmax(counts))
-    others = [c for c in range(k) if c != body_c]
-    others.sort(key=lambda c: lums[c])
-    dark_c = others[0] if others else None
-    accent_c = others[-1] if len(others) > 1 else None
-    # 본체가 매우 어두우면(예: 삼족오) 본체보다 더 어두운 군집만 '#'
-    role = {body_c: "o"}
-    if dark_c is not None:
-        role[dark_c] = "#" if lums[dark_c] < lums[body_c] else "+"
-    if accent_c is not None and accent_c not in role:
-        role[accent_c] = "+" if lums[accent_c] >= lums[body_c] else "#"
 
-    # 셀 채우기
+def build_palette(stage_pixels, k=5):
+    """종 전체 스테이지 픽셀에서 고정 팔레트 k색 (명암 오름차순) 산출."""
+    cells = np.concatenate(stage_pixels, axis=0)
+    uniq = len(np.unique(cells.astype(np.uint8).reshape(-1, 3), axis=0))
+    k = min(k, max(1, uniq))
+    centroids, _ = kmeans2(cells, k, minit="++", seed=7, iter=40)
+    order = np.argsort(luminance(centroids))
+    return centroids[order]  # (k,3) 명암 오름차순
+
+
+def to_ascii(alpha, rgb, palette, size):
+    """셀마다 팔레트 최근접색 인덱스 → ASCII (색은 팔레트로 보존)."""
     out = [["."] * size for _ in range(size)]
-    idx = 0
     for y in range(size):
         for x in range(size):
-            if alpha[y, x]:
-                out[y][x] = role.get(labels[idx], "o")
-                idx += 1
-    return ["".join(r) for r in out], (alpha, out)
+            if not alpha[y, x]:
+                continue
+            d = ((palette - rgb[y, x]) ** 2).sum(axis=1)
+            out[y][x] = PALETTE_CHARS[int(np.argmin(d))]
+    return ["".join(r) for r in out]
 
 
 def detect_eyes(art, size):
@@ -198,25 +199,43 @@ def detect_eyes(art, size):
     return [(max(0, x), max(0, y), max(2, w), max(2, h))]
 
 
+def _hex(c):
+    return "0x{:02X}{:02X}{:02X}".format(int(c[0]), int(c[1]), int(c[2]))
+
+
 def main():
     result = {}
+    palettes = {}
     for species, (path, flip) in SPECIES.items():
         arr = np.array(Image.open(path).convert("RGB"))
         mask = content_mask(arr)
         labeled, groups = segment_three(mask, )
         if len(groups) != 3:
             print(f"[warn] {species}: {len(groups)}그룹 검출 (3 아님)")
+
+        # 1) 세 스테이지 픽셀을 모아 종 고정 팔레트(5색) 산출 — 스테이지 간
+        #    색이 일관되도록. 각 셀은 이 팔레트의 최근접색으로 배정된다.
+        preps = []
+        subs = []
         for stage_idx, group in enumerate(groups[:3]):
             size = STAGE_SIZES[stage_idx]
             _, _, _, _, sub = region_bbox(labeled, group)
-            art, _ = to_ascii(arr, sub, size, flip)
+            alpha, rgb = _prep_square(arr, sub, size, flip)
+            preps.append((alpha, rgb, size))
+            subs.append(rgb[alpha])
+        palette = build_palette(subs, k=5)
+        palettes[species] = [_hex(c) for c in palette]
+
+        # 2) 스테이지별 ASCII (팔레트 최근접색)
+        for stage_idx, (alpha, rgb, size) in enumerate(preps):
+            art = to_ascii(alpha, rgb, palette, size)
             eyes = detect_eyes(art, size)
             eyes = [tuple(int(v) for v in e) for e in eyes]
             ex, ey, ew, eh = eyes[0]
             mouth = (int(max(0, ex)), int(min(size - 1, ey + eh + 2)))
             key = f"{species}{stage_idx + 1}"
             result[key] = {"body": art, "eyes": eyes, "mouth": mouth}
-            print(f"  {key}: {size}px, eyes={eyes}, mouth={mouth}")
+        print(f"  {species}: palette={palettes[species]}")
 
     with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
         f.write("# -*- coding: utf-8 -*-\n")
@@ -231,8 +250,13 @@ def main():
             f.write(f'        "eyes": {d["eyes"]!r},\n')
             f.write(f'        "mouth": {tuple(d["mouth"])!r},\n')
             f.write("    },\n")
+        f.write("}\n\n")
+        # 종 → 팔레트 5색 (명암 오름차순: '#','o','+','&','%' 순서와 대응)
+        f.write("HIDDEN_PALETTE = {\n")
+        for species, cols in palettes.items():
+            f.write(f"    {species!r}: [{', '.join(cols)}],\n")
         f.write("}\n")
-    print(f"생성: {OUTPUT_PATH} ({len(result)}개 스프라이트)")
+    print(f"생성: {OUTPUT_PATH} ({len(result)}개 스프라이트, 팔레트 {len(palettes)}종)")
 
 
 if __name__ == "__main__":

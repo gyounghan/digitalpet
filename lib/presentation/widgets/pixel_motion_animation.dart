@@ -1,11 +1,23 @@
 import 'package:flutter/material.dart';
 import '../../core/pixel/pet_motion_data.dart';
 import '../../core/pixel/pet_pixel_data.dart';
+import '../../core/pixel/hidden_palette.dart';
 import '../../core/utils/pet_image_helper.dart';
 import '../../core/theme/species_theme.dart';
 import '../../domain/entities/evolution_type.dart';
 import '../../domain/entities/pet.dart';
 import 'pixel_pet_image.dart';
+
+/// 스프라이트 키에서 설화 영물 5색 팔레트 조회 (아니면 null).
+///
+/// 히든 종은 테마 재도색이 아니라 레퍼런스 실제 색으로 렌더한다.
+/// 키 형식: '{종}{스테이지}'(+ 'n' 일반종) — 예: 'gumiho2', 'haetae3n'.
+List<Color>? hiddenPaletteForSpriteKey(String spriteKey) {
+  for (final species in hiddenSpeciesPalette.keys) {
+    if (spriteKey.startsWith(species)) return hiddenSpeciesPalette[species];
+  }
+  return null;
+}
 
 /// 도트 모션 종류 (유아기 stage 2 / 성장기 stage 3 공통)
 enum PixelMotion {
@@ -219,6 +231,22 @@ class _PixelMotionAnimationState extends State<PixelMotionAnimation>
       );
     }
     final idx = _currentIndex < frames.length ? _currentIndex : 0;
+
+    // 설화 영물은 레퍼런스 5색 팔레트로 렌더 (테마 재도색 대신 실제 색)
+    final palette = hiddenPaletteForSpriteKey(widget.spriteKey);
+    if (palette != null && palette.length >= 5) {
+      return PixelSpriteView(
+        sprite: frames[idx],
+        width: widget.width,
+        height: widget.height,
+        darkColor: palette[0],
+        dotColor: palette[1],
+        accentColor: palette[2],
+        accent2Color: palette[3],
+        accent3Color: palette[4],
+      );
+    }
+
     return PixelSpriteView(
       sprite: frames[idx],
       width: widget.width,

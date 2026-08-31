@@ -36,6 +36,7 @@ from PIL import Image
 
 BASE = 24  # 이펙트 글리프 좌표의 기준 그리드 (24 기준값 + 앵커 보정)
 OUTPUT_PATH = os.path.join("lib", "core", "pixel", "pet_motion_data.dart")
+PALETTE_PATH = os.path.join("lib", "core", "pixel", "hidden_palette.dart")
 
 # 안드로이드 홈 위젯이 앱과 동일한 도트 모션을 네이티브로 렌더하기 위한 JSON.
 # 위젯은 정지 이미지라 모션별 대표 프레임(가운데=index 1) 1장만 내보낸다.
@@ -99,7 +100,7 @@ def validate(art, name):
     for i, row in enumerate(art):
         assert len(row) == n, "%s row %d: %d칸 (정사각 %d이어야 함)" % (
             name, i, len(row), n)
-        assert set(row) <= {".", "#", "o", "+"}, (
+        assert set(row) <= {".", "#", "o", "+", "&", "%"}, (
             "%s row %d: 잘못된 문자" % (name, i)
         )
 
@@ -1089,7 +1090,7 @@ NORMAL_DROP_EYES = {"turtle2": {1}, "turtle3": {1}}  # 뱀 눈 제거
 # 'o'는 런타임에 종 테마색으로 렌더된다(기존 백호=청회색과 동일한 스타일화).
 # ---------------------------------------------------------------------------
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from hidden_species_art import HIDDEN_ART  # noqa: E402
+from hidden_species_art import HIDDEN_ART, HIDDEN_PALETTE  # noqa: E402
 
 for _k, _v in HIDDEN_ART.items():
     SPECIES_ART[_k] = {
@@ -1526,15 +1527,16 @@ MOTIONS = {
 
 
 def art_to_masks(g):
-    """아트 그리드 → (dark, body, accent) 행 마스크."""
+    """아트 그리드 → (dark, body, accent, accent2, accent3) 행 마스크.
+
+    '#'dark / 'o'body / '+'accent / '&'accent2 / '%'accent3.
+    설화 영물(레퍼런스 5색 팔레트)만 accent2/3를 쓰고, 사신수는 3계조라
+    accent2/3가 전부 0 → 출력에서 생략된다.
+    """
     n = len(g)
-    dark_rows = []
-    body_rows = []
-    accent_rows = []
+    dark_rows, body_rows, accent_rows, a2_rows, a3_rows = [], [], [], [], []
     for y in range(n):
-        dark = 0
-        body = 0
-        accent = 0
+        dark = body = accent = a2 = a3 = 0
         for x in range(n):
             ch = g[y][x]
             if ch == "#":
@@ -1543,10 +1545,16 @@ def art_to_masks(g):
                 body |= 1 << x
             elif ch == "+":
                 accent |= 1 << x
+            elif ch == "&":
+                a2 |= 1 << x
+            elif ch == "%":
+                a3 |= 1 << x
         dark_rows.append(dark)
         body_rows.append(body)
         accent_rows.append(accent)
-    return dark_rows, body_rows, accent_rows
+        a2_rows.append(a2)
+        a3_rows.append(a3)
+    return dark_rows, body_rows, accent_rows, a2_rows, a3_rows
 
 
 def format_rows(rows, n):
@@ -1609,19 +1617,26 @@ def main() -> int:
             size = art_size(key)
             for motion_name, frames in motions.items():
                 f.write("    '%s': [\n" % motion_name)
-                for dark, body, accent in frames:
+                for dark, body, accent, a2, a3 in frames:
+                    extra = ""
+                    if any(a2):
+                        extra += "        accent2: %s,\n" % format_rows(a2, size)
+                    if any(a3):
+                        extra += "        accent3: %s,\n" % format_rows(a3, size)
                     f.write(
                         "      PixelSprite(\n"
                         "        size: %d,\n"
                         "        dark: %s,\n"
                         "        body: %s,\n"
                         "        accent: %s,\n"
+                        "%s"
                         "      ),\n"
                         % (
                             size,
                             format_rows(dark, size),
                             format_rows(body, size),
                             format_rows(accent, size),
+                            extra,
                         )
                     )
                 f.write("    ],\n")
@@ -1629,6 +1644,7 @@ def main() -> int:
         f.write("};\n")
 
     write_widget_json(sprite_frames)
+    write_hidden_palette()
 
     total = sum(len(m) * 3 for m in sprite_frames.values())
     sizes = ", ".join(
@@ -1637,6 +1653,27 @@ def main() -> int:
     print("생성 완료: %s (%d개 프레임, %s)" % (OUTPUT_PATH, total, sizes))
     print("위젯 JSON: %s" % WIDGET_JSON_PATH)
     return 0
+
+
+def write_hidden_palette():
+    """설화 영물 종별 5색 실제 팔레트 → Dart (명암 오름차순).
+
+    렌더러는 스프라이트 키에서 종을 뽑아 이 팔레트로 5계조를 칠한다
+    (테마색 재도색이 아니라 레퍼런스 실제 색).
+    인덱스 0='#'dark, 1='o'body, 2='+'accent, 3='&'accent2, 4='%'accent3.
+    """
+    with open(PALETTE_PATH, "w", encoding="utf-8") as f:
+        f.write("// GENERATED CODE - DO NOT EDIT BY HAND\n")
+        f.write("// tool/generate_motion_data.py 로 재생성.\n\n")
+        f.write("import 'package:flutter/material.dart';\n\n")
+        f.write("/// 설화 영물 종 → 5색 팔레트 (레퍼런스 컨셉아트 실측).\n")
+        f.write("/// 순서: dark, body, accent, accent2, accent3\n")
+        f.write("const Map<String, List<Color>> hiddenSpeciesPalette = {\n")
+        for species, cols in HIDDEN_PALETTE.items():
+            colors = ", ".join("Color(0xFF%06X)" % c for c in cols)
+            f.write("  '%s': [%s],\n" % (species, colors))
+        f.write("};\n")
+    print("팔레트: %s" % PALETTE_PATH)
 
 
 def write_widget_json(sprite_frames):
@@ -1656,9 +1693,11 @@ def write_widget_json(sprite_frames):
                     {
                         "d": ["%X" % v for v in dark],
                         "b": ["%X" % v for v in body],
-                        "a": ["%X" % v for v in accent],
+                        # 위젯(네이티브)은 3계조 — 보조색2/3을 보조색에 합침
+                        "a": ["%X" % (a | a2 | a3)
+                              for a, a2, a3 in zip(accent, acc2, acc3)],
                     }
-                    for dark, body, accent in frames
+                    for dark, body, accent, acc2, acc3 in frames
                 ]
             }
         root[key] = entry

@@ -35,7 +35,7 @@ void main() {
       }
     });
 
-    test('프레임은 size와 행 수가 일치하고 dark/body/accent가 겹치지 않는다', () {
+    test('프레임은 size·행수가 일치하고 5계조(dark/body/accent/2/3)가 겹치지 않는다', () {
       for (final key in motionFrames.keys) {
         for (final m in motions) {
           final frames = motionFrames[key]![m]!;
@@ -47,16 +47,41 @@ void main() {
             expect(frame.body.length, n, reason: '$key/$m[$i]: body rows');
             expect(frame.accent.length, n, reason: '$key/$m[$i]: accent rows');
             for (var y = 0; y < n; y++) {
-              expect(frame.dark[y] & frame.body[y], 0,
-                  reason: '$key/$m[$i]: row $y dark∩body');
-              expect(frame.dark[y] & frame.accent[y], 0,
-                  reason: '$key/$m[$i]: row $y dark∩accent');
-              expect(frame.body[y] & frame.accent[y], 0,
-                  reason: '$key/$m[$i]: row $y body∩accent');
+              // 각 도트는 한 계조에만 속해야 한다 (레이어 간 비트 겹침 없음)
+              final layers = [
+                frame.dark[y],
+                frame.body[y],
+                frame.accent[y],
+                y < frame.accent2.length ? frame.accent2[y] : 0,
+                y < frame.accent3.length ? frame.accent3[y] : 0,
+              ];
+              for (var a = 0; a < layers.length; a++) {
+                for (var b = a + 1; b < layers.length; b++) {
+                  expect(layers[a] & layers[b], 0,
+                      reason: '$key/$m[$i]: row $y layer$a∩layer$b');
+                }
+              }
             }
           }
         }
       }
+    });
+
+    test('설화 영물 6종은 5색 팔레트를 가진다', () {
+      for (final species in [
+        'samjoko',
+        'gumiho',
+        'moonrabbit',
+        'haetae',
+        'dokkaebi',
+        'hwangryong'
+      ]) {
+        final pal = hiddenPaletteForSpriteKey('${species}2');
+        expect(pal, isNotNull, reason: '$species 팔레트 없음');
+        expect(pal!.length, 5, reason: '$species 팔레트 5색 아님');
+      }
+      // 사신수는 팔레트 없음 (테마 재도색 유지)
+      expect(hiddenPaletteForSpriteKey('tiger2'), isNull);
     });
 
     test('같은 스프라이트 키의 모든 프레임은 같은 size를 가진다', () {
