@@ -125,43 +125,47 @@ class SpeciesTheme {
     spriteAccent: Color(0xFFFFF0DC),
   );
 
-  /// 달토끼 (moonrabbit) - 연보라 (달빛)
+  /// 달토끼 (moonrabbit) - 흰 몸 + 보라 문양 (달빛). 레퍼런스에 맞춰 몸통을
+  /// 밝게(연보라-화이트) 잡고 보라는 보조색으로.
   static const SpeciesTheme moonrabbit = SpeciesTheme(
-    primary: Color(0xFF9B8AC9),
-    primaryDeep: Color(0xFF5F4E96),
+    primary: Color(0xFFB8ACD8),
+    primaryDeep: Color(0xFF6A5AA0),
     primarySoft: Color(0xFFEDE8F8),
     surfaceDeep: Color(0xFFE9E3F6),
-    accent: Color(0xFFB9A8E4),
-    glow: Color(0xFFD3C7EF),
-    gradStart: Color(0xFFFAF8FE),
-    gradEnd: Color(0xFFE2D9F5),
-    spriteAccent: Color(0xFFF8F6FF),
+    accent: Color(0xFFC8BCE8),
+    glow: Color(0xFFD9CFEF),
+    gradStart: Color(0xFFFBFAFE),
+    gradEnd: Color(0xFFE6DEF5),
+    spriteAccent: Color(0xFFF6F3FF),
   );
 
-  /// 해태 (haetae) - 청록+금 갈기 (돌 수호수)
+  /// 해태 (haetae) - 청회색 몸 + 붉은 불꽃 갈기 (돌 수호수).
+  /// 레퍼런스 실측: 몸통=청회색('o'), 갈기·꼬리 불꽃=붉은색('+').
   static const SpeciesTheme haetae = SpeciesTheme(
-    primary: Color(0xFF2E9B8F),
-    primaryDeep: Color(0xFF176B62),
-    primarySoft: Color(0xFFCDEEE9),
-    surfaceDeep: Color(0xFFC9ECE6),
-    accent: Color(0xFF54C2B4),
-    glow: Color(0xFF8FDDD1),
-    gradStart: Color(0xFFF0FBF9),
-    gradEnd: Color(0xFFC5EBE4),
-    spriteAccent: Color(0xFFE8C86A),
+    primary: Color(0xFF5E7A88),
+    primaryDeep: Color(0xFF3A5462),
+    primarySoft: Color(0xFFD7E3E8),
+    surfaceDeep: Color(0xFFD2E0E6),
+    accent: Color(0xFFE0654A),
+    glow: Color(0xFF9CB4BE),
+    gradStart: Color(0xFFF4F8FA),
+    gradEnd: Color(0xFFD2E2E8),
+    spriteAccent: Color(0xFFD9503A),
   );
 
-  /// 도깨비 (dokkaebi) - 청보라+빨강 (장난꾸러기 싸움꾼)
+  /// 도깨비 (dokkaebi) - 붉은 피부 + 짙은 머리 (장난꾸러기 싸움꾼).
+  /// 레퍼런스 실측: 어두운 머리·아웃라인이 최대 군집('o'→짙은 갈색),
+  /// 붉은 피부는 보조색('+'). UI도 오니답게 다크레드 톤.
   static const SpeciesTheme dokkaebi = SpeciesTheme(
-    primary: Color(0xFF6157A8),
-    primaryDeep: Color(0xFF3E3576),
-    primarySoft: Color(0xFFE4E0F4),
-    surfaceDeep: Color(0xFFE0DCF2),
-    accent: Color(0xFFE85D4F),
-    glow: Color(0xFF9A90D8),
-    gradStart: Color(0xFFF8F7FD),
-    gradEnd: Color(0xFFDCD7F2),
-    spriteAccent: Color(0xFFE8734F),
+    primary: Color(0xFF4A3230),
+    primaryDeep: Color(0xFF2E201F),
+    primarySoft: Color(0xFFF0DAD4),
+    surfaceDeep: Color(0xFFEDD6D0),
+    accent: Color(0xFFE05A48),
+    glow: Color(0xFFB08078),
+    gradStart: Color(0xFFFBF4F2),
+    gradEnd: Color(0xFFF0D8D2),
+    spriteAccent: Color(0xFFD14B3A),
   );
 
   /// 황룡 (hwangryong) - 금 (오방의 중앙)
