@@ -1,14 +1,20 @@
 # -*- coding: utf-8 -*-
-"""레퍼런스 이미지(설화 영물 컨셉아트)에서 도트 아트를 추출.
+"""레퍼런스 이미지(설화 영물 마커 아트)에서 도트 아트를 추출.
 
-각 레퍼런스는 3스테이지(유아기·성장기·성숙기)가 좌→우로 나열돼 있다.
-연결요소 분석으로 3마리를 분리 → 크롭 → (필요시 좌우반전, 게임 펫은 왼쪽을
-본다) → 목표 격자로 축소 → 색을 3계조('#'dark/'o'body/'+'accent)로 양자화.
+각 레퍼런스(tool/refs/{종}_눈입.png — APK 번들 제외를 위해 assets/ 밖)는
+3스테이지(유아기·성장기·성숙기)가
+좌→우로 나열돼 있고, 사용자가 눈=마젠타(#FF00FF)·입=시안(#00FFFF) 마커를
+직접 찍어 두었다. 실루엣과 눈/입 좌표가 같은 이미지에서 나오므로
+자동 눈 검출의 오검출·잔상 문제가 원천적으로 없다.
 
-몸통색('o')은 런타임에 종 테마색으로 렌더되므로(기존 백호=청회색처럼 스타일화),
-여기선 실루엣과 명암 구조를 충실히 뜨는 게 목적이다.
+처리 순서 (스테이지별):
+  1. 연결요소 분석으로 3마리를 분리 → 본체(최대 컴포넌트)만 크롭
+     (범례 스와치·라벨 텍스트·떠 있는 장식은 자동 제외)
+  2. 마커 픽셀을 주변 캐릭터 색으로 메꿔 잔상 제거 (inpaint)
+  3. 목표 격자로 축소 → 종 고정 5색 팔레트로 양자화
+  4. 마커 마스크를 같은 변환으로 축소해 눈 rect·입 좌표 산출
 
-출력: tool/hidden_species_art.py  (HIDDEN_ART dict)
+출력: tool/hidden_species_art.py  (HIDDEN_ART / HIDDEN_PALETTE)
 사용: python tool/dump_reference_art.py
 """
 
@@ -19,20 +25,20 @@ from scipy import ndimage
 from scipy.cluster.vq import kmeans2
 
 # 종 → (경로, 좌우반전 여부). 게임 펫은 전부 왼쪽을 본다(사신수와 통일).
-# 실측(tiger 기준 렌더 비교)으로 확정한 값.
+# 마커 레퍼런스는 전부 왼쪽을 보고 그려져 반전 불필요.
 SPECIES = {
-    "samjoko": ("assets/삼족오.png", False),
-    "gumiho": ("assets/구미호.jpeg", False),
-    "moonrabbit": ("assets/달토끼.png", True),
-    "haetae": ("assets/해테.jpeg", False),
-    "dokkaebi": ("assets/도깨비.png", False),
-    "hwangryong": ("assets/황룡.png", False),
+    "samjoko": ("tool/refs/삼족오_눈입.png", False),
+    "gumiho": ("tool/refs/구미호_눈입.png", False),
+    "moonrabbit": ("tool/refs/달토기_눈입.png", False),
+    "haetae": ("tool/refs/해테_눈입.png", False),
+    "dokkaebi": ("tool/refs/도깨비_눈입.png", False),
+    "hwangryong": ("tool/refs/황룡_눈입.png", False),
 }
 
 # 스테이지별 목표 격자 (유아기 32 / 성장기 36 / 성숙기 56 — 기존 규칙)
 STAGE_SIZES = [32, 36, 56]
 
-# 종별 얼굴(눈) 대략 위치 (fx, fy) 0~1 — 전부 왼쪽을 보는 기준.
+# 종별 얼굴(눈) 대략 위치 (fx, fy) 0~1 — 마커가 없을 때만 쓰는 폴백.
 EYE_HINT = {
     "samjoko": (0.30, 0.30),
     "gumiho": (0.30, 0.32),
@@ -42,68 +48,9 @@ EYE_HINT = {
     "hwangryong": (0.30, 0.30),
 }
 
-# 눈 수동 지정 — 레퍼런스에서 실제 눈 위치를 판독해 그 자리에 배치.
-# 값은 눈 rect (x, y, w, h) 목록. 예전 2튜플(x, y)은 2x2로 해석된다.
-# 정면/3/4 얼굴은 2개, 옆모습은 1개. 자동검출보다 우선.
-EYE_OVERRIDE = {
-    # 도깨비 — 얼굴 중앙이 아니라 실제 양쪽 눈동자 덩어리 기준.
-    "dokkaebi1": [(6, 14, 3, 4), (15, 13, 3, 5)],
-    "dokkaebi2": [(8, 12, 3, 4), (15, 12, 3, 4)],
-    "dokkaebi3": [(13, 16, 4, 6), (25, 15, 4, 6)],
-
-    # 해태 — 눈은 얼굴 중단, 입은 왼쪽 주둥이 쪽에서 따로 보정.
-    "haetae1": [(10, 10, 3, 3)],
-    "haetae2": [(11, 13, 3, 3)],
-    "haetae3": [(15, 21, 3, 3)],
-
-    # 구미호 — 레퍼런스의 검은 눈 픽셀 덩어리 기준.
-    "gumiho1": [(6, 13, 3, 3), (14, 13, 3, 3)],
-    "gumiho2": [(4, 11, 4, 5), (13, 11, 4, 5)],
-    "gumiho3": [(38, 21, 5, 4)],
-
-    # 달토끼 — 전 단계에서 양눈이 보인다. 자동검출은 목도리/몸통을 잡기 쉬움.
-    "moonrabbit1": [(15, 17, 3, 4), (25, 17, 3, 4)],
-    "moonrabbit2": [(19, 16, 3, 3), (28, 16, 3, 4)],
-    "moonrabbit3": [(18, 22, 4, 4), (42, 22, 4, 4)],
-
-    # 황룡 — 자동검출이 뿔/귀 하이라이트를 눈으로 오인해 수동 고정.
-    "hwangryong1": [(10, 14, 4, 5)],
-    "hwangryong2": [(10, 14, 4, 5)],
-    "hwangryong3": [(14, 18, 4, 6)],
-
-    # 삼족오 — 검은 몸통이라 눈 대비가 약해 실제 얼굴 위치를 크게 잡는다.
-    "samjoko1": [(9, 8, 3, 3)],
-    "samjoko2": [(5, 12, 3, 3)],
-    "samjoko3": [(17, 15, 3, 3)],
-}
-
-# 눈 제거 수동 지정 — 작은 표정 눈을 그리기 전에 원본 레퍼런스의 검은 눈 자국을
-# 먼저 지울 영역. 새 눈 위치(EYE_OVERRIDE)보다 넓을 수 있다.
-EYE_CLEAR_OVERRIDE = {
-    "gumiho1": [(5, 11, 5, 6), (13, 11, 5, 6)],
-}
-
-# 입 수동 지정 — 공격 브레스/배고픔 침 효과가 주둥이·부리에서 시작하도록 보정.
-MOUTH_OVERRIDE = {
-    "dokkaebi1": (10, 18),
-    "dokkaebi2": (12, 17),
-    "dokkaebi3": (20, 23),
-    "haetae1": (5, 14),
-    "haetae2": (6, 17),
-    "haetae3": (7, 24),
-    "gumiho1": (9, 16),
-    "gumiho2": (8, 16),
-    "gumiho3": (34, 24),
-    "moonrabbit1": (20, 22),
-    "moonrabbit2": (23, 21),
-    "moonrabbit3": (30, 27),
-    "hwangryong1": (5, 19),
-    "hwangryong2": (5, 19),
-    "hwangryong3": (8, 25),
-    "samjoko1": (6, 12),
-    "samjoko2": (3, 16),
-    "samjoko3": (10, 19),
-}
+# 수동 지정 폴백 — 마커 검출이 실패한 키만 여기에 적는다 (마커가 우선).
+EYE_OVERRIDE = {}
+MOUTH_OVERRIDE = {}
 
 OUTPUT_PATH = os.path.join("tool", "hidden_species_art.py")
 
@@ -111,6 +58,34 @@ OUTPUT_PATH = os.path.join("tool", "hidden_species_art.py")
 def luminance(rgb):
     r, g, b = rgb[..., 0], rgb[..., 1], rgb[..., 2]
     return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255.0
+
+
+def marker_masks(arr):
+    """눈(마젠타)·입(시안) 마커 픽셀 마스크.
+
+    캐릭터 아트에 있는 분홍 볼터치/붉은 피부는 g가 높거나 b가 낮아
+    걸리지 않도록 채도 높은 순색만 잡는다.
+    """
+    r = arr[..., 0].astype(int)
+    g = arr[..., 1].astype(int)
+    b = arr[..., 2].astype(int)
+    eye = (r > 170) & (b > 170) & (g < 110)
+    mouth = (g > 170) & (b > 170) & (r < 110)
+    return eye, mouth
+
+
+def blend_masks(arr):
+    """마커 주변 안티앨리어싱 번짐(마젠타/시안 계열)까지 넓게 잡은 마스크.
+
+    inpaint 전용 — 좌표 산출에는 쓰지 않는다. 캐릭터 고유의 분홍 볼터치·
+    붉은 갈기 등은 g/b 비율 조건에 걸리지 않아 보존된다.
+    """
+    r = arr[..., 0].astype(int)
+    g = arr[..., 1].astype(int)
+    b = arr[..., 2].astype(int)
+    eyeish = (r > 110) & (b > 100) & (g < r - 40) & (g < b - 30)
+    mouthish = (g > 110) & (b > 110) & (r < g - 40) & (r < b - 30)
+    return eyeish | mouthish
 
 
 def content_mask(arr):
@@ -138,7 +113,7 @@ def content_mask(arr):
 
 
 def segment_three(mask, min_area_frac=0.0006):
-    """마스크에서 3마리 영역의 (x0,x1) 열 범위를 반환 (좌→우)."""
+    """마스크에서 3마리 영역의 컴포넌트 그룹을 반환 (좌→우)."""
     labeled, n = ndimage.label(mask)
     if n == 0:
         raise RuntimeError("내용 없음")
@@ -162,36 +137,68 @@ def segment_three(mask, min_area_frac=0.0006):
     return labeled, groups
 
 
-def region_bbox(labeled, group):
-    """그룹(라벨 목록)이 차지하는 통합 bbox — 몸통 본체 + 근접 부속만.
+def main_component(labeled, group):
+    """그룹에서 본체(최대 컴포넌트)만 마스크로 반환.
 
-    본체(최대 컴포넌트) 발 아래로 처지는 것(텍스트)은 제외.
+    범례 스와치·라벨 텍스트·떠 있는 불꽃/반짝이/소품(달토끼 절구 등)은
+    본체와 분리돼 있으므로 여기서 전부 걸러진다. 손에 쥔 방망이·붙은
+    꼬리 불꽃처럼 몸에 닿은 요소는 본체 컴포넌트에 포함돼 유지된다.
     """
-    sub = np.isin(labeled, group)
-    ys, xs = np.where(sub)
-    # 본체 = 최대 컴포넌트
     sizes = {g: int((labeled == g).sum()) for g in group}
     main = max(sizes, key=sizes.get)
-    mys, mxs = np.where(labeled == main)
-    main_bottom = mys.max()
-    keep = []
-    for g in group:
-        gys, gxs = np.where(labeled == g)
-        # 본체 발밑(아래로 8px 초과)에서 시작하는 조각 = 텍스트/그림자 → 제외
-        if gys.min() > main_bottom + 8:
-            continue
-        keep.append(g)
-    sub = np.isin(labeled, keep)
+    return labeled == main
+
+
+def stage_sub(labeled, group, marker_all):
+    """스테이지 마스크 = 본체 + 본체 bbox 안의 조각 + (필요시) 봉합 복구.
+
+    흰 몸통이 배경색과 비슷하면 얼굴 내부가 배경으로 새고(달토끼 성숙기)
+    눈·코가 본체와 분리된 섬으로 남는다. 본체 bbox 안에 완전히 포함된
+    조각을 합치고, 그래도 마커가 본체 밖이면 closing+fill_holes로
+    아웃라인 틈을 봉합해 얼굴 내부(마커 포함)를 복구한다.
+    """
+    sub = main_component(labeled, group)
     ys, xs = np.where(sub)
-    return xs.min(), xs.max(), ys.min(), ys.max(), sub
+    y0, y1, x0, x1 = ys.min(), ys.max(), xs.min(), xs.max()
+    bbox = np.zeros_like(sub)
+    bbox[y0:y1 + 1, x0:x1 + 1] = True
+    if (marker_all & bbox & ~sub).sum() > 20:
+        # 얼굴 누수 감지 — bbox 안에 완전히 포함된 조각(눈·코 섬)을 합치고
+        # 아웃라인 틈을 봉합해 내부를 채운다. 정상 종은 이 경로를 타지
+        # 않아 떠 있는 장식(반짝이·불꽃)이 섞이지 않는다.
+        for g in group:
+            gys, gxs = np.where(labeled == g)
+            if (gys.min() >= y0 - 2 and gys.max() <= y1 + 2
+                    and gxs.min() >= x0 - 2 and gxs.max() <= x1 + 2):
+                sub = sub | (labeled == g)
+        sub = ndimage.binary_fill_holes(
+            ndimage.binary_closing(sub, structure=np.ones((7, 7))))
+    return sub
+
+
+def inpaint_markers(arr, sub, marker):
+    """마커 픽셀을 가장 가까운 비마커 캐릭터 색으로 메꾼다 (잔상 제거)."""
+    m = ndimage.binary_dilation(marker, iterations=2) & sub
+    valid = sub & ~m
+    if not m.any() or not valid.any():
+        return arr
+    _, (iy, ix) = ndimage.distance_transform_edt(
+        ~valid, return_indices=True)
+    out = arr.copy()
+    out[m] = arr[iy[m], ix[m]]
+    return out
 
 
 # 팔레트 인덱스(명암 오름차순) → ASCII 글자. dark→'#' … 최명→'%'
 PALETTE_CHARS = ["#", "o", "+", "&", "%"]
 
 
-def _prep_square(arr, sub, size, flip):
-    """크롭·반전·정사각 패딩 후 size 격자로 축소한 (alpha, rgb) 반환."""
+def _prep_square(arr, sub, size, flip, masks=()):
+    """크롭·반전·정사각 패딩 후 size 격자로 축소.
+
+    반환: (alpha, rgb, 축소된 마스크 커버리지[0~1] 목록)
+    masks의 각 마스크도 동일한 변환을 거쳐 격자 좌표계로 매핑된다.
+    """
     ys, xs = np.where(sub)
     y0, y1, x0, x1 = ys.min(), ys.max(), xs.min(), xs.max()
     crop = arr[y0:y1 + 1, x0:x1 + 1].astype(np.uint8)
@@ -201,11 +208,111 @@ def _prep_square(arr, sub, size, flip):
     if flip:
         im = im.transpose(Image.FLIP_LEFT_RIGHT)
     side = max(im.width, im.height)
+    ox, oy = (side - im.width) // 2, (side - im.height) // 2
     sq = Image.new("RGBA", (side, side), (0, 0, 0, 0))
-    sq.paste(im, ((side - im.width) // 2, (side - im.height) // 2))
+    sq.paste(im, (ox, oy))
     small = sq.resize((size, size), Image.BOX)
     px = np.array(small)
-    return px[..., 3] > 110, px[..., :3].astype(float)
+
+    scaled_masks = []
+    for m in masks:
+        mc = (m[y0:y1 + 1, x0:x1 + 1] & cmask).astype(np.uint8) * 255
+        mim = Image.fromarray(mc, "L")
+        if flip:
+            mim = mim.transpose(Image.FLIP_LEFT_RIGHT)
+        msq = Image.new("L", (side, side), 0)
+        msq.paste(mim, (ox, oy))
+        scaled_masks.append(
+            np.array(msq.resize((size, size), Image.BOX)).astype(float) / 255.0)
+
+    return px[..., 3] > 110, px[..., :3].astype(float), scaled_masks
+
+
+def eyes_from_marker(cov, thresh=0.15, max_eyes=2):
+    """축소된 눈 마커 커버리지에서 눈 rect 목록 산출 (좌→우)."""
+    m = cov > thresh
+    labeled, n = ndimage.label(m)
+    if n == 0:
+        return []
+    clusters = []
+    for i in range(1, n + 1):
+        ys, xs = np.where(labeled == i)
+        weight = float(cov[ys, xs].sum())
+        clusters.append((weight, xs.min(), xs.max(), ys.min(), ys.max()))
+    # 커버리지 큰 순으로 최대 max_eyes개 (노이즈 방지)
+    clusters.sort(reverse=True)
+    clusters = clusters[:max_eyes]
+    size = cov.shape[0]
+
+    def _expand(v0, v1, hi):
+        # 최소 2칸 (표정 렌더 최소 크기)
+        if v1 - v0 + 1 >= 2:
+            return v0, v1
+        if v1 + 1 < hi:
+            return v0, v1 + 1
+        return max(0, v0 - 1), v1
+
+    rects = []
+    for _, x0, x1, ys0, ys1 in clusters:
+        x0, x1 = _expand(int(x0), int(x1), size)
+        ys0, ys1 = _expand(int(ys0), int(ys1), size)
+        rects.append((x0, ys0, x1 - x0 + 1, ys1 - ys0 + 1))
+    rects.sort()
+    return rects
+
+
+def derive_eye_clear(art, eyes):
+    """눈 rect 안에 남은 어두운 도트('#')와 연결된 어두운 눈두덩 자동 산출.
+
+    황룡처럼 눈이 어두운 소켓 안에 그려진 종은 inpaint 후에도 소켓이
+    rect 밖으로 남아 표정 교체 시 잔상이 된다. rect 내부 '#'에서 시작해
+    주변 2칸 창 안의 연결된 '#' 덩어리를 찾아 그 bbox를 eye_clear로 쓴다.
+    삼족오처럼 얼굴 전체가 어두운 종은 덩어리가 창을 가득 채우므로
+    (75% 이상) 잔상이 아니라 몸색으로 보고 건너뛴다.
+    """
+    n = len(art)
+    g = [list(r) for r in art]
+    clears = []
+    for (ex, ey, ew, eh) in eyes:
+        wx0, wy0 = max(0, ex - 2), max(0, ey - 2)
+        wx1, wy1 = min(n - 1, ex + ew + 1), min(n - 1, ey + eh + 1)
+        seeds = [(x, y) for y in range(ey, min(n, ey + eh))
+                 for x in range(ex, min(n, ex + ew)) if g[y][x] == "#"]
+        if not seeds:
+            continue
+        blob = set(seeds)
+        stack = list(seeds)
+        while stack:
+            cx, cy = stack.pop()
+            for dx2, dy2 in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                nx, ny = cx + dx2, cy + dy2
+                if (wx0 <= nx <= wx1 and wy0 <= ny <= wy1
+                        and (nx, ny) not in blob and g[ny][nx] == "#"):
+                    blob.add((nx, ny))
+                    stack.append((nx, ny))
+        window_area = (wx1 - wx0 + 1) * (wy1 - wy0 + 1)
+        if len(blob) >= window_area * 0.75:
+            continue  # 어두운 몸색(삼족오) — 잔상 아님
+        bx0 = min(x for x, _ in blob)
+        bx1 = max(x for x, _ in blob)
+        by0 = min(y for _, y in blob)
+        by1 = max(y for _, y in blob)
+        cx0, cy0 = min(bx0, ex), min(by0, ey)
+        cx1, cy1 = max(bx1, ex + ew - 1), max(by1, ey + eh - 1)
+        if (cx0, cy0, cx1 - cx0 + 1, cy1 - cy0 + 1) != (ex, ey, ew, eh):
+            clears.append((cx0, cy0, cx1 - cx0 + 1, cy1 - cy0 + 1))
+    return clears
+
+
+def mouth_from_marker(cov, thresh=0.10):
+    """축소된 입 마커 커버리지에서 가중 중심 좌표 산출."""
+    if cov.max() <= thresh:
+        return None
+    ys, xs = np.where(cov > thresh)
+    w = cov[ys, xs]
+    mx = int(round(float((xs * w).sum() / w.sum())))
+    my = int(round(float((ys * w).sum() / w.sum())))
+    return (mx, my)
 
 
 def build_palette(stage_pixels, k=5):
@@ -231,15 +338,7 @@ def to_ascii(alpha, rgb, palette, size):
 
 
 def detect_eyes(art, size, eye_hint=None):
-    """art에서 눈 rect 추정 — "몸통에 완전히 둘러싸인" 작은 어두운 덩어리.
-
-    눈은 얼굴(몸통) 안에 박힌 어두운 점이라, 실루엣 경계('.'에 닿음)와
-    달리 8-이웃이 전부 비배경이다. 이 봉인(enclosure) 조건으로 아웃라인·
-    갈기 그림자를 걸러내고, 얼굴 영역(상반부·전방[왼쪽])의 것을 고른다.
-
-    [eye_hint] (fx, fy) 0~1 상대좌표 — 이 얼굴 위치에 가까운 후보 우선.
-    실패 시 hint(또는 기본 머리 전방)에 눈을 배치한다.
-    """
+    """마커가 없을 때의 폴백 — "몸통에 완전히 둘러싸인" 작은 어두운 덩어리."""
     grid = [list(r) for r in art]
     dark = np.array([[1 if c == "#" else 0 for c in row] for row in grid])
     filled = np.array(
@@ -269,7 +368,6 @@ def detect_eyes(art, size, eye_hint=None):
             continue
         if cx > size * 0.70:
             continue
-        # hint에 가까울수록 높은 점수 (+ 약간의 전방·상단 선호)
         dist = ((cx - hx) ** 2 + (cy - hy) ** 2) ** 0.5
         score = -dist
         if best is None or score > best[0]:
@@ -305,42 +403,62 @@ def main():
     palettes = {}
     for species, (path, flip) in SPECIES.items():
         arr = np.array(Image.open(path).convert("RGB"))
-        mask = content_mask(arr)
-        labeled, groups = segment_three(mask, )
+        eye_m, mouth_m = marker_masks(arr)
+        # 마커 픽셀도 캐릭터의 일부로 취급 (마스크가 마커 자리를 구멍 내지 않게)
+        mask = content_mask(arr) | eye_m | mouth_m
+        labeled, groups = segment_three(mask)
         if len(groups) != 3:
             print(f"[warn] {species}: {len(groups)}그룹 검출 (3 아님)")
 
-        # 1) 세 스테이지 픽셀을 모아 종 고정 팔레트(5색) 산출 — 스테이지 간
-        #    색이 일관되도록. 각 셀은 이 팔레트의 최근접색으로 배정된다.
+        # 1) 세 스테이지 픽셀을 모아 종 고정 팔레트(5색) 산출.
+        #    마커는 inpaint로 먼저 지워 팔레트가 오염되지 않는다.
         preps = []
         subs = []
+        blend = blend_masks(arr)
         for stage_idx, group in enumerate(groups[:3]):
             size = STAGE_SIZES[stage_idx]
-            _, _, _, _, sub = region_bbox(labeled, group)
-            alpha, rgb = _prep_square(arr, sub, size, flip)
-            preps.append((alpha, rgb, size))
+            sub = stage_sub(labeled, group, eye_m | mouth_m)
+            clean = inpaint_markers(arr, sub, eye_m | mouth_m | blend)
+            alpha, rgb, (eye_cov, mouth_cov) = _prep_square(
+                clean, sub, size, flip, masks=(eye_m, mouth_m))
+            preps.append((alpha, rgb, size, eye_cov, mouth_cov))
             subs.append(rgb[alpha])
         palette = build_palette(subs, k=5)
         palettes[species] = [_hex(c) for c in palette]
 
-        # 2) 스테이지별 ASCII (팔레트 최근접색)
-        for stage_idx, (alpha, rgb, size) in enumerate(preps):
+        # 2) 스테이지별 ASCII (팔레트 최근접색) + 마커 기반 눈/입
+        for stage_idx, (alpha, rgb, size, eye_cov, mouth_cov) in enumerate(preps):
             art = to_ascii(alpha, rgb, palette, size)
             key = f"{species}{stage_idx + 1}"
-            if key in EYE_OVERRIDE:
-                eyes = normalize_eye_override(EYE_OVERRIDE[key])
-            else:
-                eyes = detect_eyes(art, size, eye_hint=EYE_HINT.get(species))
+
+            eyes = eyes_from_marker(eye_cov)
+            src = "마커"
+            if not eyes:
+                if key in EYE_OVERRIDE:
+                    eyes = normalize_eye_override(EYE_OVERRIDE[key])
+                    src = "수동"
+                else:
+                    eyes = detect_eyes(art, size, eye_hint=EYE_HINT.get(species))
+                    src = "자동폴백"
+                print(f"[warn] {key}: 눈 마커 미검출 → {src}")
             eyes = [tuple(int(v) for v in e) for e in eyes]
-            if key in MOUTH_OVERRIDE:
-                mouth = MOUTH_OVERRIDE[key]
-            else:
-                ex, ey, ew, eh = eyes[0]
-                mouth = (int(max(0, ex)), int(min(size - 1, ey + eh + 2)))
-            item = {"body": art, "eyes": eyes, "mouth": mouth}
-            if key in EYE_CLEAR_OVERRIDE:
-                item["eye_clear"] = normalize_eye_override(EYE_CLEAR_OVERRIDE[key])
+
+            mouth = mouth_from_marker(mouth_cov)
+            if mouth is None:
+                if key in MOUTH_OVERRIDE:
+                    mouth = MOUTH_OVERRIDE[key]
+                else:
+                    ex, ey, ew, eh = eyes[0]
+                    mouth = (int(max(0, ex)), int(min(size - 1, ey + eh + 2)))
+                print(f"[warn] {key}: 입 마커 미검출 → 폴백 {mouth}")
+
+            item = {"body": art, "eyes": eyes, "mouth": tuple(mouth)}
+            clears = derive_eye_clear(art, eyes)
+            if clears:
+                item["eye_clear"] = clears
             result[key] = item
+            extra = f" eye_clear={clears}" if clears else ""
+            print(f"  {key}: eyes({src})={eyes} mouth={tuple(mouth)}{extra}")
         print(f"  {species}: palette={palettes[species]}")
 
     with open(OUTPUT_PATH, "w", encoding="utf-8") as f:

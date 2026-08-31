@@ -118,17 +118,20 @@ void main() {
     });
 
     test('구미호 유아기 눈은 원본 눈 잔상을 지운 뒤 그린다', () {
+      // 마커 기반 파이프라인(tool/dump_reference_art.py) 좌표:
+      // 눈 rect (4,14,2,3)/(13,14,2,3), eye_clear (4,14,3,3)/(13,14,3,3).
+      // 지움 영역 안에서는 그려진 눈 자리에만 dark 도트가 있어야 한다.
       final frame = motionFrames['gumiho1']!['walk']![1];
 
       bool isDrawnEye(int x, int y) {
-        final inLeft = x >= 6 && x < 9 && y >= 13 && y < 16;
-        final inRight = x >= 14 && x < 17 && y >= 13 && y < 16;
+        final inLeft = x >= 4 && x < 6 && y >= 14 && y < 17;
+        final inRight = x >= 13 && x < 15 && y >= 14 && y < 17;
         return inLeft || inRight;
       }
 
       for (final clearArea in [
-        (x: 5, y: 11, w: 5, h: 6),
-        (x: 13, y: 11, w: 5, h: 6),
+        (x: 4, y: 14, w: 3, h: 3),
+        (x: 13, y: 14, w: 3, h: 3),
       ]) {
         for (var y = clearArea.y; y < clearArea.y + clearArea.h; y++) {
           for (var x = clearArea.x; x < clearArea.x + clearArea.w; x++) {

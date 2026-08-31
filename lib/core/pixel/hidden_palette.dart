@@ -6,10 +6,10 @@ import 'package:flutter/material.dart';
 /// 설화 영물 종 → 5색 팔레트 (레퍼런스 컨셉아트 실측).
 /// 순서: dark, body, accent, accent2, accent3
 const Map<String, List<Color>> hiddenSpeciesPalette = {
-  'samjoko': [Color(0xFF111110), Color(0xFF252525), Color(0xFF404040), Color(0xFFA3A3A3), Color(0xFFF1F1F1)],
-  'gumiho': [Color(0xFF2B1B18), Color(0xFF7A3D2E), Color(0xFFD66A2F), Color(0xFFC39887), Color(0xFFDED7D4)],
-  'moonrabbit': [Color(0xFF524C65), Color(0xFF888095), Color(0xFFBCB9C8), Color(0xFFE9BB9E), Color(0xFFF7F5F6)],
-  'haetae': [Color(0xFF3C3739), Color(0xFF9A553E), Color(0xFF626F74), Color(0xFFB89D86), Color(0xFFD9D2CC)],
-  'dokkaebi': [Color(0xFF312522), Color(0xFF774031), Color(0xFFCA5040), Color(0xFFD79A63), Color(0xFFB7B7BB)],
-  'hwangryong': [Color(0xFF614925), Color(0xFFBE892D), Color(0xFFB6B2AC), Color(0xFFF4CA47), Color(0xFFF3E1A3)],
+  'samjoko': [Color(0xFF0F0E0E), Color(0xFF232323), Color(0xFF5B5B5B), Color(0xFFABABAB), Color(0xFFF5F5F5)],
+  'gumiho': [Color(0xFF2D1C14), Color(0xFF884121), Color(0xFFDA702B), Color(0xFFC9ADA6), Color(0xFFF8EBDD)],
+  'moonrabbit': [Color(0xFF534D69), Color(0xFF9894A8), Color(0xFFCD975F), Color(0xFFE0C4C4), Color(0xFFF9F7F8)],
+  'haetae': [Color(0xFF302320), Color(0xFF454E55), Color(0xFFB05E36), Color(0xFF67787C), Color(0xFFDFC8AC)],
+  'dokkaebi': [Color(0xFF462921), Color(0xFFC13F33), Color(0xFFD98E3E), Color(0xFF9A999D), Color(0xFFF1F1ED)],
+  'hwangryong': [Color(0xFF43321B), Color(0xFF896A31), Color(0xFFDA9B21), Color(0xFFF6D047), Color(0xFFDED0A4)],
 };
