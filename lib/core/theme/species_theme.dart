@@ -99,6 +99,58 @@ class SpeciesTheme {
     spriteAccent: Color(0xFFF2E3C2),
   );
 
+  /// 삼족오 (samjoko) - 흑+금 (태양의 까마귀)
+  static const SpeciesTheme samjoko = SpeciesTheme(
+    primary: Color(0xFF3F3F49),
+    primaryDeep: Color(0xFF26262D),
+    primarySoft: Color(0xFFE8E3D2),
+    surfaceDeep: Color(0xFFE9E4D4),
+    accent: Color(0xFFE0B44A),
+    glow: Color(0xFFEFCB6F),
+    gradStart: Color(0xFFFBF7EC),
+    gradEnd: Color(0xFFEADFB9),
+    spriteAccent: Color(0xFFF2C24E),
+  );
+
+  /// 구미호 (gumiho) - 주황 여우
+  static const SpeciesTheme gumiho = SpeciesTheme(
+    primary: Color(0xFFE07A3F),
+    primaryDeep: Color(0xFFAD5220),
+    primarySoft: Color(0xFFFFE3CE),
+    surfaceDeep: Color(0xFFFFE0C8),
+    accent: Color(0xFFFF9E66),
+    glow: Color(0xFFFFC08A),
+    gradStart: Color(0xFFFFF8F1),
+    gradEnd: Color(0xFFFFDDBE),
+    spriteAccent: Color(0xFFFFF0DC),
+  );
+
+  /// 달토끼 (moonrabbit) - 연보라 (달빛)
+  static const SpeciesTheme moonrabbit = SpeciesTheme(
+    primary: Color(0xFF9B8AC9),
+    primaryDeep: Color(0xFF5F4E96),
+    primarySoft: Color(0xFFEDE8F8),
+    surfaceDeep: Color(0xFFE9E3F6),
+    accent: Color(0xFFB9A8E4),
+    glow: Color(0xFFD3C7EF),
+    gradStart: Color(0xFFFAF8FE),
+    gradEnd: Color(0xFFE2D9F5),
+    spriteAccent: Color(0xFFF8F6FF),
+  );
+
+  /// 해태 (haetae) - 청록+금 갈기 (돌 수호수)
+  static const SpeciesTheme haetae = SpeciesTheme(
+    primary: Color(0xFF2E9B8F),
+    primaryDeep: Color(0xFF176B62),
+    primarySoft: Color(0xFFCDEEE9),
+    surfaceDeep: Color(0xFFC9ECE6),
+    accent: Color(0xFF54C2B4),
+    glow: Color(0xFF8FDDD1),
+    gradStart: Color(0xFFF0FBF9),
+    gradEnd: Color(0xFFC5EBE4),
+    spriteAccent: Color(0xFFE8C86A),
+  );
+
   /// 도트 스프라이트 아웃라인/눈 색 (전 종 공통)
   ///
   /// 근흑색 — 백호(청회색 몸)·흑 계열 변이처럼 어두운 몸통에서도 눈이
@@ -144,6 +196,30 @@ class SpeciesTheme {
           (Color(0xFF9A8748), Color(0xFFB08C50)), // 황갈 거북
           (Color(0xFF4A6B3E), Color(0xFF7A5E3C)), // 짙은초록 거북
         ],
+      EvolutionType.samjoko => const [
+          (Color(0xFF4B4B54), Color(0xFF8E8E96)), // 회흑 까마귀
+          (Color(0xFF6E5A46), Color(0xFFA88C6A)), // 갈색 까마귀
+          (Color(0xFF5A6474), Color(0xFF9AA6B8)), // 청회 까마귀
+          (Color(0xFF3E3E46), Color(0xFF787880)), // 짙은 흑 까마귀
+        ],
+      EvolutionType.gumiho => const [
+          (Color(0xFFD9853E), Color(0xFFF6E3C8)), // 주황 여우
+          (Color(0xFF8E93A2), Color(0xFFE2E6EE)), // 은여우
+          (Color(0xFFD9CDB8), Color(0xFFF4EFE2)), // 백여우
+          (Color(0xFF57504A), Color(0xFF8B837B)), // 흑여우
+        ],
+      EvolutionType.moonrabbit => const [
+          (Color(0xFFD9D4CC), Color(0xFFF5F2EC)), // 흰 토끼
+          (Color(0xFF9BA0A8), Color(0xFFD6DAE0)), // 회 토끼
+          (Color(0xFFA98D66), Color(0xFFE0CDAA)), // 갈색 토끼
+          (Color(0xFF57534E), Color(0xFF8D8983)), // 검은 토끼
+        ],
+      EvolutionType.haetae => const [
+          (Color(0xFF8E9299), Color(0xFFC8CCD2)), // 돌회 해치
+          (Color(0xFF7E8A62), Color(0xFFB7C29A)), // 청동 해치
+          (Color(0xFFBCA878), Color(0xFFE6DCC0)), // 모래 해치
+          (Color(0xFF4E5258), Color(0xFF83888E)), // 흑요 해치
+        ],
       null => const [
           (Color(0xFF4A5A78), Color(0xFFDDE3EC)),
         ],
@@ -158,6 +234,10 @@ class SpeciesTheme {
       EvolutionType.bird => bird,
       EvolutionType.turtle => turtle,
       EvolutionType.snake => snake,
+      EvolutionType.samjoko => samjoko,
+      EvolutionType.gumiho => gumiho,
+      EvolutionType.moonrabbit => moonrabbit,
+      EvolutionType.haetae => haetae,
       null => defaultTheme,
     };
   }
@@ -169,6 +249,10 @@ class SpeciesTheme {
       EvolutionType.bird => '주작',
       EvolutionType.turtle => '현무',
       EvolutionType.snake => '청룡',
+      EvolutionType.samjoko => '삼족오',
+      EvolutionType.gumiho => '구미호',
+      EvolutionType.moonrabbit => '달토끼',
+      EvolutionType.haetae => '해태',
       null => '털뭉치',
     };
   }

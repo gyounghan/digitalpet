@@ -9,6 +9,10 @@ const Map<EvolutionType, String> _evolutionImagePrefix = {
   EvolutionType.snake: 'dragon',
   EvolutionType.tiger: 'tiger',
   EvolutionType.turtle: 'turtle',
+  EvolutionType.samjoko: 'samjoko',
+  EvolutionType.gumiho: 'gumiho',
+  EvolutionType.moonrabbit: 'moonrabbit',
+  EvolutionType.haetae: 'haetae',
 };
 
 /// EvolutionType의 이미지 파일 접두어(종 키) 반환

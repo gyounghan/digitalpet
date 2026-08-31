@@ -62,4 +62,42 @@ class EvolutionAxisScores {
     if (isRegular) return EvolutionType.turtle;
     return EvolutionType.snake;
   }
+
+  // ── 설화 영물(히든 종) 각성 임계 — 원천 지표 직접 판정 ──
+  // Lv5(종 결정) 시점에 한 지표가 극단이면 사신수 대신 각성한다.
+  // 세트 클리어 유저는 3~4일에 Lv5 도달 — 그 기간에 "일부러" 몰아야
+  // 닿는 수치로 잡아 히든의 희소성을 유지한다.
+  // (해태만 예외적으로 "가볍게 오래" — 레벨업이 느린 개근 유저 보상)
+
+  /// 삼족오: 누적 4만 보 (하루 1만+ 보씩 걸은 걸음왕)
+  static const int samjokoStepsThreshold = 40000;
+
+  /// 구미호: 급식 목표 9회 달성 (매일 모든 슬롯을 챙긴 미식가)
+  static const int gumihoFeedsThreshold = 9;
+
+  /// 달토끼: 수면 목표 8회 달성 (매일 두 번씩 재우는 꿀잠 육성)
+  static const int moonrabbitSleepsThreshold = 8;
+
+  /// 해태: 연속 접속 7일 (매일 빠짐없이 찾아온 개근왕)
+  static const int haetaeLoginDaysThreshold = 7;
+
+  /// 히든 종 각성 판정 — 해당 없으면 null (사신수 4분면으로)
+  ///
+  /// 여러 조건 동시 충족 시 달성 난도가 높은 순서로 우선한다:
+  /// 삼족오 → 구미호 → 달토끼 → 해태
+  static EvolutionType? hiddenTypeFor(Pet pet) {
+    if (pet.totalSteps >= samjokoStepsThreshold) {
+      return EvolutionType.samjoko;
+    }
+    if (pet.feedAchievedCount >= gumihoFeedsThreshold) {
+      return EvolutionType.gumiho;
+    }
+    if (pet.sleepAchievedCount >= moonrabbitSleepsThreshold) {
+      return EvolutionType.moonrabbit;
+    }
+    if (pet.consecutiveLoginDays >= haetaeLoginDaysThreshold) {
+      return EvolutionType.haetae;
+    }
+    return null;
+  }
 }

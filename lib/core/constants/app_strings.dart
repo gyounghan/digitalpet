@@ -42,12 +42,19 @@ class AppStrings {
   // 진화 단계별 이름
   static const Map<String, String> stage2Names = {
     'bird': '아기새', 'snake': '아기뱀', 'tiger': '아기범', 'turtle': '아기거북',
+    // 설화 영물 (히든 종)
+    'samjoko': '아기까마귀', 'gumiho': '아기여우',
+    'moonrabbit': '아기토끼', 'haetae': '아기해치',
   };
   static const Map<String, Map<String, String>> stage3Names = {
     'bird': {'normal': '독수리', 'superior': '봉황'},
     'snake': {'normal': '뱀', 'superior': '이무기'},
     'tiger': {'normal': '호랑이', 'superior': '맹호'},
     'turtle': {'normal': '바다거북', 'superior': '영귀'},
+    'samjoko': {'normal': '까마귀', 'superior': '금까마귀'},
+    'gumiho': {'normal': '여우', 'superior': '불여우'},
+    'moonrabbit': {'normal': '토끼', 'superior': '옥토끼'},
+    'haetae': {'normal': '돌강아지', 'superior': '해치'},
   };
   // 성숙기: 잘 키우면 사신수(mythical), 아니면 그냥 동물(normal)
   static const Map<String, Map<String, String>> stage4Names = {
@@ -55,6 +62,10 @@ class AppStrings {
     'snake': {'normal': '구렁이', 'mythical': '청룡 \u{1F409}'},
     'tiger': {'normal': '호랑이', 'mythical': '백호 \u{26A1}'},
     'turtle': {'normal': '왕거북', 'mythical': '현무 \u{1F30A}'},
+    'samjoko': {'normal': '큰부리까마귀', 'mythical': '삼족오 \u{2600}\u{FE0F}'},
+    'gumiho': {'normal': '늙은여우', 'mythical': '구미호 \u{1F98A}'},
+    'moonrabbit': {'normal': '산토끼', 'mythical': '달토끼 \u{1F315}'},
+    'haetae': {'normal': '삽살개', 'mythical': '해태 \u{2696}\u{FE0F}'},
   };
 
   // 대결
@@ -67,11 +78,13 @@ class AppStrings {
 
   // 종 결정 연출 (SpeciesRevealScreen — 서사 본문은 SpeciesRevealNarrator가 생성)
   static const String speciesRevealBadge = '사신수 각성';
+  static const String hiddenSpeciesRevealBadge = '설화 영물 각성';
   static const String speciesRevealConfirm = '만나러 가기';
 
   // 진화 연출 (EvolutionRevealScreen — 3·4단계 전이)
   static const String evolutionRevealBadge = '진화';
   static const String evolutionRevealBadgeMythical = '사신수 강림';
+  static const String evolutionRevealBadgeHiddenMythical = '설화 영물 강림';
   static const String evolutionRevealConfirm = '좋아, 멋져!';
 
   // 목표 달성 순간 피드백 (홈 목표 카드)

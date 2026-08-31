@@ -1006,6 +1006,14 @@ class _MeScreenState extends ConsumerState<MeScreen> {
         return '현무 → 백호에 강함';
       case EvolutionType.tiger:
         return '백호 → 주작에 강함';
+      case EvolutionType.samjoko:
+        return '삼족오 → 구미호에 강함';
+      case EvolutionType.gumiho:
+        return '구미호 → 달토끼에 강함';
+      case EvolutionType.moonrabbit:
+        return '달토끼 → 해태에 강함';
+      case EvolutionType.haetae:
+        return '해태 → 삼족오에 강함';
       case null:
         return '진화 전';
     }

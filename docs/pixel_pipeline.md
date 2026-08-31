@@ -196,6 +196,26 @@ TMP/TEMP를 지정할 것.
 
 ---
 
+## 3.7 설화 영물(히든 종) 아트 파생
+
+신규 4종(samjoko/gumiho/moonrabbit/haetae)은 PNG 원본 없이
+`HIDDEN_SPECIES`(generate_motion_data.py)가 기존 몸체에서 프로그램
+편집으로 파생한다 — 좌표는 전부 아트에서 계산하므로 스테이지가 달라도
+같은 편집 함수를 재사용한다:
+
+- samjoko(삼족오) ← bird: 세 번째 다리(`_third_leg`) + 가슴 태양 문양(`_sun_mark`)
+- gumiho(구미호) ← tiger: 줄무늬 제거(`_destripe`) + 꼬리 끝 보조색(`_tail_accent`)
+- moonrabbit(달토끼) ← tiger: 줄무늬 제거 + 귀 연장(`_raise_ears`)
+- haetae(해태) ← tiger: 줄무늬 제거 + 갈기 링(`_mane`) + 이마 뿔(`_horn`)
+
+tiger 파생 3종은 SPECIES_SRC 재샘플링을 끈다(흰 호랑이 몸이 통째로
+보조색 승격돼 편집 표식이 묻힘) — 몸통은 테마색 단색, 표식만 보조색.
+종별 정체성은 SpeciesTheme 팔레트가 주도한다. 'n'(일반종) 라인은
+`_make_normal_forms` bases에 포함해 자동 파생된다 (스트립 없음 — 색만).
+
+각성 조건·성장 게이트는 `EvolutionAxisScores.hiddenTypeFor` /
+`EvolvePetUseCase` 참조.
+
 ## 4. 런타임 위젯 계층
 
 ```

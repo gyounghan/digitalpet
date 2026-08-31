@@ -55,8 +55,9 @@ class SpeciesRevealNarrator {
 
   /// 활발/차분 축 근거 1줄 — 종이 속한 축 기준
   static String _activityAxisLine(EvolutionType type, Pet pet) {
-    final isActiveType =
-        type == EvolutionType.tiger || type == EvolutionType.bird;
+    final isActiveType = type == EvolutionType.tiger ||
+        type == EvolutionType.bird ||
+        type == EvolutionType.samjoko;
     if (isActiveType) {
       if (pet.totalSteps >= 1000) {
         return '함께 걸은 ${formatNumber(pet.totalSteps)}보가 활발한 기운을 키웠어요';
@@ -71,8 +72,9 @@ class SpeciesRevealNarrator {
 
   /// 규칙/자유 축 근거 1줄 — 종이 속한 축 기준
   static String _rhythmAxisLine(EvolutionType type, Pet pet) {
-    final isRegularType =
-        type == EvolutionType.tiger || type == EvolutionType.turtle;
+    final isRegularType = type == EvolutionType.tiger ||
+        type == EvolutionType.turtle ||
+        type == EvolutionType.haetae;
     if (isRegularType) {
       if (pet.consecutiveLoginDays > 1) {
         return '${pet.consecutiveLoginDays}일 연속 찾아와 준 꾸준함이 더해졌어요';
@@ -96,6 +98,14 @@ class SpeciesRevealNarrator {
         return '몸 쓰는 걸 좋아하는 든든한 전투형 친구예요';
       case EvolutionType.turtle:
         return '차분하고 묵직한 방어형 친구예요';
+      case EvolutionType.samjoko:
+        return '태양을 향해 달리는 전설의 걸음꾼이에요';
+      case EvolutionType.gumiho:
+        return '맛있는 것 앞에선 못 참는 미식가 여우예요';
+      case EvolutionType.moonrabbit:
+        return '달빛 아래 꿀잠이 특기인 몽글한 친구예요';
+      case EvolutionType.haetae:
+        return '하루도 빠짐없이 곁을 지키는 수호수예요';
     }
   }
 
@@ -110,6 +120,14 @@ class SpeciesRevealNarrator {
         return '백호';
       case EvolutionType.turtle:
         return '현무';
+      case EvolutionType.samjoko:
+        return '삼족오';
+      case EvolutionType.gumiho:
+        return '구미호';
+      case EvolutionType.moonrabbit:
+        return '달토끼';
+      case EvolutionType.haetae:
+        return '해태';
     }
   }
 

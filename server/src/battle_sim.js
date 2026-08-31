@@ -38,11 +38,34 @@ const SKILL_SETS = {
     { name: '박치기', special: false, mult: 1.0 },
     { name: '방어자세', special: true, mult: 1.0, dmgReduction: 0.5, shieldCharges: 1 },
   ],
+  // 설화 영물 (클라이언트 _skillSets와 동기화)
+  samjoko: [
+    { name: '홰치기', special: false, mult: 1.0 },
+    { name: '일식', special: true, mult: 1.3 },
+  ],
+  gumiho: [
+    { name: '할큄', special: false, mult: 1.0 },
+    { name: '홀리기', special: true, mult: 1.1, atkDebuff: 2, debuffTurns: 2 },
+  ],
+  moonrabbit: [
+    { name: '떡방아', special: false, mult: 1.0 },
+    { name: '보름달', special: true, mult: 1.0, dmgReduction: 0.4, shieldCharges: 2 },
+  ],
+  haetae: [
+    { name: '들이받기', special: false, mult: 1.0 },
+    { name: '심판', special: true, mult: 1.1, defDebuff: 3, debuffTurns: 2 },
+  ],
 };
 const DEFAULT_SKILLS = [{ name: '공격', special: false, mult: 1.0 }];
 
-/// 공격자 종이 방어자 종에 유리한가 (bird→snake→turtle→tiger→bird)
-const ADVANTAGE = { bird: 'snake', snake: 'turtle', turtle: 'tiger', tiger: 'bird' };
+/// 공격자 종이 방어자 종에 유리한가
+/// 사신수: bird→snake→turtle→tiger→bird
+/// 설화 영물: samjoko→gumiho→moonrabbit→haetae→samjoko (그룹 간 중립)
+const ADVANTAGE = {
+  bird: 'snake', snake: 'turtle', turtle: 'tiger', tiger: 'bird',
+  samjoko: 'gumiho', gumiho: 'moonrabbit',
+  moonrabbit: 'haetae', haetae: 'samjoko',
+};
 
 export function affinityMultiplier(attackerType, defenderType) {
   if (!attackerType || !defenderType) return 1.0;

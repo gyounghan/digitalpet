@@ -60,6 +60,31 @@ class SpeciesGrowthConfig {
       stamina: 1.2,
       exp: 1.0,
     ),
+    // 설화 영물 — 각성 축의 개성을 배율로 반영
+    EvolutionType.samjoko: StatMultipliers(
+      hunger: 1.0,
+      happiness: 1.2,
+      stamina: 0.9,
+      exp: 1.1,
+    ),
+    EvolutionType.gumiho: StatMultipliers(
+      hunger: 1.3,
+      happiness: 1.0,
+      stamina: 1.0,
+      exp: 1.0,
+    ),
+    EvolutionType.moonrabbit: StatMultipliers(
+      hunger: 1.0,
+      happiness: 1.0,
+      stamina: 1.3,
+      exp: 1.0,
+    ),
+    EvolutionType.haetae: StatMultipliers(
+      hunger: 1.0,
+      happiness: 1.0,
+      stamina: 1.0,
+      exp: 1.15,
+    ),
   };
 
   /// 감소 배율 (UpdatePetStateUseCase 시간 감소 계열에 적용)
@@ -87,6 +112,30 @@ class SpeciesGrowthConfig {
       hunger: 1.0,
       happiness: 0.85,
       stamina: 0.8,
+      exp: 1.0,
+    ),
+    EvolutionType.samjoko: StatMultipliers(
+      hunger: 1.0,
+      happiness: 1.0,
+      stamina: 1.15,
+      exp: 1.0,
+    ),
+    EvolutionType.gumiho: StatMultipliers(
+      hunger: 1.1,
+      happiness: 1.0,
+      stamina: 1.0,
+      exp: 1.0,
+    ),
+    EvolutionType.moonrabbit: StatMultipliers(
+      hunger: 1.1,
+      happiness: 1.0,
+      stamina: 0.8,
+      exp: 1.0,
+    ),
+    EvolutionType.haetae: StatMultipliers(
+      hunger: 1.0,
+      happiness: 0.9,
+      stamina: 1.0,
       exp: 1.0,
     ),
   };

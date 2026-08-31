@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/constants/app_strings.dart';
 import '../../core/theme/species_theme.dart';
+import '../../domain/entities/evolution_type.dart';
 import '../../domain/entities/pet.dart';
 import '../widgets/pixel_motion_animation.dart';
 
@@ -213,7 +214,9 @@ class _EvolutionRevealScreenState extends State<EvolutionRevealScreen>
           const SizedBox(width: 5),
           Text(
             _isMythical
-                ? AppStrings.evolutionRevealBadgeMythical
+                ? (widget.pet.evolutionType?.isHiddenSpecies == true
+                    ? AppStrings.evolutionRevealBadgeHiddenMythical
+                    : AppStrings.evolutionRevealBadgeMythical)
                 : AppStrings.evolutionRevealBadge,
             style: TextStyle(
               fontSize: 11.5,

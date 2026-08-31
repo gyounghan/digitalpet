@@ -8,12 +8,19 @@ import '../repositories/activity_repository.dart';
 import '../repositories/battle_history_repository.dart';
 import 'apply_battle_reward.dart';
 
-/// 상성 테이블: bird→snake→turtle→tiger→bird
+/// 상성 테이블
+/// 사신수: bird→snake→turtle→tiger→bird
+/// 설화 영물: samjoko→gumiho→moonrabbit→haetae→samjoko
+/// (두 순환은 서로 중립 — 그룹 간 상성 없음)
 const Map<EvolutionType, EvolutionType> _affinityAdvantage = {
   EvolutionType.bird: EvolutionType.snake,
   EvolutionType.snake: EvolutionType.turtle,
   EvolutionType.turtle: EvolutionType.tiger,
   EvolutionType.tiger: EvolutionType.bird,
+  EvolutionType.samjoko: EvolutionType.gumiho,
+  EvolutionType.gumiho: EvolutionType.moonrabbit,
+  EvolutionType.moonrabbit: EvolutionType.haetae,
+  EvolutionType.haetae: EvolutionType.samjoko,
 };
 
 /// 종별 스킬 정의
@@ -66,6 +73,37 @@ const Map<EvolutionType, List<BattleSkill>> _skillSets = {
   EvolutionType.turtle: [
     BattleSkill(name: '박치기'),
     BattleSkill(name: '방어자세', type: SkillType.special, damageReduction: 0.5, reductionDuration: 1),
+  ],
+  // 설화 영물 — 각 종의 정체성을 반영한 고유기
+  EvolutionType.samjoko: [
+    BattleSkill(name: '홰치기'),
+    BattleSkill(name: '일식', type: SkillType.special, damageMultiplier: 1.3),
+  ],
+  EvolutionType.gumiho: [
+    BattleSkill(name: '할큄'),
+    BattleSkill(
+        name: '홀리기',
+        type: SkillType.special,
+        damageMultiplier: 1.1,
+        attackDebuff: 2,
+        debuffDuration: 2),
+  ],
+  EvolutionType.moonrabbit: [
+    BattleSkill(name: '떡방아'),
+    BattleSkill(
+        name: '보름달',
+        type: SkillType.special,
+        damageReduction: 0.4,
+        reductionDuration: 2),
+  ],
+  EvolutionType.haetae: [
+    BattleSkill(name: '들이받기'),
+    BattleSkill(
+        name: '심판',
+        type: SkillType.special,
+        damageMultiplier: 1.1,
+        defenseDebuff: 3,
+        debuffDuration: 2),
   ],
 };
 
@@ -393,6 +431,10 @@ class BattleWithActivityUseCase {
       case EvolutionType.snake: hpBonus = 10; defenseBonus = 2; break;
       case EvolutionType.tiger: attackBonus = 2; defenseBonus = 2; break;
       case EvolutionType.turtle: defenseBonus = 3; hpBonus = 10; break;
+      case EvolutionType.samjoko: attackBonus = 3; hpBonus = 5; break;
+      case EvolutionType.gumiho: attackBonus = 2; defenseBonus = 1; hpBonus = 5; break;
+      case EvolutionType.moonrabbit: defenseBonus = 2; hpBonus = 12; break;
+      case EvolutionType.haetae: attackBonus = 1; defenseBonus = 3; hpBonus = 5; break;
       case null: break; // 털뭉치 — 종 보너스 없음
     }
 

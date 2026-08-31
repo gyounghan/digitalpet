@@ -122,7 +122,9 @@ class EvolvePetUseCase {
   /// 점수 공식·축 정의는 [EvolutionAxisScores]가 단일 소스 —
   /// 종 결정 연출(SpeciesRevealNarrator)의 판정 근거 문구와 항상 일치한다.
   EvolutionType _determineEvolutionType(Pet pet) {
-    return EvolutionAxisScores.fromPet(pet).resultType;
+    // 한 지표가 극단이면 설화 영물(히든 종)로 각성 — 아니면 사신수 4분면
+    return EvolutionAxisScores.hiddenTypeFor(pet) ??
+        EvolutionAxisScores.fromPet(pet).resultType;
   }
 
   /// 3단계 등급 결정 (종별 조건 — 종 대칭 · 누적 성취 게이팅)
@@ -166,6 +168,20 @@ class EvolvePetUseCase {
         superior = pet.sleepAchievedCount >= _supCalm &&
             pet.consecutiveLoginDays >= _supRegular;
         break;
+      // 설화 영물 — 각성시킨 "그 한 축"만 요구 (각성 자체가 극단 조건이라
+      // 성장 게이트는 단일 축으로 관대하게)
+      case EvolutionType.samjoko:
+        superior = pet.exerciseAchievedCount >= _supActive;
+        break;
+      case EvolutionType.gumiho:
+        superior = pet.feedAchievedCount >= _supFree;
+        break;
+      case EvolutionType.moonrabbit:
+        superior = pet.sleepAchievedCount >= _supCalm;
+        break;
+      case EvolutionType.haetae:
+        superior = pet.consecutiveLoginDays >= _supRegular;
+        break;
       default:
         return 'normal';
     }
@@ -204,6 +220,15 @@ class EvolvePetUseCase {
       case EvolutionType.turtle:
         return pet.sleepAchievedCount >= _mythCalm &&
             pet.consecutiveLoginDays >= _mythRegular;
+      // 설화 영물 — 단일 축 (superior와 동일 축, 더 높은 임계)
+      case EvolutionType.samjoko:
+        return pet.exerciseAchievedCount >= _mythActive;
+      case EvolutionType.gumiho:
+        return pet.feedAchievedCount >= _mythFree;
+      case EvolutionType.moonrabbit:
+        return pet.sleepAchievedCount >= _mythCalm;
+      case EvolutionType.haetae:
+        return pet.consecutiveLoginDays >= _mythRegular;
       default:
         return false;
     }

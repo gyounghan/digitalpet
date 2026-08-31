@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/constants/app_strings.dart';
 import '../../core/theme/species_theme.dart';
+import '../../domain/entities/evolution_type.dart';
 import '../../domain/entities/pet.dart';
 import '../../domain/usecases/species_reveal_narrator.dart';
 import '../widgets/pixel_motion_animation.dart';
@@ -212,7 +213,9 @@ class _SpeciesRevealScreenState extends State<SpeciesRevealScreen>
           Icon(Icons.auto_awesome, size: 13, color: theme.glow),
           const SizedBox(width: 5),
           Text(
-            AppStrings.speciesRevealBadge,
+            _story.type.isHiddenSpecies
+                ? AppStrings.hiddenSpeciesRevealBadge
+                : AppStrings.speciesRevealBadge,
             style: TextStyle(
               fontSize: 11.5,
               fontWeight: FontWeight.w800,

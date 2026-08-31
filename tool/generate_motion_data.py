@@ -1079,10 +1079,189 @@ NORMAL_STRIP = {
 NORMAL_DROP_EYES = {"turtle2": {1}, "turtle3": {1}}  # 뱀 눈 제거
 
 
+# ---------------------------------------------------------------------------
+# 설화 영물(히든 종) 아트 파생 — 기존 몸체에서 프로그램 편집으로 생성
+#
+# 좌표는 전부 아트에서 계산하므로(bbox·눈 rect 기준) 스테이지 크기가 달라도
+# 같은 편집 함수를 재사용한다. 파생은 업스케일 전 원본 그리드에서 수행.
+#   samjoko(삼족오)   ← bird  : 세 번째 다리 + 가슴 태양 문양
+#   gumiho(구미호)    ← tiger : 줄무늬 제거 + 꼬리 끝 보조색
+#   moonrabbit(달토끼) ← tiger : 줄무늬 제거 + 귀 연장
+#   haetae(해태)      ← tiger : 얼굴 갈기(보조색 링) + 이마 뿔
+# ---------------------------------------------------------------------------
+
+
+def _destripe(g, eyes):
+    """몸 내부 '#'(줄무늬)을 'o'로 — 4방향 이웃이 대부분 몸이면 내부로 판정.
+
+    아웃라인('.'과 맞닿음)과 눈 rect 내부는 보존한다.
+    """
+    n = len(g)
+    eye_cells = set()
+    for ex, ey, ew, eh in eyes:
+        for y in range(ey, ey + eh):
+            for x in range(ex, ex + ew):
+                eye_cells.add((x, y))
+    out = [row[:] for row in g]
+    for y in range(n):
+        for x in range(n):
+            if g[y][x] != "#" or (x, y) in eye_cells:
+                continue
+            body_neighbors = 0
+            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                nx, ny = x + dx, y + dy
+                if 0 <= nx < n and 0 <= ny < n and g[ny][nx] in ("o", "+"):
+                    body_neighbors += 1
+            if body_neighbors >= 3:
+                out[y][x] = "o"
+    return out
+
+
+def _third_leg(g, _eyes):
+    """바닥 발 행의 가운데 빈틈에 발 하나 추가 (삼족오)."""
+    n = len(g)
+    for y in range(n - 1, -1, -1):
+        xs = [x for x in range(n) if g[y][x] != "."]
+        if xs:
+            cx = (min(xs) + max(xs)) // 2
+            for x in (cx, cx + 1):
+                if 0 <= x < n and g[y][x] == ".":
+                    g[y][x] = "#"
+            break
+    return g
+
+
+def _sun_mark(g, eyes):
+    """가슴에 '+' 태양 문양 (삼족오) — 눈 아래 몸통 중앙."""
+    ex, ey, ew, eh = eyes[0]
+    cx, cy = ex + ew // 2, ey + eh + max(3, eh)
+    n = len(g)
+    for dx, dy in ((0, 0), (1, 0), (-1, 0), (0, 1), (0, -1)):
+        x, y = cx + dx, cy + dy
+        if 0 <= x < n and 0 <= y < n and g[y][x] == "o":
+            g[y][x] = "+"
+    return g
+
+
+def _tail_accent(g, _eyes):
+    """오른쪽 끝(꼬리)의 몸통색을 보조색으로 — 크림빛 꼬리 끝 (구미호)."""
+    n = len(g)
+    band = max(3, n // 8)
+    for y in range(n):
+        for x in range(n - band, n):
+            if g[y][x] == "o":
+                g[y][x] = "+"
+    return g
+
+
+def _raise_ears(g, _eyes, height=None):
+    """머리 위 두 봉우리(귀)를 위로 연장 (달토끼)."""
+    n = len(g)
+    height = height or max(3, n // 8)
+    tops = {}
+    for x in range(n):
+        for y in range(n):
+            if g[y][x] != ".":
+                tops[x] = y
+                break
+    if not tops:
+        return g
+    ymin = min(tops.values())
+    peak_xs = sorted(x for x, y in tops.items() if y <= ymin + 1)
+    # 좌/우 봉우리 하나씩 — 봉우리가 하나면 양끝을 쓴다
+    ears = {peak_xs[0], peak_xs[-1]}
+    for x in ears:
+        top = tops[x]
+        for k in range(1, height + 1):
+            y = top - k
+            if y < 0:
+                break
+            g[y][x] = "#" if k == height else "o"
+            for fx in (x - 1, x + 1):
+                if 0 <= fx < n and g[y][fx] == ".":
+                    g[y][fx] = "#"
+    return g
+
+
+def _mane(g, eyes):
+    """눈 주위를 감싸는 보조색 갈기 링 (해태)."""
+    n = len(g)
+    x0 = min(e[0] for e in eyes) - 2
+    y0 = min(e[1] for e in eyes) - 2
+    x1 = max(e[0] + e[2] for e in eyes) + 1
+    y1 = max(e[1] + e[3] for e in eyes) + 1
+    for x in range(x0, x1 + 1):
+        for y in (y0, y1):
+            if 0 <= x < n and 0 <= y < n and g[y][x] == "o":
+                g[y][x] = "+"
+    for y in range(y0, y1 + 1):
+        for x in (x0, x1):
+            if 0 <= x < n and 0 <= y < n and g[y][x] == "o":
+                g[y][x] = "+"
+    return g
+
+
+def _horn(g, eyes):
+    """이마 중앙 위로 뿔 2도트 (해태)."""
+    n = len(g)
+    cx = (min(e[0] for e in eyes) + max(e[0] + e[2] for e in eyes)) // 2
+    top = None
+    for y in range(n):
+        if g[y][cx] != ".":
+            top = y
+            break
+    if top is None:
+        return g
+    for k in (1, 2):
+        y = top - k
+        if 0 <= y:
+            g[y][cx] = "#"
+    return g
+
+
+# 히든 종 → (베이스 종, 스테이지 공통 편집 함수 목록, PNG 보조색 재샘플링 여부)
+# tiger 파생 3종은 재샘플링을 끈다 — 흰 호랑이 몸이 통째로 보조색 승격돼
+# 편집 표식(꼬리끝·갈기)이 묻힌다. 몸통=테마색 단색 + 표식만 보조색이
+# 새 종의 정체성을 더 또렷하게 만든다.
+HIDDEN_SPECIES = {
+    "samjoko": ("bird", [_third_leg, _sun_mark], True),
+    "gumiho": ("tiger", [_destripe, _tail_accent], False),
+    "moonrabbit": ("tiger", [_destripe, _raise_ears], False),
+    "haetae": ("tiger", [_destripe, _mane, _horn], False),
+}
+
+
+def _derive_hidden_species():
+    for species, (base, ops, copy_src) in HIDDEN_SPECIES.items():
+        for stage in ("1", "2", "3"):
+            base_key = base + stage
+            key = species + stage
+            src = SPECIES_ART[base_key]
+            g = [list(r) for r in src["body"]]
+            for op in ops:
+                g = op(g, src["eyes"])
+            SPECIES_ART[key] = {
+                "body": ["".join(r) for r in g],
+                "eyes": [tuple(e) for e in src["eyes"]],
+                "mouth": src["mouth"],
+            }
+            if "wings" in src:
+                SPECIES_ART[key]["wings"] = src["wings"]
+            if copy_src and base_key in SPECIES_SRC:
+                SPECIES_SRC[key] = SPECIES_SRC[base_key]
+            TARGET_SIZE[key] = TARGET_SIZE[base_key]
+
+
+_derive_hidden_species()
+
+
 def _make_normal_forms():
     """사신수/신수 아트에서 신수 요소를 제거한 '{종}2n'·'{종}3n' 일반종 아트 파생."""
     bases = ("tiger2", "bird2", "turtle2", "dragon2",
-             "tiger3", "bird3", "turtle3", "dragon3")
+             "tiger3", "bird3", "turtle3", "dragon3",
+             # 히든 종 — 신수 요소 스트립 없음(색만 다른 일반종 라인)
+             "samjoko2", "samjoko3", "gumiho2", "gumiho3",
+             "moonrabbit2", "moonrabbit3", "haetae2", "haetae3")
     for base in bases:
         src = SPECIES_ART[base]
         n = len(src["body"])
@@ -1101,7 +1280,8 @@ def _make_normal_forms():
         }
         if "wings" in src:
             SPECIES_ART[key]["wings"] = src["wings"]
-        SPECIES_SRC[key] = SPECIES_SRC[base]  # 같은 PNG로 보조색 자동 태깅
+        if base in SPECIES_SRC:  # 재샘플링 없는 히든 종은 건너뜀
+            SPECIES_SRC[key] = SPECIES_SRC[base]  # 같은 PNG로 보조색 자동 태깅
         TARGET_SIZE[key] = TARGET_SIZE[base]
 
 

@@ -104,8 +104,8 @@ void main() {
       final pet = _createPet(
         level: 5,
         evolutionStage: 1,
-        totalSteps: 50000, // move = 25
-        consecutiveLoginDays: 10, // regular = 5 > free 0
+        totalSteps: 20000, // move = 10 (히든 임계 4만 미만)
+        consecutiveLoginDays: 6, // regular 6 > free 0 (해태 임계 7 미만)
         feedAchievedCount: 0,
       );
       repository.setPet(pet);
@@ -119,9 +119,9 @@ void main() {
       final pet = _createPet(
         level: 5,
         evolutionStage: 1,
-        totalSteps: 50000, // move = 25, rest 0 → active
+        totalSteps: 20000, // move = 10, rest 0 → active (히든 임계 미만)
         consecutiveLoginDays: 0,
-        feedAchievedCount: 10, // free 10 > regular 0
+        feedAchievedCount: 8, // free 8 > regular 0 (구미호 임계 9 미만)
       );
       repository.setPet(pet);
 
@@ -137,7 +137,7 @@ void main() {
         totalSteps: 0, // move 0
         totalIdleHours: 30, // rest = 5 + sleep 2 = 7 → calm
         sleepAchievedCount: 2,
-        consecutiveLoginDays: 10, // regular = 2 + 5 = 7 > free 0
+        consecutiveLoginDays: 6, // regular = 2 + 5 > free 0 (해태 임계 미만)
         feedAchievedCount: 0,
       );
       repository.setPet(pet);
@@ -155,7 +155,7 @@ void main() {
         totalIdleHours: 30, // rest = 5 → calm
         sleepAchievedCount: 0,
         consecutiveLoginDays: 0, // regular 0
-        feedAchievedCount: 10, // free 10 → 자유
+        feedAchievedCount: 8, // free 8 → 자유 (구미호 임계 9 미만)
       );
       repository.setPet(pet);
 
@@ -183,24 +183,24 @@ void main() {
     test('4종 모두 도달 가능 (쏠림 없음)', () async {
       final types = <EvolutionType>{};
       final profiles = [
-        // tiger: 활발+규칙
+        // tiger: 활발+규칙 (수치는 전부 히든 각성 임계 미만)
         _createPet(
             level: 5,
-            totalSteps: 40000,
-            consecutiveLoginDays: 8,
+            totalSteps: 24000,
+            consecutiveLoginDays: 6,
             feedAchievedCount: 0),
         // bird: 활발+자유
-        _createPet(level: 5, totalSteps: 40000, feedAchievedCount: 12),
+        _createPet(level: 5, totalSteps: 24000, feedAchievedCount: 8),
         // turtle: 차분+규칙
         _createPet(
             level: 5,
             totalIdleHours: 36,
             sleepAchievedCount: 3,
-            consecutiveLoginDays: 12,
+            consecutiveLoginDays: 6,
             feedAchievedCount: 0),
         // snake: 차분+자유
         _createPet(
-            level: 5, totalIdleHours: 36, feedAchievedCount: 12),
+            level: 5, totalIdleHours: 36, feedAchievedCount: 8),
       ];
       for (final p in profiles) {
         repository.setPet(p);
@@ -213,6 +213,71 @@ void main() {
         EvolutionType.turtle,
         EvolutionType.snake,
       });
+    });
+  });
+
+  group('EvolvePetUseCase - 설화 영물(히든 종) 각성', () {
+    test('걸음 4만 보 이상 → 삼족오 각성', () async {
+      repository.setPet(_createPet(level: 5, totalSteps: 40000));
+      final r = await useCase('test-pet');
+      expect(r.evolutionType, EvolutionType.samjoko);
+    });
+
+    test('급식 달성 9회 이상 → 구미호 각성', () async {
+      repository.setPet(_createPet(level: 5, feedAchievedCount: 9));
+      final r = await useCase('test-pet');
+      expect(r.evolutionType, EvolutionType.gumiho);
+    });
+
+    test('수면 달성 8회 이상 → 달토끼 각성', () async {
+      repository.setPet(_createPet(level: 5, sleepAchievedCount: 8));
+      final r = await useCase('test-pet');
+      expect(r.evolutionType, EvolutionType.moonrabbit);
+    });
+
+    test('연속 접속 7일 이상 → 해태 각성', () async {
+      repository.setPet(_createPet(level: 5, consecutiveLoginDays: 7));
+      final r = await useCase('test-pet');
+      expect(r.evolutionType, EvolutionType.haetae);
+    });
+
+    test('동시 충족 시 우선순위 — 삼족오 > 해태', () async {
+      repository.setPet(_createPet(
+          level: 5, totalSteps: 40000, consecutiveLoginDays: 10));
+      final r = await useCase('test-pet');
+      expect(r.evolutionType, EvolutionType.samjoko);
+    });
+
+    test('임계 미만이면 사신수 4분면으로', () async {
+      repository.setPet(_createPet(
+          level: 5, totalSteps: 39999, consecutiveLoginDays: 6));
+      final r = await useCase('test-pet');
+      expect(r.evolutionType, EvolutionType.tiger);
+    });
+
+    test('히든 종 성장 라인 — 단일 축으로 superior/mythical 도달', () async {
+      // Lv10 구미호 + 급식 8 → superior
+      repository.setPet(_createPet(
+        level: 10,
+        evolutionStage: 2,
+        evolutionType: EvolutionType.gumiho,
+        feedAchievedCount: 8,
+      ));
+      final s3 = await useCase('test-pet');
+      expect(s3.evolutionStage, 3);
+      expect(s3.evolutionGrade, 'superior');
+
+      // Lv15 + 급식 20 → mythical (구미호 완전체)
+      repository.setPet(_createPet(
+        level: 15,
+        evolutionStage: 3,
+        evolutionGrade: 'superior',
+        evolutionType: EvolutionType.gumiho,
+        feedAchievedCount: 20,
+      ));
+      final s4 = await useCase('test-pet');
+      expect(s4.evolutionStage, 4);
+      expect(s4.evolutionGrade, 'mythical');
     });
   });
 
