@@ -10,6 +10,7 @@ import '../../domain/entities/mission.dart';
 import '../../domain/constants/meal_times.dart';
 import '../../domain/constants/mission_catalog.dart';
 import '../../domain/usecases/alternative_feed_pet_usecase.dart';
+import '../../domain/usecases/drink_water_usecase.dart';
 import '../../domain/usecases/alternative_sleep_pet_usecase.dart';
 import '../../domain/usecases/shake_step_bonus_usecase.dart';
 import '../../data/datasources/shake_detector.dart';
@@ -86,6 +87,9 @@ class _CareScreenState extends ConsumerState<CareScreen> {
               // 현재 상태 — 대체 행동의 효과를 보는 화면이므로 여기서 노출
               _buildStatusCard(pet, theme),
               const SizedBox(height: 14),
+              // 능동 건강 습관 — 갓생몬 컨셉
+              _buildWaterRow(pet, theme),
+              const SizedBox(height: 6),
               // 대체 케어 — 바쁠 때 직접 채우는 행동
               _buildAltFeedRow(pet, theme),
               const SizedBox(height: 6),
@@ -295,6 +299,45 @@ class _CareScreenState extends ConsumerState<CareScreen> {
   }
 
   // ── 섹션 1 컴포넌트 ────────────────────────────────────────
+
+  /// 물마시기 — 하루 수분 목표(8잔). 능동 건강 습관(갓생몬 컨셉).
+  Widget _buildWaterRow(Pet pet, SpeciesTheme theme) {
+    final used = pet.needsGoalReset ? 0 : pet.todayWaterCount;
+    final goal = Pet.waterGoalCount;
+    final done = used >= goal;
+    final enabled = !pet.isDead && !done;
+
+    return AppListRow(
+      theme: theme,
+      tinted: enabled,
+      leading: Icon(Icons.local_drink,
+          color: enabled ? theme.primaryDeep : DesignTokens.ink3, size: 20),
+      title: '물마시기',
+      subtitle: done
+          ? '오늘 수분 목표 달성! 💧 ($used/$goal잔)'
+          : '한 잔당 기력 +${DrinkWaterUseCase.staminaPerCup} · 오늘 $used/$goal잔',
+      trailing: _trailingPill(enabled, theme),
+      onTap: enabled
+          ? () async {
+              final before = pet.todayWaterCount;
+              final applied = await ref
+                  .read(petNotifierProvider(HomeScreen.defaultPetId).notifier)
+                  .performDrinkWater();
+              if (!mounted) return;
+              final reachedGoal = before + 1 >= goal;
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(!applied
+                      ? '오늘 수분 목표를 이미 채웠어요'
+                      : reachedGoal
+                          ? '수분 목표 달성! 완료 보너스 +${DrinkWaterUseCase.completionExp} EXP 💧'
+                          : '꿀꺽꿀꺽 · 기력 +${DrinkWaterUseCase.staminaPerCup}'),
+                ),
+              );
+            }
+          : null,
+    );
+  }
 
   Widget _buildAltFeedRow(Pet pet, SpeciesTheme theme) {
     final useCase = ref.read(alternativeFeedPetUseCaseProvider);

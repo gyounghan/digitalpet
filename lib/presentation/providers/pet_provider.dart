@@ -41,6 +41,7 @@ import '../../domain/usecases/update_pet_name_usecase.dart';
 import '../../domain/usecases/alternative_feed_pet_usecase.dart';
 import '../../domain/usecases/alternative_sleep_pet_usecase.dart';
 import '../../domain/usecases/shake_step_bonus_usecase.dart';
+import '../../domain/usecases/drink_water_usecase.dart';
 import '../../domain/usecases/check_pet_death_usecase.dart';
 import '../../domain/usecases/resurrect_pet_usecase.dart';
 import '../../domain/usecases/reset_pet_usecase.dart';
@@ -344,6 +345,11 @@ final alternativeSleepPetUseCaseProvider = Provider<AlternativeSleepPetUseCase>(
 
 /// ShakeStepBonusUseCase Provider
 /// 폰 흔들기 → 걸음 보너스 유스케이스 인스턴스를 제공
+final drinkWaterUseCaseProvider = Provider<DrinkWaterUseCase>((ref) {
+  final repository = ref.watch(petRepositoryProvider);
+  return DrinkWaterUseCase(repository);
+});
+
 final shakeStepBonusUseCaseProvider = Provider<ShakeStepBonusUseCase>((ref) {
   final repository = ref.watch(petRepositoryProvider);
   return ShakeStepBonusUseCase(repository);
@@ -409,6 +415,7 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
   final AlternativeFeedPetUseCase alternativeFeedPetUseCase;
   final AlternativeSleepPetUseCase alternativeSleepPetUseCase;
   final ShakeStepBonusUseCase shakeStepBonusUseCase;
+  final DrinkWaterUseCase drinkWaterUseCase;
   final CheckPetDeathUseCase checkPetDeathUseCase;
   final ResurrectPetUseCase resurrectPetUseCase;
   final ResetPetUseCase resetPetUseCase;
@@ -435,6 +442,7 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
     required this.alternativeFeedPetUseCase,
     required this.alternativeSleepPetUseCase,
     required this.shakeStepBonusUseCase,
+    required this.drinkWaterUseCase,
     required this.checkPetDeathUseCase,
     required this.resurrectPetUseCase,
     required this.resetPetUseCase,
@@ -830,7 +838,26 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
       return false;
     }
   }
-  
+
+  /// 물마시기 — 하루 수분 목표(8잔)를 채우는 능동 케어
+  /// 반환: 실제로 적용됐는지 (목표 소진/사망 시 false)
+  Future<bool> performDrinkWater() async {
+    if (state.isLoading || state.hasError) return false;
+    final before = state.valueOrNull;
+    if (before == null || before.isDead) return false;
+
+    try {
+      final updatedPet = await drinkWaterUseCase(petId);
+      final applied = updatedPet.todayWaterCount != before.todayWaterCount;
+      final evolvedPet = await _updateAndEvolve(updatedPet);
+      state = AsyncValue.data(evolvedPet);
+      return applied;
+    } catch (e, stackTrace) {
+      state = AsyncValue.error(e, stackTrace);
+      return false;
+    }
+  }
+
   /// 앱이 포그라운드로 전환되었을 때 호출
   /// 
   /// 폰 미사용 시간을 계산하여 자동으로 Sleep 상태 적용
@@ -1034,6 +1061,7 @@ final petNotifierProvider = StateNotifierProvider.family<PetNotifier, AsyncValue
     alternativeFeedPetUseCase: ref.watch(alternativeFeedPetUseCaseProvider),
     alternativeSleepPetUseCase: ref.watch(alternativeSleepPetUseCaseProvider),
     shakeStepBonusUseCase: ref.watch(shakeStepBonusUseCaseProvider),
+    drinkWaterUseCase: ref.watch(drinkWaterUseCaseProvider),
     checkPetDeathUseCase: ref.watch(checkPetDeathUseCaseProvider),
     resurrectPetUseCase: ref.watch(resurrectPetUseCaseProvider),
     resetPetUseCase: ref.watch(resetPetUseCaseProvider),

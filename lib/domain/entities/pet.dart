@@ -99,6 +99,9 @@ class Pet {
   /// bit0: 아침, bit1: 점심, bit2: 저녁
   final int todayFedMealSlots;
 
+  /// 오늘 물마시기 횟수 (일일 수분 목표 추적, 최대 waterGoalCount)
+  final int todayWaterCount;
+
   /// 오늘의 수면 시간 (시간, 일일 목표 추적)
   /// 오늘 0시부터 현재까지의 총 수면 시간
   /// 내부적으로 todaySleepMinutes에서 파생되어 저장된다.
@@ -292,6 +295,7 @@ class Pet {
     this.evolutionType,
     this.todayFeedCount = 0,
     this.todayFedMealSlots = 0,
+    this.todayWaterCount = 0,
     this.todaySleepHours = 0,
     this.todaySleepMinutes = 0,
     this.todaySleepCount = 0,
@@ -356,6 +360,7 @@ class Pet {
     EvolutionType? evolutionType,
     int? todayFeedCount,
     int? todayFedMealSlots,
+    int? todayWaterCount,
     int? todaySleepHours,
     int? todaySleepMinutes,
     int? todaySleepCount,
@@ -417,6 +422,7 @@ class Pet {
       evolutionType: evolutionType ?? this.evolutionType,
       todayFeedCount: todayFeedCount ?? this.todayFeedCount,
       todayFedMealSlots: todayFedMealSlots ?? this.todayFedMealSlots,
+      todayWaterCount: todayWaterCount ?? this.todayWaterCount,
       todaySleepHours: todaySleepHours ?? this.todaySleepHours,
       todaySleepMinutes: todaySleepMinutes ?? this.todaySleepMinutes,
       todaySleepCount: todaySleepCount ?? this.todaySleepCount,
@@ -635,6 +641,7 @@ class Pet {
   Pet resetDailyGoals() {
     return copyWith(
       todayFedMealSlots: 0,
+      todayWaterCount: 0,
       todaySleepCount: 0,
       todayAlternativeFeedCount: 0,
       todayAlternativeSleepCount: 0,
@@ -658,6 +665,17 @@ class Pet {
   // 광고 1회 시청 = 해당 모드 가능 횟수 +1 (GrantExtraBattleUseCase).
   // 자정이 지나 리셋 대기 중(needsGoalReset)이면 카운트·광고 추가분 모두
   // 논리적으로 0으로 취급한다 (유스케이스는 체크 전에 resetDailyGoals 수행).
+
+  /// 하루 수분 목표 (물마시기 잔 수) — 성인 권장 8잔
+  static const int waterGoalCount = 8;
+
+  /// 오늘 남은 물마시기 횟수
+  int get remainingWaterDrinks =>
+      (waterGoalCount - (needsGoalReset ? 0 : todayWaterCount))
+          .clamp(0, waterGoalCount);
+
+  /// 물마시기 가능 여부 (오늘 목표 미달)
+  bool get canDrinkWater => remainingWaterDrinks > 0;
 
   /// 하루 기본 배틀 한도 — AI 대전과 온라인(친구) 대전에 각각 적용
   static const int maxBattlesPerDay = 5;
@@ -750,6 +768,7 @@ class Pet {
       evolutionType: evolutionType,
       todayFeedCount: todayFeedCount,
       todayFedMealSlots: todayFedMealSlots,
+      todayWaterCount: todayWaterCount,
       todaySleepHours: todaySleepHours,
       todaySleepMinutes: todaySleepMinutes,
       todaySleepCount: todaySleepCount,
@@ -816,6 +835,7 @@ class Pet {
       evolutionType: evolutionType,
       todayFeedCount: todayFeedCount,
       todayFedMealSlots: todayFedMealSlots,
+      todayWaterCount: todayWaterCount,
       todaySleepHours: todaySleepHours,
       todaySleepMinutes: todaySleepMinutes,
       todaySleepCount: todaySleepCount,
@@ -873,6 +893,7 @@ class Pet {
       evolutionType: evolutionType,
       todayFeedCount: todayFeedCount,
       todayFedMealSlots: todayFedMealSlots,
+      todayWaterCount: todayWaterCount,
       todaySleepHours: todaySleepHours,
       todaySleepMinutes: todaySleepMinutes,
       todaySleepCount: todaySleepCount,
