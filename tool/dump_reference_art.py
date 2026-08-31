@@ -42,15 +42,14 @@ EYE_HINT = {
     "hwangryong": (0.30, 0.30),
 }
 
-# 눈 수동 지정 (전체 ASCII 판독) — 각 얼굴 위에 눈을 새로 그린다.
-# 값은 눈 rect 좌상단 (x, y). 폭·높이는 2px 고정. 자동검출보다 우선.
+# 눈 수동 지정 — 레퍼런스에서 실제 눈 위치를 판독해 그 자리에 배치.
+# 값은 눈 rect 좌상단 (x, y) 목록. 정면 얼굴은 2개, 옆모습은 1개.
+# 폭·높이는 2px. 자동검출보다 우선. (미지정 종은 자동검출)
 EYE_OVERRIDE = {
-    "samjoko1": (9, 5), "samjoko2": (7, 10), "samjoko3": (14, 9),
-    "gumiho1": (9, 8), "gumiho2": (7, 8), "gumiho3": (26, 18),
-    "moonrabbit1": (10, 5), "moonrabbit2": (15, 6), "moonrabbit3": (23, 11),
-    "haetae1": (5, 10), "haetae2": (6, 9), "haetae3": (8, 13),
-    "dokkaebi1": (6, 13), "dokkaebi2": (10, 11), "dokkaebi3": (16, 16),
-    "hwangryong1": (6, 8), "hwangryong2": (5, 8), "hwangryong3": (9, 12),
+    # 구미호 — 유아기 정면(양눈, row9 '&' 쌍), 성장기 3/4, 성숙기 옆모습
+    "gumiho1": [(7, 8), (12, 8)],
+    "gumiho2": [(5, 8), (11, 7)],
+    "gumiho3": [(38, 18)],
 }
 
 OUTPUT_PATH = os.path.join("tool", "hidden_species_art.py")
@@ -262,8 +261,7 @@ def main():
             art = to_ascii(alpha, rgb, palette, size)
             key = f"{species}{stage_idx + 1}"
             if key in EYE_OVERRIDE:
-                ox, oy = EYE_OVERRIDE[key]
-                eyes = [(ox, oy, 2, 2)]
+                eyes = [(ox, oy, 2, 2) for ox, oy in EYE_OVERRIDE[key]]
             else:
                 eyes = detect_eyes(art, size, eye_hint=EYE_HINT.get(species))
             eyes = [tuple(int(v) for v in e) for e in eyes]
