@@ -291,6 +291,16 @@ def scale_eye(rect, n, target):
     return (nx, ny, nw, nh)
 
 
+def scale_rect(rect, n, target):
+    """눈 제거 영역은 원본 비율대로 통째로 스케일한다."""
+    x, y, w, h = rect
+    nx = int(round(x * target / n))
+    ny = int(round(y * target / n))
+    nw = max(1, int(round(w * target / n)))
+    nh = max(1, int(round(h * target / n)))
+    return (nx, ny, nw, nh)
+
+
 def squash_art(g, factor):
     """바닥 고정 세로 눌림 (역매핑이라 구멍 없음). factor < 1.0"""
     n = len(g)
@@ -1111,11 +1121,14 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from hidden_species_art import HIDDEN_ART, HIDDEN_PALETTE  # noqa: E402
 
 for _k, _v in HIDDEN_ART.items():
-    SPECIES_ART[_k] = {
+    item = {
         "body": list(_v["body"]),
         "eyes": [tuple(e) for e in _v["eyes"]],
         "mouth": tuple(_v["mouth"]),
     }
+    if "eye_clear" in _v:
+        item["eye_clear"] = [tuple(e) for e in _v["eye_clear"]]
+    SPECIES_ART[_k] = item
     TARGET_SIZE[_k] = len(_v["body"])
 
 
@@ -1248,6 +1261,10 @@ def pose(
     # 화난/사선 눈의 좌우 판별 기준은 그리드 중심이 아니라 눈 그룹 중심
     # (캐릭터마다 눈이 한쪽으로 치우쳐 있어 그리드 중심을 쓰면 좌우가 틀림).
     eye_rects = meta["eyes"]
+    for rect in meta.get("eye_clear", []):
+        x, y, w, h = rect
+        fill = _eye_fill_char(g, x, y, w, h, halo=1)
+        _clear_eye_box(g, x, y, w, h, halo=0, fill=fill)
     group_cx = sum(x + w / 2.0 for (x, y, w, h) in eye_rects) / len(eye_rects)
     # 정면 얼굴(백호·털뭉치·양눈 히든 포유형)은 화난 눈을 \ / 로,
     # 옆모습(주작·청룡·현무 — 왼쪽을 봐 앞쪽이 왼쪽)은 항상 / 로 그린다.
@@ -1601,6 +1618,10 @@ def main() -> int:
         if target != src_n:
             meta["body"] = upscale_art(meta["body"], target)
             meta["eyes"] = [scale_eye(r, src_n, target) for r in meta["eyes"]]
+            if "eye_clear" in meta:
+                meta["eye_clear"] = [
+                    scale_rect(r, src_n, target) for r in meta["eye_clear"]
+                ]
             meta["mouth"] = scale_point(meta["mouth"], src_n, target)
         # 성장기(28px)·성숙기(56 덤프)·털뭉치는 가장자리가 몸통색으로 끝나
         # 테두리가 빠지므로 실루엣을 검은 테두리로 감싼다

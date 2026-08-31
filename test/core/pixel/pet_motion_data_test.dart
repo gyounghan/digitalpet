@@ -127,8 +127,8 @@ void main() {
       }
 
       for (final clearArea in [
-        (x: 5, y: 12, w: 5, h: 5),
-        (x: 13, y: 12, w: 5, h: 5),
+        (x: 5, y: 11, w: 5, h: 6),
+        (x: 13, y: 11, w: 5, h: 6),
       ]) {
         for (var y = clearArea.y; y < clearArea.y + clearArea.h; y++) {
           for (var x = clearArea.x; x < clearArea.x + clearArea.w; x++) {

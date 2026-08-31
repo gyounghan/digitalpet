@@ -77,6 +77,12 @@ EYE_OVERRIDE = {
     "samjoko3": [(17, 15, 3, 3)],
 }
 
+# 눈 제거 수동 지정 — 작은 표정 눈을 그리기 전에 원본 레퍼런스의 검은 눈 자국을
+# 먼저 지울 영역. 새 눈 위치(EYE_OVERRIDE)보다 넓을 수 있다.
+EYE_CLEAR_OVERRIDE = {
+    "gumiho1": [(5, 11, 5, 6), (13, 11, 5, 6)],
+}
+
 # 입 수동 지정 — 공격 브레스/배고픔 침 효과가 주둥이·부리에서 시작하도록 보정.
 MOUTH_OVERRIDE = {
     "dokkaebi1": (10, 18),
@@ -331,7 +337,10 @@ def main():
             else:
                 ex, ey, ew, eh = eyes[0]
                 mouth = (int(max(0, ex)), int(min(size - 1, ey + eh + 2)))
-            result[key] = {"body": art, "eyes": eyes, "mouth": mouth}
+            item = {"body": art, "eyes": eyes, "mouth": mouth}
+            if key in EYE_CLEAR_OVERRIDE:
+                item["eye_clear"] = normalize_eye_override(EYE_CLEAR_OVERRIDE[key])
+            result[key] = item
         print(f"  {species}: palette={palettes[species]}")
 
     with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
@@ -345,6 +354,8 @@ def main():
                 f.write(f"            {row!r},\n")
             f.write("        ],\n")
             f.write(f'        "eyes": {d["eyes"]!r},\n')
+            if "eye_clear" in d:
+                f.write(f'        "eye_clear": {d["eye_clear"]!r},\n')
             f.write(f'        "mouth": {tuple(d["mouth"])!r},\n')
             f.write("    },\n")
         f.write("}\n\n")
