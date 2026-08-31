@@ -1,5 +1,6 @@
 import 'dart:math';
 import '../entities/pet.dart';
+import '../entities/wild_encounter.dart';
 import '../entities/battle_history.dart';
 import '../entities/battle_style.dart';
 import '../entities/evolution_type.dart';
@@ -181,10 +182,13 @@ class BattleWithActivityUseCase {
       baseDodgeChance +
       maxStaminaDodgeBonus * (stamina / 100).clamp(0.0, 1.0);
 
+  /// [wild]가 주어지면 야생 조우 배틀: 하루 한도 미소모, 상대 종·레벨은
+  /// 조우 정보로 고정, 보상은 감쇠 없는 소보상 (BattleReward.wild* 참조)
   Future<BattleResult> call(
     String petId, {
     BattleStyle style = BattleStyle.balanced,
     Random? random,
+    WildEncounter? wild,
   }) async {
     var pet = await petRepository.getPet(petId);
 
@@ -198,7 +202,8 @@ class BattleWithActivityUseCase {
     }
 
     // 한도 = 기본 5회 + 광고 시청 추가분 (AI 대전 전용 카운트)
-    if (!pet.canBattleAi) {
+    // 야생 조우는 우연한 보너스 이벤트 — 하루 한도와 무관하게 진행한다
+    if (wild == null && !pet.canBattleAi) {
       return BattleResult.empty(pet, limitReached: true);
     }
 
@@ -217,10 +222,14 @@ class BattleWithActivityUseCase {
     // AI 상대 생성 (종 랜덤)
     // 미러 기준은 스타일 적용 "전" 스탯 — 스타일 선택은 플레이어만의 edge로 남긴다.
     // 털뭉치(종 미결정)는 털뭉치끼리 만난다 — 상대도 종 없음(상성·종 보너스 중립)
-    final opponentLevel = max(1, pet.level - 2 + random.nextInt(4));
-    final opponentType = playerType == null
-        ? null
-        : EvolutionType.values[random.nextInt(EvolutionType.values.length)];
+    final opponentLevel =
+        wild?.level ?? max(1, pet.level - 2 + random.nextInt(4));
+    final opponentType = wild != null
+        ? wild.species
+        : (playerType == null
+            ? null
+            : EvolutionType
+                .values[random.nextInt(EvolutionType.values.length)]);
     final baseStats = BattleStats(
       attack: pet.battleAtk,
       defense: pet.battleDef,
@@ -363,6 +372,7 @@ class BattleWithActivityUseCase {
       isVictory: isVictory,
       isDominantVictory: isDominantVictory,
       nowMs: currentTime,
+      isWild: wild != null,
     );
     final expGain = reward.expGained;
     final updatedPet = reward.updatedPet;

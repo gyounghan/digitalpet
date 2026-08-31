@@ -25,6 +25,12 @@ class BattleReward {
   static const int defeatExp = 15;
   static const int dominantVictoryExp = 70;
 
+  /// 야생 조우 보상 — 하루 한도와 무관한 보너스 이벤트라 절반 수준.
+  /// 감쇠 없음, 배틀 카운트 미소모 (승수는 기록 — 도깨비 축 기여)
+  static const int wildVictoryExp = 25;
+  static const int wildDefeatExp = 5;
+  static const int wildDominantVictoryExp = 35;
+
   /// 하루 1·2·3번째 배틀 보상 배수
   static const List<double> rewardMultipliers = [1.0, 0.7, 0.5];
 
@@ -52,14 +58,21 @@ class BattleReward {
     int? baseExp,
     required int nowMs,
     bool isOnline = false,
+    bool isWild = false,
   }) {
     final modeBattleCount =
         isOnline ? pet.todayOnlineBattleCount : pet.todayBattleCount;
     final multiplierIndex =
         modeBattleCount.clamp(0, rewardMultipliers.length - 1);
-    final multiplier = rewardMultipliers[multiplierIndex];
+    // 야생 조우는 하루 한도와 무관한 보너스 이벤트 — 감쇠(반감 배수) 없이 고정 소보상
+    final multiplier = isWild ? 1.0 : rewardMultipliers[multiplierIndex];
     final resolvedBase = baseExp ??
-        baseExpFor(isVictory: isVictory, isDominantVictory: isDominantVictory);
+        (isWild
+            ? (isDominantVictory
+                ? wildDominantVictoryExp
+                : (isVictory ? wildVictoryExp : wildDefeatExp))
+            : baseExpFor(
+                isVictory: isVictory, isDominantVictory: isDominantVictory));
     // adventure 이벤트: 배틀 EXP 2배 (호출 전 자정 리셋이 어제 이벤트를 지움)
     final eventMultiplier = pet.todayEvent == DailyEvents.adventure
         ? DailyEvents.adventureBattleExpMultiplier.toDouble()
@@ -90,9 +103,11 @@ class BattleReward {
           (pet.happiness + happinessBonus + levelUpStatBonus).clamp(0, 100),
       hunger: (pet.hunger + levelUpStatBonus).clamp(0, 100),
       stamina: (pet.stamina + levelUpStatBonus).clamp(0, 100),
-      todayBattleCount: isOnline ? null : pet.todayBattleCount + 1,
+      // 야생 조우는 하루 배틀 한도를 소모하지 않는다 (AI/온라인 카운트 불변)
+      todayBattleCount: (isOnline || isWild) ? null : pet.todayBattleCount + 1,
       todayOnlineBattleCount:
           isOnline ? pet.todayOnlineBattleCount + 1 : null,
+      // 승수는 야생도 기록 — 도깨비 각성 축(battleVictoryCount)에 기여
       battleVictoryCount:
           isVictory ? pet.battleVictoryCount + 1 : pet.battleVictoryCount,
       lastUpdated: nowMs,

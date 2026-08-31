@@ -23,6 +23,7 @@ import '../../data/datasources/step_sensor_datasource.dart';
 import '../../data/repository/notification_repository_impl.dart';
 import '../../data/datasource/notification_local_datasource.dart';
 import 'notification_service.dart';
+import 'wild_encounter_service.dart';
 import 'widget_service.dart';
 import '../../presentation/screens/home_screen.dart';
 
@@ -284,17 +285,29 @@ void callbackDispatcher() {
       
       // 6. 일일 목표 점수 적용
       pet = await applyDailyGoalsScoreUseCase(petId);
-      
+
       // 7. 진화 체크 및 실행
       pet = await evolvePetUseCase(petId);
-      
+
       // 8. 위젯 업데이트
       try {
         await widgetService.updatePetWidget(pet);
       } catch (e) {
         // 위젯 업데이트 실패는 무시
       }
-      
+
+      // 9. 야생 조우 판정 — 걸음 동기화 직후라 오늘 걸음이 최신.
+      //    앱을 안 보고 있을 때 "야생의 ○○을 만났다!" 알림이 뜨는 지점
+      //    (다마고치식 랜덤 인카운터). 하루 1회, 소진/대기 시 no-op.
+      try {
+        await WildEncounterService(notificationService: notificationService)
+            .maybeSpawn(pet);
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint('BackgroundService: wild encounter spawn failed: $e');
+        }
+      }
+
       return true;
     } catch (e) {
       // 에러 발생 시에도 작업 완료로 처리 (다음 실행 시 재시도)

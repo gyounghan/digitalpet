@@ -19,8 +19,11 @@ import '../../domain/entities/pet.dart';
 import '../../domain/usecases/battle_result_narrator.dart';
 import '../../domain/usecases/battle_with_activity_usecase.dart'
     show BattleTurn, BattleWithActivityUseCase;
+import '../../domain/entities/wild_encounter.dart';
 import '../../data/datasources/battle_socket_datasource.dart';
+import '../../data/datasources/wild_encounter_datasource.dart';
 import '../../data/services/ad_service.dart';
+import '../../data/services/wild_encounter_service.dart';
 import 'home_screen.dart';
 
 /// 배틀 화면
@@ -78,6 +81,33 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
 
   /// 선택된 배틀 스타일 (기본 균형형)
   BattleStyle _battleStyle = BattleStyle.balanced;
+
+  /// 대기 중인 야생 조우 (있으면 로비에 조우 카드 노출)
+  WildEncounter? _pendingWild;
+  final WildEncounterDatasource _wildDatasource = WildEncounterDatasource();
+
+  @override
+  void initState() {
+    super.initState();
+    // 배틀 화면 진입 시 야생 조우 스폰 시도 + 대기 조우 로드
+    // (걷다가 만난 야생 펫을 배틀 탭에서 바로 발견)
+    WidgetsBinding.instance.addPostFrameCallback((_) => _refreshWildEncounter());
+  }
+
+  Future<void> _refreshWildEncounter() async {
+    try {
+      final pet =
+          ref.read(petNotifierProvider(HomeScreen.defaultPetId)).valueOrNull;
+      if (pet != null) {
+        // 조우 카드 진입점에서도 스폰을 굴린다(백그라운드 미동작 기기 대비)
+        await WildEncounterService().maybeSpawn(pet);
+      }
+      final pending = await _wildDatasource.getPending();
+      if (mounted) setState(() => _pendingWild = pending);
+    } catch (_) {
+      // 조우 조회 실패는 무시 (핵심 흐름 아님)
+    }
+  }
 
   @override
   void dispose() {
@@ -444,7 +474,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
     );
   }
 
-  Future<void> _simulateTurns() async {
+  Future<void> _simulateTurns({WildEncounter? wild}) async {
     setState(() {
       turns = [];
       currentTurnIndex = -1;
@@ -457,8 +487,11 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
       final prePet =
           ref.read(petNotifierProvider(HomeScreen.defaultPetId)).valueOrNull;
       final battleUseCase = ref.read(battleWithActivityUseCaseProvider);
-      final result =
-          await battleUseCase(HomeScreen.defaultPetId, style: _battleStyle);
+      final result = await battleUseCase(
+        HomeScreen.defaultPetId,
+        style: _battleStyle,
+        wild: wild,
+      );
 
       if (result.limitReached) {
         setState(() {
@@ -474,6 +507,10 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
         final oppType = _parseType(result.opponentTypeName);
         setState(() {
           _opponentType = oppType;
+          // 야생 조우는 상대 단계를 레벨로 추정해 스프라이트를 제대로 렌더
+          _opponentStage = wild != null ? _stageForLevel(wild.level) : null;
+          _opponentGrade = '';
+          _opponentVariant = 0;
           opponentName = '야생의 ${SpeciesTheme.labelFor(oppType)}';
           opponentLevel = result.opponentLevel;
           _affinityAdvantage = result.affinityAdvantage;
@@ -574,6 +611,52 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
     await _simulateTurns();
   }
 
+  /// 레벨 → 진화 단계 추정 (야생 상대 스프라이트 렌더용)
+  int _stageForLevel(int level) {
+    if (level >= 15) return 4;
+    if (level >= 10) return 3;
+    if (level >= 5) return 2;
+    return 1;
+  }
+
+  /// 야생 조우 배틀 시작 — 하루 한도 미소모, 상대는 조우 정보로 고정.
+  /// 시작과 동시에 대기 조우를 소비해 중복 전투를 막는다.
+  Future<void> _startWildBattle(dynamic pet) async {
+    if (isLoading || battleResult != null) return;
+    final encounter = _pendingWild;
+    if (encounter == null) return;
+
+    if (pet != null && pet.isDead) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('펫이 깊은 잠에 빠져 있어요. 깨운 뒤 다시 시도해주세요.')),
+      );
+      return;
+    }
+
+    await _wildDatasource.clearPending();
+
+    setState(() {
+      _pendingWild = null;
+      isLoading = true;
+      isMatchmaking = false;
+      _opponentType = null;
+      _opponentStage = null;
+      _opponentGrade = '';
+      _opponentVariant = 0;
+      _affinityAdvantage = false;
+      _affinityDisadvantage = false;
+      opponentName = null;
+      opponentLevel = null;
+    });
+    await _simulateTurns(wild: encounter);
+  }
+
+  /// 야생 조우 도망 — 보상 없이 조우 소비
+  Future<void> _fleeWildEncounter() async {
+    await _wildDatasource.clearPending();
+    if (mounted) setState(() => _pendingWild = null);
+  }
+
   void _resetBattle() {
     setState(() {
       battleResult = null;
@@ -669,6 +752,10 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
             children: [
               _buildMyPetCard(pet, theme),
               const SizedBox(height: 10),
+              if (!isLoading && _pendingWild != null) ...[
+                _buildWildEncounterCard(pet, theme),
+                const SizedBox(height: 10),
+              ],
               if (!isLoading) ...[
                 _buildStyleSelector(theme),
                 const SizedBox(height: 10),
@@ -875,6 +962,105 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  /// 야생 조우 카드 — 걷다가 만난 야생 펫과 싸우거나 도망
+  Widget _buildWildEncounterCard(dynamic pet, SpeciesTheme theme) {
+    final wild = _pendingWild!;
+    final oppType = wild.species;
+    final oppTheme = SpeciesTheme.forType(oppType);
+    final label = SpeciesTheme.labelFor(oppType);
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [oppTheme.gradStart, DesignTokens.surface],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: oppTheme.primary.withValues(alpha: 0.4)),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              _arenaSprite(
+                type: oppType,
+                stage: _stageForLevel(wild.level),
+                grade: '',
+                variant: wild.level % 4,
+                theme: oppTheme,
+                motion: PixelMotion.angry,
+                size: 56,
+                flip: true,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      '부스럭... 야생의 기척!',
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w700,
+                        color: DesignTokens.ink3,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '야생의 $label Lv.${wild.level}',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: oppTheme.primaryDeep,
+                      ),
+                    ),
+                    const Text(
+                      '한도와 무관 · 이기면 보너스 EXP',
+                      style: TextStyle(
+                          fontSize: 10.5, color: DesignTokens.ink3),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                flex: 2,
+                child: _BigButton(
+                  label: '싸운다!',
+                  icon: Icons.sports_kabaddi,
+                  theme: theme,
+                  onTap: () => _startWildBattle(pet),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: _fleeWildEncounter,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: DesignTokens.ink3,
+                    side: const BorderSide(color: DesignTokens.line),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text('도망',
+                      style: TextStyle(fontWeight: FontWeight.w700)),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
