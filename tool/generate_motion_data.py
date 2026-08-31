@@ -350,7 +350,8 @@ def draw_eye(g, rect, style, group_cx=None, frontal=True, ink="#"):
 
     happy/pain/angry는 획이 성글어 작은 눈(2x2)에선 안 보이므로 최소 3x3로
     키우고(중앙 정렬) 주변 줄무늬를 정리한 뒤 획을 굵게 그린다.
-    open/closed는 면을 채워 작아도 보이므로 원본 크기 그대로 둔다.
+    open/closed는 면을 채워 작아도 보이므로 원본 크기 그대로 두되,
+    먼저 기존 눈 픽셀 주변을 얼굴 바탕색으로 지운 뒤 다시 그린다.
     """
     x, y, w, h = rect
     n = len(g)
@@ -368,9 +369,7 @@ def draw_eye(g, rect, style, group_cx=None, frontal=True, ink="#"):
     else:
         pw, ph, ex, ey = w, h, x, y
         fill = _eye_fill_char(g, ex, ey, pw, ph, halo=1)
-        for dy in range(ph):
-            for dx in range(pw):
-                put(g, ex + dx, ey + dy, fill)
+        _clear_eye_box(g, ex, ey, pw, ph, halo=1, fill=fill)
 
     if style == "open":
         for dy in range(ph):

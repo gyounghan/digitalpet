@@ -1,8 +1,13 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pocketfriend/core/pixel/pet_motion_data.dart';
+import 'package:pocketfriend/core/pixel/pet_pixel_data.dart';
 import 'package:pocketfriend/domain/entities/evolution_type.dart';
 import 'package:pocketfriend/domain/entities/pet.dart';
 import 'package:pocketfriend/presentation/widgets/pixel_motion_animation.dart';
+
+bool _hasDarkDot(PixelSprite sprite, int x, int y) {
+  return (sprite.dark[y] & (1 << x)) != 0;
+}
 
 void main() {
   const babyKeys = ['tiger1', 'bird1', 'turtle1', 'dragon1'];
@@ -109,6 +114,31 @@ void main() {
       for (final key in motionFrames.keys) {
         expect(motionFrames[key]!['walk']![0].size, expectedSize(key),
             reason: '$key: 그리드 크기');
+      }
+    });
+
+    test('구미호 유아기 눈은 원본 눈 잔상을 지운 뒤 그린다', () {
+      final frame = motionFrames['gumiho1']!['walk']![1];
+
+      bool isDrawnEye(int x, int y) {
+        final inLeft = x >= 6 && x < 9 && y >= 13 && y < 16;
+        final inRight = x >= 14 && x < 17 && y >= 13 && y < 16;
+        return inLeft || inRight;
+      }
+
+      for (final clearArea in [
+        (x: 5, y: 12, w: 5, h: 5),
+        (x: 13, y: 12, w: 5, h: 5),
+      ]) {
+        for (var y = clearArea.y; y < clearArea.y + clearArea.h; y++) {
+          for (var x = clearArea.x; x < clearArea.x + clearArea.w; x++) {
+            expect(
+              _hasDarkDot(frame, x, y),
+              isDrawnEye(x, y),
+              reason: 'gumiho1 눈 주변 잔상: ($x, $y)',
+            );
+          }
+        }
       }
     });
 
