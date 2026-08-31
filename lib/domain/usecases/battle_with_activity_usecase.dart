@@ -79,24 +79,26 @@ const Map<EvolutionType, List<BattleSkill>> _skillSets = {
   // 설화 영물 — 각 종의 정체성을 반영한 고유기
   EvolutionType.samjoko: [
     BattleSkill(name: '홰치기'),
-    BattleSkill(name: '일식', type: SkillType.special, damageMultiplier: 1.3),
+    // 시뮬 튜닝: 1.3은 영물군이 사신수군을 지배 → 급강하와 동일한 1.25로
+    BattleSkill(name: '일식', type: SkillType.special, damageMultiplier: 1.25),
   ],
   EvolutionType.gumiho: [
     BattleSkill(name: '할큄'),
     BattleSkill(
         name: '홀리기',
         type: SkillType.special,
-        damageMultiplier: 1.1,
+        damageMultiplier: 1.05,
         attackDebuff: 2,
         debuffDuration: 2),
   ],
   EvolutionType.moonrabbit: [
     BattleSkill(name: '떡방아'),
+    // 시뮬 튜닝: 2회 충전은 쿨2와 겹쳐 상시 실드(승률 82%)가 됨 → 1회
     BattleSkill(
         name: '보름달',
         type: SkillType.special,
         damageReduction: 0.4,
-        reductionDuration: 2),
+        reductionDuration: 1),
   ],
   EvolutionType.haetae: [
     BattleSkill(name: '들이받기'),
@@ -112,17 +114,16 @@ const Map<EvolutionType, List<BattleSkill>> _skillSets = {
     BattleSkill(
         name: '도깨비불',
         type: SkillType.special,
-        damageMultiplier: 1.15,
+        damageMultiplier: 1.05,
         attackDebuff: 2,
         debuffDuration: 2),
   ],
   EvolutionType.hwangryong: [
     BattleSkill(name: '꼬리치기'),
-    // 여의주 — 공격과 동시에 다음 1회 피격 30% 경감 (균형의 용)
+    // 여의주 — 다음 1회 피격 30% 경감 (균형의 용, 공격 보정 없음 — 시뮬 튜닝)
     BattleSkill(
         name: '여의주',
         type: SkillType.special,
-        damageMultiplier: 1.1,
         damageReduction: 0.3,
         reductionDuration: 1),
   ],
@@ -454,8 +455,8 @@ class BattleWithActivityUseCase {
       case EvolutionType.turtle: defenseBonus = 3; hpBonus = 10; break;
       case EvolutionType.samjoko: attackBonus = 3; hpBonus = 5; break;
       case EvolutionType.gumiho: attackBonus = 2; defenseBonus = 1; hpBonus = 5; break;
-      case EvolutionType.moonrabbit: defenseBonus = 2; hpBonus = 12; break;
-      case EvolutionType.haetae: attackBonus = 1; defenseBonus = 3; hpBonus = 5; break;
+      case EvolutionType.moonrabbit: defenseBonus = 2; hpBonus = 10; break;
+      case EvolutionType.haetae: attackBonus = 2; defenseBonus = 3; hpBonus = 5; break;
       case EvolutionType.dokkaebi: attackBonus = 3; hpBonus = 5; break;
       case EvolutionType.hwangryong: attackBonus = 2; defenseBonus = 2; hpBonus = 5; break;
       case null: break; // 털뭉치 — 종 보너스 없음

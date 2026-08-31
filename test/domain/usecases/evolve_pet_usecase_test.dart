@@ -217,10 +217,22 @@ void main() {
   });
 
   group('EvolvePetUseCase - 설화 영물(히든 종) 각성', () {
-    test('걸음 4만 보 이상 → 삼족오 각성', () async {
-      repository.setPet(_createPet(level: 5, totalSteps: 40000));
+    test('걸음 목표 9회 달성 + 걸음 축 지배 → 삼족오 각성', () async {
+      repository.setPet(_createPet(level: 5, exerciseAchievedCount: 9));
       final r = await useCase('test-pet');
       expect(r.evolutionType, EvolutionType.samjoko);
+    });
+
+    test('세 축이 함께 오르면(세트 클리어) 지배 불성립 → 사신수로', () async {
+      repository.setPet(_createPet(
+        level: 5,
+        exerciseAchievedCount: 10, // 임계는 넘지만
+        feedAchievedCount: 8, // 다른 축의 2배가 아님 → 지배 실패
+        sleepAchievedCount: 7,
+        consecutiveLoginDays: 4,
+      ));
+      final r = await useCase('test-pet');
+      expect(r.evolutionType!.isHiddenSpecies, isFalse);
     });
 
     test('급식 달성 9회 이상 → 구미호 각성', () async {
@@ -247,13 +259,13 @@ void main() {
       expect(r.evolutionType, EvolutionType.dokkaebi);
     });
 
-    test('네 지표 모두 5 이상 → 황룡 각성', () async {
+    test('네 지표 모두 6 이상 → 황룡 각성', () async {
       repository.setPet(_createPet(
         level: 5,
-        feedAchievedCount: 5,
-        sleepAchievedCount: 5,
-        exerciseAchievedCount: 5,
-        consecutiveLoginDays: 5,
+        feedAchievedCount: 6,
+        sleepAchievedCount: 6,
+        exerciseAchievedCount: 6,
+        consecutiveLoginDays: 6,
       ));
       final r = await useCase('test-pet');
       expect(r.evolutionType, EvolutionType.hwangryong);
@@ -262,11 +274,10 @@ void main() {
     test('황룡은 다른 히든 조건보다 우선한다 (4축 동시가 최고 난도)', () async {
       repository.setPet(_createPet(
         level: 5,
-        totalSteps: 50000, // 삼족오 조건도 충족
-        feedAchievedCount: 9, // 구미호 조건도 충족
-        sleepAchievedCount: 8,
-        exerciseAchievedCount: 5,
-        consecutiveLoginDays: 5,
+        feedAchievedCount: 20, // 구미호 지배 조건도 충족하지만
+        sleepAchievedCount: 9,
+        exerciseAchievedCount: 6,
+        consecutiveLoginDays: 7, // 네 축 모두 6 이상 → 황룡 우선
       ));
       final r = await useCase('test-pet');
       expect(r.evolutionType, EvolutionType.hwangryong);
@@ -296,14 +307,17 @@ void main() {
 
     test('동시 충족 시 우선순위 — 삼족오 > 해태', () async {
       repository.setPet(_createPet(
-          level: 5, totalSteps: 40000, consecutiveLoginDays: 10));
+          level: 5, exerciseAchievedCount: 9, consecutiveLoginDays: 10));
       final r = await useCase('test-pet');
       expect(r.evolutionType, EvolutionType.samjoko);
     });
 
     test('임계 미만이면 사신수 4분면으로', () async {
       repository.setPet(_createPet(
-          level: 5, totalSteps: 39999, consecutiveLoginDays: 6));
+          level: 5,
+          totalSteps: 20000,
+          exerciseAchievedCount: 8, // 삼족오 임계 9 미만
+          consecutiveLoginDays: 6)); // 해태 임계 7 미만
       final r = await useCase('test-pet');
       expect(r.evolutionType, EvolutionType.tiger);
     });

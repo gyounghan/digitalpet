@@ -63,49 +63,67 @@ class EvolutionAxisScores {
     return EvolutionType.snake;
   }
 
-  // ── 설화 영물(히든 종) 각성 임계 — 원천 지표 직접 판정 ──
+  // ── 설화 영물(히든 종) 각성 판정 ──
   // Lv5(종 결정) 시점에 한 지표가 극단이면 사신수 대신 각성한다.
-  // 세트 클리어 유저는 3~4일에 Lv5 도달 — 그 기간에 "일부러" 몰아야
-  // 닿는 수치로 잡아 히든의 희소성을 유지한다.
-  // (해태만 예외적으로 "가볍게 오래" — 레벨업이 느린 개근 유저 보상)
+  //
+  // 설계 원칙 (밸런스 검토 반영):
+  // 1. 카운터는 "목표 달성 횟수" 기반 — 절대 누적(걸음 수 등)은 느리게
+  //    레벨업하는 일상 유저가 의도 없이 넘어 몰빵의 의미가 사라진다.
+  // 2. 단일 축 3종(삼족오·구미호·달토끼)은 **지배 조건**을 함께 요구:
+  //    그 축이 다른 두 달성 축 각각의 2배 이상. 세트 클리어 유저는
+  //    세 카운터가 함께 오르므로 지배가 성립하지 않아 사신수로 간다 —
+  //    "일부러 한 축만 판" 육성만 각성한다.
+  // 3. 황룡은 네 지표 모두 6 이상 — 연속 접속 6이 포함돼 최소 6일
+  //    육성이 필요하다. 빠르게 레벨업한 유저(3~4일 Lv5)는 도달 불가 —
+  //    "느긋하지만 완벽하게" 키운 육성 전용.
+  // (해태는 "가볍게 오래" — 레벨업이 느린 개근 유저 보상, 최후순위)
 
-  /// 삼족오: 누적 4만 보 (하루 1만+ 보씩 걸은 걸음왕)
-  static const int samjokoStepsThreshold = 40000;
+  /// 삼족오: 걸음 목표 9회 달성 + 걸음 축 지배 (걸음왕)
+  static const int samjokoWalksThreshold = 9;
 
-  /// 구미호: 급식 목표 9회 달성 (매일 모든 슬롯을 챙긴 미식가)
+  /// 구미호: 급식 목표 9회 달성 + 급식 축 지배 (미식가)
   static const int gumihoFeedsThreshold = 9;
 
-  /// 달토끼: 수면 목표 8회 달성 (매일 두 번씩 재우는 꿀잠 육성)
+  /// 달토끼: 수면 목표 8회 달성 + 수면 축 지배 (꿀잠 육성)
   static const int moonrabbitSleepsThreshold = 8;
 
   /// 해태: 연속 접속 7일 (매일 빠짐없이 찾아온 개근왕)
   static const int haetaeLoginDaysThreshold = 7;
 
-  /// 도깨비: 배틀 12승 (하루 전승 페이스로 2~3일 — 싸움꾼)
+  /// 도깨비: 배틀 12승 (AI·온라인 병행 전승 페이스로 2~3일 — 싸움꾼)
   static const int dokkaebiWinsThreshold = 12;
 
-  /// 황룡: 급식·수면·운동 달성 + 연속 접속 네 지표 모두 5 이상
-  /// (오방의 중앙 — 어느 하나 몰지 않고 고루 완벽하게 키운 육성 보상)
-  static const int hwangryongBalancedThreshold = 5;
+  /// 황룡: 급식·수면·운동 달성 + 연속 접속 네 지표 모두 6 이상
+  static const int hwangryongBalancedThreshold = 6;
+
+  /// 축 지배 판정 — [axis]가 나머지 두 축 각각의 2배 이상
+  static bool _dominates(int axis, int other1, int other2) {
+    return axis >= other1 * 2 && axis >= other2 * 2;
+  }
 
   /// 히든 종 각성 판정 — 해당 없으면 null (사신수 4분면으로)
   ///
   /// 여러 조건 동시 충족 시 달성 난도가 높은 순서로 우선한다:
   /// 황룡(4축 동시) → 삼족오 → 구미호 → 달토끼 → 도깨비 → 해태
   static EvolutionType? hiddenTypeFor(Pet pet) {
-    if (pet.feedAchievedCount >= hwangryongBalancedThreshold &&
-        pet.sleepAchievedCount >= hwangryongBalancedThreshold &&
-        pet.exerciseAchievedCount >= hwangryongBalancedThreshold &&
+    final walks = pet.exerciseAchievedCount;
+    final feeds = pet.feedAchievedCount;
+    final sleeps = pet.sleepAchievedCount;
+
+    if (feeds >= hwangryongBalancedThreshold &&
+        sleeps >= hwangryongBalancedThreshold &&
+        walks >= hwangryongBalancedThreshold &&
         pet.consecutiveLoginDays >= hwangryongBalancedThreshold) {
       return EvolutionType.hwangryong;
     }
-    if (pet.totalSteps >= samjokoStepsThreshold) {
+    if (walks >= samjokoWalksThreshold && _dominates(walks, feeds, sleeps)) {
       return EvolutionType.samjoko;
     }
-    if (pet.feedAchievedCount >= gumihoFeedsThreshold) {
+    if (feeds >= gumihoFeedsThreshold && _dominates(feeds, walks, sleeps)) {
       return EvolutionType.gumiho;
     }
-    if (pet.sleepAchievedCount >= moonrabbitSleepsThreshold) {
+    if (sleeps >= moonrabbitSleepsThreshold &&
+        _dominates(sleeps, walks, feeds)) {
       return EvolutionType.moonrabbit;
     }
     if (pet.battleVictoryCount >= dokkaebiWinsThreshold) {

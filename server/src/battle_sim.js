@@ -41,15 +41,15 @@ const SKILL_SETS = {
   // 설화 영물 (클라이언트 _skillSets와 동기화)
   samjoko: [
     { name: '홰치기', special: false, mult: 1.0 },
-    { name: '일식', special: true, mult: 1.3 },
+    { name: '일식', special: true, mult: 1.25 },
   ],
   gumiho: [
     { name: '할큄', special: false, mult: 1.0 },
-    { name: '홀리기', special: true, mult: 1.1, atkDebuff: 2, debuffTurns: 2 },
+    { name: '홀리기', special: true, mult: 1.05, atkDebuff: 2, debuffTurns: 2 },
   ],
   moonrabbit: [
     { name: '떡방아', special: false, mult: 1.0 },
-    { name: '보름달', special: true, mult: 1.0, dmgReduction: 0.4, shieldCharges: 2 },
+    { name: '보름달', special: true, mult: 1.0, dmgReduction: 0.4, shieldCharges: 1 },
   ],
   haetae: [
     { name: '들이받기', special: false, mult: 1.0 },
@@ -57,11 +57,11 @@ const SKILL_SETS = {
   ],
   dokkaebi: [
     { name: '방망이질', special: false, mult: 1.0 },
-    { name: '도깨비불', special: true, mult: 1.15, atkDebuff: 2, debuffTurns: 2 },
+    { name: '도깨비불', special: true, mult: 1.05, atkDebuff: 2, debuffTurns: 2 },
   ],
   hwangryong: [
     { name: '꼬리치기', special: false, mult: 1.0 },
-    { name: '여의주', special: true, mult: 1.1, dmgReduction: 0.3, shieldCharges: 1 },
+    { name: '여의주', special: true, mult: 1.0, dmgReduction: 0.3, shieldCharges: 1 },
   ],
 };
 const DEFAULT_SKILLS = [{ name: '공격', special: false, mult: 1.0 }];

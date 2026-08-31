@@ -516,9 +516,9 @@ class Pet {
       case EvolutionType.gumiho:
         return const [2, 1, 5];
       case EvolutionType.moonrabbit:
-        return const [0, 2, 12];
+        return const [0, 2, 10];
       case EvolutionType.haetae:
-        return const [1, 3, 5];
+        return const [2, 3, 5];
       case EvolutionType.dokkaebi:
         return const [3, 0, 5];
       case EvolutionType.hwangryong:
