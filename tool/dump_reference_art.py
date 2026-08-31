@@ -52,6 +52,15 @@ EYE_HINT = {
 EYE_OVERRIDE = {}
 MOUTH_OVERRIDE = {}
 
+# 마커 눈 rect 미세보정 — {키: [(눈 인덱스, dx, dy, dw, dh)]}
+# 인덱스는 좌→우 정렬 기준 (0=왼눈, 1=오른눈). 사용자 검수 반영.
+EYE_TWEAK = {
+    "haetae2": [(1, 0, -1, 0, 1)],       # 오른눈 위로 1칸 확장
+    "hwangryong1": [(1, -1, 0, 0, 0)],   # 오른눈 왼쪽으로 1칸 이동
+    "hwangryong2": [(0, 0, -1, 0, 1)],   # 왼눈 위로 1칸 확장
+    "hwangryong3": [(0, 0, -1, 0, 1)],   # 왼눈 위로 1칸 확장
+}
+
 OUTPUT_PATH = os.path.join("tool", "hidden_species_art.py")
 
 
@@ -177,15 +186,32 @@ def stage_sub(labeled, group, marker_all):
 
 
 def inpaint_markers(arr, sub, marker):
-    """마커 픽셀을 가장 가까운 비마커 캐릭터 색으로 메꾼다 (잔상 제거)."""
-    m = ndimage.binary_dilation(marker, iterations=2) & sub
-    valid = sub & ~m
-    if not m.any() or not valid.any():
-        return arr
-    _, (iy, ix) = ndimage.distance_transform_edt(
-        ~valid, return_indices=True)
+    """마커 클러스터를 주변 밝은 피부색(중앙값)으로 평탄하게 메꾼다.
+
+    최근접 픽셀 복사 방식은 눈 바로 옆의 어두운 눈두덩 색을 번지게 해
+    황룡처럼 눈 주변이 황토 얼룩이 되는 문제가 있었다. 클러스터마다
+    주변 링에서 밝은 픽셀(상위 30% 휘도)의 중앙값 한 색으로 채워
+    눈 자리가 피부색으로 매끈하게 돌아간다. 링이 전부 어두우면(삼족오
+    검은 머리) 어두운 색 그대로 쓴다.
+    """
+    labeled, n = ndimage.label(marker & sub)
     out = arr.copy()
-    out[m] = arr[iy[m], ix[m]]
+    for i in range(1, n + 1):
+        cluster = labeled == i
+        near = ndimage.binary_dilation(cluster, iterations=4) & sub
+        ring = near & ~ndimage.binary_dilation(cluster, iterations=1) & ~marker
+        ys, xs = np.where(ring)
+        if len(ys) == 0:
+            continue
+        cols = arr[ys, xs].astype(float)
+        lum = (0.2126 * cols[:, 0] + 0.7152 * cols[:, 1]
+               + 0.0722 * cols[:, 2]) / 255.0
+        cut = np.percentile(lum, 70)
+        bright = cols[lum >= max(cut, 0.35)]
+        use = bright if len(bright) >= 4 else cols
+        fill = np.median(use, axis=0)
+        area = ndimage.binary_dilation(cluster, iterations=2) & sub
+        out[area] = fill
     return out
 
 
@@ -442,6 +468,11 @@ def main():
                     src = "자동폴백"
                 print(f"[warn] {key}: 눈 마커 미검출 → {src}")
             eyes = [tuple(int(v) for v in e) for e in eyes]
+            for idx, dx, dy, dw, dh in EYE_TWEAK.get(key, []):
+                if idx < len(eyes):
+                    ex, ey, ew, eh = eyes[idx]
+                    eyes[idx] = (max(0, ex + dx), max(0, ey + dy),
+                                 max(2, ew + dw), max(2, eh + dh))
 
             mouth = mouth_from_marker(mouth_cov)
             if mouth is None:

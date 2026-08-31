@@ -1268,8 +1268,11 @@ def pose(
     group_cx = sum(x + w / 2.0 for (x, y, w, h) in eye_rects) / len(eye_rects)
     # 정면 얼굴(백호·털뭉치·양눈 히든 포유형)은 화난 눈을 \ / 로,
     # 옆모습(주작·청룡·현무 — 왼쪽을 봐 앞쪽이 왼쪽)은 항상 / 로 그린다.
+    # 히든 종은 양눈이 잡힌 스프라이트 전부 정면 취급 — 화난 눈이
+    # \ / (10시 10분)로 마주 보게 그려진다 (해태·황룡 포함).
     hidden_frontal = (
-        key.startswith(("dokkaebi", "gumiho", "moonrabbit"))
+        key.startswith(("dokkaebi", "gumiho", "moonrabbit",
+                        "haetae", "hwangryong", "samjoko"))
         and len(eye_rects) >= 2
     )
     frontal = key.startswith("tiger") or key == "fluff" or hidden_frontal
