@@ -28,10 +28,10 @@ class CheckPetDeathUseCase {
 
     if (pet.isDead) return pet;
 
-    if (pet.isAllStatsZero) {
+    if (pet.isStarving) {
       if (pet.zeroStatStartDate == null) {
-        // 처음으로 모든 수치가 0이 됨 - 시작 날짜 기록
-        pet = pet.copyWith(zeroStatStartDate: pet.todayDateString);
+        // 처음으로 포만감이 0이 됨 - 굶기 시작 시각 기록 (하루 경과 정밀 판정)
+        pet = pet.copyWith(zeroStatStartDate: DateTime.now().toIso8601String());
         await petRepository.updatePet(pet);
       } else if (pet.shouldDie) {
         // 임계 일수(3일) 경과 - 사망 처리
@@ -39,7 +39,7 @@ class CheckPetDeathUseCase {
         await petRepository.updatePet(pet);
       }
     } else {
-      // 수치가 회복됨 - zeroStatStartDate 초기화
+      // 포만감이 회복됨 - zeroStatStartDate 초기화
       if (pet.zeroStatStartDate != null) {
         pet = pet.clearZeroStatStartDate();
         await petRepository.updatePet(pet);

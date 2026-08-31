@@ -135,7 +135,8 @@ class Pet {
   /// 사망 시각 (밀리초 타임스탬프, null이면 살아있음)
   final int? deathDate;
 
-  /// 모든 수치가 0이 된 시점 (YYYY-MM-DD 형식, null이면 0 상태 아님)
+  /// 포만감이 0이 된 시점 (ISO8601, null이면 굶는 상태 아님)
+  /// — 긴 잠 판정 기준. 과거 데이터는 YYYY-MM-DD만 있을 수 있다(자정으로 파싱).
   final String? zeroStatStartDate;
 
   /// 부활 횟수
@@ -671,18 +672,20 @@ class Pet {
   /// 온라인 대전 가능 여부
   bool get canBattleOnline => remainingOnlineBattles > 0;
 
-  /// 모든 수치가 0인지 확인
-  bool get isAllStatsZero => hunger == 0 && happiness == 0 && stamina == 0;
+  /// 굶는 중인지 — 포만감은 급식으로만 오르는 유일한 축이라
+  /// 긴 잠 판정의 단독 기준으로 쓴다 (기력은 폰 미사용 수면으로 자동 회복돼
+  /// 셋 다 0 조건은 사실상 도달 불가였다).
+  bool get isStarving => hunger == 0;
 
-  /// 긴 잠(isDead) 진입까지의 일수 — 모든 수치 0이 이 일수 이상 지속되면 긴 잠
+  /// 긴 잠(isDead) 진입까지의 일수 — 포만감 0이 이 일수 이상 지속되면 긴 잠
   /// (CheckPetDeathUseCase가 이 상수를 참조한다 — 단일 소스)
-  static const int deathThresholdDays = 3;
+  static const int deathThresholdDays = 1;
 
-  /// 긴 잠(isDead) 진입 조건 충족 여부 (모든 수치 0이 [deathThresholdDays]일 이상 지속)
+  /// 긴 잠(isDead) 진입 조건 충족 여부 (포만감 0이 [deathThresholdDays]일 이상 지속)
   /// (필드명은 isDead지만 UX상 "사망"이 아니라 "긴 잠"으로 표현한다)
   bool get shouldDie {
     if (isDead) return false;
-    if (!isAllStatsZero) return false;
+    if (!isStarving) return false;
     if (zeroStatStartDate == null) return false;
     try {
       final startDate = DateTime.parse(zeroStatStartDate!);

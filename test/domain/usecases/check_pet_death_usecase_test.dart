@@ -67,8 +67,8 @@ void main() {
       expect(result.zeroStatStartDate, isNull);
     });
 
-    test('모든 수치 0 + zeroStatStartDate null이면 시작일 기록', () async {
-      final pet = _createPet(hunger: 0, happiness: 0, stamina: 0);
+    test('포만감 0 + zeroStatStartDate null이면 굶기 시작 시각 기록', () async {
+      final pet = _createPet(hunger: 0, happiness: 70, stamina: 70);
       repository.setPet(pet);
 
       final result = await useCase('test-pet');
@@ -76,16 +76,14 @@ void main() {
       expect(result.zeroStatStartDate, isNotNull);
     });
 
-    test('모든 수치 0 + 임계 일수(3일) 경과면 사망 처리', () async {
-      final threeDaysAgo = DateTime.now().subtract(
-          const Duration(days: CheckPetDeathUseCase.deathThresholdDays));
-      final dateStr =
-          '${threeDaysAgo.year}-${threeDaysAgo.month.toString().padLeft(2, '0')}-${threeDaysAgo.day.toString().padLeft(2, '0')}';
+    test('포만감 0 + 임계(하루) 경과면 긴 잠 처리 — 행복·기력 남아있어도', () async {
+      final overThreshold = DateTime.now().subtract(const Duration(
+          days: CheckPetDeathUseCase.deathThresholdDays, hours: 1));
       final pet = _createPet(
         hunger: 0,
-        happiness: 0,
-        stamina: 0,
-        zeroStatStartDate: dateStr,
+        happiness: 40,
+        stamina: 60,
+        zeroStatStartDate: overThreshold.toIso8601String(),
       );
       repository.setPet(pet);
 
@@ -94,16 +92,14 @@ void main() {
       expect(result.deathDate, isNotNull);
     });
 
-    test('모든 수치 0 + 임계 미만(2일) 경과면 아직 생존', () async {
-      final twoDaysAgo = DateTime.now().subtract(
-          const Duration(days: CheckPetDeathUseCase.deathThresholdDays - 1));
-      final dateStr =
-          '${twoDaysAgo.year}-${twoDaysAgo.month.toString().padLeft(2, '0')}-${twoDaysAgo.day.toString().padLeft(2, '0')}';
+    test('포만감 0 + 하루 미만이면 아직 생존', () async {
+      final underThreshold =
+          DateTime.now().subtract(const Duration(hours: 23));
       final pet = _createPet(
         hunger: 0,
         happiness: 0,
         stamina: 0,
-        zeroStatStartDate: dateStr,
+        zeroStatStartDate: underThreshold.toIso8601String(),
       );
       repository.setPet(pet);
 
@@ -111,7 +107,7 @@ void main() {
       expect(result.isDead, false);
     });
 
-    test('수치 회복 시 zeroStatStartDate null로 초기화', () async {
+    test('포만감 회복 시 zeroStatStartDate null로 초기화', () async {
       final pet = _createPet(
         hunger: 10,
         happiness: 0,

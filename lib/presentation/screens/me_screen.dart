@@ -1038,8 +1038,8 @@ class _MeScreenState extends ConsumerState<MeScreen> {
           const SizedBox(height: 12),
           _lifeRow(Icons.directions_run, '걸음 수',
               _formatNumber(pet.totalSteps), '보'),
-          _lifeRow(Icons.fitness_center, '운동',
-              _formatNumber(pet.totalExerciseMinutes), '분'),
+          // '운동(분)'은 헬스커넥트 운동 세션이 있어야만 쌓여 대부분 0으로
+          // 보이는 죽은 표시라 제거 (내부적으로는 행복/진화 축에 계속 반영)
           _lifeRow(Icons.bedtime, '수면', _formatNumber(pet.totalIdleHours), '시간'),
           _lifeRow(Icons.emoji_events, '배틀 승리',
               _formatNumber(pet.battleVictoryCount), '회'),

@@ -59,48 +59,41 @@ void main() {
     });
   });
 
-  group('Pet.isAllStatsZero', () {
-    test('모든 수치가 0이면 true', () {
-      final pet = _createPet(hunger: 0, happiness: 0, stamina: 0);
-      expect(pet.isAllStatsZero, true);
+  group('Pet.isStarving', () {
+    test('포만감 0이면 true (행복·기력 무관)', () {
+      expect(_createPet(hunger: 0, happiness: 0, stamina: 0).isStarving, true);
+      expect(
+          _createPet(hunger: 0, happiness: 80, stamina: 80).isStarving, true);
     });
 
-    test('하나라도 0이 아니면 false', () {
-      final pet = _createPet(hunger: 1, happiness: 0, stamina: 0);
-      expect(pet.isAllStatsZero, false);
-    });
-
-    test('모든 수치가 양수이면 false', () {
-      final pet = _createPet(hunger: 50, happiness: 50, stamina: 50);
-      expect(pet.isAllStatsZero, false);
+    test('포만감이 1 이상이면 false', () {
+      expect(_createPet(hunger: 1, happiness: 0, stamina: 0).isStarving, false);
+      expect(
+          _createPet(hunger: 50, happiness: 50, stamina: 50).isStarving, false);
     });
   });
 
   group('Pet.shouldDie', () {
-    test('모든 수치 0 + zeroStatStartDate 3일 전이면 true', () {
-      final threeDaysAgo = DateTime.now()
-          .subtract(const Duration(days: Pet.deathThresholdDays));
-      final dateStr =
-          '${threeDaysAgo.year}-${threeDaysAgo.month.toString().padLeft(2, '0')}-${threeDaysAgo.day.toString().padLeft(2, '0')}';
+    test('포만감 0 + 굶기 시작 하루(임계) 경과면 true — 행복·기력 남아있어도', () {
+      final overThreshold = DateTime.now().subtract(
+          const Duration(days: Pet.deathThresholdDays, hours: 1));
       final pet = _createPet(
         hunger: 0,
-        happiness: 0,
-        stamina: 0,
-        zeroStatStartDate: dateStr,
+        happiness: 60,
+        stamina: 60,
+        zeroStatStartDate: overThreshold.toIso8601String(),
       );
       expect(pet.shouldDie, true);
     });
 
-    test('모든 수치 0 + zeroStatStartDate 2일 전이면 false', () {
-      final twoDaysAgo = DateTime.now()
-          .subtract(const Duration(days: Pet.deathThresholdDays - 1));
-      final dateStr =
-          '${twoDaysAgo.year}-${twoDaysAgo.month.toString().padLeft(2, '0')}-${twoDaysAgo.day.toString().padLeft(2, '0')}';
+    test('포만감 0이어도 하루 미만이면 false', () {
+      final underThreshold =
+          DateTime.now().subtract(const Duration(hours: 23));
       final pet = _createPet(
         hunger: 0,
         happiness: 0,
         stamina: 0,
-        zeroStatStartDate: dateStr,
+        zeroStatStartDate: underThreshold.toIso8601String(),
       );
       expect(pet.shouldDie, false);
     });
@@ -121,7 +114,7 @@ void main() {
       expect(pet.shouldDie, false);
     });
 
-    test('수치가 0이 아니면 false', () {
+    test('포만감이 0이 아니면 false (행복·기력 0이어도)', () {
       final pet = _createPet(
         hunger: 10,
         happiness: 0,
