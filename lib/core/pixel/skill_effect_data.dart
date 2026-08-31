@@ -489,6 +489,10 @@ const Map<String, String> skillNameToEffect = {
   '보름달': 'guard',
   '들이받기': 'strike',
   '심판': 'bind',
+  '방망이질': 'strike',
+  '도깨비불': 'roar',
+  '꼬리치기': 'slash',
+  '여의주': 'guard',
 };
 
 /// 스킬 이름으로 이펙트 프레임 조회 (미등록 스킬은 null)
@@ -499,4 +503,4 @@ List<PixelSprite>? skillEffectForSkillName(String skillName) {
 
 /// 시전자 자신 위에 표시하는 스킬인지 (자기 버프 계열)
 bool isSelfSkillEffect(String skillName) =>
-    skillName == '방어자세' || skillName == '보름달';
+    skillName == '방어자세' || skillName == '보름달' || skillName == '여의주';

@@ -57,7 +57,8 @@ class SpeciesRevealNarrator {
   static String _activityAxisLine(EvolutionType type, Pet pet) {
     final isActiveType = type == EvolutionType.tiger ||
         type == EvolutionType.bird ||
-        type == EvolutionType.samjoko;
+        type == EvolutionType.samjoko ||
+        type == EvolutionType.dokkaebi;
     if (isActiveType) {
       if (pet.totalSteps >= 1000) {
         return '함께 걸은 ${formatNumber(pet.totalSteps)}보가 활발한 기운을 키웠어요';
@@ -74,7 +75,8 @@ class SpeciesRevealNarrator {
   static String _rhythmAxisLine(EvolutionType type, Pet pet) {
     final isRegularType = type == EvolutionType.tiger ||
         type == EvolutionType.turtle ||
-        type == EvolutionType.haetae;
+        type == EvolutionType.haetae ||
+        type == EvolutionType.hwangryong;
     if (isRegularType) {
       if (pet.consecutiveLoginDays > 1) {
         return '${pet.consecutiveLoginDays}일 연속 찾아와 준 꾸준함이 더해졌어요';
@@ -106,6 +108,10 @@ class SpeciesRevealNarrator {
         return '달빛 아래 꿀잠이 특기인 몽글한 친구예요';
       case EvolutionType.haetae:
         return '하루도 빠짐없이 곁을 지키는 수호수예요';
+      case EvolutionType.dokkaebi:
+        return '싸움도 장난처럼 즐기는 개구쟁이예요';
+      case EvolutionType.hwangryong:
+        return '무엇 하나 빠짐없는 오방의 중심이에요';
     }
   }
 
@@ -128,6 +134,10 @@ class SpeciesRevealNarrator {
         return '달토끼';
       case EvolutionType.haetae:
         return '해태';
+      case EvolutionType.dokkaebi:
+        return '도깨비';
+      case EvolutionType.hwangryong:
+        return '황룡';
     }
   }
 

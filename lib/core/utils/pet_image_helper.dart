@@ -13,6 +13,8 @@ const Map<EvolutionType, String> _evolutionImagePrefix = {
   EvolutionType.gumiho: 'gumiho',
   EvolutionType.moonrabbit: 'moonrabbit',
   EvolutionType.haetae: 'haetae',
+  EvolutionType.dokkaebi: 'dokkaebi',
+  EvolutionType.hwangryong: 'hwangryong',
 };
 
 /// EvolutionType의 이미지 파일 접두어(종 키) 반환

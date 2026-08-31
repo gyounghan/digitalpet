@@ -81,11 +81,24 @@ class EvolutionAxisScores {
   /// 해태: 연속 접속 7일 (매일 빠짐없이 찾아온 개근왕)
   static const int haetaeLoginDaysThreshold = 7;
 
+  /// 도깨비: 배틀 12승 (하루 전승 페이스로 2~3일 — 싸움꾼)
+  static const int dokkaebiWinsThreshold = 12;
+
+  /// 황룡: 급식·수면·운동 달성 + 연속 접속 네 지표 모두 5 이상
+  /// (오방의 중앙 — 어느 하나 몰지 않고 고루 완벽하게 키운 육성 보상)
+  static const int hwangryongBalancedThreshold = 5;
+
   /// 히든 종 각성 판정 — 해당 없으면 null (사신수 4분면으로)
   ///
   /// 여러 조건 동시 충족 시 달성 난도가 높은 순서로 우선한다:
-  /// 삼족오 → 구미호 → 달토끼 → 해태
+  /// 황룡(4축 동시) → 삼족오 → 구미호 → 달토끼 → 도깨비 → 해태
   static EvolutionType? hiddenTypeFor(Pet pet) {
+    if (pet.feedAchievedCount >= hwangryongBalancedThreshold &&
+        pet.sleepAchievedCount >= hwangryongBalancedThreshold &&
+        pet.exerciseAchievedCount >= hwangryongBalancedThreshold &&
+        pet.consecutiveLoginDays >= hwangryongBalancedThreshold) {
+      return EvolutionType.hwangryong;
+    }
     if (pet.totalSteps >= samjokoStepsThreshold) {
       return EvolutionType.samjoko;
     }
@@ -94,6 +107,9 @@ class EvolutionAxisScores {
     }
     if (pet.sleepAchievedCount >= moonrabbitSleepsThreshold) {
       return EvolutionType.moonrabbit;
+    }
+    if (pet.battleVictoryCount >= dokkaebiWinsThreshold) {
+      return EvolutionType.dokkaebi;
     }
     if (pet.consecutiveLoginDays >= haetaeLoginDaysThreshold) {
       return EvolutionType.haetae;

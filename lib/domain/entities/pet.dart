@@ -519,6 +519,10 @@ class Pet {
         return const [0, 2, 12];
       case EvolutionType.haetae:
         return const [1, 3, 5];
+      case EvolutionType.dokkaebi:
+        return const [3, 0, 5];
+      case EvolutionType.hwangryong:
+        return const [2, 2, 5];
       case null:
         return const [0, 0, 0];
     }

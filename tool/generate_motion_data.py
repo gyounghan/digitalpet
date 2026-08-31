@@ -1072,6 +1072,9 @@ NORMAL_STRIP = {
     # 성숙기(stage4) — 신수 요소 뚜렷
     "turtle3": [(9, 6, 42, 24), (39, 24, 55, 37), (42, 37, 55, 45)],  # 등 뒤 뱀 제거
     "dragon3": [(0, 24, 11, 43)],                    # 왼손 여의주 + 팔 제거
+    # 황룡 일반종 — dragon과 동일 스트립 (여의주 제거)
+    "hwangryong2": [(20, 10, 28, 22)],
+    "hwangryong3": [(0, 24, 11, 43)],
     "bird3": [(13, 47, 43, 55)],                     # 하단 불꽃 꼬리 제거
     "tiger3": [],                                    # 형태 동일 (색만)
 }
@@ -1228,6 +1231,10 @@ HIDDEN_SPECIES = {
     "gumiho": ("tiger", [_destripe, _tail_accent], False),
     "moonrabbit": ("tiger", [_destripe, _raise_ears], False),
     "haetae": ("tiger", [_destripe, _mane, _horn], False),
+    # 도깨비 ← tiger: 줄무늬 유지(호피 감투) + 외뿔 — 해태(민무늬+갈기)와 구분
+    "dokkaebi": ("tiger", [_horn], False),
+    # 황룡 ← dragon: 형태 그대로, 금색 팔레트(테마)가 정체성 — 오방의 중앙
+    "hwangryong": ("dragon", [], True),
 }
 
 
@@ -1261,7 +1268,8 @@ def _make_normal_forms():
              "tiger3", "bird3", "turtle3", "dragon3",
              # 히든 종 — 신수 요소 스트립 없음(색만 다른 일반종 라인)
              "samjoko2", "samjoko3", "gumiho2", "gumiho3",
-             "moonrabbit2", "moonrabbit3", "haetae2", "haetae3")
+             "moonrabbit2", "moonrabbit3", "haetae2", "haetae3",
+             "dokkaebi2", "dokkaebi3", "hwangryong2", "hwangryong3")
     for base in bases:
         src = SPECIES_ART[base]
         n = len(src["body"])

@@ -45,6 +45,7 @@ class AppStrings {
     // 설화 영물 (히든 종)
     'samjoko': '아기까마귀', 'gumiho': '아기여우',
     'moonrabbit': '아기토끼', 'haetae': '아기해치',
+    'dokkaebi': '아기도깨비', 'hwangryong': '아기용',
   };
   static const Map<String, Map<String, String>> stage3Names = {
     'bird': {'normal': '독수리', 'superior': '봉황'},
@@ -55,6 +56,8 @@ class AppStrings {
     'gumiho': {'normal': '여우', 'superior': '불여우'},
     'moonrabbit': {'normal': '토끼', 'superior': '옥토끼'},
     'haetae': {'normal': '돌강아지', 'superior': '해치'},
+    'dokkaebi': {'normal': '꼬마도깨비', 'superior': '청도깨비'},
+    'hwangryong': {'normal': '금구렁이', 'superior': '금비늘용'},
   };
   // 성숙기: 잘 키우면 사신수(mythical), 아니면 그냥 동물(normal)
   static const Map<String, Map<String, String>> stage4Names = {
@@ -66,6 +69,8 @@ class AppStrings {
     'gumiho': {'normal': '늙은여우', 'mythical': '구미호 \u{1F98A}'},
     'moonrabbit': {'normal': '산토끼', 'mythical': '달토끼 \u{1F315}'},
     'haetae': {'normal': '삽살개', 'mythical': '해태 \u{2696}\u{FE0F}'},
+    'dokkaebi': {'normal': '어른도깨비', 'mythical': '도깨비대장 \u{1F525}'},
+    'hwangryong': {'normal': '큰구렁이', 'mythical': '황룡 \u{1F451}'},
   };
 
   // 대결

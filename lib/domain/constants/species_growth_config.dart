@@ -85,6 +85,18 @@ class SpeciesGrowthConfig {
       stamina: 1.0,
       exp: 1.15,
     ),
+    EvolutionType.dokkaebi: StatMultipliers(
+      hunger: 1.0,
+      happiness: 1.1,
+      stamina: 1.0,
+      exp: 1.2,
+    ),
+    EvolutionType.hwangryong: StatMultipliers(
+      hunger: 1.1,
+      happiness: 1.1,
+      stamina: 1.1,
+      exp: 1.05,
+    ),
   };
 
   /// 감소 배율 (UpdatePetStateUseCase 시간 감소 계열에 적용)
@@ -136,6 +148,18 @@ class SpeciesGrowthConfig {
       hunger: 1.0,
       happiness: 0.9,
       stamina: 1.0,
+      exp: 1.0,
+    ),
+    EvolutionType.dokkaebi: StatMultipliers(
+      hunger: 1.15,
+      happiness: 1.0,
+      stamina: 1.0,
+      exp: 1.0,
+    ),
+    EvolutionType.hwangryong: StatMultipliers(
+      hunger: 0.95,
+      happiness: 0.95,
+      stamina: 0.95,
       exp: 1.0,
     ),
   };

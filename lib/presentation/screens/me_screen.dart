@@ -1013,7 +1013,11 @@ class _MeScreenState extends ConsumerState<MeScreen> {
       case EvolutionType.moonrabbit:
         return '달토끼 → 해태에 강함';
       case EvolutionType.haetae:
-        return '해태 → 삼족오에 강함';
+        return '해태 → 도깨비에 강함';
+      case EvolutionType.dokkaebi:
+        return '도깨비 → 황룡에 강함';
+      case EvolutionType.hwangryong:
+        return '황룡 → 삼족오에 강함';
       case null:
         return '진화 전';
     }

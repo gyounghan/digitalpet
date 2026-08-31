@@ -182,6 +182,16 @@ class EvolvePetUseCase {
       case EvolutionType.haetae:
         superior = pet.consecutiveLoginDays >= _supRegular;
         break;
+      case EvolutionType.dokkaebi:
+        superior = pet.battleVictoryCount >= _supBattle;
+        break;
+      // 황룡 — 각성답게 네 축 모두 (superior 임계 그대로)
+      case EvolutionType.hwangryong:
+        superior = pet.exerciseAchievedCount >= _supActive &&
+            pet.sleepAchievedCount >= _supCalm &&
+            pet.feedAchievedCount >= _supFree &&
+            pet.consecutiveLoginDays >= _supRegular;
+        break;
       default:
         return 'normal';
     }
@@ -206,6 +216,10 @@ class EvolvePetUseCase {
   static const int _mythFree = 20;
   static const int _mythRegular = 14;
 
+  /// 도깨비 배틀 축 임계 (superior/mythical)
+  static const int _supBattle = 15;
+  static const int _mythBattle = 30;
+
   bool _meetsStage4Condition(Pet pet) {
     switch (pet.evolutionType) {
       case EvolutionType.bird:
@@ -229,6 +243,13 @@ class EvolvePetUseCase {
         return pet.sleepAchievedCount >= _mythCalm;
       case EvolutionType.haetae:
         return pet.consecutiveLoginDays >= _mythRegular;
+      case EvolutionType.dokkaebi:
+        return pet.battleVictoryCount >= _mythBattle;
+      case EvolutionType.hwangryong:
+        return pet.exerciseAchievedCount >= _mythActive &&
+            pet.sleepAchievedCount >= _mythCalm &&
+            pet.feedAchievedCount >= _mythFree &&
+            pet.consecutiveLoginDays >= _mythRegular;
       default:
         return false;
     }

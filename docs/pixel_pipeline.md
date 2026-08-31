@@ -207,6 +207,8 @@ TMP/TEMP를 지정할 것.
 - gumiho(구미호) ← tiger: 줄무늬 제거(`_destripe`) + 꼬리 끝 보조색(`_tail_accent`)
 - moonrabbit(달토끼) ← tiger: 줄무늬 제거 + 귀 연장(`_raise_ears`)
 - haetae(해태) ← tiger: 줄무늬 제거 + 갈기 링(`_mane`) + 이마 뿔(`_horn`)
+- dokkaebi(도깨비) ← tiger: 줄무늬 유지(호피 감투) + 외뿔 — 해태와 구분
+- hwangryong(황룡) ← dragon: 형태 그대로, 금색 팔레트가 정체성 (오방의 중앙)
 
 tiger 파생 3종은 SPECIES_SRC 재샘플링을 끈다(흰 호랑이 몸이 통째로
 보조색 승격돼 편집 표식이 묻힘) — 몸통은 테마색 단색, 표식만 보조색.

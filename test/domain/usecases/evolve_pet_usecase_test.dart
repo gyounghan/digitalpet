@@ -241,6 +241,59 @@ void main() {
       expect(r.evolutionType, EvolutionType.haetae);
     });
 
+    test('배틀 12승 이상 → 도깨비 각성', () async {
+      repository.setPet(_createPet(level: 5, battleVictoryCount: 12));
+      final r = await useCase('test-pet');
+      expect(r.evolutionType, EvolutionType.dokkaebi);
+    });
+
+    test('네 지표 모두 5 이상 → 황룡 각성', () async {
+      repository.setPet(_createPet(
+        level: 5,
+        feedAchievedCount: 5,
+        sleepAchievedCount: 5,
+        exerciseAchievedCount: 5,
+        consecutiveLoginDays: 5,
+      ));
+      final r = await useCase('test-pet');
+      expect(r.evolutionType, EvolutionType.hwangryong);
+    });
+
+    test('황룡은 다른 히든 조건보다 우선한다 (4축 동시가 최고 난도)', () async {
+      repository.setPet(_createPet(
+        level: 5,
+        totalSteps: 50000, // 삼족오 조건도 충족
+        feedAchievedCount: 9, // 구미호 조건도 충족
+        sleepAchievedCount: 8,
+        exerciseAchievedCount: 5,
+        consecutiveLoginDays: 5,
+      ));
+      final r = await useCase('test-pet');
+      expect(r.evolutionType, EvolutionType.hwangryong);
+    });
+
+    test('도깨비 성장 라인 — 배틀 승수로 superior/mythical', () async {
+      repository.setPet(_createPet(
+        level: 10,
+        evolutionStage: 2,
+        evolutionType: EvolutionType.dokkaebi,
+        battleVictoryCount: 15,
+      ));
+      final s3 = await useCase('test-pet');
+      expect(s3.evolutionGrade, 'superior');
+
+      repository.setPet(_createPet(
+        level: 15,
+        evolutionStage: 3,
+        evolutionGrade: 'superior',
+        evolutionType: EvolutionType.dokkaebi,
+        battleVictoryCount: 30,
+      ));
+      final s4 = await useCase('test-pet');
+      expect(s4.evolutionStage, 4);
+      expect(s4.evolutionGrade, 'mythical');
+    });
+
     test('동시 충족 시 우선순위 — 삼족오 > 해태', () async {
       repository.setPet(_createPet(
           level: 5, totalSteps: 40000, consecutiveLoginDays: 10));

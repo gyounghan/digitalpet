@@ -10,7 +10,7 @@ import 'apply_battle_reward.dart';
 
 /// 상성 테이블
 /// 사신수: bird→snake→turtle→tiger→bird
-/// 설화 영물: samjoko→gumiho→moonrabbit→haetae→samjoko
+/// 설화 영물(6종 순환): samjoko→gumiho→moonrabbit→haetae→dokkaebi→hwangryong→samjoko
 /// (두 순환은 서로 중립 — 그룹 간 상성 없음)
 const Map<EvolutionType, EvolutionType> _affinityAdvantage = {
   EvolutionType.bird: EvolutionType.snake,
@@ -20,7 +20,9 @@ const Map<EvolutionType, EvolutionType> _affinityAdvantage = {
   EvolutionType.samjoko: EvolutionType.gumiho,
   EvolutionType.gumiho: EvolutionType.moonrabbit,
   EvolutionType.moonrabbit: EvolutionType.haetae,
-  EvolutionType.haetae: EvolutionType.samjoko,
+  EvolutionType.haetae: EvolutionType.dokkaebi,
+  EvolutionType.dokkaebi: EvolutionType.hwangryong,
+  EvolutionType.hwangryong: EvolutionType.samjoko,
 };
 
 /// 종별 스킬 정의
@@ -104,6 +106,25 @@ const Map<EvolutionType, List<BattleSkill>> _skillSets = {
         damageMultiplier: 1.1,
         defenseDebuff: 3,
         debuffDuration: 2),
+  ],
+  EvolutionType.dokkaebi: [
+    BattleSkill(name: '방망이질'),
+    BattleSkill(
+        name: '도깨비불',
+        type: SkillType.special,
+        damageMultiplier: 1.15,
+        attackDebuff: 2,
+        debuffDuration: 2),
+  ],
+  EvolutionType.hwangryong: [
+    BattleSkill(name: '꼬리치기'),
+    // 여의주 — 공격과 동시에 다음 1회 피격 30% 경감 (균형의 용)
+    BattleSkill(
+        name: '여의주',
+        type: SkillType.special,
+        damageMultiplier: 1.1,
+        damageReduction: 0.3,
+        reductionDuration: 1),
   ],
 };
 
@@ -435,6 +456,8 @@ class BattleWithActivityUseCase {
       case EvolutionType.gumiho: attackBonus = 2; defenseBonus = 1; hpBonus = 5; break;
       case EvolutionType.moonrabbit: defenseBonus = 2; hpBonus = 12; break;
       case EvolutionType.haetae: attackBonus = 1; defenseBonus = 3; hpBonus = 5; break;
+      case EvolutionType.dokkaebi: attackBonus = 3; hpBonus = 5; break;
+      case EvolutionType.hwangryong: attackBonus = 2; defenseBonus = 2; hpBonus = 5; break;
       case null: break; // 털뭉치 — 종 보너스 없음
     }
 

@@ -151,6 +151,32 @@ class SpeciesTheme {
     spriteAccent: Color(0xFFE8C86A),
   );
 
+  /// 도깨비 (dokkaebi) - 청보라+빨강 (장난꾸러기 싸움꾼)
+  static const SpeciesTheme dokkaebi = SpeciesTheme(
+    primary: Color(0xFF6157A8),
+    primaryDeep: Color(0xFF3E3576),
+    primarySoft: Color(0xFFE4E0F4),
+    surfaceDeep: Color(0xFFE0DCF2),
+    accent: Color(0xFFE85D4F),
+    glow: Color(0xFF9A90D8),
+    gradStart: Color(0xFFF8F7FD),
+    gradEnd: Color(0xFFDCD7F2),
+    spriteAccent: Color(0xFFE8734F),
+  );
+
+  /// 황룡 (hwangryong) - 금 (오방의 중앙)
+  static const SpeciesTheme hwangryong = SpeciesTheme(
+    primary: Color(0xFFD4A017),
+    primaryDeep: Color(0xFF9C7208),
+    primarySoft: Color(0xFFF7ECC8),
+    surfaceDeep: Color(0xFFF4E8C2),
+    accent: Color(0xFFE8C24A),
+    glow: Color(0xFFF0D77E),
+    gradStart: Color(0xFFFEFBF2),
+    gradEnd: Color(0xFFF2E3B4),
+    spriteAccent: Color(0xFFFFE9A8),
+  );
+
   /// 도트 스프라이트 아웃라인/눈 색 (전 종 공통)
   ///
   /// 근흑색 — 백호(청회색 몸)·흑 계열 변이처럼 어두운 몸통에서도 눈이
@@ -220,6 +246,18 @@ class SpeciesTheme {
           (Color(0xFFBCA878), Color(0xFFE6DCC0)), // 모래 해치
           (Color(0xFF4E5258), Color(0xFF83888E)), // 흑요 해치
         ],
+      EvolutionType.dokkaebi => const [
+          (Color(0xFFC05548), Color(0xFFEFC0B8)), // 홍 도깨비
+          (Color(0xFF4E6FA8), Color(0xFFBFD0E8)), // 청 도깨비
+          (Color(0xFF5E8A5A), Color(0xFFC2DCC0)), // 녹 도깨비
+          (Color(0xFFC9A94E), Color(0xFFEEDFB0)), // 황 도깨비
+        ],
+      EvolutionType.hwangryong => const [
+          (Color(0xFFC9A227), Color(0xFFF0E1B0)), // 금 구렁이
+          (Color(0xFFD9D2C0), Color(0xFFF4F0E4)), // 백금 구렁이
+          (Color(0xFFC08040), Color(0xFFEDD5B5)), // 적금 구렁이
+          (Color(0xFF8A8A5A), Color(0xFFD5D5AC)), // 청금 구렁이
+        ],
       null => const [
           (Color(0xFF4A5A78), Color(0xFFDDE3EC)),
         ],
@@ -238,6 +276,8 @@ class SpeciesTheme {
       EvolutionType.gumiho => gumiho,
       EvolutionType.moonrabbit => moonrabbit,
       EvolutionType.haetae => haetae,
+      EvolutionType.dokkaebi => dokkaebi,
+      EvolutionType.hwangryong => hwangryong,
       null => defaultTheme,
     };
   }
@@ -253,6 +293,8 @@ class SpeciesTheme {
       EvolutionType.gumiho => '구미호',
       EvolutionType.moonrabbit => '달토끼',
       EvolutionType.haetae => '해태',
+      EvolutionType.dokkaebi => '도깨비',
+      EvolutionType.hwangryong => '황룡',
       null => '털뭉치',
     };
   }

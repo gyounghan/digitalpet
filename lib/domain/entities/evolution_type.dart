@@ -27,6 +27,12 @@ enum EvolutionType {
 
   /// 해태 계열 - 연속 접속 극단 (정의의 수호수)
   haetae,
+
+  /// 도깨비 계열 - 배틀 승수 극단 (장난꾸러기 싸움꾼)
+  dokkaebi,
+
+  /// 황룡 계열 - 네 지표 균형 (오방의 중앙, 완벽 육성)
+  hwangryong,
 }
 
 /// 종 분류 편의 확장
@@ -36,5 +42,7 @@ extension EvolutionTypeX on EvolutionType {
       this == EvolutionType.samjoko ||
       this == EvolutionType.gumiho ||
       this == EvolutionType.moonrabbit ||
-      this == EvolutionType.haetae;
+      this == EvolutionType.haetae ||
+      this == EvolutionType.dokkaebi ||
+      this == EvolutionType.hwangryong;
 }

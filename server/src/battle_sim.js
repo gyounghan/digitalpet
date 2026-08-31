@@ -55,6 +55,14 @@ const SKILL_SETS = {
     { name: '들이받기', special: false, mult: 1.0 },
     { name: '심판', special: true, mult: 1.1, defDebuff: 3, debuffTurns: 2 },
   ],
+  dokkaebi: [
+    { name: '방망이질', special: false, mult: 1.0 },
+    { name: '도깨비불', special: true, mult: 1.15, atkDebuff: 2, debuffTurns: 2 },
+  ],
+  hwangryong: [
+    { name: '꼬리치기', special: false, mult: 1.0 },
+    { name: '여의주', special: true, mult: 1.1, dmgReduction: 0.3, shieldCharges: 1 },
+  ],
 };
 const DEFAULT_SKILLS = [{ name: '공격', special: false, mult: 1.0 }];
 
@@ -63,8 +71,8 @@ const DEFAULT_SKILLS = [{ name: '공격', special: false, mult: 1.0 }];
 /// 설화 영물: samjoko→gumiho→moonrabbit→haetae→samjoko (그룹 간 중립)
 const ADVANTAGE = {
   bird: 'snake', snake: 'turtle', turtle: 'tiger', tiger: 'bird',
-  samjoko: 'gumiho', gumiho: 'moonrabbit',
-  moonrabbit: 'haetae', haetae: 'samjoko',
+  samjoko: 'gumiho', gumiho: 'moonrabbit', moonrabbit: 'haetae',
+  haetae: 'dokkaebi', dokkaebi: 'hwangryong', hwangryong: 'samjoko',
 };
 
 export function affinityMultiplier(attackerType, defenderType) {
