@@ -43,13 +43,58 @@ EYE_HINT = {
 }
 
 # 눈 수동 지정 — 레퍼런스에서 실제 눈 위치를 판독해 그 자리에 배치.
-# 값은 눈 rect 좌상단 (x, y) 목록. 정면 얼굴은 2개, 옆모습은 1개.
-# 폭·높이는 2px. 자동검출보다 우선. (미지정 종은 자동검출)
+# 값은 눈 rect (x, y, w, h) 목록. 예전 2튜플(x, y)은 2x2로 해석된다.
+# 정면/3/4 얼굴은 2개, 옆모습은 1개. 자동검출보다 우선.
 EYE_OVERRIDE = {
+    # 도깨비 — 얼굴 중앙이 아니라 실제 양쪽 눈동자 덩어리 기준.
+    "dokkaebi1": [(6, 14, 3, 4), (15, 13, 3, 5)],
+    "dokkaebi2": [(8, 12, 3, 4), (15, 12, 3, 4)],
+    "dokkaebi3": [(13, 16, 4, 6), (25, 15, 4, 6)],
+
+    # 해태 — 눈은 얼굴 중단, 입은 왼쪽 주둥이 쪽에서 따로 보정.
+    "haetae1": [(10, 10, 3, 3)],
+    "haetae2": [(11, 13, 3, 3)],
+    "haetae3": [(15, 21, 3, 3)],
+
     # 구미호 — 유아기 정면(양눈, row9 '&' 쌍), 성장기 3/4, 성숙기 옆모습
-    "gumiho1": [(7, 8), (12, 8)],
-    "gumiho2": [(5, 8), (11, 7)],
-    "gumiho3": [(38, 18)],
+    "gumiho1": [(7, 8, 2, 2), (12, 8, 2, 2)],
+    "gumiho2": [(5, 8, 2, 2), (11, 7, 2, 2)],
+    "gumiho3": [(38, 21, 4, 4)],
+
+    # 달토끼 — 전 단계에서 양눈이 보인다. 자동검출은 목도리/몸통을 잡기 쉬움.
+    "moonrabbit1": [(15, 17, 3, 4), (25, 17, 3, 4)],
+    "moonrabbit2": [(19, 16, 3, 3), (28, 16, 3, 4)],
+    "moonrabbit3": [(18, 22, 4, 4), (42, 22, 4, 4)],
+
+    # 황룡 — 자동검출이 뿔/귀 하이라이트를 눈으로 오인해 수동 고정.
+    "hwangryong1": [(10, 14, 4, 5)],
+    "hwangryong2": [(10, 14, 4, 5)],
+    "hwangryong3": [(14, 18, 4, 6)],
+
+    # 삼족오 — 검은 몸통이라 눈 대비가 약해 실제 얼굴 위치를 크게 잡는다.
+    "samjoko1": [(9, 8, 3, 3)],
+    "samjoko2": [(5, 12, 3, 3)],
+    "samjoko3": [(17, 15, 3, 3)],
+}
+
+# 입 수동 지정 — 공격 브레스/배고픔 침 효과가 주둥이·부리에서 시작하도록 보정.
+MOUTH_OVERRIDE = {
+    "dokkaebi1": (10, 18),
+    "dokkaebi2": (12, 17),
+    "dokkaebi3": (20, 23),
+    "haetae1": (5, 14),
+    "haetae2": (6, 17),
+    "haetae3": (7, 24),
+    "gumiho3": (34, 24),
+    "moonrabbit1": (20, 22),
+    "moonrabbit2": (23, 21),
+    "moonrabbit3": (30, 27),
+    "hwangryong1": (5, 19),
+    "hwangryong2": (5, 19),
+    "hwangryong3": (8, 25),
+    "samjoko1": (6, 12),
+    "samjoko2": (3, 16),
+    "samjoko3": (10, 19),
 }
 
 OUTPUT_PATH = os.path.join("tool", "hidden_species_art.py")
@@ -229,6 +274,20 @@ def detect_eyes(art, size, eye_hint=None):
     return [(max(0, x), max(0, y), w, h)]
 
 
+def normalize_eye_override(rects):
+    """수동 눈 좌표를 (x, y, w, h) rect 목록으로 정규화."""
+    normalized = []
+    for rect in rects:
+        if len(rect) == 2:
+            x, y = rect
+            normalized.append((x, y, 2, 2))
+        elif len(rect) == 4:
+            normalized.append(tuple(rect))
+        else:
+            raise ValueError(f"눈 좌표는 2튜플 또는 4튜플이어야 함: {rect!r}")
+    return normalized
+
+
 def _hex(c):
     return "0x{:02X}{:02X}{:02X}".format(int(c[0]), int(c[1]), int(c[2]))
 
@@ -261,12 +320,15 @@ def main():
             art = to_ascii(alpha, rgb, palette, size)
             key = f"{species}{stage_idx + 1}"
             if key in EYE_OVERRIDE:
-                eyes = [(ox, oy, 2, 2) for ox, oy in EYE_OVERRIDE[key]]
+                eyes = normalize_eye_override(EYE_OVERRIDE[key])
             else:
                 eyes = detect_eyes(art, size, eye_hint=EYE_HINT.get(species))
             eyes = [tuple(int(v) for v in e) for e in eyes]
-            ex, ey, ew, eh = eyes[0]
-            mouth = (int(max(0, ex)), int(min(size - 1, ey + eh + 2)))
+            if key in MOUTH_OVERRIDE:
+                mouth = MOUTH_OVERRIDE[key]
+            else:
+                ex, ey, ew, eh = eyes[0]
+                mouth = (int(max(0, ex)), int(min(size - 1, ey + eh + 2)))
             result[key] = {"body": art, "eyes": eyes, "mouth": mouth}
         print(f"  {species}: palette={palettes[species]}")
 

@@ -74,14 +74,14 @@ hex 문자열로)을 굽는다. 안드로이드 홈 위젯이 이 JSON을 파싱
 
 ---
 
-## 3. 모션 파이프라인 (13스프라이트×9모션×3프레임 — 털뭉치 40 / 유아기 32 / 성장기 36 / 성숙기 56)
+## 3. 모션 파이프라인 (39스프라이트×9모션×3프레임 — 털뭉치 40 / 유아기 32 / 성장기 36 / 성숙기 56)
 
 **스크립트**: `tool/generate_motion_data.py` → `lib/core/pixel/pet_motion_data.dart`
 (출력: `motionFrames` — `Map<String 스프라이트키, Map<String모션, List<PixelSprite>>>`,
 키는 `'{종}{스테이지}'` — `'dragon1'`(유아기 32), `'dragon2'`(성장기 36), `'dragon3'`(성숙기 56))
 
 핵심 아이디어: 원본 `assets/{종}{1|2}.png` 픽셀아트를 **도트 아트 문자열**로
-옮긴 뒤(수작업 정리), 부위별 변형으로 모션을 합성한다. 프레임을 손으로 351장
+옮긴 뒤(수작업 정리), 부위별 변형으로 모션을 합성한다. 프레임을 손으로 1053장
 그리는 게 아니라, 스프라이트당 몸체 아트 1장 + 조립 규칙으로 만든다.
 
 아트 소스는 유아기 24·성장기 28이지만 `TARGET_SIZE`대로 32·36으로
@@ -190,30 +190,34 @@ TMP/TEMP를 지정할 것.
 테스트 파일:
 - `test/core/pixel/pet_pixel_data_test.dart` — 정적 146장 무결성
   (64그리드, 3레이어 비겹침, 핵심 에셋 키 존재)
-- `test/core/pixel/pet_motion_data_test.dart` — 모션 351프레임 무결성
+- `test/core/pixel/pet_motion_data_test.dart` — 모션 1053프레임 무결성
   (size-행수 일치, 털뭉치 40/유아기 32/성장기 36/성숙기 56, 3레이어 비겹침, 프레임 간 차이,
   mood 매핑, 에셋 경로→스프라이트 키 추출)
 
 ---
 
-## 3.7 설화 영물(히든 종) 아트 파생
+## 3.7 설화 영물(히든 종) 레퍼런스 아트
 
-신규 4종(samjoko/gumiho/moonrabbit/haetae)은 PNG 원본 없이
-`HIDDEN_SPECIES`(generate_motion_data.py)가 기존 몸체에서 프로그램
-편집으로 파생한다 — 좌표는 전부 아트에서 계산하므로 스테이지가 달라도
-같은 편집 함수를 재사용한다:
+설화 영물 6종(samjoko/gumiho/moonrabbit/haetae/dokkaebi/hwangryong)은
+`tool/dump_reference_art.py`가 레퍼런스 컨셉아트에서 3스테이지를 분리해
+`tool/hidden_species_art.py`로 굽는다. 프로그램 파생 대신 실제 레퍼런스의
+실루엣과 5색 팔레트를 보존한다:
 
-- samjoko(삼족오) ← bird: 세 번째 다리(`_third_leg`) + 가슴 태양 문양(`_sun_mark`)
-- gumiho(구미호) ← tiger: 줄무늬 제거(`_destripe`) + 꼬리 끝 보조색(`_tail_accent`)
-- moonrabbit(달토끼) ← tiger: 줄무늬 제거 + 귀 연장(`_raise_ears`)
-- haetae(해태) ← tiger: 줄무늬 제거 + 갈기 링(`_mane`) + 이마 뿔(`_horn`)
-- dokkaebi(도깨비) ← tiger: 줄무늬 유지(호피 감투) + 외뿔 — 해태와 구분
-- hwangryong(황룡) ← dragon: 형태 그대로, 금색 팔레트가 정체성 (오방의 중앙)
+- samjoko(삼족오): 검은 새 실루엣 + 밝은 눈, 성숙기 날개/꼬리 볼륨
+- gumiho(구미호): 주황 여우 + 꼬리 다발/불꽃
+- moonrabbit(달토끼): 흰 토끼 + 달 장식/보라 스카프
+- haetae(해태): 청회색 몸 + 붉은 갈기/꼬리 불꽃
+- dokkaebi(도깨비): 붉은 얼굴/몸 + 검은 머리, 뿔과 방망이
+- hwangryong(황룡): 금색 용 + 크림 배/뿔
 
-tiger 파생 3종은 SPECIES_SRC 재샘플링을 끈다(흰 호랑이 몸이 통째로
-보조색 승격돼 편집 표식이 묻힘) — 몸통은 테마색 단색, 표식만 보조색.
-종별 정체성은 SpeciesTheme 팔레트가 주도한다. 'n'(일반종) 라인은
-`_make_normal_forms` bases에 포함해 자동 파생된다 (스트립 없음 — 색만).
+눈 좌표는 자동 탐지만 쓰지 않고 `EYE_OVERRIDE`에 레퍼런스 기준 수동 rect를
+둔다. 도깨비·달토끼처럼 양눈이 보이는 스프라이트는 두 rect를 모두 넣어
+`joy`/`angry`/`hurt` 표정이 양쪽 눈에 함께 그려지게 한다. `MOUTH_OVERRIDE`는
+공격 브레스·배고픔 침 효과가 주둥이/부리에서 시작하도록 별도로 보정한다.
+삼족오는 검은 몸통에서 어두운 눈이 묻히므로 표정 잉크를 밝은 팔레트로 그린다.
+
+히든 종은 등급별 일반종('n') 변형을 만들지 않는다. 레퍼런스 단일 디자인을
+사용하며, 5색 렌더는 `hidden_palette.dart`를 통해 앱에서 적용된다.
 
 각성 조건·성장 게이트는 `EvolutionAxisScores.hiddenTypeFor` /
 `EvolvePetUseCase` 참조.

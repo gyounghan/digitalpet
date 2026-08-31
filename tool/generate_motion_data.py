@@ -310,12 +310,26 @@ def squash_art(g, factor):
 # ---------------------------------------------------------------------------
 
 
-def _clear_eye_box(g, ex, ey, pw, ph, halo=1):
-    """표정을 그릴 자리를 몸통색으로 비운다.
+def _eye_fill_char(g, ex, ey, pw, ph, halo=1):
+    """눈 주변에서 가장 자연스러운 얼굴 바탕 문자를 고른다."""
+    n = len(g)
+    counts = {}
+    for yy in range(max(0, ey - halo), min(n, ey + ph + halo)):
+        for xx in range(max(0, ex - halo), min(n, ex + pw + halo)):
+            ch = g[yy][xx]
+            if ch in ("o", "+", "&", "%"):
+                counts[ch] = counts.get(ch, 0) + 1
+    if not counts:
+        return "o"
+    return max(counts.items(), key=lambda item: item[1])[0]
 
-    눈 박스 내부는 무조건 'o'로 채우고, 주변 halo px의 어두운 줄무늬/
-    음영('#')만 'o'로 눌러 표정(어두운 ^/X)이 배경 줄무늬와 섞이지 않게 한다.
-    실루엣 밖(빈칸 '.')·보조색('+')은 건드리지 않아 몸 형태는 유지된다.
+
+def _clear_eye_box(g, ex, ey, pw, ph, halo=1, fill="o"):
+    """표정을 그릴 자리를 얼굴 바탕색으로 비운다.
+
+    눈 박스 내부는 주변 얼굴의 대표 문자로 채우고, halo px의 어두운 줄무늬/
+    음영('#')만 같은 문자로 눌러 표정(어두운 ^/X)이 배경 줄무늬와 섞이지
+    않게 한다. 실루엣 밖(빈칸 '.')은 건드리지 않아 몸 형태는 유지된다.
     (tiger처럼 눈이 얼굴 줄무늬에 파묻힌 종은 halo=2로 넓게 정리해야 함)
     """
     n = len(g)
@@ -326,12 +340,12 @@ def _clear_eye_box(g, ex, ey, pw, ph, halo=1):
                 continue
             inside = 0 <= dx < pw and 0 <= dy < ph
             if inside:
-                g[yy][xx] = "o"
+                g[yy][xx] = fill
             elif g[yy][xx] == "#":  # 주변 줄무늬만 정리 (빈칸/보조색 유지)
-                g[yy][xx] = "o"
+                g[yy][xx] = fill
 
 
-def draw_eye(g, rect, style, group_cx=None, frontal=True):
+def draw_eye(g, rect, style, group_cx=None, frontal=True, ink="#"):
     """rect=(x, y, w, h) 영역에 눈 스타일을 그림.
 
     happy/pain/angry는 획이 성글어 작은 눈(2x2)에선 안 보이므로 최소 3x3로
@@ -349,17 +363,21 @@ def draw_eye(g, rect, style, group_cx=None, frontal=True):
         ey = y - (ph - h) // 2
         # 작은 눈(2x2)·큰 그리드(덤프 노이즈 아트)는 주변을 2px까지 넓게 정리
         halo = 2 if min(w, h) <= 2 or n >= 48 else 1
-        _clear_eye_box(g, ex, ey, pw, ph, halo=halo)
+        fill = _eye_fill_char(g, ex, ey, pw, ph, halo=halo)
+        _clear_eye_box(g, ex, ey, pw, ph, halo=halo, fill=fill)
     else:
         pw, ph, ex, ey = w, h, x, y
+        fill = _eye_fill_char(g, ex, ey, pw, ph, halo=1)
         for dy in range(ph):
             for dx in range(pw):
-                put(g, ex + dx, ey + dy, "o")
+                put(g, ex + dx, ey + dy, fill)
 
     if style == "open":
         for dy in range(ph):
             for dx in range(pw):
-                put(g, ex + dx, ey + dy, "#")
+                put(g, ex + dx, ey + dy, ink)
+        if ink != "#":
+            put(g, ex + pw // 2, ey + ph // 2, "#")
         # 큰 눈(털뭉치): 타원 눈망울 + 반짝이로 촉촉하게 (작은 눈은 뭉개지므로 제외).
         if pw >= 6 and ph >= 7:
             # 36 그리드 큰 눈 — 사각 채움을 타원으로 깎고 큰/작은 하이라이트 2점
@@ -369,39 +387,40 @@ def draw_eye(g, rect, style, group_cx=None, frontal=True):
                     nx = (dx - cx0) / (pw / 2.0)
                     ny = (dy - cy0) / (ph / 2.0)
                     if nx * nx + ny * ny > 1.0:
-                        put(g, ex + dx, ey + dy, "o")  # 타원 밖은 몸통색
+                        put(g, ex + dx, ey + dy, fill)  # 타원 밖은 얼굴색
             for hy in range(1, 4):  # 왼쪽 위 큰 반짝이
                 for hx in range(2, 4):
-                    put(g, ex + hx, ey + hy, "o")
-            put(g, ex + pw - 3, ey + ph - 4, "o")  # 오른쪽 아래 작은 반짝이
-            put(g, ex + pw - 4, ey + ph - 4, "o")
+                    put(g, ex + hx, ey + hy, fill)
+            put(g, ex + pw - 3, ey + ph - 4, fill)  # 오른쪽 아래 작은 반짝이
+            put(g, ex + pw - 4, ey + ph - 4, fill)
         elif pw >= 5 and ph >= 5:
             for cx, cy in ((0, 0), (pw - 1, 0), (0, ph - 1), (pw - 1, ph - 1)):
-                put(g, ex + cx, ey + cy, "o")
-            put(g, ex + 1, ey + 1, "o")
-            put(g, ex + 2, ey + 1, "o")
+                put(g, ex + cx, ey + cy, fill)
+            put(g, ex + 1, ey + 1, fill)
+            put(g, ex + 2, ey + 1, fill)
     elif style == "closed":  # 감은 눈 — 가운데 가로 실선 '-' (모든 캐릭터 공통)
         lw = max(pw, min_dim)
         lx = ex - (lw - pw) // 2
         ly = ey + ph // 2
         halo = 2 if min(pw, ph) <= 2 or n >= 48 else 1
-        _clear_eye_box(g, lx, ly - 1, lw, 3, halo=halo)
+        fill = _eye_fill_char(g, lx, ly - 1, lw, 3, halo=halo)
+        _clear_eye_box(g, lx, ly - 1, lw, 3, halo=halo, fill=fill)
         for dx in range(lw):
-            put(g, lx + dx, ly, "#")
+            put(g, lx + dx, ly, ink)
     elif style == "happy":  # ^ 웃는 눈 (위로 볼록, 굵게)
         mid = (pw - 1) / 2.0
         for dx in range(pw):
             dy = min(int(round(abs(dx - mid))), ph - 1)
-            put(g, ex + dx, ey + dy, "#")
+            put(g, ex + dx, ey + dy, ink)
             if dy + 1 < ph:  # 한 칸 아래도 찍어 획을 굵게
-                put(g, ex + dx, ey + dy + 1, "#")
+                put(g, ex + dx, ey + dy + 1, ink)
     elif style == "pain":  # >< 찡그림 (X자)
         # 박스를 몸통색으로 비우고 halo로 주변 줄무늬를 정리했으므로
         # 가는 X 두 대각선이면 배경과 구분돼 보인다.
         for dx in range(pw):
             dy = int(round(dx * (ph - 1) / max(pw - 1, 1)))
-            put(g, ex + dx, ey + dy, "#")
-            put(g, ex + dx, ey + (ph - 1) - dy, "#")
+            put(g, ex + dx, ey + dy, ink)
+            put(g, ex + dx, ey + (ph - 1) - dy, ink)
     elif style == "angry":  # 화난 눈 — 안쪽이 처진 사선
         # 정면 얼굴(frontal): 눈 그룹 중심으로 왼/오른을 나눠 왼눈 \, 오른눈 /.
         # 옆모습(주작·청룡·현무): 앞쪽(왼쪽)이 아래로 처진 / 로 통일(눈 개수 무관).
@@ -421,9 +440,9 @@ def draw_eye(g, rect, style, group_cx=None, frontal=True):
             else:
                 frac = 1.0 - abs(dx - mid) / mid if mid > 0 else 1.0  # \/ 가운데 처짐
             yy = ey + int(round(frac * (ph - 1)))
-            put(g, ex + dx, yy, "#")
+            put(g, ex + dx, yy, ink)
             if yy + 1 < ey + ph:
-                put(g, ex + dx, yy + 1, "#")
+                put(g, ex + dx, yy + 1, ink)
 
 
 def draw_mouth(g, mx, my, style):
@@ -1231,11 +1250,16 @@ def pose(
     # (캐릭터마다 눈이 한쪽으로 치우쳐 있어 그리드 중심을 쓰면 좌우가 틀림).
     eye_rects = meta["eyes"]
     group_cx = sum(x + w / 2.0 for (x, y, w, h) in eye_rects) / len(eye_rects)
-    # 정면 얼굴(백호·털뭉치)은 화난 눈을 \ / 로, 옆모습(주작·청룡·현무 — 왼쪽을
-    # 봐 앞쪽이 왼쪽)은 항상 / 로 그린다.
-    frontal = key.startswith("tiger") or key == "fluff"
+    # 정면 얼굴(백호·털뭉치·양눈 히든 포유형)은 화난 눈을 \ / 로,
+    # 옆모습(주작·청룡·현무 — 왼쪽을 봐 앞쪽이 왼쪽)은 항상 / 로 그린다.
+    hidden_frontal = (
+        key.startswith(("dokkaebi", "gumiho", "moonrabbit"))
+        and len(eye_rects) >= 2
+    )
+    frontal = key.startswith("tiger") or key == "fluff" or hidden_frontal
+    eye_ink = "%" if key.startswith("samjoko") else "#"
     for rect in eye_rects:
-        draw_eye(g, rect, eye, group_cx=group_cx, frontal=frontal)
+        draw_eye(g, rect, eye, group_cx=group_cx, frontal=frontal, ink=eye_ink)
     mx, my = meta["mouth"]
     draw_mouth(g, mx, my, mouth)
 
