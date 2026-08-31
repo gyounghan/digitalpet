@@ -11,7 +11,7 @@ import 'pixel_pet_image.dart';
 /// 스프라이트 키에서 설화 영물 5색 팔레트 조회 (아니면 null).
 ///
 /// 히든 종은 테마 재도색이 아니라 레퍼런스 실제 색으로 렌더한다.
-/// 키 형식: '{종}{스테이지}'(+ 'n' 일반종) — 예: 'gumiho2', 'haetae3n'.
+/// 키 형식: '{종}{스테이지}' — 예: 'gumiho2', 'haetae3' (히든 종은 'n' 변형 없음).
 List<Color>? hiddenPaletteForSpriteKey(String spriteKey) {
   for (final species in hiddenSpeciesPalette.keys) {
     if (spriteKey.startsWith(species)) return hiddenSpeciesPalette[species];
@@ -76,9 +76,13 @@ String? motionSpriteKeyForStage(EvolutionType? type, int stage,
   if (stage <= 1) return 'fluff';
   final species = evolutionSpeciesImagePrefix(type);
   if (species == null) return null;
+  final n = stage - 1; // 2→1, 3→2, 4→3
+  // 설화 영물(히든 종)은 레퍼런스 단일 디자인 — 등급 무관, 'n' 변형 없음.
+  if (hiddenSpeciesPalette.containsKey(species)) {
+    return '$species$n';
+  }
   // 성장기(3)·성숙기(4)는 등급으로 분기 — 사신수 라인 '{종}2'/'{종}3'(원색),
   // 일반종 라인 '{종}2n'/'{종}3n'(자연색). 사신수는 stage4 mythical 뿐.
-  final n = stage - 1; // 3→2, 4→3
   if (stage == 3) return grade == 'normal' ? '$species${n}n' : '$species$n';
   if (stage == 4) return grade == 'mythical' ? '$species$n' : '$species${n}n';
   if (stage == 2) return '$species$n';

@@ -33,7 +33,6 @@ SPECIES = {
 STAGE_SIZES = [32, 36, 56]
 
 # 종별 얼굴(눈) 대략 위치 (fx, fy) 0~1 — 전부 왼쪽을 보는 기준.
-# detect_eyes가 이 근방의 '봉인된 어두운 덩어리'를 눈으로 우선 선택한다.
 EYE_HINT = {
     "samjoko": (0.30, 0.30),
     "gumiho": (0.30, 0.32),
@@ -41,6 +40,17 @@ EYE_HINT = {
     "haetae": (0.32, 0.36),
     "dokkaebi": (0.42, 0.30),
     "hwangryong": (0.30, 0.30),
+}
+
+# 눈 수동 지정 (전체 ASCII 판독) — 각 얼굴 위에 눈을 새로 그린다.
+# 값은 눈 rect 좌상단 (x, y). 폭·높이는 2px 고정. 자동검출보다 우선.
+EYE_OVERRIDE = {
+    "samjoko1": (9, 5), "samjoko2": (7, 10), "samjoko3": (14, 9),
+    "gumiho1": (9, 8), "gumiho2": (7, 8), "gumiho3": (26, 18),
+    "moonrabbit1": (10, 5), "moonrabbit2": (15, 6), "moonrabbit3": (23, 11),
+    "haetae1": (5, 10), "haetae2": (6, 9), "haetae3": (8, 13),
+    "dokkaebi1": (6, 13), "dokkaebi2": (10, 11), "dokkaebi3": (16, 16),
+    "hwangryong1": (6, 8), "hwangryong2": (5, 8), "hwangryong3": (9, 12),
 }
 
 OUTPUT_PATH = os.path.join("tool", "hidden_species_art.py")
@@ -250,11 +260,15 @@ def main():
         # 2) 스테이지별 ASCII (팔레트 최근접색)
         for stage_idx, (alpha, rgb, size) in enumerate(preps):
             art = to_ascii(alpha, rgb, palette, size)
-            eyes = detect_eyes(art, size, eye_hint=EYE_HINT.get(species))
+            key = f"{species}{stage_idx + 1}"
+            if key in EYE_OVERRIDE:
+                ox, oy = EYE_OVERRIDE[key]
+                eyes = [(ox, oy, 2, 2)]
+            else:
+                eyes = detect_eyes(art, size, eye_hint=EYE_HINT.get(species))
             eyes = [tuple(int(v) for v in e) for e in eyes]
             ex, ey, ew, eh = eyes[0]
             mouth = (int(max(0, ex)), int(min(size - 1, ey + eh + 2)))
-            key = f"{species}{stage_idx + 1}"
             result[key] = {"body": art, "eyes": eyes, "mouth": mouth}
         print(f"  {species}: palette={palettes[species]}")
 

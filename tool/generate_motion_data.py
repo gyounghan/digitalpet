@@ -1103,12 +1103,10 @@ for _k, _v in HIDDEN_ART.items():
 
 def _make_normal_forms():
     """사신수/신수 아트에서 신수 요소를 제거한 '{종}2n'·'{종}3n' 일반종 아트 파생."""
+    # 사신수만 일반종('n') 라인을 파생한다. 설화 영물(히든 종)은 레퍼런스
+    # 단일 디자인이라 등급 무관 — 'n' 변형을 만들지 않는다.
     bases = ("tiger2", "bird2", "turtle2", "dragon2",
-             "tiger3", "bird3", "turtle3", "dragon3",
-             # 히든 종 — 신수 요소 스트립 없음(색만 다른 일반종 라인)
-             "samjoko2", "samjoko3", "gumiho2", "gumiho3",
-             "moonrabbit2", "moonrabbit3", "haetae2", "haetae3",
-             "dokkaebi2", "dokkaebi3", "hwangryong2", "hwangryong3")
+             "tiger3", "bird3", "turtle3", "dragon3")
     for base in bases:
         src = SPECIES_ART[base]
         n = len(src["body"])
