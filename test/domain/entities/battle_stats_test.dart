@@ -112,13 +112,13 @@ void main() {
   });
 
   group('전투 스탯 — 종/진화단계 보너스', () {
-    test('종 보너스: bird ATK+3, turtle DEF+3·HP+10', () {
+    test('종 보너스: bird ATK+3, turtle DEF+2·HP+7 (밸런스 재조정)', () {
       final neutral = _pet();
       final bird = _pet(evolutionType: EvolutionType.bird);
       final turtle = _pet(evolutionType: EvolutionType.turtle);
       expect(bird.battleAtk, neutral.battleAtk + 3);
-      expect(turtle.battleDef, neutral.battleDef + 3);
-      expect(turtle.battleHp, neutral.battleHp + 10);
+      expect(turtle.battleDef, neutral.battleDef + 2);
+      expect(turtle.battleHp, neutral.battleHp + 7);
     });
 
     test('진화단계 보너스: stage4 ATK/DEF +7', () {
