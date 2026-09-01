@@ -253,6 +253,10 @@ class PetModel extends Pet {
   @override
   final int todayWaterCount;
 
+  @HiveField(60)
+  @override
+  final int todayFocusCount;
+
   PetModel({
     required this.id,
     this.name = '펫',
@@ -273,6 +277,7 @@ class PetModel extends Pet {
     this.todayFeedCount = 0,
     this.todayFedMealSlots = 0,
     this.todayWaterCount = 0,
+    this.todayFocusCount = 0,
     this.todaySleepHours = 0,
     this.todaySleepMinutes = 0,
     this.todayAlternativeFeedCount = 0,
@@ -334,6 +339,7 @@ class PetModel extends Pet {
          todayFeedCount: todayFeedCount,
          todayFedMealSlots: todayFedMealSlots,
          todayWaterCount: todayWaterCount,
+         todayFocusCount: todayFocusCount,
          todaySleepHours: todaySleepHours,
          todaySleepMinutes: todaySleepMinutes,
          todayAlternativeFeedCount: todayAlternativeFeedCount,
@@ -408,6 +414,7 @@ class PetModel extends Pet {
       todayFeedCount: json['todayFeedCount'] as int? ?? 0,
       todayFedMealSlots: json['todayFedMealSlots'] as int? ?? 0,
       todayWaterCount: json['todayWaterCount'] as int? ?? 0,
+      todayFocusCount: json['todayFocusCount'] as int? ?? 0,
       todaySleepHours: json['todaySleepHours'] as int? ?? 0,
       todaySleepMinutes: json['todaySleepMinutes'] as int? ?? 0,
       todayAlternativeFeedCount: json['todayAlternativeFeedCount'] as int? ?? 0,
@@ -479,6 +486,7 @@ class PetModel extends Pet {
       'todayFeedCount': todayFeedCount,
       'todayFedMealSlots': todayFedMealSlots,
       'todayWaterCount': todayWaterCount,
+      'todayFocusCount': todayFocusCount,
       'todaySleepHours': todaySleepHours,
       'todaySleepMinutes': todaySleepMinutes,
       'todayAlternativeFeedCount': todayAlternativeFeedCount,
@@ -549,6 +557,7 @@ class PetModel extends Pet {
       todayFeedCount: pet.todayFeedCount,
       todayFedMealSlots: pet.todayFedMealSlots,
       todayWaterCount: pet.todayWaterCount,
+      todayFocusCount: pet.todayFocusCount,
       todaySleepHours: pet.todaySleepHours,
       todaySleepMinutes: pet.todaySleepMinutes,
       todayAlternativeFeedCount: pet.todayAlternativeFeedCount,
@@ -617,6 +626,7 @@ class PetModel extends Pet {
       todayFeedCount: todayFeedCount,
       todayFedMealSlots: todayFedMealSlots,
       todayWaterCount: todayWaterCount,
+      todayFocusCount: todayFocusCount,
       todaySleepHours: todaySleepHours,
       todaySleepMinutes: todaySleepMinutes,
       todayAlternativeFeedCount: todayAlternativeFeedCount,
@@ -685,6 +695,7 @@ class PetModel extends Pet {
     int? todayFeedCount,
     int? todayFedMealSlots,
     int? todayWaterCount,
+    int? todayFocusCount,
     int? todaySleepHours,
     int? todaySleepMinutes,
     int? todayAlternativeFeedCount,
@@ -747,6 +758,7 @@ class PetModel extends Pet {
       todayFeedCount: todayFeedCount ?? this.todayFeedCount,
       todayFedMealSlots: todayFedMealSlots ?? this.todayFedMealSlots,
       todayWaterCount: todayWaterCount ?? this.todayWaterCount,
+      todayFocusCount: todayFocusCount ?? this.todayFocusCount,
       todaySleepHours: todaySleepHours ?? this.todaySleepHours,
       todaySleepMinutes: todaySleepMinutes ?? this.todaySleepMinutes,
       todayAlternativeFeedCount: todayAlternativeFeedCount ?? this.todayAlternativeFeedCount,

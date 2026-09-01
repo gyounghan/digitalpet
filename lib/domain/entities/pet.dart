@@ -102,6 +102,9 @@ class Pet {
   /// 오늘 물마시기 횟수 (일일 수분 목표 추적, 최대 waterGoalCount)
   final int todayWaterCount;
 
+  /// 오늘 집중(뽀모도로) 완료 횟수 (일일 목표 추적, 최대 focusGoalCount)
+  final int todayFocusCount;
+
   /// 오늘의 수면 시간 (시간, 일일 목표 추적)
   /// 오늘 0시부터 현재까지의 총 수면 시간
   /// 내부적으로 todaySleepMinutes에서 파생되어 저장된다.
@@ -296,6 +299,7 @@ class Pet {
     this.todayFeedCount = 0,
     this.todayFedMealSlots = 0,
     this.todayWaterCount = 0,
+    this.todayFocusCount = 0,
     this.todaySleepHours = 0,
     this.todaySleepMinutes = 0,
     this.todaySleepCount = 0,
@@ -361,6 +365,7 @@ class Pet {
     int? todayFeedCount,
     int? todayFedMealSlots,
     int? todayWaterCount,
+    int? todayFocusCount,
     int? todaySleepHours,
     int? todaySleepMinutes,
     int? todaySleepCount,
@@ -423,6 +428,7 @@ class Pet {
       todayFeedCount: todayFeedCount ?? this.todayFeedCount,
       todayFedMealSlots: todayFedMealSlots ?? this.todayFedMealSlots,
       todayWaterCount: todayWaterCount ?? this.todayWaterCount,
+      todayFocusCount: todayFocusCount ?? this.todayFocusCount,
       todaySleepHours: todaySleepHours ?? this.todaySleepHours,
       todaySleepMinutes: todaySleepMinutes ?? this.todaySleepMinutes,
       todaySleepCount: todaySleepCount ?? this.todaySleepCount,
@@ -642,6 +648,7 @@ class Pet {
     return copyWith(
       todayFedMealSlots: 0,
       todayWaterCount: 0,
+      todayFocusCount: 0,
       todaySleepCount: 0,
       todayAlternativeFeedCount: 0,
       todayAlternativeSleepCount: 0,
@@ -676,6 +683,17 @@ class Pet {
 
   /// 물마시기 가능 여부 (오늘 목표 미달)
   bool get canDrinkWater => remainingWaterDrinks > 0;
+
+  /// 하루 집중 세션 목표 (25분 × N) — 4회(총 100분)
+  static const int focusGoalCount = 4;
+
+  /// 오늘 남은 집중 세션 수
+  int get remainingFocusSessions =>
+      (focusGoalCount - (needsGoalReset ? 0 : todayFocusCount))
+          .clamp(0, focusGoalCount);
+
+  /// 집중 세션 가능 여부 (오늘 목표 미달)
+  bool get canFocus => remainingFocusSessions > 0;
 
   /// 하루 기본 배틀 한도 — AI 대전과 온라인(친구) 대전에 각각 적용
   static const int maxBattlesPerDay = 5;
@@ -769,6 +787,7 @@ class Pet {
       todayFeedCount: todayFeedCount,
       todayFedMealSlots: todayFedMealSlots,
       todayWaterCount: todayWaterCount,
+      todayFocusCount: todayFocusCount,
       todaySleepHours: todaySleepHours,
       todaySleepMinutes: todaySleepMinutes,
       todaySleepCount: todaySleepCount,
@@ -836,6 +855,7 @@ class Pet {
       todayFeedCount: todayFeedCount,
       todayFedMealSlots: todayFedMealSlots,
       todayWaterCount: todayWaterCount,
+      todayFocusCount: todayFocusCount,
       todaySleepHours: todaySleepHours,
       todaySleepMinutes: todaySleepMinutes,
       todaySleepCount: todaySleepCount,
@@ -894,6 +914,7 @@ class Pet {
       todayFeedCount: todayFeedCount,
       todayFedMealSlots: todayFedMealSlots,
       todayWaterCount: todayWaterCount,
+      todayFocusCount: todayFocusCount,
       todaySleepHours: todaySleepHours,
       todaySleepMinutes: todaySleepMinutes,
       todaySleepCount: todaySleepCount,

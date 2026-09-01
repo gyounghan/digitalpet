@@ -11,6 +11,7 @@ import '../../domain/constants/meal_times.dart';
 import '../../domain/constants/mission_catalog.dart';
 import '../../domain/usecases/alternative_feed_pet_usecase.dart';
 import '../../domain/usecases/drink_water_usecase.dart';
+import '../../domain/usecases/focus_session_usecase.dart';
 import '../../domain/usecases/alternative_sleep_pet_usecase.dart';
 import '../../domain/usecases/shake_step_bonus_usecase.dart';
 import '../../data/datasources/shake_detector.dart';
@@ -40,6 +41,11 @@ class _CareScreenState extends ConsumerState<CareScreen> {
   /// 시각 기준이면 복귀 시 경과 시간이 그대로 인정된다.
   DateTime? _napEndsAt;
 
+  Timer? _focusTimer;
+
+  /// 집중 세션 종료 시각 (낮잠과 동일하게 시각 기준 — 폰 내려놓기 취지)
+  DateTime? _focusEndsAt;
+
   /// 미션 전체 펼침 여부 (기본: 진행 중 상위 3개만)
   bool _showAllMissions = false;
 
@@ -48,6 +54,7 @@ class _CareScreenState extends ConsumerState<CareScreen> {
     _shakeTimer?.cancel();
     _shakeDetector?.stop();
     _napTimer?.cancel();
+    _focusTimer?.cancel();
     super.dispose();
   }
 
@@ -88,6 +95,8 @@ class _CareScreenState extends ConsumerState<CareScreen> {
               _buildStatusCard(pet, theme),
               const SizedBox(height: 14),
               // 능동 건강 습관 — 갓생몬 컨셉
+              _buildFocusRow(pet, theme),
+              const SizedBox(height: 6),
               _buildWaterRow(pet, theme),
               const SizedBox(height: 6),
               // 대체 케어 — 바쁠 때 직접 채우는 행동
@@ -301,6 +310,175 @@ class _CareScreenState extends ConsumerState<CareScreen> {
   // ── 섹션 1 컴포넌트 ────────────────────────────────────────
 
   /// 물마시기 — 하루 수분 목표(8잔). 능동 건강 습관(갓생몬 컨셉).
+  /// 집중 모드(뽀모도로) — 25분 폰 내려놓고 집중하면 펫이 함께 성장.
+  /// 갓생 정체성의 핵심: 생산성·디지털 웰빙. 낮잠(기력)과 달리 성장(EXP·행복).
+  Widget _buildFocusRow(Pet pet, SpeciesTheme theme) {
+    final used = pet.needsGoalReset ? 0 : pet.todayFocusCount;
+    final goal = Pet.focusGoalCount;
+    final done = used >= goal;
+    final enabled = !pet.isDead && !done && _focusTimer == null;
+
+    return AppListRow(
+      theme: theme,
+      tinted: enabled,
+      leading: Icon(Icons.self_improvement,
+          color: enabled ? theme.primaryDeep : DesignTokens.ink3, size: 20),
+      title: '집중 모드 (${FocusSessionUseCase.sessionMinutes}분)',
+      subtitle: _focusTimer != null
+          ? '집중 중... 폰을 내려놓아요'
+          : done
+              ? '오늘 집중 목표 달성! 🎯 ($used/$goal)'
+              : '폰 내려놓고 집중하면 성장 · 오늘 $used/$goal회',
+      trailing: _trailingPill(enabled, theme),
+      onTap: enabled ? () => _startFocusMode(ref) : null,
+    );
+  }
+
+  void _startFocusMode(WidgetRef ref) {
+    if (_focusTimer != null) return;
+    setState(() {});
+    _focusEndsAt = DateTime.now()
+        .add(const Duration(minutes: FocusSessionUseCase.sessionMinutes));
+    final remainingNotifier =
+        ValueNotifier<int>(FocusSessionUseCase.sessionMinutes * 60);
+
+    Future<void> completeFocus() async {
+      if (Navigator.of(context, rootNavigator: true).canPop()) {
+        Navigator.of(context, rootNavigator: true).pop();
+      }
+      final applied = await ref
+          .read(petNotifierProvider(HomeScreen.defaultPetId).notifier)
+          .performFocusSession();
+      if (!mounted) {
+        remainingNotifier.dispose();
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(applied
+              ? '집중 완료! 펫이 함께 성장했어요 (+${FocusSessionUseCase.sessionExp} EXP · 행복 +${FocusSessionUseCase.happinessReward})'
+              : '오늘 집중 목표를 모두 채웠어요.'),
+        ),
+      );
+      remainingNotifier.dispose();
+      setState(() {});
+    }
+
+    _focusTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        _focusTimer = null;
+        _focusEndsAt = null;
+        remainingNotifier.dispose();
+        return;
+      }
+      final remaining = _focusEndsAt!.difference(DateTime.now()).inSeconds;
+      if (remaining <= 0) {
+        timer.cancel();
+        _focusTimer = null;
+        _focusEndsAt = null;
+        remainingNotifier.value = 0;
+        completeFocus();
+        return;
+      }
+      remainingNotifier.value = remaining;
+    });
+
+    // 집중 포기 — 보상 없음, 사용 횟수 미차감
+    void giveUpFocus() {
+      _focusTimer?.cancel();
+      _focusTimer = null;
+      _focusEndsAt = null;
+      if (Navigator.of(context, rootNavigator: true).canPop()) {
+        Navigator.of(context, rootNavigator: true).pop();
+      }
+      remainingNotifier.dispose();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('집중을 중단했어요. (보상 없음)')),
+      );
+      setState(() {});
+    }
+
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return PopScope(
+          canPop: false,
+          child: Material(
+            color: Colors.black.withValues(alpha: 0.88),
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ValueListenableBuilder<int>(
+                    valueListenable: remainingNotifier,
+                    builder: (context, remaining, _) {
+                      final minutes =
+                          (remaining ~/ 60).toString().padLeft(2, '0');
+                      final seconds =
+                          (remaining % 60).toString().padLeft(2, '0');
+                      return Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.self_improvement,
+                              color: Colors.white, size: 56),
+                          const SizedBox(height: 16),
+                          const Text(
+                            '집중하는 중',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 22,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          const Text(
+                            '폰을 내려놓고 펫과 함께 몰입해요',
+                            style: TextStyle(
+                                color: Colors.white70, fontSize: 13),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            '$minutes:$seconds',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 42,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 2,
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 24),
+                  TextButton(
+                    onPressed: giveUpFocus,
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.white70,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 8),
+                    ),
+                    child: const Text(
+                      '중단하기',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        decoration: TextDecoration.underline,
+                        decorationColor: Colors.white38,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildWaterRow(Pet pet, SpeciesTheme theme) {
     final used = pet.needsGoalReset ? 0 : pet.todayWaterCount;
     final goal = Pet.waterGoalCount;

@@ -42,6 +42,7 @@ import '../../domain/usecases/alternative_feed_pet_usecase.dart';
 import '../../domain/usecases/alternative_sleep_pet_usecase.dart';
 import '../../domain/usecases/shake_step_bonus_usecase.dart';
 import '../../domain/usecases/drink_water_usecase.dart';
+import '../../domain/usecases/focus_session_usecase.dart';
 import '../../domain/usecases/check_pet_death_usecase.dart';
 import '../../domain/usecases/resurrect_pet_usecase.dart';
 import '../../domain/usecases/reset_pet_usecase.dart';
@@ -350,6 +351,11 @@ final drinkWaterUseCaseProvider = Provider<DrinkWaterUseCase>((ref) {
   return DrinkWaterUseCase(repository);
 });
 
+final focusSessionUseCaseProvider = Provider<FocusSessionUseCase>((ref) {
+  final repository = ref.watch(petRepositoryProvider);
+  return FocusSessionUseCase(repository);
+});
+
 final shakeStepBonusUseCaseProvider = Provider<ShakeStepBonusUseCase>((ref) {
   final repository = ref.watch(petRepositoryProvider);
   return ShakeStepBonusUseCase(repository);
@@ -416,6 +422,7 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
   final AlternativeSleepPetUseCase alternativeSleepPetUseCase;
   final ShakeStepBonusUseCase shakeStepBonusUseCase;
   final DrinkWaterUseCase drinkWaterUseCase;
+  final FocusSessionUseCase focusSessionUseCase;
   final CheckPetDeathUseCase checkPetDeathUseCase;
   final ResurrectPetUseCase resurrectPetUseCase;
   final ResetPetUseCase resetPetUseCase;
@@ -443,6 +450,7 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
     required this.alternativeSleepPetUseCase,
     required this.shakeStepBonusUseCase,
     required this.drinkWaterUseCase,
+    required this.focusSessionUseCase,
     required this.checkPetDeathUseCase,
     required this.resurrectPetUseCase,
     required this.resetPetUseCase,
@@ -858,6 +866,25 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
     }
   }
 
+  /// 집중(뽀모도로) 세션 완료 — EXP·행복 보상 (하루 캡)
+  /// 반환: 실제 적용 여부 (목표 소진/사망 시 false)
+  Future<bool> performFocusSession() async {
+    if (state.isLoading || state.hasError) return false;
+    final before = state.valueOrNull;
+    if (before == null || before.isDead) return false;
+
+    try {
+      final updatedPet = await focusSessionUseCase(petId);
+      final applied = updatedPet.todayFocusCount != before.todayFocusCount;
+      final evolvedPet = await _updateAndEvolve(updatedPet);
+      state = AsyncValue.data(evolvedPet);
+      return applied;
+    } catch (e, stackTrace) {
+      state = AsyncValue.error(e, stackTrace);
+      return false;
+    }
+  }
+
   /// 앱이 포그라운드로 전환되었을 때 호출
   /// 
   /// 폰 미사용 시간을 계산하여 자동으로 Sleep 상태 적용
@@ -1062,6 +1089,7 @@ final petNotifierProvider = StateNotifierProvider.family<PetNotifier, AsyncValue
     alternativeSleepPetUseCase: ref.watch(alternativeSleepPetUseCaseProvider),
     shakeStepBonusUseCase: ref.watch(shakeStepBonusUseCaseProvider),
     drinkWaterUseCase: ref.watch(drinkWaterUseCaseProvider),
+    focusSessionUseCase: ref.watch(focusSessionUseCaseProvider),
     checkPetDeathUseCase: ref.watch(checkPetDeathUseCaseProvider),
     resurrectPetUseCase: ref.watch(resurrectPetUseCaseProvider),
     resetPetUseCase: ref.watch(resetPetUseCaseProvider),
