@@ -135,6 +135,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
   }
 
+  /// 펫을 톡 건드렸을 때의 반응 모션.
+  /// 기분 좋음/보통 → 기뻐함(joy), 배고픔·지침·시무룩 → 삐침(angry).
+  /// (angry 감정을 실제 게임플레이에서 볼 수 있는 유일한 상호작용)
+  PixelMotion _pokeReaction(PetMood mood) {
+    switch (mood) {
+      case PetMood.hungry:
+      case PetMood.tired:
+      case PetMood.sad:
+        return PixelMotion.angry;
+      default:
+        return PixelMotion.joy;
+    }
+  }
+
   /// 일시 모션 재생 — [duration] 후 mood 기반 대기 모션으로 복귀
   /// (모션 1사이클 900ms — 기본 5400ms = 6회 반복. 900의 배수로 맞춰야
   ///  사이클 중간에 뚝 끊기지 않는다)
@@ -405,8 +419,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
           ],
         ),
-        // 종/기분 라벨은 상단 헤더에 이미 있으므로 카드는 순수 펫 무대로 둔다
-        child: Center(child: _buildPetSprite(pet, theme)),
+        // 종/기분 라벨은 상단 헤더에 이미 있으므로 카드는 순수 펫 무대로 둔다.
+        // 펫을 톡 건드리면 반응 — 기분 좋으면 기뻐하고, 나쁘면 삐친다(화남).
+        child: Center(
+          child: GestureDetector(
+            onTap: () => _playTransientMotion(_pokeReaction(pet.mood)),
+            child: _buildPetSprite(pet, theme),
+          ),
+        ),
       ),
     );
   }
