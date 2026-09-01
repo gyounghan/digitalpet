@@ -19,6 +19,8 @@ data class WidgetSprite(
     val dark: LongArray,
     val body: LongArray,
     val accent: LongArray,
+    val accent2: LongArray,
+    val accent3: LongArray,
 )
 
 /// JSON 스프라이트 로더 (프로세스 수명 동안 1회 파싱 후 캐시)
@@ -55,6 +57,8 @@ object WidgetPixelData {
                 dark = toRows(obj.getJSONArray("d")),
                 body = toRows(obj.getJSONArray("b")),
                 accent = toRows(obj.getJSONArray("a")),
+                accent2 = toOptionalRows(obj.optJSONArray("a2")),
+                accent3 = toOptionalRows(obj.optJSONArray("a3")),
             )
         }
         return result
@@ -66,6 +70,10 @@ object WidgetPixelData {
         LongArray(array.length()) { index ->
             java.lang.Long.parseUnsignedLong(array.getString(index), 16)
         }
+
+    /// accent2/accent3처럼 없을 수 있는 레이어용 (구버전 JSON 호환)
+    private fun toOptionalRows(array: JSONArray?): LongArray =
+        if (array == null) LongArray(0) else toRows(array)
 }
 
 /// 홈 위젯용 모션 도트 로더 — `tool/generate_motion_data.py`가 앱
@@ -118,6 +126,8 @@ object WidgetMotionData {
                         dark = toRows(frame.getJSONArray("d")),
                         body = toRows(frame.getJSONArray("b")),
                         accent = toRows(frame.getJSONArray("a")),
+                        accent2 = toOptionalRows(frame.optJSONArray("a2")),
+                        accent3 = toOptionalRows(frame.optJSONArray("a3")),
                     )
                 }
             }
@@ -130,21 +140,31 @@ object WidgetMotionData {
         LongArray(array.length()) { index ->
             java.lang.Long.parseUnsignedLong(array.getString(index), 16)
         }
+
+    private fun toOptionalRows(array: JSONArray?): LongArray =
+        if (array == null) LongArray(0) else toRows(array)
 }
 
-/// [WidgetSprite]를 3계조 색으로 Bitmap에 렌더 (앱 _PixelSpritePainter와 동일 규칙)
+/// [WidgetSprite]를 5계조 색으로 Bitmap에 렌더 (앱 _PixelSpritePainter와 동일 규칙)
 object WidgetPixelRenderer {
-    /// 아웃라인/눈 색 (앱 SpeciesTheme.dotDark와 동일 — 어두운 몸통 대비 확보)
+    /// 아웃라인/눈 기본 색 (앱 SpeciesTheme.dotDark와 동일) — darkColor 미지정 시 폴백
     private const val DARK_COLOR = 0xFF14161A.toInt()
 
     /// 도트가 맞닿는 경계의 안티에일리어싱 흰 실선을 없애기 위한 미세 오버랩 비율
     private const val SEAM_OVERLAP_RATIO = 0.06f
 
+    /// 앱이 계산해 넘긴 5색(dark/body/accent/accent2/accent3)으로 렌더한다.
+    /// accent2/accent3가 없거나 0이면 accent로 폴백해 3색 스프라이트도 그대로 그린다.
+    /// 그리기 순서 body → accent → accent2 → accent3 → dark 는 앱의 픽셀 우선순위
+    /// (dark > a3 > a2 > accent > body)와 동일한 결과를 낸다.
     fun render(
         sprite: WidgetSprite,
         dotColor: Int,
         accentColor: Int,
         sizePx: Int,
+        darkColor: Int = DARK_COLOR,
+        accent2Color: Int = accentColor,
+        accent3Color: Int = accentColor,
     ): Bitmap {
         val n = sprite.size
         val bitmap = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
@@ -154,28 +174,30 @@ object WidgetPixelRenderer {
 
         val bodyPaint = Paint().apply { color = dotColor; isAntiAlias = false }
         val accentPaint = Paint().apply { color = accentColor; isAntiAlias = false }
-        val darkPaint = Paint().apply { color = DARK_COLOR; isAntiAlias = false }
+        val accent2Paint = Paint().apply { color = accent2Color; isAntiAlias = false }
+        val accent3Paint = Paint().apply { color = accent3Color; isAntiAlias = false }
+        val darkPaint = Paint().apply { color = darkColor; isAntiAlias = false }
 
-        // 앱과 동일 순서로 그린다: body → accent → dark (테두리가 위에 얹힘)
-        for (y in 0 until n) {
-            val bodyMask = sprite.body[y]
-            if (bodyMask != 0L) {
-                drawRow(canvas, bodyMask, y, n, cell, overlap, bodyPaint)
-            }
-        }
-        for (y in 0 until n) {
-            val accentMask = sprite.accent[y]
-            if (accentMask != 0L) {
-                drawRow(canvas, accentMask, y, n, cell, overlap, accentPaint)
-            }
-        }
-        for (y in 0 until n) {
-            val darkMask = sprite.dark[y]
-            if (darkMask != 0L) {
-                drawRow(canvas, darkMask, y, n, cell, overlap, darkPaint)
-            }
-        }
+        drawLayer(canvas, sprite.body, n, cell, overlap, bodyPaint)
+        drawLayer(canvas, sprite.accent, n, cell, overlap, accentPaint)
+        drawLayer(canvas, sprite.accent2, n, cell, overlap, accent2Paint)
+        drawLayer(canvas, sprite.accent3, n, cell, overlap, accent3Paint)
+        drawLayer(canvas, sprite.dark, n, cell, overlap, darkPaint)
         return bitmap
+    }
+
+    private fun drawLayer(
+        canvas: Canvas,
+        rows: LongArray,
+        n: Int,
+        cell: Float,
+        overlap: Float,
+        paint: Paint,
+    ) {
+        for (y in rows.indices) {
+            val mask = rows[y]
+            if (mask != 0L) drawRow(canvas, mask, y, n, cell, overlap, paint)
+        }
     }
 
     private fun drawRow(

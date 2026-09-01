@@ -1771,9 +1771,10 @@ def write_widget_json(sprite_frames):
                     {
                         "d": ["%X" % v for v in dark],
                         "b": ["%X" % v for v in body],
-                        # 위젯(네이티브)은 3계조 — 보조색2/3을 보조색에 합침
-                        "a": ["%X" % (a | a2 | a3)
-                              for a, a2, a3 in zip(accent, acc2, acc3)],
+                        "a": ["%X" % v for v in accent],
+                        # 설화 영물 5색 팔레트용 보조색2/3 (사신수는 전부 0)
+                        "a2": ["%X" % v for v in acc2],
+                        "a3": ["%X" % v for v in acc3],
                     }
                     for dark, body, accent, acc2, acc3 in frames
                 ]

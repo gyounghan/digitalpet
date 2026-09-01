@@ -1,9 +1,16 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart' show Color;
 import 'package:home_widget/home_widget.dart';
 import '../../domain/entities/pet.dart';
+import '../../core/theme/species_theme.dart';
 import '../../core/utils/pet_image_helper.dart';
 import '../../core/constants/app_strings.dart';
 import '../../presentation/widgets/pixel_pet_image.dart' show pixelKeyFromAssetPath;
+import '../../presentation/widgets/pixel_motion_animation.dart'
+    show motionSpriteKeyForStage, hiddenPaletteForSpriteKey, dotColorsForKey;
+
+String _colorHex(Color c) =>
+    c.toARGB32().toRadixString(16).padLeft(8, '0').toUpperCase();
 
 /// 홈 화면 위젯 서비스
 /// 펫 데이터를 홈 화면 위젯에 업데이트하는 서비스
@@ -32,6 +39,14 @@ class WidgetService {
   static const String _keyColorVariant = 'colorVariant'; // 일반종 개체 색 변이 (0~3)
   static const String _keyEvolutionImage = 'evolutionImage'; // 진화 이미지 리소스명 (bird1, dragon2 등)
   static const String _keyPixelKey = 'pixelKey'; // 위젯이 도트를 직접 렌더할 스프라이트 키
+  // 앱이 계산한 모션 스프라이트 키 + 5색 (위젯이 재계산하지 않고 그대로 사용
+  // → 앱과 위젯 렌더가 항상 동일). 색은 ARGB hex 문자열.
+  static const String _keyMotionKey = 'motionKey';
+  static const String _keyDotDark = 'dotDark';
+  static const String _keyDotBody = 'dotBody';
+  static const String _keyDotAccent = 'dotAccent';
+  static const String _keyDotAccent2 = 'dotAccent2';
+  static const String _keyDotAccent3 = 'dotAccent3';
 
   /// 펫 데이터를 위젯에 업데이트
   /// 
@@ -59,6 +74,39 @@ class WidgetService {
       await HomeWidget.saveWidgetData<String>(_keyEvolutionStage, pet.evolutionStage.toString());
       await HomeWidget.saveWidgetData<String>(_keyEvolutionGrade, pet.evolutionGrade);
       await HomeWidget.saveWidgetData<String>(_keyColorVariant, pet.colorVariant.toString());
+
+      // 앱과 동일한 모션 스프라이트 키 + 5색을 계산해 넘긴다 (위젯 렌더 통일).
+      final motionKey = motionSpriteKeyForStage(
+          pet.evolutionType, pet.evolutionStage, pet.evolutionGrade);
+      final theme = SpeciesTheme.forType(pet.evolutionType);
+      final palette = motionKey == null
+          ? null
+          : hiddenPaletteForSpriteKey(motionKey, pet.colorVariant);
+      final Color dark, body, accent, accent2, accent3;
+      if (palette != null && palette.length >= 5) {
+        // 설화 영물 — 레퍼런스 5색 팔레트(색변이)
+        dark = palette[0];
+        body = palette[1];
+        accent = palette[2];
+        accent2 = palette[3];
+        accent3 = palette[4];
+      } else {
+        // 사신수/털뭉치 — 테마/자연색 (변이). accent2/3는 accent와 동일(3계조)
+        final (dot, acc) = dotColorsForKey(
+            motionKey ?? 'fluff', pet.evolutionType, theme, pet.colorVariant);
+        dark = SpeciesTheme.dotDark;
+        body = dot;
+        accent = acc;
+        accent2 = acc;
+        accent3 = acc;
+      }
+      await HomeWidget.saveWidgetData<String>(_keyMotionKey, motionKey ?? '');
+      await HomeWidget.saveWidgetData<String>(_keyDotDark, _colorHex(dark));
+      await HomeWidget.saveWidgetData<String>(_keyDotBody, _colorHex(body));
+      await HomeWidget.saveWidgetData<String>(_keyDotAccent, _colorHex(accent));
+      await HomeWidget.saveWidgetData<String>(_keyDotAccent2, _colorHex(accent2));
+      await HomeWidget.saveWidgetData<String>(_keyDotAccent3, _colorHex(accent3));
+
       await HomeWidget.saveWidgetData<String>(_keyLastUpdated, pet.lastUpdated.toString());
       await HomeWidget.saveWidgetData<String>(_keyImageType, imageType);
 

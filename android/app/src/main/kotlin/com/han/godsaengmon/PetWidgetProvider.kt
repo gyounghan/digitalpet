@@ -28,6 +28,9 @@ class PetWidgetProvider : AppWidgetProvider() {
 
         /// 위젯 도트 렌더 비트맵 한 변 크기 (px) — 선명도용 업스케일
         private const val DOT_RENDER_SIZE_PX = 240
+
+        /// 아웃라인/눈 기본 도트 색 (앱 SpeciesTheme.dotDark와 동일) — 저장값 없을 때 폴백
+        private const val DARK_DOT_COLOR = 0xFF14161A.toInt()
         
         /// 애니메이션 업데이트를 위한 Intent Action
         private const val ACTION_ANIMATION_UPDATE = "com.han.godsaengmon.ACTION_ANIMATION_UPDATE"
@@ -381,15 +384,23 @@ class PetWidgetProvider : AppWidgetProvider() {
         val stage = getWidgetString(context, "evolutionStage", "1")?.toIntOrNull() ?: 1
         val grade = getWidgetString(context, "evolutionGrade", "") ?: ""
         val variant = getWidgetString(context, "colorVariant", "0")?.toIntOrNull() ?: 0
-        val (dotColor, accentColor) = resolveDotColors(evolutionType, stage, grade, variant)
+
+        // 앱(WidgetService)이 계산해 넘긴 스프라이트 키·5색을 최우선으로 사용한다.
+        // (앱과 위젯이 동일 팔레트·동일 종 로직을 쓰도록 — 네이티브 재계산 제거).
+        // 값이 없는 구버전 저장 데이터는 아래 폴백 계산으로 그린다.
+        val colors = resolveDotColors5(context, evolutionType, stage, grade, variant)
 
         // 1) 모션 프레임 (털뭉치~성숙기 전 스테이지)
-        val motionKey = motionSpriteKey(evolutionType, stage, grade)
+        val savedMotionKey = getWidgetString(context, "motionKey", null)?.takeIf { it.isNotBlank() }
+        val motionKey = savedMotionKey ?: motionSpriteKey(evolutionType, stage, grade)
         if (motionKey != null) {
             val frames = WidgetMotionData.frames(context, motionKey, motionForMood(mood))
             val bitmaps = frames.mapNotNull { frame ->
                 runCatching {
-                    WidgetPixelRenderer.render(frame, dotColor, accentColor, DOT_RENDER_SIZE_PX)
+                    WidgetPixelRenderer.render(
+                        frame, colors.body, colors.accent, DOT_RENDER_SIZE_PX,
+                        colors.dark, colors.accent2, colors.accent3,
+                    )
                 }.getOrNull()
             }
             if (bitmaps.size >= 2) {
@@ -413,7 +424,10 @@ class PetWidgetProvider : AppWidgetProvider() {
         if (pixelKey.isNullOrBlank()) return false
         val sprite = WidgetPixelData.sprite(context, pixelKey) ?: return false
         val bitmap = runCatching {
-            WidgetPixelRenderer.render(sprite, dotColor, accentColor, DOT_RENDER_SIZE_PX)
+            WidgetPixelRenderer.render(
+                sprite, colors.body, colors.accent, DOT_RENDER_SIZE_PX,
+                colors.dark, colors.accent2, colors.accent3,
+            )
         }.getOrNull() ?: return false
         return applyStaticDotBitmap(views, bitmap)
     }
@@ -430,10 +444,10 @@ class PetWidgetProvider : AppWidgetProvider() {
         return true
     }
 
-    /// 앱 motionSpriteKeyForStage와 동일한 규칙.
-    /// stage1 → 'fluff', stage2 → '{종}1',
-    /// stage3(성장기) → superior '{종}2' / 일반 '{종}2n',
-    /// stage4(성숙기) → 사신수(mythical) '{종}3' / 일반 '{종}3n'.
+    /// 앱 motionSpriteKeyForStage 폴백 규칙 (단일 디자인 — 등급별 'n' 분기 없음).
+    /// stage1 → 'fluff', stage2 → '{종}1', stage3 → '{종}2', stage4 → '{종}3'.
+    /// 새 앱은 저장된 motionKey를 넘기므로 이 계산은 구버전 저장 데이터 폴백 전용이며,
+    /// 사신수 4종만 처리한다(설화 영물은 항상 저장된 키로 그려진다).
     private fun motionSpriteKey(evolutionType: String?, stage: Int, grade: String): String? {
         if (stage <= 1) return "fluff"
         val prefix = when (evolutionType) {
@@ -443,12 +457,7 @@ class PetWidgetProvider : AppWidgetProvider() {
             "turtle" -> "turtle"
             else -> return null
         }
-        return when (stage) {
-            2 -> "${prefix}1"
-            3 -> if (grade == "normal") "${prefix}2n" else "${prefix}2"
-            4 -> if (grade == "mythical") "${prefix}3" else "${prefix}3n"
-            else -> null
-        }
+        return "$prefix${stage - 1}"
     }
 
     /// 앱 motionForMood와 동일한 mood → 모션 매핑.
@@ -458,6 +467,44 @@ class PetWidgetProvider : AppWidgetProvider() {
         "hungry" -> "hungry"
         "sad" -> "hurt"
         else -> "walk"
+    }
+
+    /// 렌더에 넘길 5색 묶음 (앱 5레이어 팔레트와 동일 구성).
+    private data class DotColors5(
+        val dark: Int,
+        val body: Int,
+        val accent: Int,
+        val accent2: Int,
+        val accent3: Int,
+    )
+
+    /// 앱(WidgetService)이 저장한 5색을 우선 사용하고, 없으면 기존 2색 계산으로 폴백한다.
+    /// 저장값(dotBody/dotAccent)이 하나라도 유효하면 저장 팔레트를 신뢰한다
+    /// (설화 영물 5색 팔레트·개체 색변이가 여기서 그대로 반영됨).
+    private fun resolveDotColors5(
+        context: Context,
+        evolutionType: String?,
+        stage: Int,
+        grade: String,
+        variant: Int,
+    ): DotColors5 {
+        val body = parseArgbHex(getWidgetString(context, "dotBody", null))
+        val accent = parseArgbHex(getWidgetString(context, "dotAccent", null))
+        if (body != null && accent != null) {
+            val dark = parseArgbHex(getWidgetString(context, "dotDark", null)) ?: DARK_DOT_COLOR
+            val accent2 = parseArgbHex(getWidgetString(context, "dotAccent2", null)) ?: accent
+            val accent3 = parseArgbHex(getWidgetString(context, "dotAccent3", null)) ?: accent
+            return DotColors5(dark, body, accent, accent2, accent3)
+        }
+        // 폴백: 구버전 저장 데이터 — 기존 2색 계산(테두리는 기본 dark, accent2/3=accent)
+        val (fbBody, fbAccent) = resolveDotColors(evolutionType, stage, grade, variant)
+        return DotColors5(DARK_DOT_COLOR, fbBody, fbAccent, fbAccent, fbAccent)
+    }
+
+    /// "FF14161A" 같은 8자리 ARGB hex → Int. 파싱 실패 시 null.
+    private fun parseArgbHex(hex: String?): Int? {
+        if (hex.isNullOrBlank()) return null
+        return runCatching { java.lang.Long.parseLong(hex.trim(), 16).toInt() }.getOrNull()
     }
 
     /// 종별 도트 색 (앱 SpeciesTheme와 동일 값 — 색은 거의 불변이라 수동 유지)
