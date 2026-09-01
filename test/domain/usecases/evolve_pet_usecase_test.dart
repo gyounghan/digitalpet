@@ -223,6 +223,44 @@ void main() {
       expect(r.evolutionType, EvolutionType.samjoko);
     });
 
+    test('각성 창: Lv5에 사신수여도 성숙기 전 임계 도달 시 히든으로 승격', () async {
+      // Lv8 유아기(stage2) 사신수 tiger 상태에서 배틀 12승 도달 → 도깨비 승격
+      repository.setPet(_createPet(
+        level: 8,
+        evolutionStage: 2,
+        evolutionType: EvolutionType.tiger,
+        battleVictoryCount: 12,
+      ));
+      final r = await useCase('test-pet');
+      expect(r.evolutionType, EvolutionType.dokkaebi,
+          reason: 'Lv5 이후에도 성숙기 전이면 히든 각성 가능해야');
+    });
+
+    test('각성 창: 성장기(stage3)에서도 히든 승격 가능', () async {
+      repository.setPet(_createPet(
+        level: 12,
+        evolutionStage: 3,
+        evolutionType: EvolutionType.turtle,
+        feedAchievedCount: 6,
+        sleepAchievedCount: 6,
+        exerciseAchievedCount: 6,
+        consecutiveLoginDays: 6,
+      ));
+      final r = await useCase('test-pet');
+      expect(r.evolutionType, EvolutionType.hwangryong);
+    });
+
+    test('이미 히든 종이면 다른 히든으로 바뀌지 않는다', () async {
+      repository.setPet(_createPet(
+        level: 8,
+        evolutionStage: 2,
+        evolutionType: EvolutionType.gumiho,
+        battleVictoryCount: 20, // 도깨비 임계도 넘지만
+      ));
+      final r = await useCase('test-pet');
+      expect(r.evolutionType, EvolutionType.gumiho);
+    });
+
     test('세 축이 함께 오르면(세트 클리어) 지배 불성립 → 사신수로', () async {
       repository.setPet(_createPet(
         level: 5,

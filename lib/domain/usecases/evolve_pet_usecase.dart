@@ -74,6 +74,21 @@ class EvolvePetUseCase {
       newGrade = '';
     }
 
+    // ── 설화 영물 각성 창 (유아기~성장기, 성숙기 전까지) ──
+    // 종은 Lv5에 사신수로 확정되지만, 이후 한 축을 몰아 히든 임계를 넘으면
+    // 성숙기(Lv15) 전까지 히든 종으로 승격한다. Lv5 즉시 고정이던 예전 구조는
+    // 도깨비(12승)·황룡(4축 6+)처럼 달성에 EXP가 많이 드는 조건이 Lv5를 넘겨
+    // 창이 닫혀 사실상 각성 불가였다 → 창을 성숙기 전까지 확장해 해결.
+    if (newStage >= 2 &&
+        newStage < 4 &&
+        newType != null &&
+        !newType.isHiddenSpecies) {
+      final hidden = EvolutionAxisScores.hiddenTypeFor(pet);
+      if (hidden != null) {
+        newType = hidden;
+      }
+    }
+
     if (newStage == pet.evolutionStage &&
         newType == pet.evolutionType &&
         newGrade == pet.evolutionGrade) {
