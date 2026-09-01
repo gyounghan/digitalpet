@@ -116,17 +116,12 @@ class _MeScreenState extends ConsumerState<MeScreen> {
     if (stage <= 1) return '털뭉치';
     if (type == null) return '???';
     final typeName = type.name;
+    // 10종 단일 성장 라인 — 등급별 다른 종(독수리 등) 없이 명예 라인만.
     if (stage == 2) return AppStrings.stage2Names[typeName] ?? '???';
     if (stage == 3) {
-      final g = grade.isNotEmpty ? grade : 'normal';
-      return AppStrings.stage3Names[typeName]?[g] ?? '???';
+      return AppStrings.stage3Names[typeName]?['superior'] ?? '???';
     }
-    if (stage >= 4) {
-      // 성숙기: 사신수(mythical) vs 일반종(그 외)
-      final g = grade == 'mythical' ? 'mythical' : 'normal';
-      return AppStrings.stage4Names[typeName]?[g] ?? '???';
-    }
-    return '???';
+    return AppStrings.stage4Names[typeName]?['mythical'] ?? '???';
   }
 
   int _requiredLevelForStage(int currentStage) {

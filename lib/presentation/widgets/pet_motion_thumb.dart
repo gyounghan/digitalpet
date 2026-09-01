@@ -58,8 +58,8 @@ class PetMotionThumb extends StatelessWidget {
       if (frames != null && frames.isNotEmpty) {
         final (dotColor, accentColor) =
             dotColorsForKey(key, type, theme, variant);
-        // 설화 영물은 레퍼런스 5색 팔레트로 (테마 재도색 대신 실제 색)
-        final palette = hiddenPaletteForSpriteKey(key);
+        // 설화 영물은 레퍼런스 5색 팔레트로 (테마 재도색 대신 실제 색·색변이)
+        final palette = hiddenPaletteForSpriteKey(key, variant);
         // 일부 스프라이트(주작 성장기 등)는 그리드 상단에 거의 붙어 있어
         // 컨테이너 가장자리와 겹치면 잘린 것처럼 보인다 — 숨 쉴 여백 확보
         final pad = size * 0.05;

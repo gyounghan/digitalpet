@@ -1351,6 +1351,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
       height: size,
       dotColor: dotColor,
       accentColor: accentColor,
+      colorVariant: variant,
     );
     if (!flip) return sprite;
     return Transform.flip(flipX: true, child: sprite);

@@ -1161,7 +1161,8 @@ def _make_normal_forms():
         TARGET_SIZE[key] = TARGET_SIZE[base]
 
 
-_make_normal_forms()
+# 사신수 일반종('n') 라인 폐기 — 10종은 각자 단일 디자인 + 색 변이로 통일
+# _make_normal_forms()
 
 # ---------------------------------------------------------------------------
 # 이펙트 글리프 (24 기준 dark 도트 좌표 — 배치 시 앵커 보정)
@@ -1700,25 +1701,57 @@ def main() -> int:
     return 0
 
 
-def write_hidden_palette():
-    """설화 영물 종별 5색 실제 팔레트 → Dart (명암 오름차순).
+def _pale_morph(c):
+    """밝은(백변/은빛) 색 모프 — 밝은 회색 쪽으로 블렌드."""
+    r, g, b = (c >> 16) & 255, (c >> 8) & 255, c & 255
+    m = lambda v: int(v * 0.45 + 205 * 0.55)
+    return (m(r) << 16) | (m(g) << 8) | m(b)
 
-    렌더러는 스프라이트 키에서 종을 뽑아 이 팔레트로 5계조를 칠한다
-    (테마색 재도색이 아니라 레퍼런스 실제 색).
+
+def _dark_morph(c):
+    """어두운(흑화) 색 모프 — 검정 쪽으로 블렌드(약간의 색 유지)."""
+    r, g, b = (c >> 16) & 255, (c >> 8) & 255, c & 255
+    m = lambda v: int(v * 0.42 + 20 * 0.58)
+    return (m(r) << 16) | (m(g) << 8) | m(b)
+
+
+def _palette_variants(cols):
+    """5색 팔레트 → 3변이 [원본, 밝은, 어두운].
+
+    아웃라인(idx0)은 유지, 몸통·보조색(idx1~3)만 모프. 최명(idx4 하이라이트)은
+    밝은 변이에선 유지, 어두운 변이에선만 소폭 낮춘다.
+    """
+    orig = list(cols)
+    pale = [cols[0]] + [_pale_morph(c) for c in cols[1:4]] + [cols[4]]
+    dark = [cols[0]] + [_dark_morph(c) for c in cols[1:4]] + [_dark_morph(cols[4])]
+    return [orig, pale, dark]
+
+
+def write_hidden_palette():
+    """설화 영물 종별 5색 팔레트 × 3색변이 → Dart.
+
+    렌더러는 스프라이트 키에서 종을, colorVariant(0~2)로 변이를 뽑아 5계조를
+    칠한다 (테마 재도색이 아니라 레퍼런스 실제 색 + 자연 모프).
+    변이: 0=원본(제일 좋은 자기 색), 1=밝은(백변), 2=어두운(흑화).
     인덱스 0='#'dark, 1='o'body, 2='+'accent, 3='&'accent2, 4='%'accent3.
     """
     with open(PALETTE_PATH, "w", encoding="utf-8") as f:
         f.write("// GENERATED CODE - DO NOT EDIT BY HAND\n")
         f.write("// tool/generate_motion_data.py 로 재생성.\n\n")
         f.write("import 'package:flutter/material.dart';\n\n")
-        f.write("/// 설화 영물 종 → 5색 팔레트 (레퍼런스 컨셉아트 실측).\n")
-        f.write("/// 순서: dark, body, accent, accent2, accent3\n")
-        f.write("const Map<String, List<Color>> hiddenSpeciesPalette = {\n")
+        f.write("/// 설화 영물 종 → [색변이][5색] (레퍼런스 실측 + 자연 모프).\n")
+        f.write("/// 변이 0=원본, 1=밝은, 2=어두운. 색 순서: dark,body,accent,a2,a3\n")
+        f.write(
+            "const Map<String, List<List<Color>>> hiddenSpeciesPalette = {\n")
         for species, cols in HIDDEN_PALETTE.items():
-            colors = ", ".join("Color(0xFF%06X)" % c for c in cols)
-            f.write("  '%s': [%s],\n" % (species, colors))
+            variants = _palette_variants(cols)
+            f.write("  '%s': [\n" % species)
+            for v in variants:
+                colors = ", ".join("Color(0xFF%06X)" % c for c in v)
+                f.write("    [%s],\n" % colors)
+            f.write("  ],\n")
         f.write("};\n")
-    print("팔레트: %s" % PALETTE_PATH)
+    print("팔레트(변이 3): %s" % PALETTE_PATH)
 
 
 def write_widget_json(sprite_frames):

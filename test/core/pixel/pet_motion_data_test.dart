@@ -208,20 +208,17 @@ void main() {
       expect(motionSpriteKeyFromAssetPath('assets/bird3.png'), 'bird3');
     });
 
-    test('진화 단계 → 모션 키 (성장기·성숙기 등급 분기: 사신수 라인 vs 일반종 라인)', () {
+    test('진화 단계 → 모션 키 (10종 단일 디자인, 등급/n 분기 없음)', () {
       expect(motionSpriteKeyForStage(null, 1), 'fluff');
       expect(motionSpriteKeyForStage(EvolutionType.snake, 2), 'dragon1');
-      // 성장기: superior → '{종}2', normal → '{종}2n'
+      // 등급과 무관하게 단일 라인 — 색만 변이로 달라진다
       expect(motionSpriteKeyForStage(EvolutionType.tiger, 3, 'superior'), 'tiger2');
-      expect(motionSpriteKeyForStage(EvolutionType.tiger, 3, 'normal'), 'tiger2n');
-      // 성숙기: mythical → 사신수 '{종}3', 그 외 → 일반종 '{종}3n'
+      expect(motionSpriteKeyForStage(EvolutionType.tiger, 3, 'normal'), 'tiger2');
       expect(motionSpriteKeyForStage(EvolutionType.bird, 4, 'mythical'), 'bird3');
-      expect(motionSpriteKeyForStage(EvolutionType.bird, 4, 'normal'), 'bird3n');
-      expect(motionSpriteKeyForStage(EvolutionType.turtle, 4), 'turtle3n'); // 기본 일반종
-      expect(isNaturalLineKey('bird3n'), isTrue);
-      expect(isNaturalLineKey('bird2n'), isTrue);
-      expect(isNaturalLineKey('bird3'), isFalse);
-      expect(isNaturalLineKey('fluff'), isFalse);
+      expect(motionSpriteKeyForStage(EvolutionType.bird, 4, 'normal'), 'bird3');
+      expect(motionSpriteKeyForStage(EvolutionType.turtle, 4), 'turtle3');
+      // 'n' 일반종 라인은 폐기 — 그런 키는 생성되지 않는다
+      expect(motionFrames.keys.any((k) => k.endsWith('n')), isFalse);
       // 종 미결정 상태의 미래 단계는 null
       expect(motionSpriteKeyForStage(null, 2), isNull);
     });

@@ -127,6 +127,7 @@ class _EvolutionRevealScreenState extends State<EvolutionRevealScreen>
                             height: 210,
                             dotColor: dotColor,
                             accentColor: accentColor,
+                            colorVariant: pet.colorVariant,
                           ),
                         ),
                       ),

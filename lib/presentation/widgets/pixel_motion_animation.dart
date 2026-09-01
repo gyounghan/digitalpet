@@ -8,13 +8,16 @@ import '../../domain/entities/evolution_type.dart';
 import '../../domain/entities/pet.dart';
 import 'pixel_pet_image.dart';
 
-/// 스프라이트 키에서 설화 영물 5색 팔레트 조회 (아니면 null).
+/// 스프라이트 키 + 색변이에서 설화 영물 5색 팔레트 조회 (아니면 null).
 ///
-/// 히든 종은 테마 재도색이 아니라 레퍼런스 실제 색으로 렌더한다.
-/// 키 형식: '{종}{스테이지}' — 예: 'gumiho2', 'haetae3' (히든 종은 'n' 변형 없음).
-List<Color>? hiddenPaletteForSpriteKey(String spriteKey) {
+/// [variant] 0=원본(제일 좋은 자기 색), 1=밝은, 2=어두운.
+/// 키 형식: '{종}{스테이지}' — 예: 'gumiho2', 'haetae3'.
+List<Color>? hiddenPaletteForSpriteKey(String spriteKey, [int variant = 0]) {
   for (final species in hiddenSpeciesPalette.keys) {
-    if (spriteKey.startsWith(species)) return hiddenSpeciesPalette[species];
+    if (spriteKey.startsWith(species)) {
+      final variants = hiddenSpeciesPalette[species]!;
+      return variants[variant.clamp(0, variants.length - 1)];
+    }
   }
   return null;
 }
@@ -76,38 +79,27 @@ String? motionSpriteKeyForStage(EvolutionType? type, int stage,
   if (stage <= 1) return 'fluff';
   final species = evolutionSpeciesImagePrefix(type);
   if (species == null) return null;
-  final n = stage - 1; // 2→1, 3→2, 4→3
-  // 설화 영물(히든 종)은 레퍼런스 단일 디자인 — 등급 무관, 'n' 변형 없음.
-  if (hiddenSpeciesPalette.containsKey(species)) {
-    return '$species$n';
-  }
-  // 성장기(3)·성숙기(4)는 등급으로 분기 — 사신수 라인 '{종}2'/'{종}3'(원색),
-  // 일반종 라인 '{종}2n'/'{종}3n'(자연색). 사신수는 stage4 mythical 뿐.
-  if (stage == 3) return grade == 'normal' ? '$species${n}n' : '$species$n';
-  if (stage == 4) return grade == 'mythical' ? '$species$n' : '$species${n}n';
-  if (stage == 2) return '$species$n';
-  return null;
+  // 10종 통일: 등급·'n' 없이 단일 디자인. stage2→{종}1, 3→{종}2, 4→{종}3.
+  return '$species${stage - 1}';
 }
 
-/// 스프라이트 키가 일반종 라인('{종}2n'·'{종}3n')인지 — 자연색 렌더 판정용.
-bool isNaturalLineKey(String? spriteKey) =>
-    spriteKey != null && spriteKey.endsWith('n') && spriteKey != 'fluff';
-
-/// 일반종 개체 색 변이(0~3) — [Pet.colorVariant] 위임 (렌더부 편의 래퍼).
+/// 개체 색 변이(0~2) — [Pet.colorVariant] 위임 (렌더부 편의 래퍼).
 int colorVariantFor(Pet pet) => pet.colorVariant;
 
-/// 도트 스프라이트 (몸통색, 보조색) — 털뭉치=베이지, 일반종=자연색(변이),
-/// 그 외(사신수·성장기 superior)=테마색.
+/// 사신수 도트 (몸통색, 보조색) — 색변이별. 0=테마 원색(제일 좋은 자기 색),
+/// 1·2=자연 모프(naturalDotColors 재사용). 히든 종은 이 경로가 아니라
+/// [hiddenPaletteForSpriteKey]의 5색 팔레트로 렌더된다.
 (Color, Color) dotColorsForKey(
     String? spriteKey, EvolutionType? type, SpeciesTheme theme,
     [int variant = 0]) {
   if (spriteKey == 'fluff') {
     return (SpeciesTheme.fluffBody, SpeciesTheme.fluffAccent);
   }
-  if (isNaturalLineKey(spriteKey)) {
-    return SpeciesTheme.naturalDotColors(type, variant);
+  final v = variant.clamp(0, 2); // 3변이로 통일 (원본 + 밝은/어두운 자연 모프)
+  if (v == 0) {
+    return (theme.primary, theme.spriteAccent);
   }
-  return (theme.primary, theme.spriteAccent);
+  return SpeciesTheme.naturalDotColors(type, v - 1);
 }
 
 /// 에셋 경로에 모션 데이터가 있으면 스프라이트 키 반환
@@ -146,6 +138,9 @@ class PixelMotionAnimation extends StatefulWidget {
   /// 보조색 도트 색 (배/부리/등딱지 — null이면 dotColor)
   final Color? accentColor;
 
+  /// 색 변이 0~2 — 설화 영물 팔레트 선택용 (사신수는 색이 dotColor로 전달됨)
+  final int colorVariant;
+
   const PixelMotionAnimation({
     super.key,
     required this.spriteKey,
@@ -156,6 +151,7 @@ class PixelMotionAnimation extends StatefulWidget {
     required this.dotColor,
     this.darkColor = SpeciesTheme.dotDark,
     this.accentColor,
+    this.colorVariant = 0,
   });
 
   @override
@@ -237,7 +233,8 @@ class _PixelMotionAnimationState extends State<PixelMotionAnimation>
     final idx = _currentIndex < frames.length ? _currentIndex : 0;
 
     // 설화 영물은 레퍼런스 5색 팔레트로 렌더 (테마 재도색 대신 실제 색)
-    final palette = hiddenPaletteForSpriteKey(widget.spriteKey);
+    final palette =
+        hiddenPaletteForSpriteKey(widget.spriteKey, widget.colorVariant);
     if (palette != null && palette.length >= 5) {
       return PixelSpriteView(
         sprite: frames[idx],

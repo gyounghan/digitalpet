@@ -437,6 +437,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             height: 270,
             dotColor: dotColor,
             accentColor: accentColor,
+            colorVariant: colorVariantFor(pet),
           ),
         ),
       );

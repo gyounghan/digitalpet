@@ -117,6 +117,7 @@ class _SpeciesRevealScreenState extends State<SpeciesRevealScreen>
                             height: 210,
                             dotColor: dotColor,
                             accentColor: accentColor,
+                            colorVariant: widget.pet.colorVariant,
                           ),
                         ),
                       ),
