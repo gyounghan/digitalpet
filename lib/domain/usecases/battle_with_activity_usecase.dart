@@ -460,12 +460,12 @@ class BattleWithActivityUseCase {
     int attackBonus = 0, defenseBonus = 0, hpBonus = 0;
     switch (type) {
       case EvolutionType.bird: attackBonus = 3; break;
-      case EvolutionType.snake: hpBonus = 10; defenseBonus = 2; break;
+      case EvolutionType.snake: attackBonus = 1; hpBonus = 10; defenseBonus = 2; break;
       case EvolutionType.tiger: attackBonus = 2; defenseBonus = 2; break;
-      case EvolutionType.turtle: defenseBonus = 3; hpBonus = 10; break;
+      case EvolutionType.turtle: defenseBonus = 2; hpBonus = 7; break;
       case EvolutionType.samjoko: attackBonus = 3; hpBonus = 5; break;
       case EvolutionType.gumiho: attackBonus = 2; defenseBonus = 1; hpBonus = 5; break;
-      case EvolutionType.moonrabbit: defenseBonus = 2; hpBonus = 10; break;
+      case EvolutionType.moonrabbit: attackBonus = 1; defenseBonus = 2; hpBonus = 7; break;
       case EvolutionType.haetae: attackBonus = 2; defenseBonus = 3; hpBonus = 5; break;
       case EvolutionType.dokkaebi: attackBonus = 3; hpBonus = 5; break;
       case EvolutionType.hwangryong: attackBonus = 2; defenseBonus = 2; hpBonus = 5; break;

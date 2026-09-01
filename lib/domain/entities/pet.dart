@@ -512,17 +512,17 @@ class Pet {
       case EvolutionType.bird:
         return const [3, 0, 0];
       case EvolutionType.snake:
-        return const [0, 2, 10];
+        return const [1, 2, 10];
       case EvolutionType.tiger:
         return const [2, 2, 0];
       case EvolutionType.turtle:
-        return const [0, 3, 10];
+        return const [0, 2, 7];
       case EvolutionType.samjoko:
         return const [3, 0, 5];
       case EvolutionType.gumiho:
         return const [2, 1, 5];
       case EvolutionType.moonrabbit:
-        return const [0, 2, 10];
+        return const [1, 2, 7];
       case EvolutionType.haetae:
         return const [2, 3, 5];
       case EvolutionType.dokkaebi:
