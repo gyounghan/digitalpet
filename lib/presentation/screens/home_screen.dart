@@ -342,8 +342,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             // 펫 스테이지는 내용(300)에 맞춰 높이를 잡는다 (카드가 과하게
             // 늘어나지 않도록 Expanded 대신 Flexible — 남는 공간은 아래로).
             Flexible(child: _buildPetStage(pet, theme)),
-            // Feed 버튼 + 현재 상태 3카드
-            _buildFeedButton(ref, pet, theme),
+            // 상호작용 행: 밥주기(급식) · 쓰담(joy 연출) · 휴식(sleep 연출)
+            _buildInteractionRow(ref, pet, theme),
             _buildTodayGoalsCard(pet, theme),
           ],
         ),
@@ -454,13 +454,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Widget _buildPetStage(Pet pet, SpeciesTheme theme) {
+    // 시안 톤: 하늘(위)→풀밭(아래) 서식지 무대. 펫을 크게 세우고 바닥
+    // 플랫폼(둥근 잔디 밴드 + 그림자)으로 "진짜 키우는" 느낌을 준다.
     return Padding(
       padding: const EdgeInsets.fromLTRB(18, 0, 18, 12),
       child: Container(
+        clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
             colors: [theme.gradStart, theme.gradEnd],
           ),
           borderRadius: BorderRadius.circular(24),
@@ -472,13 +475,43 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
           ],
         ),
-        // 종/기분 라벨은 상단 헤더에 이미 있으므로 카드는 순수 펫 무대로 둔다.
-        // 펫을 톡 건드리면 반응 — 기분 좋으면 기뻐하고, 나쁘면 삐친다(화남).
-        child: Center(
-          child: GestureDetector(
-            onTap: () => _playTransientMotion(_pokeReaction(pet.mood)),
-            child: _buildPetSprite(pet, theme),
-          ),
+        child: Stack(
+          alignment: Alignment.bottomCenter,
+          children: [
+            // 바닥 풀밭 밴드 (테마색을 옅게 깐 둥근 지면)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: Container(
+                height: 54,
+                decoration: BoxDecoration(
+                  color: theme.primary.withValues(alpha: 0.10),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(80),
+                    topRight: Radius.circular(80),
+                  ),
+                ),
+              ),
+            ),
+            // 펫 발밑 그림자 (접지감)
+            Positioned(
+              bottom: 30,
+              child: Container(
+                width: 150,
+                height: 20,
+                decoration: BoxDecoration(
+                  color: theme.primaryDeep.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(100),
+                ),
+              ),
+            ),
+            // 펫 — 톡 건드리면 반응(기분 좋으면 joy, 나쁘면 angry)
+            GestureDetector(
+              onTap: () => _playTransientMotion(_pokeReaction(pet.mood)),
+              child: _buildPetSprite(pet, theme),
+            ),
+          ],
         ),
       ),
     );
@@ -532,36 +565,53 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  Widget _buildFeedButton(WidgetRef ref, Pet pet, SpeciesTheme theme) {
-    final canFeedUseCase = ref.watch(canFeedPetUseCaseProvider);
-    final canFeed = canFeedUseCase.canFeed(pet);
-    if (!canFeed) return const SizedBox.shrink();
+  /// 홈 상호작용 행 — 밥주기(급식) · 쓰담(joy 연출) · 휴식(sleep 연출).
+  /// 시안의 "직접 돌보는" 감을 위해 큰 펫 무대 바로 아래 3버튼으로 배치.
+  /// 쓰담·휴식은 수치 변화 없는 순수 반응 모션(기존 톡 반응과 동일 방식).
+  Widget _buildInteractionRow(WidgetRef ref, Pet pet, SpeciesTheme theme) {
+    final canFeed = ref.watch(canFeedPetUseCaseProvider).canFeed(pet);
+    final hasMotion = _motionSpriteKey(pet) != null;
     return Padding(
       padding: const EdgeInsets.fromLTRB(18, 0, 18, 8),
-      child: SizedBox(
-        width: double.infinity,
-        child: ElevatedButton.icon(
-          onPressed: () {
-            ref
-                .read(petNotifierProvider(HomeScreen.defaultPetId).notifier)
-                .feed();
-            // 도트 모션이 있는 단계면 밥먹는 모션을 잠깐 재생
-            if (_motionSpriteKey(pet) != null) {
-              _playTransientMotion(PixelMotion.eat);
-            }
-          },
-          icon: const Icon(Icons.restaurant, size: 18),
-          label: Text(AppStrings.feed),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: theme.primaryDeep,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 13),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14),
+      child: Row(
+        children: [
+          Expanded(
+            flex: 3,
+            child: _InteractionButton(
+              icon: Icons.restaurant,
+              label: AppStrings.feed,
+              theme: theme,
+              filled: true,
+              enabled: canFeed,
+              onTap: () {
+                ref
+                    .read(petNotifierProvider(HomeScreen.defaultPetId).notifier)
+                    .feed();
+                if (hasMotion) _playTransientMotion(PixelMotion.eat);
+              },
             ),
-            elevation: 0,
           ),
-        ),
+          const SizedBox(width: 8),
+          Expanded(
+            flex: 2,
+            child: _InteractionButton(
+              icon: Icons.back_hand,
+              label: '쓰담',
+              theme: theme,
+              onTap: () => _playTransientMotion(PixelMotion.joy),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            flex: 2,
+            child: _InteractionButton(
+              icon: Icons.bedtime,
+              label: '휴식',
+              theme: theme,
+              onTap: () => _playTransientMotion(PixelMotion.sleep),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -827,6 +877,62 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ],
         );
       },
+    );
+  }
+}
+
+/// 홈 상호작용 버튼 — 시안 톤의 둥근 파스텔 버튼.
+/// [filled]면 테마 딥컬러로 채운 주요 버튼(밥주기), 아니면 옅은 소프트 버튼.
+class _InteractionButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final SpeciesTheme theme;
+  final VoidCallback onTap;
+  final bool filled;
+  final bool enabled;
+
+  const _InteractionButton({
+    required this.icon,
+    required this.label,
+    required this.theme,
+    required this.onTap,
+    this.filled = false,
+    this.enabled = true,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final Color bg = filled ? theme.primaryDeep : theme.primarySoft;
+    final Color fg = filled ? Colors.white : theme.primaryDeep;
+    final content = Container(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 20, color: fg),
+          const SizedBox(height: 3),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w800,
+              color: fg,
+            ),
+          ),
+        ],
+      ),
+    );
+    return Opacity(
+      opacity: enabled ? 1.0 : 0.4,
+      child: GestureDetector(
+        onTap: enabled ? onTap : null,
+        behavior: HitTestBehavior.opaque,
+        child: content,
+      ),
     );
   }
 }
