@@ -1,3 +1,4 @@
+import '../entities/evolution_type.dart';
 import '../entities/pet.dart';
 import 'calculate_daily_goals_score_usecase.dart';
 
@@ -67,5 +68,24 @@ class PetTransitionEvents {
     if (seenStage == null) return false;
     if (pet.isDead) return false;
     return pet.evolutionStage >= 3 && pet.evolutionStage > seenStage;
+  }
+
+  /// 설화 영물 각성 연출을 보여줘야 하는가 — 성장 중 사신수 → 영물로 종이
+  /// 바뀐 순간을 잡는다. 종 변경은 단계 변화 없이도 일어날 수 있어(예: Lv7에
+  /// 12승으로 청룡→도깨비) 단계 기반 [shouldRevealEvolution]로는 못 잡는다.
+  ///
+  /// [seenTypeName]은 "이 기기에서 마지막으로 보여준 종"(EvolutionType.name).
+  /// null이면 기준 없음(기능 도입 전/최초) — 뒤늦은 연출을 막기 위해 보여주지
+  /// 않는다(호출부는 현재 종을 기록만 한다). 현재 종이 영물이 아니거나
+  /// 본 종과 같으면 각성이 아니다.
+  static bool shouldRevealAwakening({
+    required String? seenTypeName,
+    required Pet pet,
+  }) {
+    if (seenTypeName == null) return false;
+    if (pet.isDead) return false;
+    final type = pet.evolutionType;
+    if (type == null || !type.isHiddenSpecies) return false;
+    return type.name != seenTypeName;
   }
 }

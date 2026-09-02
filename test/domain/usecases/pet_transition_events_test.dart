@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pocketfriend/domain/entities/evolution_type.dart';
 import 'package:pocketfriend/domain/entities/pet.dart';
 import 'package:pocketfriend/domain/usecases/calculate_daily_goals_score_usecase.dart';
 import 'package:pocketfriend/domain/usecases/pet_transition_events.dart';
@@ -10,6 +11,7 @@ void main() {
     int todayExerciseAchievedCount = 0,
     int todaySetExpClaimed = 0,
     int evolutionStage = 1,
+    EvolutionType? evolutionType,
     bool isDead = false,
   }) {
     return Pet(
@@ -21,6 +23,7 @@ void main() {
       exp: 0,
       level: 1,
       evolutionStage: evolutionStage,
+      evolutionType: evolutionType,
       lastUpdated: 0,
       lastStatusDecayUpdated: 0,
       todayFeedAchievedCount: todayFeedAchievedCount,
@@ -148,6 +151,71 @@ void main() {
       expect(
         PetTransitionEvents.shouldRevealEvolution(
             seenStage: 2, pet: makePet(evolutionStage: 3, isDead: true)),
+        isFalse,
+      );
+    });
+  });
+
+  group('PetTransitionEvents.shouldRevealAwakening', () {
+    test('사신수 → 영물(도깨비) 종 변경이면 각성 연출', () {
+      expect(
+        PetTransitionEvents.shouldRevealAwakening(
+          seenTypeName: 'snake',
+          pet: makePet(evolutionStage: 2, evolutionType: EvolutionType.dokkaebi),
+        ),
+        isTrue,
+      );
+    });
+
+    test('본 종과 현재 종이 같으면 연출 안 함 (중복 방지)', () {
+      expect(
+        PetTransitionEvents.shouldRevealAwakening(
+          seenTypeName: 'dokkaebi',
+          pet: makePet(evolutionStage: 3, evolutionType: EvolutionType.dokkaebi),
+        ),
+        isFalse,
+      );
+    });
+
+    test('현재 종이 사신수면 각성 아님 — 연출 안 함', () {
+      expect(
+        PetTransitionEvents.shouldRevealAwakening(
+          seenTypeName: 'bird',
+          pet: makePet(evolutionStage: 3, evolutionType: EvolutionType.snake),
+        ),
+        isFalse,
+      );
+    });
+
+    test('기준(seenType) 없으면 뒤늦은 연출 방지 — 연출 안 함', () {
+      expect(
+        PetTransitionEvents.shouldRevealAwakening(
+          seenTypeName: null,
+          pet: makePet(evolutionStage: 2, evolutionType: EvolutionType.gumiho),
+        ),
+        isFalse,
+      );
+    });
+
+    test('종 미결정(null)이면 연출 안 함', () {
+      expect(
+        PetTransitionEvents.shouldRevealAwakening(
+          seenTypeName: 'snake',
+          pet: makePet(evolutionStage: 1),
+        ),
+        isFalse,
+      );
+    });
+
+    test('죽은 펫은 연출 안 함', () {
+      expect(
+        PetTransitionEvents.shouldRevealAwakening(
+          seenTypeName: 'snake',
+          pet: makePet(
+              evolutionStage: 2,
+              evolutionType: EvolutionType.dokkaebi,
+              isDead: true),
+        ),
         isFalse,
       );
     });

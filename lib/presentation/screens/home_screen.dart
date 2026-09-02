@@ -44,6 +44,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   /// 진화 연출(3·4단계) 재진입 방지
   bool _evolutionRevealChecking = false;
 
+  /// 설화 영물 각성 연출(사신수→영물) 재진입 방지
+  bool _awakeningRevealChecking = false;
+
   /// 목표 달성 순간 플래시 중인 카테고리 — 해당 줄을 금색 "목표 달성!"으로
   /// 잠깐 강조해 누적식 표시(자연스러운 다음 목표 전환)에 티를 낸다
   final Set<GoalCategory> _flashingGoals = {};
@@ -226,7 +229,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             WidgetsBinding.instance.addPostFrameCallback((_) async {
               if (!mounted) return;
               await _maybeShowSpeciesReveal(pet);
-              if (mounted) await _maybeShowEvolutionReveal(pet);
+              if (!mounted) return;
+              // 각성(사신수→영물)이 떴으면 같은 틱의 단계 연출은 건너뛴다
+              final awakened = await _maybeShowAwakeningReveal(pet);
+              if (mounted && !awakened) await _maybeShowEvolutionReveal(pet);
             });
             return _buildPetContent(context, ref, pet);
           },
@@ -254,6 +260,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       }
       await prefs.setSpeciesRevealShown();
       _speciesRevealHandled = true;
+      // 각성 감지 기준(baseline) — 이 종을 보여줬다고 기록.
+      // 이후 사신수→영물 각성 시 종 변경을 잡는다.
+      await prefs.setRevealedSpeciesType(pet.evolutionType!.name);
 
       if (pet.evolutionStage > 2) return;
       if (!mounted) return;
@@ -268,6 +277,50 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       );
     } finally {
       _speciesRevealChecking = false;
+    }
+  }
+
+  /// 설화 영물 각성 풀스크린 연출 — 성장 중 사신수 → 영물로 종이 바뀐 순간
+  ///
+  /// 종 결정 연출은 기기당 1회뿐이고 진화 연출은 단계 변화에만 뜨므로,
+  /// 같은 단계에서 종만 바뀌는 각성(예: Lv7에 12승으로 청룡→도깨비)은
+  /// 둘 다 놓친다 — 조용히 스프라이트만 바뀌어 혼란스럽다. 이 핸들러가
+  /// "마지막으로 보여준 종"과 현재 종을 비교해 각성을 전용 연출로 띄운다.
+  /// 연출을 띄웠으면 true (호출부가 같은 틱의 단계 연출 중복을 피한다).
+  Future<bool> _maybeShowAwakeningReveal(Pet pet) async {
+    if (_awakeningRevealChecking) return false;
+    if (pet.isDead || pet.evolutionType == null) return false;
+
+    _awakeningRevealChecking = true;
+    try {
+      final prefs = AppPrefsDatasource();
+      final seenType = await prefs.getRevealedSpeciesType();
+      // 기준 없음(기능 도입 전 펫) — 현재 종을 기록만, 뒤늦은 연출 생략
+      if (seenType == null) {
+        await prefs.setRevealedSpeciesType(pet.evolutionType!.name);
+        return false;
+      }
+      if (!PetTransitionEvents.shouldRevealAwakening(
+          seenTypeName: seenType, pet: pet)) {
+        return false;
+      }
+      await prefs.setRevealedSpeciesType(pet.evolutionType!.name);
+      // 각성은 단계 변화 없이도 뜨지만, 마침 단계까지 올랐다면 같은 틱의
+      // 단계 연출과 겹치지 않도록 본 단계도 현재로 당겨 기록한다.
+      await prefs.setEvolutionSeenStage(pet.evolutionStage);
+      if (!mounted) return false;
+      await Navigator.of(context).push(
+        PageRouteBuilder(
+          fullscreenDialog: true,
+          transitionDuration: const Duration(milliseconds: 450),
+          pageBuilder: (_, __, ___) => SpeciesRevealScreen(pet: pet),
+          transitionsBuilder: (_, animation, __, child) =>
+              FadeTransition(opacity: animation, child: child),
+        ),
+      );
+      return true;
+    } finally {
+      _awakeningRevealChecking = false;
     }
   }
 

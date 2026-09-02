@@ -8,6 +8,7 @@ class AppPrefsDatasource {
   static const String _keyOnboardingDone = 'onboarding_done';
   static const String _keySpeciesRevealShown = 'species_reveal_shown';
   static const String _keyEvolutionSeenStage = 'evolution_seen_stage';
+  static const String _keyRevealedSpeciesType = 'revealed_species_type';
 
   /// 온보딩(이름 짓기 → 권한 → 첫 목표 → 위젯 유도) 완료 여부
   Future<bool> isOnboardingDone() async {
@@ -44,5 +45,19 @@ class AppPrefsDatasource {
   Future<void> setEvolutionSeenStage(int stage) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(_keyEvolutionSeenStage, stage);
+  }
+
+  /// 이 기기에서 마지막으로 연출로 보여준 종(EvolutionType.name)
+  ///
+  /// 성장 중 사신수 → 영물 각성(예: 청룡→도깨비)을 감지하는 기준값.
+  /// null이면 기준 없음(기능 도입 전/최초) — 뒤늦은 각성 연출을 막는다.
+  Future<String?> getRevealedSpeciesType() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_keyRevealedSpeciesType);
+  }
+
+  Future<void> setRevealedSpeciesType(String typeName) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyRevealedSpeciesType, typeName);
   }
 }
