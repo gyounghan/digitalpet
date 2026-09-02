@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/pet_provider.dart';
+import '../providers/active_pet_provider.dart';
 import '../widgets/pet_image_animation.dart';
 import '../widgets/pixel_motion_animation.dart';
 import '../widgets/app_design.dart';
@@ -33,6 +34,10 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
+  /// 현재 활성 펫 ID (도감에서 전환). build가 activePetIdProvider를 watch하므로
+  /// 전환 시 화면이 rebuild되고, 콜백에서는 read로 현재 값을 읽는다.
+  String get _activePetId => ref.read(activePetIdProvider);
+
   /// 액션 직후 잠깐 재생하는 모션 (밥먹기 등). null이면 mood 기반 대기 모션.
   PixelMotion? _transientMotion;
   Timer? _transientTimer;
@@ -187,9 +192,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    ref.listen(
-        petNotifierProvider(HomeScreen.defaultPetId), _onPetTransition);
-    final petAsync = ref.watch(petNotifierProvider(HomeScreen.defaultPetId));
+    ref.watch(activePetIdProvider); // 활성 펫 전환 시 rebuild 구독
+    ref.listen(petNotifierProvider(_activePetId), _onPetTransition);
+    final petAsync = ref.watch(petNotifierProvider(_activePetId));
 
     return Scaffold(
       backgroundColor: DesignTokens.bg,
@@ -213,7 +218,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   const SizedBox(height: 12),
                   ElevatedButton(
                     onPressed: () => ref
-                        .read(petNotifierProvider(HomeScreen.defaultPetId)
+                        .read(petNotifierProvider(_activePetId)
                             .notifier)
                         .refresh(),
                     child: Text(AppStrings.retry),
@@ -585,7 +590,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               enabled: canFeed,
               onTap: () {
                 ref
-                    .read(petNotifierProvider(HomeScreen.defaultPetId).notifier)
+                    .read(petNotifierProvider(_activePetId).notifier)
                     .feed();
                 if (hasMotion) _playTransientMotion(PixelMotion.eat);
               },
@@ -794,7 +799,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   /// 긴 잠에 빠진 펫 — 무료 깨우기(30/30/30) 또는 광고 깨우기(완전 회복)
   Widget _buildDeadPetContent(BuildContext context, WidgetRef ref, Pet pet) {
     final notifier = ref.read(
-      petNotifierProvider(HomeScreen.defaultPetId).notifier,
+      petNotifierProvider(_activePetId).notifier,
     );
     void showWakeSuccess() {
       if (context.mounted) {
@@ -866,7 +871,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 final newName = controller.text.trim();
                 if (newName.isNotEmpty) {
                   ref
-                      .read(petNotifierProvider(HomeScreen.defaultPetId)
+                      .read(petNotifierProvider(_activePetId)
                           .notifier)
                       .updateName(newName);
                 }

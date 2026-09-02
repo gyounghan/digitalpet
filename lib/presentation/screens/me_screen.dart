@@ -6,6 +6,7 @@ import 'package:flutter/services.dart'
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart' as kakao;
 import '../providers/pet_provider.dart';
+import '../providers/active_pet_provider.dart';
 import '../widgets/app_design.dart';
 import '../widgets/pet_motion_thumb.dart';
 import '../widgets/pixel_motion_animation.dart' show colorVariantFor;
@@ -18,7 +19,6 @@ import '../../domain/entities/pet.dart';
 import '../../domain/entities/evolution_type.dart';
 import 'debug_pixel_gallery_screen.dart';
 import 'debug_cheat_screen.dart';
-import 'home_screen.dart';
 
 /// 도감 화면 — 펫 프로필 + 전투 스탯 + 진화율 + 누적 통계 + 진화 트리
 ///
@@ -32,6 +32,9 @@ class MeScreen extends ConsumerStatefulWidget {
 }
 
 class _MeScreenState extends ConsumerState<MeScreen> {
+  /// 현재 활성 펫 ID (수집 그리드에서 전환). build가 구독하므로 전환 시 rebuild.
+  String get _activePetId => ref.read(activePetIdProvider);
+
   bool _isEvolving = false;
   bool _isAdLoading = false;
   bool _isKakaoLoading = false;
@@ -40,7 +43,7 @@ class _MeScreenState extends ConsumerState<MeScreen> {
     if (_isEvolving) return;
     setState(() => _isEvolving = true);
     final notifier =
-        ref.read(petNotifierProvider(HomeScreen.defaultPetId).notifier);
+        ref.read(petNotifierProvider(_activePetId).notifier);
     final success = await notifier.evolve();
     if (!mounted) return;
     setState(() => _isEvolving = false);
@@ -85,7 +88,7 @@ class _MeScreenState extends ConsumerState<MeScreen> {
     if (confirmed != true || !mounted) return;
 
     final notifier =
-        ref.read(petNotifierProvider(HomeScreen.defaultPetId).notifier);
+        ref.read(petNotifierProvider(_activePetId).notifier);
     final messenger = ScaffoldMessenger.of(context);
 
     setState(() => _isAdLoading = true);
@@ -144,7 +147,8 @@ class _MeScreenState extends ConsumerState<MeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final petAsync = ref.watch(petNotifierProvider(HomeScreen.defaultPetId));
+    ref.watch(activePetIdProvider); // 활성 펫 전환 시 rebuild 구독
+    final petAsync = ref.watch(petNotifierProvider(_activePetId));
     return Scaffold(
       backgroundColor: DesignTokens.bg,
       body: SafeArea(
@@ -175,6 +179,9 @@ class _MeScreenState extends ConsumerState<MeScreen> {
               _buildBattleStats(pet, theme),
               const SizedBox(height: 10),
               _buildLifetimeStats(pet, theme),
+              const SizedBox(height: 14),
+              const SectionTitle(title: '발현된 친구들'),
+              _buildCollectionGrid(theme),
               const SizedBox(height: 14),
               const SectionTitle(title: '진화 트리'),
               _buildEvoTreeCard(pet, theme),
@@ -223,6 +230,117 @@ class _MeScreenState extends ConsumerState<MeScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  /// 수집 그리드 — 키우는 펫 슬롯(최대 [kMaxPets]). 탭하면 활성 펫 전환,
+  /// 빈 슬롯은 새 펫을 키우기 시작한다. (v1: 2마리)
+  Widget _buildCollectionGrid(SpeciesTheme theme) {
+    final repo = ref.read(petRepositoryProvider);
+    return FutureBuilder<List<Pet>>(
+      future: repo.getAllPets(),
+      builder: (context, snapshot) {
+        final byId = {
+          for (final p in (snapshot.data ?? const <Pet>[])) p.id: p,
+        };
+        final activeId = _activePetId;
+        return Row(
+          children: [
+            for (var i = 0; i < kPetSlotIds.length; i++) ...[
+              if (i > 0) const SizedBox(width: 10),
+              Expanded(
+                child: _buildPetSlot(
+                    kPetSlotIds[i], byId[kPetSlotIds[i]], activeId),
+              ),
+            ],
+          ],
+        );
+      },
+    );
+  }
+
+  /// 펫 슬롯 카드 — [pet]이 있으면 프로필, 없으면 새 펫 추가 슬롯.
+  Widget _buildPetSlot(String slotId, Pet? pet, String activeId) {
+    if (pet == null) {
+      return GestureDetector(
+        onTap: _addSecondPet,
+        behavior: HitTestBehavior.opaque,
+        child: const _EmptyPetSlot(),
+      );
+    }
+    final slotTheme = SpeciesTheme.forType(pet.evolutionType);
+    final isActive = slotId == activeId;
+    return GestureDetector(
+      onTap: isActive ? null : () => _switchActivePet(slotId),
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: isActive ? slotTheme.primarySoft : DesignTokens.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isActive ? slotTheme.primaryDeep : DesignTokens.line,
+            width: isActive ? 2 : 1,
+          ),
+        ),
+        child: Column(
+          children: [
+            SizedBox(
+              height: 64,
+              child: Center(
+                child: PetMotionThumb(
+                  type: pet.evolutionType,
+                  stage: pet.evolutionStage,
+                  grade: pet.evolutionGrade,
+                  variant: colorVariantFor(pet),
+                  size: 60,
+                ),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              pet.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+                color: DesignTokens.ink,
+              ),
+            ),
+            Text(
+              isActive
+                  ? '활성 · Lv.${pet.level}'
+                  : 'Lv.${pet.level} · 탭하여 전환',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: isActive ? slotTheme.primaryDeep : DesignTokens.ink3,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 활성 펫 전환 — 홈·케어·배틀이 이 펫으로 바뀐다.
+  Future<void> _switchActivePet(String slotId) async {
+    await ref.read(activePetIdProvider.notifier).setActive(slotId);
+    if (mounted) setState(() {});
+  }
+
+  /// 두 번째 펫 키우기 시작 — 생성 후 활성 전환. (로컬 전용, 서버 미동기화)
+  Future<void> _addSecondPet() async {
+    await ref.read(createDefaultPetUseCaseProvider)(kSecondPetId);
+    await ref.read(activePetIdProvider.notifier).setActive(kSecondPetId);
+    if (!mounted) return;
+    setState(() {});
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('새 펫이 태어났어요! 홈에서 이름을 지어주세요.'),
+        duration: Duration(seconds: 2),
+      ),
     );
   }
 
@@ -384,7 +502,7 @@ class _MeScreenState extends ConsumerState<MeScreen> {
       setState(() {});
       // 서버에 저장된 펫이 있으면 동기화로 끌어온다 (기기 변경 시나리오)
       unawaited(ref
-          .read(petNotifierProvider(HomeScreen.defaultPetId).notifier)
+          .read(petNotifierProvider(_activePetId).notifier)
           .refresh());
       messenger.showSnackBar(
         SnackBar(
@@ -680,7 +798,7 @@ class _MeScreenState extends ConsumerState<MeScreen> {
       setState(() {});
       // 서버에 저장된 펫이 있으면 동기화로 끌어온다 (기기 변경 시나리오)
       unawaited(ref
-          .read(petNotifierProvider(HomeScreen.defaultPetId).notifier)
+          .read(petNotifierProvider(_activePetId).notifier)
           .refresh());
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -1221,6 +1339,51 @@ class _MeScreenState extends ConsumerState<MeScreen> {
             );
           },
         ),
+      ),
+    );
+  }
+}
+
+/// 도감 수집 그리드의 빈 펫 슬롯 — 탭하면 새 펫을 키운다.
+class _EmptyPetSlot extends StatelessWidget {
+  const _EmptyPetSlot();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      decoration: BoxDecoration(
+        color: DesignTokens.surfaceSoft,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: DesignTokens.line2),
+      ),
+      child: const Column(
+        children: [
+          SizedBox(
+            height: 64,
+            child: Center(
+              child: Icon(Icons.add_circle_outline,
+                  size: 30, color: DesignTokens.ink3),
+            ),
+          ),
+          SizedBox(height: 6),
+          Text(
+            '새 펫 키우기',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+              color: DesignTokens.ink2,
+            ),
+          ),
+          Text(
+            '털뭉치부터 시작',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: DesignTokens.ink3,
+            ),
+          ),
+        ],
       ),
     );
   }

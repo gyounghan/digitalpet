@@ -9,6 +9,19 @@ class AppPrefsDatasource {
   static const String _keySpeciesRevealShown = 'species_reveal_shown';
   static const String _keyEvolutionSeenStage = 'evolution_seen_stage';
   static const String _keyRevealedSpeciesType = 'revealed_species_type';
+  static const String _keyActivePetId = 'active_pet_id';
+
+  /// 앞화면(홈·케어·배틀·도감)이 현재 보여주는 활성 펫 ID.
+  /// 기본은 첫 펫('default-pet'). 도감 수집 그리드에서 전환한다.
+  Future<String?> getActivePetId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_keyActivePetId);
+  }
+
+  Future<void> setActivePetId(String petId) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyActivePetId, petId);
+  }
 
   /// 온보딩(이름 짓기 → 권한 → 첫 목표 → 위젯 유도) 완료 여부
   Future<bool> isOnboardingDone() async {

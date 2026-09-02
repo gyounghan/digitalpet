@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/pet_provider.dart';
+import '../providers/active_pet_provider.dart';
 import '../widgets/app_design.dart';
 import '../../core/theme/species_theme.dart';
 import '../../core/constants/app_strings.dart';
@@ -15,7 +16,6 @@ import '../../domain/usecases/focus_session_usecase.dart';
 import '../../domain/usecases/alternative_sleep_pet_usecase.dart';
 import '../../domain/usecases/shake_step_bonus_usecase.dart';
 import '../../data/datasources/shake_detector.dart';
-import 'home_screen.dart';
 
 /// 케어 화면 — "바쁠 때 쓰는 대체 행동" 한 가지 목적
 ///
@@ -30,6 +30,9 @@ class CareScreen extends ConsumerStatefulWidget {
 }
 
 class _CareScreenState extends ConsumerState<CareScreen> {
+  /// 현재 활성 펫 ID (도감에서 전환). build가 구독하므로 전환 시 rebuild.
+  String get _activePetId => ref.read(activePetIdProvider);
+
   Timer? _shakeTimer;
   int _shakeRemainingSeconds = 0;
   int _shakeCount = 0;
@@ -60,7 +63,8 @@ class _CareScreenState extends ConsumerState<CareScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final petAsync = ref.watch(petNotifierProvider(HomeScreen.defaultPetId));
+    ref.watch(activePetIdProvider); // 활성 펫 전환 시 rebuild 구독
+    final petAsync = ref.watch(petNotifierProvider(_activePetId));
     return Scaffold(
       backgroundColor: DesignTokens.bg,
       body: SafeArea(
@@ -347,7 +351,7 @@ class _CareScreenState extends ConsumerState<CareScreen> {
         Navigator.of(context, rootNavigator: true).pop();
       }
       final applied = await ref
-          .read(petNotifierProvider(HomeScreen.defaultPetId).notifier)
+          .read(petNotifierProvider(_activePetId).notifier)
           .performFocusSession();
       if (!mounted) {
         remainingNotifier.dispose();
@@ -499,7 +503,7 @@ class _CareScreenState extends ConsumerState<CareScreen> {
           ? () async {
               final before = pet.todayWaterCount;
               final applied = await ref
-                  .read(petNotifierProvider(HomeScreen.defaultPetId).notifier)
+                  .read(petNotifierProvider(_activePetId).notifier)
                   .performDrinkWater();
               if (!mounted) return;
               final reachedGoal = before + 1 >= goal;
@@ -547,7 +551,7 @@ class _CareScreenState extends ConsumerState<CareScreen> {
       onTap: enabled
           ? () async {
               final applied = await ref
-                  .read(petNotifierProvider(HomeScreen.defaultPetId).notifier)
+                  .read(petNotifierProvider(_activePetId).notifier)
                   .performAlternativeFeed();
               if (!mounted) return;
               ScaffoldMessenger.of(context).showSnackBar(
@@ -653,7 +657,7 @@ class _CareScreenState extends ConsumerState<CareScreen> {
         // 한도 초과 등 no-op일 때 완료 메시지를 띄우지 않는다
         Future<void> completeShake() async {
           final applied = await ref
-              .read(petNotifierProvider(HomeScreen.defaultPetId).notifier)
+              .read(petNotifierProvider(_activePetId).notifier)
               .performShakeBonus(finalCount);
           if (!mounted) return;
           final String message;
@@ -748,7 +752,7 @@ class _CareScreenState extends ConsumerState<CareScreen> {
         Navigator.of(context, rootNavigator: true).pop();
       }
       final applied = await ref
-          .read(petNotifierProvider(HomeScreen.defaultPetId).notifier)
+          .read(petNotifierProvider(_activePetId).notifier)
           .performAlternativeSleep();
       if (!mounted) {
         remainingNotifier.dispose();

@@ -54,6 +54,7 @@ import '../../data/datasources/pet_remote_datasource.dart';
 import '../../data/datasources/device_id_datasource.dart';
 import '../../data/datasources/ranking_remote_datasource.dart';
 import 'package:flutter/foundation.dart';
+import 'active_pet_provider.dart' show kDefaultPetId;
 
 /// PetLocalDataSource Provider
 /// Hive 데이터소스 인스턴스를 제공
@@ -702,7 +703,11 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
 
   /// 서버 동기화 (fire-and-forget)
   /// UI를 블로킹하지 않고 비동기로 서버에 최신 데이터 전송
+  ///
+  /// v1(2마리): 서버 펫 슬롯은 계정당 1개라 첫 펫(default-pet)만 동기화한다.
+  /// 두 번째 펫(pet-2)은 로컬 전용 — 서버 펫을 덮어써 유실시키지 않기 위함.
   Future<void> _syncToServer(Pet pet) async {
+    if (petId != kDefaultPetId) return;
     try {
       await syncPetUseCase.remoteRepository?.savePet(pet);
     } catch (e) {

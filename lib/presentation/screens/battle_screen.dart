@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/pet_provider.dart';
+import '../providers/active_pet_provider.dart';
 import '../widgets/app_design.dart';
 import '../widgets/pet_motion_thumb.dart';
 import '../widgets/pixel_motion_animation.dart';
@@ -24,7 +25,6 @@ import '../../data/datasources/battle_socket_datasource.dart';
 import '../../data/datasources/wild_encounter_datasource.dart';
 import '../../data/services/ad_service.dart';
 import '../../data/services/wild_encounter_service.dart';
-import 'home_screen.dart';
 
 /// 배틀 화면
 ///
@@ -40,6 +40,9 @@ class BattleScreen extends ConsumerStatefulWidget {
 }
 
 class _BattleScreenState extends ConsumerState<BattleScreen> {
+  /// 현재 활성 펫 ID (도감에서 전환). build가 구독하므로 전환 시 rebuild.
+  String get _activePetId => ref.read(activePetIdProvider);
+
   bool? battleResult;
   bool isLoading = false;
   int expGained = 0;
@@ -97,7 +100,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
   Future<void> _refreshWildEncounter() async {
     try {
       final pet =
-          ref.read(petNotifierProvider(HomeScreen.defaultPetId)).valueOrNull;
+          ref.read(petNotifierProvider(_activePetId)).valueOrNull;
       if (pet != null) {
         // 조우 카드 진입점에서도 스폰을 굴린다(백그라운드 미동작 기기 대비)
         await WildEncounterService().maybeSpawn(pet);
@@ -228,7 +231,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
       final isDominant = data['isDominantVictory'] as bool? ?? false;
       // 서버 expGained는 기본 경험치 — 감쇠/이벤트 배수는 로컬에서 적용
       final reward = await ref.read(applyOnlineBattleRewardUseCaseProvider)(
-        HomeScreen.defaultPetId,
+        _activePetId,
         isVictory: isVictory,
         isDominantVictory: isDominant,
         baseExp: data['expGained'] as int?,
@@ -250,7 +253,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
           isLoading = false;
         });
         ref
-            .read(petNotifierProvider(HomeScreen.defaultPetId).notifier)
+            .read(petNotifierProvider(_activePetId).notifier)
             .refresh();
       }
     };
@@ -269,7 +272,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
       // 결과 처리 후 도착한 이탈 이벤트는 무시 (이중 보상 방지)
       if (battleResult != null) return;
       final reward = await ref.read(applyOnlineBattleRewardUseCaseProvider)(
-        HomeScreen.defaultPetId,
+        _activePetId,
         isVictory: true,
         isDominantVictory: false,
       );
@@ -283,7 +286,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
         // 몰수승 보상은 위에서 applyOnlineBattleRewardUseCase가 로컬 지급 —
         // 여기서는 갱신된 펫 상태만 다시 읽는다
         ref
-            .read(petNotifierProvider(HomeScreen.defaultPetId).notifier)
+            .read(petNotifierProvider(_activePetId).notifier)
             .refresh();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('상대가 연결을 끊었습니다. 승리!')),
@@ -450,11 +453,11 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
     await AdService().showRewardedAd(
       onRewarded: () async {
         await ref.read(grantExtraBattleUseCaseProvider)(
-          HomeScreen.defaultPetId,
+          _activePetId,
           online: online,
         );
         await ref
-            .read(petNotifierProvider(HomeScreen.defaultPetId).notifier)
+            .read(petNotifierProvider(_activePetId).notifier)
             .refresh();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -485,10 +488,10 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
     try {
       // 해설용 전투 시점 컨디션 (보상 반영 전 스탯)
       final prePet =
-          ref.read(petNotifierProvider(HomeScreen.defaultPetId)).valueOrNull;
+          ref.read(petNotifierProvider(_activePetId)).valueOrNull;
       final battleUseCase = ref.read(battleWithActivityUseCaseProvider);
       final result = await battleUseCase(
-        HomeScreen.defaultPetId,
+        _activePetId,
         style: _battleStyle,
         wild: wild,
       );
@@ -549,7 +552,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
       }
 
       await ref
-          .read(petNotifierProvider(HomeScreen.defaultPetId).notifier)
+          .read(petNotifierProvider(_activePetId).notifier)
           .refresh();
 
       setState(() {
@@ -582,7 +585,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
 
     // 죽은 펫은 배틀 불가 (UseCase의 빈 결과 카드로 오해하지 않도록 사전 차단)
     final pet =
-        ref.read(petNotifierProvider(HomeScreen.defaultPetId)).valueOrNull;
+        ref.read(petNotifierProvider(_activePetId)).valueOrNull;
     if (pet != null && pet.isDead) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('펫이 깊은 잠에 빠져 있어요. 깨운 뒤 다시 시도해주세요.')),
@@ -720,7 +723,8 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final petAsync = ref.watch(petNotifierProvider(HomeScreen.defaultPetId));
+    ref.watch(activePetIdProvider); // 활성 펫 전환 시 rebuild 구독
+    final petAsync = ref.watch(petNotifierProvider(_activePetId));
 
     return Scaffold(
       backgroundColor: DesignTokens.bg,
