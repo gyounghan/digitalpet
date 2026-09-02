@@ -63,6 +63,19 @@ void main() {
       expect(r.happiness, 100);
     });
 
+    test('목표(4회) 채운 순간 누적 달성 +1 (부엉이 각성 축)', () async {
+      final repo = _FakePetRepository()..setPet(_pet(todayFocusCount: 3));
+      final r = await FocusSessionUseCase(repo)('p');
+      expect(r.todayFocusCount, 4);
+      expect(r.focusAchievedCount, 1);
+    });
+
+    test('목표 이전 세션은 누적 달성 증가 없음', () async {
+      final repo = _FakePetRepository()..setPet(_pet(todayFocusCount: 1));
+      final r = await FocusSessionUseCase(repo)('p');
+      expect(r.focusAchievedCount, 0);
+    });
+
     test('하루 목표(4회) 소진 후 no-op', () async {
       final repo = _FakePetRepository()
         ..setPet(_pet(todayFocusCount: 4, exp: 5));

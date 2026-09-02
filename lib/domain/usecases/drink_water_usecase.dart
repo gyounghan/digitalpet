@@ -32,8 +32,9 @@ class DrinkWaterUseCase {
     final updated = pet.copyWith(
       todayWaterCount: newCount,
       stamina: (pet.stamina + staminaPerCup).clamp(0, 100),
-      // 목표(8잔) 달성 순간에만 완료 보너스 EXP 1회
+      // 목표(8잔) 달성 순간에만 완료 보너스 EXP 1회 + 누적 달성(수달 각성 축)
       exp: reachedGoal ? pet.exp + completionExp : null,
+      waterAchievedCount: reachedGoal ? pet.waterAchievedCount + 1 : null,
       lastUpdated: DateTime.now().millisecondsSinceEpoch,
     );
 

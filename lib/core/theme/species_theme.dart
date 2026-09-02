@@ -181,6 +181,58 @@ class SpeciesTheme {
     spriteAccent: Color(0xFFFFE9A8),
   );
 
+  /// 곰 (bear/웅녀) - 갈색 (인내·디톡스)
+  static const SpeciesTheme bear = SpeciesTheme(
+    primary: Color(0xFF8B5E3C),
+    primaryDeep: Color(0xFF5E3D26),
+    primarySoft: Color(0xFFEBDCC9),
+    surfaceDeep: Color(0xFFE8DBC8),
+    accent: Color(0xFFC08A55),
+    glow: Color(0xFFD3AA7E),
+    gradStart: Color(0xFFFBF6EF),
+    gradEnd: Color(0xFFE9D8C2),
+    spriteAccent: Color(0xFFE8D2B0),
+  );
+
+  /// 수달 (otter) - 갈색 몸 + 물 청록 (건강·물)
+  static const SpeciesTheme otter = SpeciesTheme(
+    primary: Color(0xFF7C6551),
+    primaryDeep: Color(0xFF50412F),
+    primarySoft: Color(0xFFE6DCCB),
+    surfaceDeep: Color(0xFFDDE8E6),
+    accent: Color(0xFF6FB4B0),
+    glow: Color(0xFFA9CFCB),
+    gradStart: Color(0xFFF4F9F8),
+    gradEnd: Color(0xFFD8E6E2),
+    spriteAccent: Color(0xFFE6D8C0),
+  );
+
+  /// 부엉이 (owl/수리부엉이) - 야행 보라 + 금눈 (지혜·집중)
+  static const SpeciesTheme owl = SpeciesTheme(
+    primary: Color(0xFF5A4B6E),
+    primaryDeep: Color(0xFF362B47),
+    primarySoft: Color(0xFFE3DCEC),
+    surfaceDeep: Color(0xFFDED7EA),
+    accent: Color(0xFFC9A24A),
+    glow: Color(0xFFB59BE0),
+    gradStart: Color(0xFFF7F5FB),
+    gradEnd: Color(0xFFDED4EE),
+    spriteAccent: Color(0xFFE8D9A8),
+  );
+
+  /// 두루미 (crane/학) - 백색 몸 + 붉은 볏 (십장생·정갈)
+  static const SpeciesTheme crane = SpeciesTheme(
+    primary: Color(0xFFC9D2DC),
+    primaryDeep: Color(0xFF8A96A4),
+    primarySoft: Color(0xFFEFF2F6),
+    surfaceDeep: Color(0xFFEAEFF4),
+    accent: Color(0xFFD6432E),
+    glow: Color(0xFFE9B0A6),
+    gradStart: Color(0xFFFAFBFD),
+    gradEnd: Color(0xFFE4EAF0),
+    spriteAccent: Color(0xFFD6432E),
+  );
+
   /// 도트 스프라이트 아웃라인/눈 색 (전 종 공통)
   ///
   /// 근흑색 — 백호(청회색 몸)·흑 계열 변이처럼 어두운 몸통에서도 눈이
@@ -262,6 +314,30 @@ class SpeciesTheme {
           (Color(0xFFC08040), Color(0xFFEDD5B5)), // 적금 구렁이
           (Color(0xFF8A8A5A), Color(0xFFD5D5AC)), // 청금 구렁이
         ],
+      EvolutionType.bear => const [
+          (Color(0xFF8B5E3C), Color(0xFFE8D2B0)), // 갈색 곰
+          (Color(0xFF6E5A50), Color(0xFFCFC3B4)), // 회갈 곰
+          (Color(0xFFB08A5A), Color(0xFFE9D9BE)), // 밝은갈 곰
+          (Color(0xFF4E3B2C), Color(0xFF8A7358)), // 흑갈 곰
+        ],
+      EvolutionType.otter => const [
+          (Color(0xFF7C6551), Color(0xFFE6D8C0)), // 갈색 수달
+          (Color(0xFF5E7A76), Color(0xFFCADFDB)), // 청록 수달
+          (Color(0xFFAA8E6E), Color(0xFFE7D8C0)), // 모래 수달
+          (Color(0xFF4A4038), Color(0xFF867A6E)), // 짙은갈 수달
+        ],
+      EvolutionType.owl => const [
+          (Color(0xFF5A4B6E), Color(0xFFE8D9A8)), // 보라 부엉이
+          (Color(0xFF6E5A46), Color(0xFFDDCBA8)), // 갈색 부엉이
+          (Color(0xFF8A8290), Color(0xFFDCD6E0)), // 회 부엉이
+          (Color(0xFF3E3448), Color(0xFF7A6E88)), // 흑보라 부엉이
+        ],
+      EvolutionType.crane => const [
+          (Color(0xFFC9D2DC), Color(0xFFD6432E)), // 백색 두루미(붉은볏)
+          (Color(0xFFB6BEC8), Color(0xFFE0844A)), // 회백 두루미
+          (Color(0xFFD9CDB8), Color(0xFFD6432E)), // 재두루미
+          (Color(0xFF8A929C), Color(0xFFB03A2A)), // 청회 두루미
+        ],
       null => const [
           (Color(0xFF4A5A78), Color(0xFFDDE3EC)),
         ],
@@ -282,6 +358,10 @@ class SpeciesTheme {
       EvolutionType.haetae => haetae,
       EvolutionType.dokkaebi => dokkaebi,
       EvolutionType.hwangryong => hwangryong,
+      EvolutionType.bear => bear,
+      EvolutionType.otter => otter,
+      EvolutionType.owl => owl,
+      EvolutionType.crane => crane,
       null => defaultTheme,
     };
   }
@@ -299,6 +379,10 @@ class SpeciesTheme {
       EvolutionType.haetae => '해태',
       EvolutionType.dokkaebi => '도깨비',
       EvolutionType.hwangryong => '황룡',
+      EvolutionType.bear => '곰',
+      EvolutionType.otter => '수달',
+      EvolutionType.owl => '부엉이',
+      EvolutionType.crane => '두루미',
       null => '털뭉치',
     };
   }

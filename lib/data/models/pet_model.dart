@@ -257,6 +257,14 @@ class PetModel extends Pet {
   @override
   final int todayFocusCount;
 
+  @HiveField(61)
+  @override
+  final int waterAchievedCount;
+
+  @HiveField(62)
+  @override
+  final int focusAchievedCount;
+
   PetModel({
     required this.id,
     this.name = '펫',
@@ -307,6 +315,8 @@ class PetModel extends Pet {
     this.feedAchievedCount = 0,
     this.sleepAchievedCount = 0,
     this.exerciseAchievedCount = 0,
+    this.waterAchievedCount = 0,
+    this.focusAchievedCount = 0,
     this.lastFeedAchievedDate = '',
     this.lastSleepAchievedDate = '',
     this.lastExerciseAchievedDate = '',
@@ -369,6 +379,8 @@ class PetModel extends Pet {
          feedAchievedCount: feedAchievedCount,
          sleepAchievedCount: sleepAchievedCount,
          exerciseAchievedCount: exerciseAchievedCount,
+         waterAchievedCount: waterAchievedCount,
+         focusAchievedCount: focusAchievedCount,
          lastFeedAchievedDate: lastFeedAchievedDate,
          lastSleepAchievedDate: lastSleepAchievedDate,
          lastExerciseAchievedDate: lastExerciseAchievedDate,
@@ -445,6 +457,8 @@ class PetModel extends Pet {
       feedAchievedCount: json['feedAchievedCount'] as int? ?? 0,
       sleepAchievedCount: json['sleepAchievedCount'] as int? ?? 0,
       exerciseAchievedCount: json['exerciseAchievedCount'] as int? ?? 0,
+      waterAchievedCount: json['waterAchievedCount'] as int? ?? 0,
+      focusAchievedCount: json['focusAchievedCount'] as int? ?? 0,
       lastFeedAchievedDate: json['lastFeedAchievedDate'] as String? ?? '',
       lastSleepAchievedDate: json['lastSleepAchievedDate'] as String? ?? '',
       lastExerciseAchievedDate:
@@ -516,6 +530,8 @@ class PetModel extends Pet {
       'feedAchievedCount': feedAchievedCount,
       'sleepAchievedCount': sleepAchievedCount,
       'exerciseAchievedCount': exerciseAchievedCount,
+      'waterAchievedCount': waterAchievedCount,
+      'focusAchievedCount': focusAchievedCount,
       'lastFeedAchievedDate': lastFeedAchievedDate,
       'lastSleepAchievedDate': lastSleepAchievedDate,
       'lastExerciseAchievedDate': lastExerciseAchievedDate,
@@ -587,6 +603,8 @@ class PetModel extends Pet {
       feedAchievedCount: pet.feedAchievedCount,
       sleepAchievedCount: pet.sleepAchievedCount,
       exerciseAchievedCount: pet.exerciseAchievedCount,
+      waterAchievedCount: pet.waterAchievedCount,
+      focusAchievedCount: pet.focusAchievedCount,
       lastFeedAchievedDate: pet.lastFeedAchievedDate,
       lastSleepAchievedDate: pet.lastSleepAchievedDate,
       lastExerciseAchievedDate: pet.lastExerciseAchievedDate,
@@ -656,6 +674,8 @@ class PetModel extends Pet {
       feedAchievedCount: feedAchievedCount,
       sleepAchievedCount: sleepAchievedCount,
       exerciseAchievedCount: exerciseAchievedCount,
+      waterAchievedCount: waterAchievedCount,
+      focusAchievedCount: focusAchievedCount,
       lastFeedAchievedDate: lastFeedAchievedDate,
       lastSleepAchievedDate: lastSleepAchievedDate,
       lastExerciseAchievedDate: lastExerciseAchievedDate,
@@ -725,6 +745,8 @@ class PetModel extends Pet {
     int? feedAchievedCount,
     int? sleepAchievedCount,
     int? exerciseAchievedCount,
+    int? waterAchievedCount,
+    int? focusAchievedCount,
     String? lastFeedAchievedDate,
     String? lastSleepAchievedDate,
     String? lastExerciseAchievedDate,
@@ -791,6 +813,8 @@ class PetModel extends Pet {
       sleepAchievedCount: sleepAchievedCount ?? this.sleepAchievedCount,
       exerciseAchievedCount:
           exerciseAchievedCount ?? this.exerciseAchievedCount,
+      waterAchievedCount: waterAchievedCount ?? this.waterAchievedCount,
+      focusAchievedCount: focusAchievedCount ?? this.focusAchievedCount,
       lastFeedAchievedDate: lastFeedAchievedDate ?? this.lastFeedAchievedDate,
       lastSleepAchievedDate:
           lastSleepAchievedDate ?? this.lastSleepAchievedDate,

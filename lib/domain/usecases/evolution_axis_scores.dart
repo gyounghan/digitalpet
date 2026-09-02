@@ -96,6 +96,21 @@ class EvolutionAxisScores {
   /// 황룡: 급식·수면·운동 달성 + 연속 접속 네 지표 모두 6 이상
   static const int hwangryongBalancedThreshold = 6;
 
+  // ── 동물 영물(2차 추가) 각성 임계 — TODO 시뮬레이션으로 밸런스 튜닝 ──
+
+  /// 수달: 물마시기 목표 7회 달성 (건강 관리 몰빵)
+  static const int otterWaterThreshold = 7;
+
+  /// 부엉이: 집중 목표 7회 달성 (정진 몰빵)
+  static const int owlFocusThreshold = 7;
+
+  /// 두루미: 물·집중 각 5회 균형 (정갈한 자기관리 — 웰니스판 균형종)
+  static const int craneBalanceThreshold = 5;
+
+  /// 곰: 누적 idle 100시간 (폰 안 씀·디지털 디톡스). idle은 수동 누적이라
+  /// 최저 우선순위 catch로 두어, 다른 특화가 없는 "조용한" 육성만 각성한다.
+  static const int bearIdleHoursThreshold = 100;
+
   /// 축 지배 판정 — [axis]가 나머지 두 축 각각의 2배 이상
   static bool _dominates(int axis, int other1, int other2) {
     return axis >= other1 * 2 && axis >= other2 * 2;
@@ -104,17 +119,24 @@ class EvolutionAxisScores {
   /// 히든 종 각성 판정 — 해당 없으면 null (사신수 4분면으로)
   ///
   /// 여러 조건 동시 충족 시 달성 난도가 높은 순서로 우선한다:
-  /// 황룡(4축 동시) → 삼족오 → 구미호 → 달토끼 → 도깨비 → 해태
+  /// 황룡(4축) → 두루미(물+집중 균형) → 삼족오 → 구미호 → 달토끼 →
+  /// 수달(물) → 부엉이(집중) → 도깨비 → 해태 → 곰(idle catch)
   static EvolutionType? hiddenTypeFor(Pet pet) {
     final walks = pet.exerciseAchievedCount;
     final feeds = pet.feedAchievedCount;
     final sleeps = pet.sleepAchievedCount;
+    final water = pet.waterAchievedCount;
+    final focus = pet.focusAchievedCount;
 
     if (feeds >= hwangryongBalancedThreshold &&
         sleeps >= hwangryongBalancedThreshold &&
         walks >= hwangryongBalancedThreshold &&
         pet.consecutiveLoginDays >= hwangryongBalancedThreshold) {
       return EvolutionType.hwangryong;
+    }
+    // 두루미 — 물·집중 균형(웰니스). 단일 몰빵(수달/부엉이)보다 먼저 판정.
+    if (water >= craneBalanceThreshold && focus >= craneBalanceThreshold) {
+      return EvolutionType.crane;
     }
     if (walks >= samjokoWalksThreshold && _dominates(walks, feeds, sleeps)) {
       return EvolutionType.samjoko;
@@ -126,11 +148,21 @@ class EvolutionAxisScores {
         _dominates(sleeps, walks, feeds)) {
       return EvolutionType.moonrabbit;
     }
+    if (water >= otterWaterThreshold) {
+      return EvolutionType.otter;
+    }
+    if (focus >= owlFocusThreshold) {
+      return EvolutionType.owl;
+    }
     if (pet.battleVictoryCount >= dokkaebiWinsThreshold) {
       return EvolutionType.dokkaebi;
     }
     if (pet.consecutiveLoginDays >= haetaeLoginDaysThreshold) {
       return EvolutionType.haetae;
+    }
+    // 곰 — idle(폰 안 씀) 최저 우선순위: 다른 특화가 없는 조용한 육성만 각성
+    if (pet.totalIdleHours >= bearIdleHoursThreshold) {
+      return EvolutionType.bear;
     }
     return null;
   }

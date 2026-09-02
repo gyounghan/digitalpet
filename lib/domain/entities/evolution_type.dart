@@ -33,6 +33,20 @@ enum EvolutionType {
 
   /// 황룡 계열 - 네 지표 균형 (오방의 중앙, 완벽 육성)
   hwangryong,
+
+  // ── 동물 영물 (2차 추가) — 능동 습관/디톡스 축으로 각성 ──
+
+  /// 곰 계열 (웅녀) - idle(폰 안 씀) 극단 (100일 인내·디지털 디톡스)
+  bear,
+
+  /// 수달 계열 - 물마시기 극단 (물의 장난꾸러기 정령·건강)
+  otter,
+
+  /// 부엉이 계열 (수리부엉이) - 집중모드 극단 (지혜·야행 정진)
+  owl,
+
+  /// 두루미 계열 (학) - 물+집중 균형 (십장생·정갈한 자기관리)
+  crane,
 }
 
 /// 종 분류 편의 확장
@@ -44,5 +58,9 @@ extension EvolutionTypeX on EvolutionType {
       this == EvolutionType.moonrabbit ||
       this == EvolutionType.haetae ||
       this == EvolutionType.dokkaebi ||
-      this == EvolutionType.hwangryong;
+      this == EvolutionType.hwangryong ||
+      this == EvolutionType.bear ||
+      this == EvolutionType.otter ||
+      this == EvolutionType.owl ||
+      this == EvolutionType.crane;
 }

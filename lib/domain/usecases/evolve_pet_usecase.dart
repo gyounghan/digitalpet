@@ -207,6 +207,20 @@ class EvolvePetUseCase {
             pet.feedAchievedCount >= _supFree &&
             pet.consecutiveLoginDays >= _supRegular;
         break;
+      // 동물 영물 — 각성시킨 그 축만 (곰은 idle, 두루미는 물+집중 균형)
+      case EvolutionType.otter:
+        superior = pet.waterAchievedCount >= _supWater;
+        break;
+      case EvolutionType.owl:
+        superior = pet.focusAchievedCount >= _supFocus;
+        break;
+      case EvolutionType.bear:
+        superior = pet.totalIdleHours >= _supIdle;
+        break;
+      case EvolutionType.crane:
+        superior = pet.waterAchievedCount >= _supCraneBalance &&
+            pet.focusAchievedCount >= _supCraneBalance;
+        break;
       default:
         return 'normal';
     }
@@ -234,6 +248,23 @@ class EvolvePetUseCase {
   /// 도깨비 배틀 축 임계 (superior/mythical)
   static const int _supBattle = 15;
   static const int _mythBattle = 30;
+
+  // ── 동물 영물(2차 추가) 등급 임계 — TODO 시뮬레이션으로 밸런스 튜닝 ──
+  /// 수달 물마시기 축 (superior/mythical)
+  static const int _supWater = 8;
+  static const int _mythWater = 20;
+
+  /// 부엉이 집중 축 (superior/mythical)
+  static const int _supFocus = 8;
+  static const int _mythFocus = 20;
+
+  /// 곰 idle(디톡스) 축 — 수동 누적이라 높게 (superior/mythical)
+  static const int _supIdle = 200;
+  static const int _mythIdle = 500;
+
+  /// 두루미 물+집중 균형 축 (superior/mythical)
+  static const int _supCraneBalance = 8;
+  static const int _mythCraneBalance = 20;
 
   bool _meetsStage4Condition(Pet pet) {
     switch (pet.evolutionType) {
@@ -265,6 +296,16 @@ class EvolvePetUseCase {
             pet.sleepAchievedCount >= _mythCalm &&
             pet.feedAchievedCount >= _mythFree &&
             pet.consecutiveLoginDays >= _mythRegular;
+      // 동물 영물 — superior와 동일 축, 더 높은 임계
+      case EvolutionType.otter:
+        return pet.waterAchievedCount >= _mythWater;
+      case EvolutionType.owl:
+        return pet.focusAchievedCount >= _mythFocus;
+      case EvolutionType.bear:
+        return pet.totalIdleHours >= _mythIdle;
+      case EvolutionType.crane:
+        return pet.waterAchievedCount >= _mythCraneBalance &&
+            pet.focusAchievedCount >= _mythCraneBalance;
       default:
         return false;
     }

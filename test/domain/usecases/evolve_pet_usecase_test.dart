@@ -48,6 +48,8 @@ Pet _createPet({
   int sleepAchievedCount = 0,
   int feedAchievedCount = 0,
   int exerciseAchievedCount = 0,
+  int waterAchievedCount = 0,
+  int focusAchievedCount = 0,
   int todayAlternativeFeedCount = 0,
 }) {
   final now = DateTime.now().millisecondsSinceEpoch;
@@ -74,6 +76,8 @@ Pet _createPet({
     sleepAchievedCount: sleepAchievedCount,
     feedAchievedCount: feedAchievedCount,
     exerciseAchievedCount: exerciseAchievedCount,
+    waterAchievedCount: waterAchievedCount,
+    focusAchievedCount: focusAchievedCount,
     todayAlternativeFeedCount: todayAlternativeFeedCount,
   );
 }
@@ -341,6 +345,54 @@ void main() {
       final s4 = await useCase('test-pet');
       expect(s4.evolutionStage, 4);
       expect(s4.evolutionGrade, 'mythical');
+    });
+
+    test('수달 각성 + 성장 라인 — 물마시기로 superior/mythical', () async {
+      // Lv5 물 7회 → 수달 각성
+      repository.setPet(_createPet(level: 5, waterAchievedCount: 7));
+      final s2 = await useCase('test-pet');
+      expect(s2.evolutionType, EvolutionType.otter);
+
+      // Lv10 물 8회 → superior
+      repository.setPet(_createPet(
+        level: 10,
+        evolutionStage: 2,
+        evolutionType: EvolutionType.otter,
+        waterAchievedCount: 8,
+      ));
+      final s3 = await useCase('test-pet');
+      expect(s3.evolutionGrade, 'superior');
+
+      // Lv15 물 20회 → mythical
+      repository.setPet(_createPet(
+        level: 15,
+        evolutionStage: 3,
+        evolutionGrade: 'superior',
+        evolutionType: EvolutionType.otter,
+        waterAchievedCount: 20,
+      ));
+      final s4 = await useCase('test-pet');
+      expect(s4.evolutionStage, 4);
+      expect(s4.evolutionGrade, 'mythical');
+    });
+
+    test('두루미 각성 + 성장 라인 — 물+집중 균형으로 superior', () async {
+      // Lv5 물·집중 각 5 → 두루미 각성
+      repository.setPet(_createPet(
+          level: 5, waterAchievedCount: 5, focusAchievedCount: 5));
+      final s2 = await useCase('test-pet');
+      expect(s2.evolutionType, EvolutionType.crane);
+
+      // Lv10 물·집중 각 8 → superior
+      repository.setPet(_createPet(
+        level: 10,
+        evolutionStage: 2,
+        evolutionType: EvolutionType.crane,
+        waterAchievedCount: 8,
+        focusAchievedCount: 8,
+      ));
+      final s3 = await useCase('test-pet');
+      expect(s3.evolutionGrade, 'superior');
     });
 
     test('동시 충족 시 우선순위 — 삼족오 > 해태', () async {

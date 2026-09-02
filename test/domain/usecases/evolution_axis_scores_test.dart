@@ -31,9 +31,13 @@ Pet _pet({
   int totalSteps = 0,
   int totalExerciseMinutes = 0,
   int sleepAchievedCount = 0,
+  int exerciseAchievedCount = 0,
   int totalIdleHours = 0,
   int consecutiveLoginDays = 0,
   int feedAchievedCount = 0,
+  int waterAchievedCount = 0,
+  int focusAchievedCount = 0,
+  int battleVictoryCount = 0,
   int level = 5,
   int evolutionStage = 1,
 }) {
@@ -51,9 +55,13 @@ Pet _pet({
     totalSteps: totalSteps,
     totalExerciseMinutes: totalExerciseMinutes,
     sleepAchievedCount: sleepAchievedCount,
+    exerciseAchievedCount: exerciseAchievedCount,
     totalIdleHours: totalIdleHours,
     consecutiveLoginDays: consecutiveLoginDays,
     feedAchievedCount: feedAchievedCount,
+    waterAchievedCount: waterAchievedCount,
+    focusAchievedCount: focusAchievedCount,
+    battleVictoryCount: battleVictoryCount,
   );
 }
 
@@ -152,6 +160,53 @@ void main() {
       expect(evolved.evolutionStage, 2);
       expect(evolved.evolutionType, EvolutionAxisScores.fromPet(pet).resultType);
       expect(evolved.evolutionType, EvolutionType.bird);
+    });
+  });
+
+  group('hiddenTypeFor 동물 영물(2차 추가) 각성', () {
+    test('물마시기 7회 몰빵 → 수달', () {
+      expect(
+        EvolutionAxisScores.hiddenTypeFor(_pet(waterAchievedCount: 7)),
+        EvolutionType.otter,
+      );
+    });
+
+    test('집중 7회 몰빵 → 부엉이', () {
+      expect(
+        EvolutionAxisScores.hiddenTypeFor(_pet(focusAchievedCount: 7)),
+        EvolutionType.owl,
+      );
+    });
+
+    test('물·집중 각 5회 균형 → 두루미 (단일 몰빵보다 우선)', () {
+      expect(
+        EvolutionAxisScores.hiddenTypeFor(
+            _pet(waterAchievedCount: 8, focusAchievedCount: 6)),
+        EvolutionType.crane,
+      );
+    });
+
+    test('idle 100시간 + 다른 특화 없음 → 곰', () {
+      expect(
+        EvolutionAxisScores.hiddenTypeFor(_pet(totalIdleHours: 100)),
+        EvolutionType.bear,
+      );
+    });
+
+    test('곰(idle)은 최저 우선순위 — 걸음 몰빵이 있으면 삼족오', () {
+      expect(
+        EvolutionAxisScores.hiddenTypeFor(
+            _pet(exerciseAchievedCount: 9, totalIdleHours: 200)),
+        EvolutionType.samjoko,
+      );
+    });
+
+    test('물·집중·idle 모두 미달이면 각성 없음(null → 사신수)', () {
+      expect(
+        EvolutionAxisScores.hiddenTypeFor(
+            _pet(waterAchievedCount: 4, focusAchievedCount: 4, totalIdleHours: 50)),
+        isNull,
+      );
     });
   });
 }

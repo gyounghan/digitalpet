@@ -12,7 +12,8 @@ import 'apply_battle_reward.dart';
 /// 상성 테이블
 /// 사신수: bird→snake→turtle→tiger→bird
 /// 설화 영물(6종 순환): samjoko→gumiho→moonrabbit→haetae→dokkaebi→hwangryong→samjoko
-/// (두 순환은 서로 중립 — 그룹 간 상성 없음)
+/// 동물 영물(4종 순환): bear→otter→owl→crane→bear
+/// (세 순환은 서로 중립 — 그룹 간 상성 없음)
 const Map<EvolutionType, EvolutionType> _affinityAdvantage = {
   EvolutionType.bird: EvolutionType.snake,
   EvolutionType.snake: EvolutionType.turtle,
@@ -24,6 +25,10 @@ const Map<EvolutionType, EvolutionType> _affinityAdvantage = {
   EvolutionType.haetae: EvolutionType.dokkaebi,
   EvolutionType.dokkaebi: EvolutionType.hwangryong,
   EvolutionType.hwangryong: EvolutionType.samjoko,
+  EvolutionType.bear: EvolutionType.otter,
+  EvolutionType.otter: EvolutionType.owl,
+  EvolutionType.owl: EvolutionType.crane,
+  EvolutionType.crane: EvolutionType.bear,
 };
 
 /// 종별 스킬 정의
@@ -469,6 +474,10 @@ class BattleWithActivityUseCase {
       case EvolutionType.haetae: attackBonus = 2; defenseBonus = 3; hpBonus = 5; break;
       case EvolutionType.dokkaebi: attackBonus = 3; hpBonus = 5; break;
       case EvolutionType.hwangryong: attackBonus = 2; defenseBonus = 2; hpBonus = 5; break;
+      case EvolutionType.bear: defenseBonus = 3; hpBonus = 8; attackBonus = 1; break;
+      case EvolutionType.otter: attackBonus = 2; defenseBonus = 1; hpBonus = 6; break;
+      case EvolutionType.owl: attackBonus = 3; defenseBonus = 1; hpBonus = 5; break;
+      case EvolutionType.crane: attackBonus = 2; defenseBonus = 2; hpBonus = 6; break;
       case null: break; // 털뭉치 — 종 보너스 없음
     }
 

@@ -57,12 +57,20 @@ void main() {
       expect(r.stamina, 100);
     });
 
-    test('목표(8잔) 달성 순간에만 완료 보너스 EXP', () async {
+    test('목표(8잔) 달성 순간에만 완료 보너스 EXP + 누적 달성 +1', () async {
       final repo = _FakePetRepository()
         ..setPet(_pet(todayWaterCount: 7, exp: 0));
       final r = await DrinkWaterUseCase(repo)('p');
       expect(r.todayWaterCount, 8);
       expect(r.exp, DrinkWaterUseCase.completionExp);
+      expect(r.waterAchievedCount, 1, reason: '수달 각성 축 누적 카운터');
+    });
+
+    test('목표 이전 잔은 누적 달성 증가 없음', () async {
+      final repo = _FakePetRepository()
+        ..setPet(_pet(todayWaterCount: 3));
+      final r = await DrinkWaterUseCase(repo)('p');
+      expect(r.waterAchievedCount, 0);
     });
 
     test('목표 이전 잔은 EXP 없음', () async {

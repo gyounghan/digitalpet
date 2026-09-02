@@ -208,6 +208,14 @@ class Pet {
   /// 일일 운동 목표를 달성한 날 수 (감소 없음)
   final int exerciseAchievedCount;
 
+  /// 물마시기 목표 누적 달성 횟수
+  /// 일일 수분 목표(waterGoalCount)를 채운 날 수 (감소 없음) — 수달 각성 축
+  final int waterAchievedCount;
+
+  /// 집중 목표 누적 달성 횟수
+  /// 일일 집중 목표(focusGoalCount)를 채운 날 수 (감소 없음) — 부엉이 각성 축
+  final int focusAchievedCount;
+
   /// 포만감 목표 마지막 달성 날짜 (YYYY-MM-DD)
   /// 홈 카드의 "오늘 달성" 표시용 (지급 게이트는 todayXxxAchievedCount가 담당)
   final String lastFeedAchievedDate;
@@ -330,6 +338,8 @@ class Pet {
     this.feedAchievedCount = 0,
     this.sleepAchievedCount = 0,
     this.exerciseAchievedCount = 0,
+    this.waterAchievedCount = 0,
+    this.focusAchievedCount = 0,
     this.lastFeedAchievedDate = '',
     this.lastSleepAchievedDate = '',
     this.lastExerciseAchievedDate = '',
@@ -396,6 +406,8 @@ class Pet {
     int? feedAchievedCount,
     int? sleepAchievedCount,
     int? exerciseAchievedCount,
+    int? waterAchievedCount,
+    int? focusAchievedCount,
     String? lastFeedAchievedDate,
     String? lastSleepAchievedDate,
     String? lastExerciseAchievedDate,
@@ -461,6 +473,8 @@ class Pet {
       feedAchievedCount: feedAchievedCount ?? this.feedAchievedCount,
       sleepAchievedCount: sleepAchievedCount ?? this.sleepAchievedCount,
       exerciseAchievedCount: exerciseAchievedCount ?? this.exerciseAchievedCount,
+      waterAchievedCount: waterAchievedCount ?? this.waterAchievedCount,
+      focusAchievedCount: focusAchievedCount ?? this.focusAchievedCount,
       lastFeedAchievedDate: lastFeedAchievedDate ?? this.lastFeedAchievedDate,
       lastSleepAchievedDate: lastSleepAchievedDate ?? this.lastSleepAchievedDate,
       lastExerciseAchievedDate:
@@ -535,6 +549,14 @@ class Pet {
         return const [3, 0, 5];
       case EvolutionType.hwangryong:
         return const [2, 2, 5];
+      case EvolutionType.bear:
+        return const [1, 3, 8]; // 곰 — 탱커(방어·체력)
+      case EvolutionType.otter:
+        return const [2, 1, 6]; // 수달 — 민첩 균형
+      case EvolutionType.owl:
+        return const [3, 1, 5]; // 부엉이 — 정확한 딜러
+      case EvolutionType.crane:
+        return const [2, 2, 6]; // 두루미 — 우아한 균형
       case null:
         return const [0, 0, 0];
     }
@@ -815,6 +837,8 @@ class Pet {
       feedAchievedCount: feedAchievedCount,
       sleepAchievedCount: sleepAchievedCount,
       exerciseAchievedCount: exerciseAchievedCount,
+      waterAchievedCount: waterAchievedCount,
+      focusAchievedCount: focusAchievedCount,
       lastFeedAchievedDate: lastFeedAchievedDate,
       lastSleepAchievedDate: lastSleepAchievedDate,
       lastExerciseAchievedDate: lastExerciseAchievedDate,
@@ -881,6 +905,8 @@ class Pet {
       feedAchievedCount: feedAchievedCount,
       sleepAchievedCount: sleepAchievedCount,
       exerciseAchievedCount: exerciseAchievedCount,
+      waterAchievedCount: waterAchievedCount,
+      focusAchievedCount: focusAchievedCount,
       lastFeedAchievedDate: lastFeedAchievedDate,
       lastSleepAchievedDate: lastSleepAchievedDate,
       lastExerciseAchievedDate: lastExerciseAchievedDate,
@@ -941,6 +967,8 @@ class Pet {
       feedAchievedCount: feedAchievedCount,
       sleepAchievedCount: sleepAchievedCount,
       exerciseAchievedCount: exerciseAchievedCount,
+      waterAchievedCount: waterAchievedCount,
+      focusAchievedCount: focusAchievedCount,
       lastFeedAchievedDate: lastFeedAchievedDate,
       lastSleepAchievedDate: lastSleepAchievedDate,
       lastExerciseAchievedDate: lastExerciseAchievedDate,

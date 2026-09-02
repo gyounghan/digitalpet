@@ -31,10 +31,16 @@ class FocusSessionUseCase {
     }
     if (pet.isDead || !pet.canFocus) return pet;
 
+    final newFocusCount = pet.todayFocusCount + 1;
+    // 일일 집중 목표(focusGoalCount)를 채운 순간 누적 달성 +1 (부엉이 각성 축)
+    final reachedGoal = newFocusCount == Pet.focusGoalCount;
+
     final updated = pet.copyWith(
-      todayFocusCount: pet.todayFocusCount + 1,
+      todayFocusCount: newFocusCount,
       exp: pet.exp + sessionExp,
       happiness: (pet.happiness + happinessReward).clamp(0, 100),
+      focusAchievedCount:
+          reachedGoal ? pet.focusAchievedCount + 1 : null,
       lastUpdated: DateTime.now().millisecondsSinceEpoch,
     );
 

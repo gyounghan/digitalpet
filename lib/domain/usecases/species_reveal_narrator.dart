@@ -112,6 +112,14 @@ class SpeciesRevealNarrator {
         return '싸움도 장난처럼 즐기는 개구쟁이예요';
       case EvolutionType.hwangryong:
         return '무엇 하나 빠짐없는 오방의 중심이에요';
+      case EvolutionType.bear:
+        return '느긋하게 쉬며 내공을 쌓는 인내의 친구예요';
+      case EvolutionType.otter:
+        return '물과 노는 걸 좋아하는 장난꾸러기 정령이에요';
+      case EvolutionType.owl:
+        return '밤에 더 또렷해지는 집중의 지혜자예요';
+      case EvolutionType.crane:
+        return '몸과 마음을 정갈히 가꾸는 균형의 선비예요';
     }
   }
 
@@ -138,6 +146,14 @@ class SpeciesRevealNarrator {
         return '도깨비';
       case EvolutionType.hwangryong:
         return '황룡';
+      case EvolutionType.bear:
+        return '곰';
+      case EvolutionType.otter:
+        return '수달';
+      case EvolutionType.owl:
+        return '부엉이';
+      case EvolutionType.crane:
+        return '두루미';
     }
   }
 
