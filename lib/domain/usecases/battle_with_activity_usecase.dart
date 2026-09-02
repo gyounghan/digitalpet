@@ -133,6 +133,41 @@ const Map<EvolutionType, List<BattleSkill>> _skillSets = {
         damageReduction: 0.3,
         reductionDuration: 1),
   ],
+  // 동물 영물(2차) — 종 정체성별 고유기 (기존 아키타입에 맞춰 밸런스 정렬)
+  EvolutionType.bear: [
+    BattleSkill(name: '내려치기'),
+    // 버티기 — 곰(탱커): 다음 1회 피격 50% 경감 (turtle 방어자세 계열)
+    BattleSkill(
+        name: '버티기',
+        type: SkillType.special,
+        damageReduction: 0.5,
+        reductionDuration: 1),
+  ],
+  EvolutionType.otter: [
+    BattleSkill(name: '물장구'),
+    // 물대포 — 수달(버스트): 강타 (bird 급강하 계열)
+    BattleSkill(name: '물대포', type: SkillType.special, damageMultiplier: 1.25),
+  ],
+  EvolutionType.owl: [
+    BattleSkill(name: '발톱치기'),
+    // 밤바람 — 부엉이(디버프): 소폭 강타 + 공격 약화 (gumiho 홀리기 계열)
+    BattleSkill(
+        name: '밤바람',
+        type: SkillType.special,
+        damageMultiplier: 1.05,
+        attackDebuff: 2,
+        debuffDuration: 2),
+  ],
+  EvolutionType.crane: [
+    BattleSkill(name: '부리쪼기'),
+    // 회오리 — 두루미(방깎): 강타 + 방어 약화 (haetae 심판 계열)
+    BattleSkill(
+        name: '회오리',
+        type: SkillType.special,
+        damageMultiplier: 1.1,
+        defenseDebuff: 3,
+        debuffDuration: 2),
+  ],
 };
 
 const List<BattleSkill> _defaultSkills = [

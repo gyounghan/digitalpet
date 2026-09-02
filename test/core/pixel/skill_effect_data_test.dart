@@ -78,10 +78,39 @@ void main() {
       expect(skillEffectForSkillName('없는스킬'), isNull);
     });
 
-    test('방어자세만 자기 대상 이펙트', () {
-      expect(isSelfSkillEffect('방어자세'), isTrue);
-      expect(isSelfSkillEffect('쪼기'), isFalse);
-      expect(isSelfSkillEffect('포효'), isFalse);
+    test('자기 대상(버프) 이펙트 — 4종', () {
+      for (final s in ['방어자세', '보름달', '여의주', '버티기']) {
+        expect(isSelfSkillEffect(s), isTrue, reason: s);
+      }
+      for (final s in ['쪼기', '포효', '물대포', '회오리']) {
+        expect(isSelfSkillEffect(s), isFalse, reason: s);
+      }
+    });
+
+    test('추가 이펙트 7종이 등록돼 있다', () {
+      for (final key in ['bite', 'slam', 'fire', 'water', 'gust', 'moon', 'charm']) {
+        expect(skillEffectSprites[key], isNotNull, reason: key);
+      }
+    });
+
+    test('동물 영물(2차) 스킬이 이펙트로 매핑된다', () {
+      const animalSkills = {
+        '내려치기': 'slam', '버티기': 'guard', // 곰
+        '물장구': 'water', '물대포': 'water', // 수달
+        '발톱치기': 'slash', '밤바람': 'gust', // 부엉이
+        '부리쪼기': 'strike', '회오리': 'gust', // 두루미
+      };
+      animalSkills.forEach((name, effect) {
+        expect(skillNameToEffect[name], effect, reason: name);
+        expect(skillEffectForSkillName(name), isNotNull, reason: name);
+      });
+    });
+
+    test('돌려쓰기 축소 — strike 공유 스킬이 3개 이하', () {
+      final strikeCount =
+          skillNameToEffect.values.where((e) => e == 'strike').length;
+      expect(strikeCount, lessThanOrEqualTo(3),
+          reason: '기존 8개에서 대폭 축소');
     });
   });
 }

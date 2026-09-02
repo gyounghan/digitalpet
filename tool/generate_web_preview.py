@@ -20,6 +20,7 @@ import re
 JSON_PATH = os.path.join("android", "app", "src", "main", "assets",
                          "pet_motion_data.json")
 PALETTE_PATH = os.path.join("lib", "core", "pixel", "hidden_palette.dart")
+EFFECT_PATH = os.path.join("lib", "core", "pixel", "skill_effect_data.dart")
 OUT_DIR = "web_preview"
 OUT_PATH = os.path.join(OUT_DIR, "index.html")
 
@@ -78,10 +79,39 @@ def build_palette_map(sprites, hidden):
     return out
 
 
+def parse_skill_effects():
+    """skill_effect_data.dart에서 이펙트 아트·스킬 매핑을 파싱한다.
+
+    반환: (effects{키:[[20행]×3]}, skillsByEffect{키:[스킬…]})
+    """
+    text = open(EFFECT_PATH, encoding="utf-8").read()
+
+    # 1) _xxxArt 상수 → 60행(3프레임×20)
+    arts = {}
+    for m in re.finditer(r"const List<List<String>> (_\w+Art) = \[(.*?)\];",
+                         text, re.S):
+        rows = re.findall(r"'([.#o+]*)'", m.group(2))
+        if len(rows) == 60:
+            arts[m.group(1)] = [rows[i * 20:(i + 1) * 20] for i in range(3)]
+
+    # 2) skillEffectSprites: '키': _parseFrames(_xxxArt)
+    key_to_art = dict(re.findall(
+        r"'(\w+)':\s*_parseFrames\((_\w+Art)\)", text))
+    effects = {key: arts[art] for key, art in key_to_art.items() if art in arts}
+
+    # 3) skillNameToEffect: '스킬': '키'  (한글 스킬명)
+    skill_map = dict(re.findall(r"'([가-힣]+)':\s*'(\w+)'", text))
+    skills_by_effect = {}
+    for skill, key in skill_map.items():
+        skills_by_effect.setdefault(key, []).append(skill)
+    return effects, skills_by_effect
+
+
 def main():
     data = json.load(open(JSON_PATH, encoding="utf-8"))
     hidden = parse_hidden_palettes()
     palettes = build_palette_map(data, hidden)
+    effects, skills_by_effect = parse_skill_effects()
 
     # 종 정렬: 신규 동물 먼저, 그다음 나머지
     prefixes = []
@@ -99,6 +129,8 @@ def main():
         "labels": LABELS,
         "order": order,
         "newSpecies": NEW_SPECIES,
+        "effects": effects,
+        "effectSkills": skills_by_effect,
     }
 
     os.makedirs(OUT_DIR, exist_ok=True)
@@ -166,6 +198,10 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
   </select>
 </div>
 <div class="grid" id="grid"></div>
+
+<h1 style="margin-top:28px">스킬 이펙트 <span class="badge" id="fxcount"></span></h1>
+<div class="sub">공격 이펙트를 종별 스킬에 맞게 다양화했습니다. 색은 시전 종 테마색으로 입혀지며, 여기선 대표색으로 표시합니다.</div>
+<div class="grid" id="fxgrid"></div>
 
 <script>
 const DATA = __DATA__;
@@ -273,8 +309,53 @@ function restartLoop(){
   timer = setInterval(() => { frame++; renderAll(); }, speed);
 }
 
+// ── 스킬 이펙트 섹션 ──
+const FX_COLORS = { '#':'#3A2A22', 'o':'#E0703A', '+':'#FFD060' };
+const FX_SCALE = 6;
+let fxCanvases = [];
+function drawEffect(canvas, key){
+  const frames = DATA.effects[key];
+  const f = frames[frame % frames.length];
+  const size = 20;
+  canvas.width = size*FX_SCALE; canvas.height = size*FX_SCALE;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  for (let y=0; y<size; y++){
+    const row = f[y] || '';
+    for (let x=0; x<size; x++){
+      const c = FX_COLORS[row[x]];
+      if (c){ ctx.fillStyle=c; ctx.fillRect(x*FX_SCALE,y*FX_SCALE,FX_SCALE,FX_SCALE); }
+    }
+  }
+}
+function buildFxGrid(){
+  const grid = document.getElementById('fxgrid');
+  grid.innerHTML=''; fxCanvases=[];
+  const keys = Object.keys(DATA.effects);
+  document.getElementById('fxcount').textContent = keys.length+'종';
+  const fxLabel = {strike:'타격',slash:'베기',dive:'급강하',bind:'속박',roar:'포효',
+    guard:'방어',bite:'물기',slam:'강타',fire:'도깨비불',water:'물',gust:'바람',
+    moon:'보름달',charm:'매혹'};
+  for (const key of keys){
+    const cell = document.createElement('div');
+    cell.className='cell';
+    const cv = document.createElement('canvas');
+    const skills = (DATA.effectSkills[key]||[]).join(' · ');
+    cell.innerHTML = `<div class="cvwrap"></div>
+      <div class="name">${fxLabel[key]||key}</div>
+      <div class="stage">${skills||'—'}</div>`;
+    cell.querySelector('.cvwrap').appendChild(cv);
+    grid.appendChild(cell); fxCanvases.push([cv,key]);
+  }
+}
+function renderFx(){ for (const [cv,key] of fxCanvases) drawEffect(cv,key); }
+
+const _renderAll = renderAll;
+renderAll = function(){ _renderAll(); renderFx(); };
+
 initMotions();
 buildGrid();
+buildFxGrid();
 restartLoop();
 </script>
 </body>
