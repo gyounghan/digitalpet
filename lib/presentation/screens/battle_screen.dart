@@ -91,13 +91,16 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
     super.initState();
     // 배틀 화면 진입 시 야생 조우 스폰 시도 + 대기 조우 로드
     // (걷다가 만난 야생 펫을 배틀 탭에서 바로 발견)
-    WidgetsBinding.instance.addPostFrameCallback((_) => _refreshWildEncounter());
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _refreshWildEncounter(),
+    );
   }
 
   Future<void> _refreshWildEncounter() async {
     try {
-      final pet =
-          ref.read(petNotifierProvider(HomeScreen.defaultPetId)).valueOrNull;
+      final pet = ref
+          .read(petNotifierProvider(HomeScreen.defaultPetId))
+          .valueOrNull;
       if (pet != null) {
         // 조우 카드 진입점에서도 스폰을 굴린다(백그라운드 미동작 기기 대비)
         await WildEncounterService().maybeSpawn(pet);
@@ -170,8 +173,9 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
     final styledAtk = (pet.battleAtk * _battleStyle.attackMultiplier).round();
     final styledDef = (pet.battleDef * _battleStyle.defenseMultiplier).round();
     final maxHp = pet.battleHp;
-    final deviceId =
-        await ref.read(deviceIdDatasourceProvider).getOrCreateDeviceId();
+    final deviceId = await ref
+        .read(deviceIdDatasourceProvider)
+        .getOrCreateDeviceId();
 
     _socket = BattleSocketDatasource();
     _socket!.onQueued = () {
@@ -183,9 +187,9 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
     _socket!.onRoomError = (message) {
       if (mounted) {
         _cancelOnlineMatch();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(message)));
       }
     };
     _socket!.onMatched = (roomId, opponent) {
@@ -197,7 +201,8 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
           opponentLevel = opponent['level'] as int? ?? 1;
           _opponentType = _parseType(opponent['evolutionType'] as String?);
           // 구버전 서버는 외형 필드를 안 내려준다 — 종이 있으면 유아기로 추정
-          _opponentStage = opponent['evolutionStage'] as int? ??
+          _opponentStage =
+              opponent['evolutionStage'] as int? ??
               (_opponentType != null ? 2 : 1);
           _opponentGrade = opponent['evolutionGrade'] as String? ?? '';
           _opponentVariant = opponent['colorVariant'] as int? ?? 0;
@@ -260,9 +265,9 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
           isLoading = false;
           isMatchmaking = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('매칭 시간 초과. 다시 시도해주세요.')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('매칭 시간 초과. 다시 시도해주세요.')));
       }
     };
     _socket!.onOpponentDisconnected = () async {
@@ -285,9 +290,9 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
         ref
             .read(petNotifierProvider(HomeScreen.defaultPetId).notifier)
             .refresh();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('상대가 연결을 끊었습니다. 승리!')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('상대가 연결을 끊었습니다. 승리!')));
       }
     };
 
@@ -373,7 +378,9 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
           title: const Text(
             '초대 코드로 참가',
             style: TextStyle(
-                color: DesignTokens.ink, fontWeight: FontWeight.w800),
+              color: DesignTokens.ink,
+              fontWeight: FontWeight.w800,
+            ),
           ),
           content: TextField(
             controller: controller,
@@ -458,9 +465,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
             .refresh();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('${online ? '온라인' : 'AI'} 대전 1회가 추가됐어요!'),
-            ),
+            SnackBar(content: Text('${online ? '온라인' : 'AI'} 대전 1회가 추가됐어요!')),
           );
         }
       },
@@ -484,8 +489,9 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
 
     try {
       // 해설용 전투 시점 컨디션 (보상 반영 전 스탯)
-      final prePet =
-          ref.read(petNotifierProvider(HomeScreen.defaultPetId)).valueOrNull;
+      final prePet = ref
+          .read(petNotifierProvider(HomeScreen.defaultPetId))
+          .valueOrNull;
       final battleUseCase = ref.read(battleWithActivityUseCaseProvider);
       final result = await battleUseCase(
         HomeScreen.defaultPetId,
@@ -581,8 +587,9 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
     if (isLoading || battleResult != null) return;
 
     // 죽은 펫은 배틀 불가 (UseCase의 빈 결과 카드로 오해하지 않도록 사전 차단)
-    final pet =
-        ref.read(petNotifierProvider(HomeScreen.defaultPetId)).valueOrNull;
+    final pet = ref
+        .read(petNotifierProvider(HomeScreen.defaultPetId))
+        .valueOrNull;
     if (pet != null && pet.isDead) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('펫이 깊은 잠에 빠져 있어요. 깨운 뒤 다시 시도해주세요.')),
@@ -715,8 +722,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
   }
 
   /// 배틀 진행/결과 중인지 — 이때는 풀스크린 아레나만 보여준다
-  bool get _inArena =>
-      (isLoading && !isMatchmaking) || battleResult != null;
+  bool get _inArena => (isLoading && !isMatchmaking) || battleResult != null;
 
   @override
   Widget build(BuildContext context) {
@@ -724,15 +730,18 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
 
     return Scaffold(
       backgroundColor: DesignTokens.bg,
-      body: SafeArea(
-        child: petAsync.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => Center(
-            child: Text('오류: $e',
-                style: const TextStyle(color: DesignTokens.bad)),
+      body: AppScaffoldBackground(
+        child: SafeArea(
+          child: petAsync.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => Center(
+              child: Text(
+                '오류: $e',
+                style: const TextStyle(color: DesignTokens.bad),
+              ),
+            ),
+            data: (pet) => _inArena ? _buildBattleArena(pet) : _buildLobby(pet),
           ),
-          data: (pet) =>
-              _inArena ? _buildBattleArena(pet) : _buildLobby(pet),
         ),
       ),
     );
@@ -792,9 +801,12 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
 
     return AppCard(
       theme: theme,
-      // 단색(primary) — 그라데이션 없이 종 테마색 그대로
-      variant: AppCardVariant.deep,
-      padding: const EdgeInsets.all(16),
+      gradient: LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [theme.gradStart, DesignTokens.surface],
+      ),
+      padding: const EdgeInsets.all(14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -802,29 +814,44 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
             '내 펫',
             style: TextStyle(
               fontSize: 11.5,
-              fontWeight: FontWeight.w700,
-              color: Colors.white.withValues(alpha: 0.7),
-              letterSpacing: 0.8,
+              fontWeight: FontWeight.w800,
+              color: theme.primaryDeep,
             ),
           ),
           const SizedBox(height: 8),
           Row(
             children: [
               Container(
-                width: 80,
-                height: 80,
+                width: 112,
+                height: 104,
                 decoration: BoxDecoration(
-                  // 밝은 배경 위에 실제 테마색 도트 모션 프레임을 그린다
-                  color: Colors.white.withValues(alpha: 0.92),
-                  borderRadius: BorderRadius.circular(14),
+                  color: DesignTokens.sky.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: DesignTokens.line, width: 1),
                 ),
-                alignment: Alignment.center,
-                child: PetMotionThumb(
-                  type: pet.evolutionType,
-                  stage: pet.evolutionStage,
-                  grade: pet.evolutionGrade,
-                  variant: colorVariantFor(pet),
-                  size: 62,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Positioned(
+                      left: 20,
+                      right: 20,
+                      bottom: 18,
+                      child: Container(
+                        height: 10,
+                        decoration: BoxDecoration(
+                          color: DesignTokens.ink.withValues(alpha: 0.10),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                      ),
+                    ),
+                    PetMotionThumb(
+                      type: pet.evolutionType,
+                      stage: pet.evolutionStage,
+                      grade: pet.evolutionGrade,
+                      variant: colorVariantFor(pet),
+                      size: 86,
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(width: 14),
@@ -837,34 +864,34 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w800,
-                        color: Colors.white,
+                        color: DesignTokens.ink,
                       ),
                     ),
                     Text(
                       'Lv.${pet.level} · ${SpeciesTheme.labelFor(pet.evolutionType)}',
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: Colors.white.withValues(alpha: 0.85),
+                        color: DesignTokens.ink2,
                       ),
                     ),
-                    const SizedBox(height: 6),
-                    Row(
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
                       children: [
-                        _statBadge('HP', myHp),
-                        const SizedBox(width: 10),
-                        _statBadge('ATK', myAtk),
-                        const SizedBox(width: 10),
-                        _statBadge('DEF', myDef),
-                        const SizedBox(width: 10),
-                        // 회피율 — 오늘 걸음수 연동 (많이 걸을수록 민첩)
-                        Text(
-                          '회피 ${(BattleWithActivityUseCase.dodgeChanceForStamina(pet.stamina as int) * 100).round()}%',
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
-                          ),
+                        _statBadge('HP', myHp, theme),
+                        _statBadge('ATK', myAtk, theme),
+                        _statBadge('DEF', myDef, theme),
+                        _statBadge(
+                          '회피',
+                          (BattleWithActivityUseCase.dodgeChanceForStamina(
+                                    pet.stamina as int,
+                                  ) *
+                                  100)
+                              .round(),
+                          theme,
+                          suffix: '%',
                         ),
                       ],
                     ),
@@ -878,13 +905,26 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
     );
   }
 
-  Widget _statBadge(String label, int value) {
-    return Text(
-      '$label $value',
-      style: const TextStyle(
-        fontSize: 11,
-        fontWeight: FontWeight.w700,
-        color: Colors.white,
+  Widget _statBadge(
+    String label,
+    int value,
+    SpeciesTheme theme, {
+    String suffix = '',
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      decoration: BoxDecoration(
+        color: theme.primarySoft.withValues(alpha: 0.72),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: DesignTokens.line, width: 1),
+      ),
+      child: Text(
+        '$label $value$suffix',
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w800,
+          color: theme.primaryDeep,
+        ),
       ),
     );
   }
@@ -940,7 +980,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
         padding: const EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
           color: selected ? theme.primarySoft : DesignTokens.surfaceSoft,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(8),
           border: selected
               ? Border.all(color: theme.primary, width: 1.5)
               : Border.all(color: DesignTokens.line, width: 1),
@@ -948,9 +988,11 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon,
-                size: 18,
-                color: selected ? theme.primaryDeep : DesignTokens.ink3),
+            Icon(
+              icon,
+              size: 18,
+              color: selected ? theme.primaryDeep : DesignTokens.ink3,
+            ),
             const SizedBox(height: 4),
             Text(
               style.label,
@@ -981,7 +1023,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(color: oppTheme.primary.withValues(alpha: 0.4)),
       ),
       child: Column(
@@ -1023,7 +1065,9 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
                     const Text(
                       '한도와 무관 · 이기면 보너스 EXP',
                       style: TextStyle(
-                          fontSize: 10.5, color: DesignTokens.ink3),
+                        fontSize: 10.5,
+                        color: DesignTokens.ink3,
+                      ),
                     ),
                   ],
                 ),
@@ -1051,11 +1095,13 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
                     side: const BorderSide(color: DesignTokens.line),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-                  child: const Text('도망',
-                      style: TextStyle(fontWeight: FontWeight.w700)),
+                  child: const Text(
+                    '도망',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
                 ),
               ),
             ],
@@ -1197,11 +1243,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
             ),
           ],
           const SizedBox(height: 16),
-          _BigButton(
-            label: '취소',
-            theme: theme,
-            onTap: _cancelOnlineMatch,
-          ),
+          _BigButton(label: '취소', theme: theme, onTap: _cancelOnlineMatch),
         ],
       ),
     );
@@ -1256,10 +1298,11 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
                           flip: true,
                         ),
                         ..._panelEffectOverlay(
-                            minePanel: false,
-                            ownTheme: oppTheme,
-                            attackerTheme: myTheme,
-                            size: 120),
+                          minePanel: false,
+                          ownTheme: oppTheme,
+                          attackerTheme: myTheme,
+                          size: 120,
+                        ),
                       ],
                     ),
                   ),
@@ -1300,10 +1343,11 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
                           size: 160,
                         ),
                         ..._panelEffectOverlay(
-                            minePanel: true,
-                            ownTheme: myTheme,
-                            attackerTheme: oppTheme,
-                            size: 135),
+                          minePanel: true,
+                          ownTheme: myTheme,
+                          attackerTheme: oppTheme,
+                          size: 135,
+                        ),
                       ],
                     ),
                   ),
@@ -1396,7 +1440,9 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
     double beginDx = 0;
     double endDx = 0;
     if (_actionPhase >= 0) {
-      final actingSkill = actorIsMe ? turn.playerSkillName : turn.opponentSkillName;
+      final actingSkill = actorIsMe
+          ? turn.playerSkillName
+          : turn.opponentSkillName;
       frames = skillEffectForSkillName(actingSkill);
       if (isSelfSkillEffect(actingSkill)) {
         // 방어자세 — 시전자 자신 패널에 제자리 방패
@@ -1482,8 +1528,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
           children: [
             Expanded(
               child: AppMeter(
-                value:
-                    maxHp > 0 ? (hp / maxHp * 100).clamp(0.0, 100.0) : 0.0,
+                value: maxHp > 0 ? (hp / maxHp * 100).clamp(0.0, 100.0) : 0.0,
                 theme: theme,
                 tone: mine ? AppMeterTone.themed : AppMeterTone.bad,
                 height: 12,
@@ -1529,7 +1574,9 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
                   width: 14,
                   height: 14,
                   child: CircularProgressIndicator(
-                      strokeWidth: 2, color: theme.primary),
+                    strokeWidth: 2,
+                    color: theme.primary,
+                  ),
                 ),
                 const SizedBox(width: 10),
                 const Text(
@@ -1554,7 +1601,9 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
                       variant: AppPillVariant.solid,
                       fontSize: 10,
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 2),
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
                     ),
                     if (_affinityAdvantage || _affinityDisadvantage) ...[
                       const SizedBox(width: 6),
@@ -1566,7 +1615,9 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
                             : AppPillVariant.outline,
                         fontSize: 10,
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 2),
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
                       ),
                     ],
                   ],
@@ -1658,8 +1709,10 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
                 theme: theme,
                 variant: win ? AppPillVariant.solid : AppPillVariant.dark,
                 fontSize: 14,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 5,
+                ),
               ),
               const SizedBox(width: 10),
               Text(
@@ -1690,8 +1743,11 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.chat_bubble_outline,
-                      size: 13, color: theme.primaryDeep),
+                  Icon(
+                    Icons.chat_bubble_outline,
+                    size: 13,
+                    color: theme.primaryDeep,
+                  ),
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
@@ -1793,7 +1849,8 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
         ),
       ),
       title: history.isVictory ? '승리' : '패배',
-      subtitle: '${history.dateString} ${history.timeString} · ${history.steps}보',
+      subtitle:
+          '${history.dateString} ${history.timeString} · ${history.steps}보',
       trailing: Text(
         '+${history.expGained} EXP',
         style: TextStyle(
@@ -1842,14 +1899,14 @@ class _BigButton extends StatelessWidget {
     final fg = primary ? Colors.white : DesignTokens.ink;
     return Material(
       color: bg,
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(8),
       child: InkWell(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(8),
         onTap: onTap,
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 16),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(8),
             // primary 버튼은 글로우 없이 순수 단색 플랫으로 둔다
             border: primary
                 ? null
@@ -1937,9 +1994,10 @@ class _SkillEffectBurstState extends State<_SkillEffectBurst>
       animation: _controller,
       builder: (context, _) {
         final t = Curves.easeOut.transform(_controller.value);
-        final idx = (_controller.value * widget.frames.length)
-            .floor()
-            .clamp(0, widget.frames.length - 1);
+        final idx = (_controller.value * widget.frames.length).floor().clamp(
+          0,
+          widget.frames.length - 1,
+        );
         final dx =
             widget.slideBeginDx + (widget.slideEndDx - widget.slideBeginDx) * t;
         final opacity = slides && _controller.value > 0.7

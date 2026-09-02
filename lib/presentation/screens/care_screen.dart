@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/pet_provider.dart';
 import '../widgets/app_design.dart';
+import '../widgets/pet_motion_thumb.dart';
+import '../widgets/pixel_motion_animation.dart' show colorVariantFor;
 import '../../core/theme/species_theme.dart';
 import '../../core/constants/app_strings.dart';
 import '../../domain/entities/pet.dart';
@@ -63,11 +65,13 @@ class _CareScreenState extends ConsumerState<CareScreen> {
     final petAsync = ref.watch(petNotifierProvider(HomeScreen.defaultPetId));
     return Scaffold(
       backgroundColor: DesignTokens.bg,
-      body: SafeArea(
-        child: petAsync.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => Center(child: Text('오류: $e')),
-          data: (pet) => _buildContent(pet),
+      body: AppScaffoldBackground(
+        child: SafeArea(
+          child: petAsync.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => Center(child: Text('오류: $e')),
+            data: (pet) => _buildContent(pet),
+          ),
         ),
       ),
     );
@@ -120,21 +124,89 @@ class _CareScreenState extends ConsumerState<CareScreen> {
   Widget _buildStatusCard(Pet pet, SpeciesTheme theme) {
     return AppCard(
       theme: theme,
-      variant: AppCardVariant.flat,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      child: Column(
+      gradient: LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [theme.gradStart, DesignTokens.surface],
+      ),
+      padding: const EdgeInsets.all(14),
+      child: Row(
         children: [
-          _statusRow(Icons.restaurant, '포만감', pet.hunger, theme),
-          const SizedBox(height: 8),
-          _statusRow(Icons.favorite, '행복', pet.happiness, theme),
-          const SizedBox(height: 8),
-          _statusRow(Icons.bolt, '기력', pet.stamina, theme),
+          Container(
+            width: 118,
+            height: 122,
+            decoration: BoxDecoration(
+              color: DesignTokens.sky.withValues(alpha: 0.16),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: DesignTokens.line, width: 1),
+            ),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Positioned(
+                  left: 20,
+                  right: 20,
+                  bottom: 22,
+                  child: Container(
+                    height: 12,
+                    decoration: BoxDecoration(
+                      color: DesignTokens.ink.withValues(alpha: 0.10),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                  ),
+                ),
+                PetMotionThumb(
+                  type: pet.evolutionType,
+                  stage: pet.evolutionStage,
+                  grade: pet.evolutionGrade,
+                  variant: colorVariantFor(pet),
+                  size: 96,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${SpeciesTheme.labelFor(pet.evolutionType)} 케어',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    color: theme.primaryDeep,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  '지금 상태를 보고 돌봐주세요',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: DesignTokens.ink,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _statusRow(Icons.restaurant, '포만감', pet.hunger, theme),
+                const SizedBox(height: 8),
+                _statusRow(Icons.favorite, '행복', pet.happiness, theme),
+                const SizedBox(height: 8),
+                _statusRow(Icons.bolt, '기력', pet.stamina, theme),
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _statusRow(IconData icon, String label, int value, SpeciesTheme theme) {
+  Widget _statusRow(
+    IconData icon,
+    String label,
+    int value,
+    SpeciesTheme theme,
+  ) {
     return Row(
       children: [
         Icon(icon, size: 15, color: theme.primaryDeep),
@@ -179,10 +251,9 @@ class _CareScreenState extends ConsumerState<CareScreen> {
     final done = MissionCatalog.completedCount(pet);
     final total = MissionCatalog.all.length;
 
-    final incomplete = MissionCatalog.all
-        .where((m) => !m.isComplete(pet))
-        .toList()
-      ..sort((a, b) => b.ratio(pet).compareTo(a.ratio(pet)));
+    final incomplete =
+        MissionCatalog.all.where((m) => !m.isComplete(pet)).toList()
+          ..sort((a, b) => b.ratio(pet).compareTo(a.ratio(pet)));
     final visible = _showAllMissions
         ? MissionCatalog.all
         : incomplete.take(3).toList();
@@ -201,16 +272,18 @@ class _CareScreenState extends ConsumerState<CareScreen> {
               const Text(
                 '미션을 달성하면 그 성향의 종으로 자란다',
                 style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: DesignTokens.ink3),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: DesignTokens.ink3,
+                ),
               ),
               Text(
                 '$done/$total',
                 style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w800,
-                    color: theme.primary),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  color: theme.primary,
+                ),
               ),
             ],
           ),
@@ -224,14 +297,18 @@ class _CareScreenState extends ConsumerState<CareScreen> {
                 style: TextButton.styleFrom(
                   foregroundColor: theme.primaryDeep,
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 4),
+                    horizontal: 12,
+                    vertical: 4,
+                  ),
                   minimumSize: Size.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
                 child: Text(
                   _showAllMissions ? '접기' : '전체 보기 ($hiddenCount)',
                   style: const TextStyle(
-                      fontSize: 11.5, fontWeight: FontWeight.w700),
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
             ),
@@ -266,8 +343,7 @@ class _CareScreenState extends ConsumerState<CareScreen> {
                 ),
               ),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
                   color: theme.primarySoft,
                   borderRadius: BorderRadius.circular(999),
@@ -321,14 +397,17 @@ class _CareScreenState extends ConsumerState<CareScreen> {
     return AppListRow(
       theme: theme,
       tinted: enabled,
-      leading: Icon(Icons.self_improvement,
-          color: enabled ? theme.primaryDeep : DesignTokens.ink3, size: 20),
+      leading: Icon(
+        Icons.self_improvement,
+        color: enabled ? theme.primaryDeep : DesignTokens.ink3,
+        size: 20,
+      ),
       title: '집중 모드 (${FocusSessionUseCase.sessionMinutes}분)',
       subtitle: _focusTimer != null
           ? '집중 중... 폰을 내려놓아요'
           : done
-              ? '오늘 집중 목표 달성! 🎯 ($used/$goal)'
-              : '폰 내려놓고 집중하면 성장 · 오늘 $used/$goal회',
+          ? '오늘 집중 목표 달성! 🎯 ($used/$goal)'
+          : '폰 내려놓고 집중하면 성장 · 오늘 $used/$goal회',
       trailing: _trailingPill(enabled, theme),
       onTap: enabled ? () => _startFocusMode(ref) : null,
     );
@@ -337,10 +416,12 @@ class _CareScreenState extends ConsumerState<CareScreen> {
   void _startFocusMode(WidgetRef ref) {
     if (_focusTimer != null) return;
     setState(() {});
-    _focusEndsAt = DateTime.now()
-        .add(const Duration(minutes: FocusSessionUseCase.sessionMinutes));
-    final remainingNotifier =
-        ValueNotifier<int>(FocusSessionUseCase.sessionMinutes * 60);
+    _focusEndsAt = DateTime.now().add(
+      const Duration(minutes: FocusSessionUseCase.sessionMinutes),
+    );
+    final remainingNotifier = ValueNotifier<int>(
+      FocusSessionUseCase.sessionMinutes * 60,
+    );
 
     Future<void> completeFocus() async {
       if (Navigator.of(context, rootNavigator: true).canPop()) {
@@ -355,9 +436,11 @@ class _CareScreenState extends ConsumerState<CareScreen> {
       }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(applied
-              ? '집중 완료! 펫이 함께 성장했어요 (+${FocusSessionUseCase.sessionExp} EXP · 행복 +${FocusSessionUseCase.happinessReward})'
-              : '오늘 집중 목표를 모두 채웠어요.'),
+          content: Text(
+            applied
+                ? '집중 완료! 펫이 함께 성장했어요 (+${FocusSessionUseCase.sessionExp} EXP · 행복 +${FocusSessionUseCase.happinessReward})'
+                : '오늘 집중 목표를 모두 채웠어요.',
+          ),
         ),
       );
       remainingNotifier.dispose();
@@ -393,9 +476,9 @@ class _CareScreenState extends ConsumerState<CareScreen> {
         Navigator.of(context, rootNavigator: true).pop();
       }
       remainingNotifier.dispose();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('집중을 중단했어요. (보상 없음)')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('집중을 중단했어요. (보상 없음)')));
       setState(() {});
     }
 
@@ -414,15 +497,22 @@ class _CareScreenState extends ConsumerState<CareScreen> {
                   ValueListenableBuilder<int>(
                     valueListenable: remainingNotifier,
                     builder: (context, remaining, _) {
-                      final minutes =
-                          (remaining ~/ 60).toString().padLeft(2, '0');
-                      final seconds =
-                          (remaining % 60).toString().padLeft(2, '0');
+                      final minutes = (remaining ~/ 60).toString().padLeft(
+                        2,
+                        '0',
+                      );
+                      final seconds = (remaining % 60).toString().padLeft(
+                        2,
+                        '0',
+                      );
                       return Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.self_improvement,
-                              color: Colors.white, size: 56),
+                          const Icon(
+                            Icons.self_improvement,
+                            color: Colors.white,
+                            size: 56,
+                          ),
                           const SizedBox(height: 16),
                           const Text(
                             '집중하는 중',
@@ -436,7 +526,9 @@ class _CareScreenState extends ConsumerState<CareScreen> {
                           const Text(
                             '폰을 내려놓고 펫과 함께 몰입해요',
                             style: TextStyle(
-                                color: Colors.white70, fontSize: 13),
+                              color: Colors.white70,
+                              fontSize: 13,
+                            ),
                           ),
                           const SizedBox(height: 12),
                           Text(
@@ -458,7 +550,9 @@ class _CareScreenState extends ConsumerState<CareScreen> {
                     style: TextButton.styleFrom(
                       foregroundColor: Colors.white70,
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 8),
+                        horizontal: 20,
+                        vertical: 8,
+                      ),
                     ),
                     child: const Text(
                       '중단하기',
@@ -488,8 +582,11 @@ class _CareScreenState extends ConsumerState<CareScreen> {
     return AppListRow(
       theme: theme,
       tinted: enabled,
-      leading: Icon(Icons.local_drink,
-          color: enabled ? theme.primaryDeep : DesignTokens.ink3, size: 20),
+      leading: Icon(
+        Icons.local_drink,
+        color: enabled ? theme.primaryDeep : DesignTokens.ink3,
+        size: 20,
+      ),
       title: '물마시기',
       subtitle: done
           ? '오늘 수분 목표 달성! 💧 ($used/$goal잔)'
@@ -505,11 +602,13 @@ class _CareScreenState extends ConsumerState<CareScreen> {
               final reachedGoal = before + 1 >= goal;
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text(!applied
-                      ? '오늘 수분 목표를 이미 채웠어요'
-                      : reachedGoal
-                          ? '수분 목표 달성! 완료 보너스 +${DrinkWaterUseCase.completionExp} EXP 💧'
-                          : '꿀꺽꿀꺽 · 기력 +${DrinkWaterUseCase.staminaPerCup}'),
+                  content: Text(
+                    !applied
+                        ? '오늘 수분 목표를 이미 채웠어요'
+                        : reachedGoal
+                        ? '수분 목표 달성! 완료 보너스 +${DrinkWaterUseCase.completionExp} EXP 💧'
+                        : '꿀꺽꿀꺽 · 기력 +${DrinkWaterUseCase.staminaPerCup}',
+                  ),
                 ),
               );
             }
@@ -539,8 +638,11 @@ class _CareScreenState extends ConsumerState<CareScreen> {
     return AppListRow(
       theme: theme,
       tinted: enabled,
-      leading: Icon(Icons.local_dining,
-          color: enabled ? theme.primaryDeep : DesignTokens.ink3, size: 20),
+      leading: Icon(
+        Icons.local_dining,
+        color: enabled ? theme.primaryDeep : DesignTokens.ink3,
+        size: 20,
+      ),
       title: '간편 급식',
       subtitle: subtitle,
       trailing: _trailingPill(enabled, theme),
@@ -552,9 +654,9 @@ class _CareScreenState extends ConsumerState<CareScreen> {
               if (!mounted) return;
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text(applied
-                      ? '간편 급식 완료 · 포만감 +'
-                      : '지금은 간편 급식을 할 수 없어요'),
+                  content: Text(
+                    applied ? '간편 급식 완료 · 포만감 +' : '지금은 간편 급식을 할 수 없어요',
+                  ),
                 ),
               );
             }
@@ -570,12 +672,13 @@ class _CareScreenState extends ConsumerState<CareScreen> {
 
     return AppListRow(
       theme: theme,
-      leading: Icon(Icons.bedtime,
-          color: enabled ? theme.primaryDeep : DesignTokens.ink3, size: 20),
+      leading: Icon(
+        Icons.bedtime,
+        color: enabled ? theme.primaryDeep : DesignTokens.ink3,
+        size: 20,
+      ),
       title: '낮잠 모드 (15분)',
-      subtitle: _napTimer != null
-          ? '진행 중...'
-          : '오늘 $used/$max회 사용 · 끝나면 기력 회복',
+      subtitle: _napTimer != null ? '진행 중...' : '오늘 $used/$max회 사용 · 끝나면 기력 회복',
       trailing: _trailingPill(enabled, theme),
       onTap: enabled ? () => _startNapMode(ref) : null,
     );
@@ -589,8 +692,11 @@ class _CareScreenState extends ConsumerState<CareScreen> {
 
     return AppListRow(
       theme: theme,
-      leading: Icon(Icons.vibration,
-          color: enabled ? theme.primaryDeep : DesignTokens.ink3, size: 20),
+      leading: Icon(
+        Icons.vibration,
+        color: enabled ? theme.primaryDeep : DesignTokens.ink3,
+        size: 20,
+      ),
       title: '흔들기 보너스 (30초)',
       subtitle: _shakeTimer != null
           ? '흔드는 중...'
@@ -658,15 +764,17 @@ class _CareScreenState extends ConsumerState<CareScreen> {
           if (!mounted) return;
           final String message;
           if (applied) {
-            message = '${AppStrings.shakeBonusComplete}: $finalCount회 → '
+            message =
+                '${AppStrings.shakeBonusComplete}: $finalCount회 → '
                 '+${finalCount * ShakeStepBonusUseCase.stepsPerShake}걸음';
           } else if (finalCount <= 0) {
             message = '흔들기가 감지되지 않았어요. (횟수 차감 없음)';
           } else {
             message = '오늘 흔들기 보너스를 이미 사용했어요.';
           }
-          ScaffoldMessenger.of(context)
-              .showSnackBar(SnackBar(content: Text(message)));
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(message)));
           setState(() {});
         }
 
@@ -691,8 +799,7 @@ class _CareScreenState extends ConsumerState<CareScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.vibration,
-                        color: Colors.white, size: 56),
+                    const Icon(Icons.vibration, color: Colors.white, size: 56),
                     const SizedBox(height: 16),
                     const Text(
                       AppStrings.shakeBonusInProgress,
@@ -723,7 +830,9 @@ class _CareScreenState extends ConsumerState<CareScreen> {
                         return Text(
                           '남은 시간 $remaining초',
                           style: const TextStyle(
-                              color: Colors.white70, fontSize: 14),
+                            color: Colors.white70,
+                            fontSize: 14,
+                          ),
                         );
                       },
                     ),
@@ -756,9 +865,9 @@ class _CareScreenState extends ConsumerState<CareScreen> {
       }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(applied
-              ? '낮잠 모드 15분 완료! 기력이 회복됐어요.'
-              : '오늘 낮잠 횟수를 모두 사용했어요.'),
+          content: Text(
+            applied ? '낮잠 모드 15분 완료! 기력이 회복됐어요.' : '오늘 낮잠 횟수를 모두 사용했어요.',
+          ),
         ),
       );
       remainingNotifier.dispose();
@@ -795,9 +904,9 @@ class _CareScreenState extends ConsumerState<CareScreen> {
         Navigator.of(context, rootNavigator: true).pop();
       }
       remainingNotifier.dispose();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('낮잠 모드를 포기했어요. (보상 없음)')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('낮잠 모드를 포기했어요. (보상 없음)')));
       setState(() {});
     }
 
@@ -816,15 +925,22 @@ class _CareScreenState extends ConsumerState<CareScreen> {
                   ValueListenableBuilder<int>(
                     valueListenable: remainingNotifier,
                     builder: (context, remaining, _) {
-                      final minutes =
-                          (remaining ~/ 60).toString().padLeft(2, '0');
-                      final seconds =
-                          (remaining % 60).toString().padLeft(2, '0');
+                      final minutes = (remaining ~/ 60).toString().padLeft(
+                        2,
+                        '0',
+                      );
+                      final seconds = (remaining % 60).toString().padLeft(
+                        2,
+                        '0',
+                      );
                       return Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.bedtime,
-                              color: Colors.white, size: 56),
+                          const Icon(
+                            Icons.bedtime,
+                            color: Colors.white,
+                            size: 56,
+                          ),
                           const SizedBox(height: 16),
                           const Text(
                             AppStrings.napModeRunning,
@@ -854,7 +970,9 @@ class _CareScreenState extends ConsumerState<CareScreen> {
                     style: TextButton.styleFrom(
                       foregroundColor: Colors.white70,
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 8),
+                        horizontal: 20,
+                        vertical: 8,
+                      ),
                     ),
                     child: const Text(
                       '포기하기',
@@ -875,4 +993,3 @@ class _CareScreenState extends ConsumerState<CareScreen> {
     );
   }
 }
-

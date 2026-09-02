@@ -39,15 +39,16 @@ class _MeScreenState extends ConsumerState<MeScreen> {
   Future<void> _handleEvolve() async {
     if (_isEvolving) return;
     setState(() => _isEvolving = true);
-    final notifier =
-        ref.read(petNotifierProvider(HomeScreen.defaultPetId).notifier);
+    final notifier = ref.read(
+      petNotifierProvider(HomeScreen.defaultPetId).notifier,
+    );
     final success = await notifier.evolve();
     if (!mounted) return;
     setState(() => _isEvolving = false);
     if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('진화 성공!')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('진화 성공!')));
     }
   }
 
@@ -60,7 +61,9 @@ class _MeScreenState extends ConsumerState<MeScreen> {
         title: const Text(
           AppStrings.restartConfirmTitle,
           style: TextStyle(
-              color: DesignTokens.ink, fontWeight: FontWeight.w800),
+            color: DesignTokens.ink,
+            fontWeight: FontWeight.w800,
+          ),
         ),
         content: const Text(
           AppStrings.restartConfirmBody,
@@ -84,8 +87,9 @@ class _MeScreenState extends ConsumerState<MeScreen> {
 
     if (confirmed != true || !mounted) return;
 
-    final notifier =
-        ref.read(petNotifierProvider(HomeScreen.defaultPetId).notifier);
+    final notifier = ref.read(
+      petNotifierProvider(HomeScreen.defaultPetId).notifier,
+    );
     final messenger = ScaffoldMessenger.of(context);
 
     setState(() => _isAdLoading = true);
@@ -147,14 +151,18 @@ class _MeScreenState extends ConsumerState<MeScreen> {
     final petAsync = ref.watch(petNotifierProvider(HomeScreen.defaultPetId));
     return Scaffold(
       backgroundColor: DesignTokens.bg,
-      body: SafeArea(
-        child: petAsync.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => Center(
-            child: Text('오류: $e',
-                style: const TextStyle(color: DesignTokens.bad)),
+      body: AppScaffoldBackground(
+        child: SafeArea(
+          child: petAsync.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => Center(
+              child: Text(
+                '오류: $e',
+                style: const TextStyle(color: DesignTokens.bad),
+              ),
+            ),
+            data: (pet) => _buildContent(pet),
           ),
-          data: (pet) => _buildContent(pet),
         ),
       ),
     );
@@ -183,8 +191,9 @@ class _MeScreenState extends ConsumerState<MeScreen> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
-                    onPressed:
-                        (_isEvolving || !canEvolve) ? null : _handleEvolve,
+                    onPressed: (_isEvolving || !canEvolve)
+                        ? null
+                        : _handleEvolve,
                     icon: Icon(
                       _isEvolving ? Icons.hourglass_top : Icons.auto_awesome,
                       size: 18,
@@ -193,17 +202,18 @@ class _MeScreenState extends ConsumerState<MeScreen> {
                       _isEvolving
                           ? AppStrings.evolutionEvolving
                           : canEvolve
-                              ? AppStrings.evolutionEvolveNow
-                              : 'Lv.${_requiredLevelForStage(pet.evolutionStage)} 필요',
+                          ? AppStrings.evolutionEvolveNow
+                          : 'Lv.${_requiredLevelForStage(pet.evolutionStage)} 필요',
                     ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: theme.primaryDeep,
-                      disabledBackgroundColor:
-                          theme.primaryDeep.withValues(alpha: 0.35),
+                      disabledBackgroundColor: theme.primaryDeep.withValues(
+                        alpha: 0.35,
+                      ),
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
+                        borderRadius: BorderRadius.circular(8),
                       ),
                       elevation: 0,
                     ),
@@ -256,7 +266,9 @@ class _MeScreenState extends ConsumerState<MeScreen> {
                       Text(
                         AuthSession.email ?? '연동됨 · 펫이 서버에 저장돼요',
                         style: const TextStyle(
-                            fontSize: 11, color: DesignTokens.ink3),
+                          fontSize: 11,
+                          color: DesignTokens.ink3,
+                        ),
                       ),
                     ],
                   ),
@@ -265,8 +277,7 @@ class _MeScreenState extends ConsumerState<MeScreen> {
                   onPressed: _handleLogout,
                   child: const Text(
                     '로그아웃',
-                    style:
-                        TextStyle(fontSize: 12, color: DesignTokens.ink3),
+                    style: TextStyle(fontSize: 12, color: DesignTokens.ink3),
                   ),
                 ),
               ],
@@ -295,7 +306,7 @@ class _MeScreenState extends ConsumerState<MeScreen> {
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(8),
                       ),
                       elevation: 0,
                     ),
@@ -316,15 +327,14 @@ class _MeScreenState extends ConsumerState<MeScreen> {
                             ),
                           )
                         : const Icon(Icons.chat_bubble, size: 16),
-                    label: Text(
-                        _isKakaoLoading ? '카카오 로그인 중...' : '카카오로 시작하기'),
+                    label: Text(_isKakaoLoading ? '카카오 로그인 중...' : '카카오로 시작하기'),
                     style: ElevatedButton.styleFrom(
                       // 카카오 브랜드 가이드 — 옐로 배경 + 85% 블랙 텍스트
                       backgroundColor: const Color(0xFFFEE500),
                       foregroundColor: const Color(0xD9000000),
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(8),
                       ),
                       elevation: 0,
                     ),
@@ -353,15 +363,14 @@ class _MeScreenState extends ConsumerState<MeScreen> {
         // 카카오 플러그인 추가 후 풀 리빌드 없이 구 빌드에서 실행한 경우
         messenger.showSnackBar(
           const SnackBar(
-              content: Text('앱을 새로 빌드해야 카카오 로그인이 작동해요 (flutter run 재실행)')),
+            content: Text('앱을 새로 빌드해야 카카오 로그인이 작동해요 (flutter run 재실행)'),
+          ),
         );
         return;
       } catch (e) {
         // 콘솔 '카카오 로그인 활성화' OFF, 키 해시 미등록 등 — 원인을 그대로 노출
         if (kDebugMode) debugPrint('kakao login failed: $e');
-        messenger.showSnackBar(
-          SnackBar(content: Text('카카오 로그인 실패: $e')),
-        );
+        messenger.showSnackBar(SnackBar(content: Text('카카오 로그인 실패: $e')));
         return;
       }
       if (accessToken == null) return; // 사용자 취소 — 조용히 종료
@@ -383,12 +392,15 @@ class _MeScreenState extends ConsumerState<MeScreen> {
       if (!mounted) return;
       setState(() {});
       // 서버에 저장된 펫이 있으면 동기화로 끌어온다 (기기 변경 시나리오)
-      unawaited(ref
-          .read(petNotifierProvider(HomeScreen.defaultPetId).notifier)
-          .refresh());
+      unawaited(
+        ref
+            .read(petNotifierProvider(HomeScreen.defaultPetId).notifier)
+            .refresh(),
+      );
       messenger.showSnackBar(
         SnackBar(
-            content: Text('${AuthSession.nickname}님, 연동 완료! 펫이 서버에 저장돼요.')),
+          content: Text('${AuthSession.nickname}님, 연동 완료! 펫이 서버에 저장돼요.'),
+        ),
       );
     } finally {
       if (mounted) setState(() => _isKakaoLoading = false);
@@ -421,9 +433,9 @@ class _MeScreenState extends ConsumerState<MeScreen> {
     await AuthSession.clear();
     if (!mounted) return;
     setState(() {});
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('로그아웃했어요. 펫은 이 기기에 그대로 있어요.')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('로그아웃했어요. 펫은 이 기기에 그대로 있어요.')));
   }
 
   /// 이메일 로그인/가입 다이얼로그 — 성공 시 세션 저장 + 서버 펫 동기화
@@ -444,8 +456,10 @@ class _MeScreenState extends ConsumerState<MeScreen> {
         floatingLabelStyle: TextStyle(fontSize: 13, color: theme.primaryDeep),
         filled: true,
         fillColor: DesignTokens.surfaceSoft,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 14,
+        ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: DesignTokens.line),
@@ -545,7 +559,9 @@ class _MeScreenState extends ConsumerState<MeScreen> {
                               const Text(
                                 '펫·랭킹·전적이 서버에 저장돼요',
                                 style: TextStyle(
-                                    fontSize: 11.5, color: DesignTokens.ink3),
+                                  fontSize: 11.5,
+                                  color: DesignTokens.ink3,
+                                ),
                               ),
                             ],
                           ),
@@ -559,9 +575,10 @@ class _MeScreenState extends ConsumerState<MeScreen> {
                       keyboardType: TextInputType.emailAddress,
                       autofillHints: const [AutofillHints.email],
                       style: const TextStyle(
-                          fontSize: 14, color: DesignTokens.ink),
-                      decoration:
-                          fieldDecoration('이메일', Icons.alternate_email),
+                        fontSize: 14,
+                        color: DesignTokens.ink,
+                      ),
+                      decoration: fieldDecoration('이메일', Icons.alternate_email),
                     ),
                     const SizedBox(height: 10),
                     TextField(
@@ -571,9 +588,13 @@ class _MeScreenState extends ConsumerState<MeScreen> {
                       autofillHints: const [AutofillHints.password],
                       onSubmitted: (_) => submit(),
                       style: const TextStyle(
-                          fontSize: 14, color: DesignTokens.ink),
-                      decoration:
-                          fieldDecoration('비밀번호 (6자 이상)', Icons.lock_outline),
+                        fontSize: 14,
+                        color: DesignTokens.ink,
+                      ),
+                      decoration: fieldDecoration(
+                        '비밀번호 (6자 이상)',
+                        Icons.lock_outline,
+                      ),
                     ),
                     if (isRegisterMode) ...[
                       const SizedBox(height: 10),
@@ -581,24 +602,33 @@ class _MeScreenState extends ConsumerState<MeScreen> {
                         controller: nicknameController,
                         enabled: !isSubmitting,
                         style: const TextStyle(
-                            fontSize: 14, color: DesignTokens.ink),
+                          fontSize: 14,
+                          color: DesignTokens.ink,
+                        ),
                         decoration: fieldDecoration(
-                            '닉네임 (선택)', Icons.emoji_emotions_outlined),
+                          '닉네임 (선택)',
+                          Icons.emoji_emotions_outlined,
+                        ),
                       ),
                     ],
                     if (errorText != null) ...[
                       const SizedBox(height: 12),
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 10),
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
                         decoration: BoxDecoration(
                           color: DesignTokens.bad.withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Row(
                           children: [
-                            const Icon(Icons.error_outline,
-                                size: 15, color: DesignTokens.bad),
+                            const Icon(
+                              Icons.error_outline,
+                              size: 15,
+                              color: DesignTokens.bad,
+                            ),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
@@ -621,8 +651,9 @@ class _MeScreenState extends ConsumerState<MeScreen> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: theme.primaryDeep,
                         foregroundColor: Colors.white,
-                        disabledBackgroundColor:
-                            theme.primaryDeep.withValues(alpha: 0.5),
+                        disabledBackgroundColor: theme.primaryDeep.withValues(
+                          alpha: 0.5,
+                        ),
                         padding: const EdgeInsets.symmetric(vertical: 13),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -641,7 +672,9 @@ class _MeScreenState extends ConsumerState<MeScreen> {
                           : Text(
                               isRegisterMode ? '가입하기' : '로그인',
                               style: const TextStyle(
-                                  fontSize: 14, fontWeight: FontWeight.w800),
+                                fontSize: 14,
+                                fontWeight: FontWeight.w800,
+                              ),
                             ),
                     ),
                     const SizedBox(height: 4),
@@ -649,13 +682,11 @@ class _MeScreenState extends ConsumerState<MeScreen> {
                       onPressed: isSubmitting
                           ? null
                           : () => setDialogState(() {
-                                isRegisterMode = !isRegisterMode;
-                                errorText = null;
-                              }),
+                              isRegisterMode = !isRegisterMode;
+                              errorText = null;
+                            }),
                       child: Text(
-                        isRegisterMode
-                            ? '이미 계정이 있어요 · 로그인'
-                            : '처음이에요 · 가입하기',
+                        isRegisterMode ? '이미 계정이 있어요 · 로그인' : '처음이에요 · 가입하기',
                         style: const TextStyle(
                           fontSize: 12.5,
                           fontWeight: FontWeight.w600,
@@ -679,12 +710,15 @@ class _MeScreenState extends ConsumerState<MeScreen> {
     if (success == true && mounted) {
       setState(() {});
       // 서버에 저장된 펫이 있으면 동기화로 끌어온다 (기기 변경 시나리오)
-      unawaited(ref
-          .read(petNotifierProvider(HomeScreen.defaultPetId).notifier)
-          .refresh());
+      unawaited(
+        ref
+            .read(petNotifierProvider(HomeScreen.defaultPetId).notifier)
+            .refresh(),
+      );
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-            content: Text('${AuthSession.nickname}님, 연동 완료! 펫이 서버에 저장돼요.')),
+          content: Text('${AuthSession.nickname}님, 연동 완료! 펫이 서버에 저장돼요.'),
+        ),
       );
     }
   }
@@ -711,9 +745,7 @@ class _MeScreenState extends ConsumerState<MeScreen> {
           foregroundColor: DesignTokens.ink3,
           side: const BorderSide(color: DesignTokens.line),
           padding: const EdgeInsets.symmetric(vertical: 13),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
       ),
     );
@@ -726,9 +758,7 @@ class _MeScreenState extends ConsumerState<MeScreen> {
       child: TextButton.icon(
         onPressed: () {
           Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => const DebugPixelGalleryScreen(),
-            ),
+            MaterialPageRoute(builder: (_) => const DebugPixelGalleryScreen()),
           );
         },
         icon: const Icon(Icons.grid_on, size: 16),
@@ -744,11 +774,9 @@ class _MeScreenState extends ConsumerState<MeScreen> {
       width: double.infinity,
       child: TextButton.icon(
         onPressed: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => const DebugCheatScreen(),
-            ),
-          );
+          Navigator.of(
+            context,
+          ).push(MaterialPageRoute(builder: (_) => const DebugCheatScreen()));
         },
         icon: const Icon(Icons.tune, size: 16),
         label: const Text('치트 패널 (디버그)'),
@@ -757,7 +785,7 @@ class _MeScreenState extends ConsumerState<MeScreen> {
     );
   }
 
-  /// 상단 프로필 카드 (deep gradient)
+  /// 상단 프로필 카드
   Widget _buildProfileCard(Pet pet, SpeciesTheme theme, bool canEvolve) {
     final stage = pet.evolutionStage;
     final requiredLevel = _requiredLevelForStage(stage);
@@ -766,37 +794,53 @@ class _MeScreenState extends ConsumerState<MeScreen> {
     final evoPct = stage >= 4
         ? 100
         : requiredLevel <= 0
-            ? 0
-            : ((pet.level / requiredLevel) * 100).clamp(0, 100).round();
+        ? 0
+        : ((pet.level / requiredLevel) * 100).clamp(0, 100).round();
 
     return AppCard(
       theme: theme,
       gradient: LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
-        colors: [theme.primary, theme.primaryDeep],
+        colors: [theme.gradStart, DesignTokens.surface],
       ),
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
               Container(
-                width: 96,
-                height: 96,
+                width: 116,
+                height: 116,
                 decoration: BoxDecoration(
-                  // 밝은 배경 위에 실제 테마색 도트 모션 프레임을 그린다
-                  color: Colors.white.withValues(alpha: 0.92),
-                  borderRadius: BorderRadius.circular(18),
+                  color: DesignTokens.sky.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: DesignTokens.line, width: 1),
                 ),
-                alignment: Alignment.center,
-                child: PetMotionThumb(
-                  type: pet.evolutionType,
-                  stage: stage,
-                  grade: pet.evolutionGrade,
-                  variant: colorVariantFor(pet),
-                  size: 78,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Positioned(
+                      left: 24,
+                      right: 24,
+                      bottom: 20,
+                      child: Container(
+                        height: 12,
+                        decoration: BoxDecoration(
+                          color: DesignTokens.ink.withValues(alpha: 0.10),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                      ),
+                    ),
+                    PetMotionThumb(
+                      type: pet.evolutionType,
+                      stage: stage,
+                      grade: pet.evolutionGrade,
+                      variant: colorVariantFor(pet),
+                      size: 88,
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(width: 14),
@@ -808,9 +852,8 @@ class _MeScreenState extends ConsumerState<MeScreen> {
                       SpeciesTheme.labelFor(pet.evolutionType),
                       style: TextStyle(
                         fontSize: 11.5,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white.withValues(alpha: 0.7),
-                        letterSpacing: 0.6,
+                        fontWeight: FontWeight.w800,
+                        color: theme.primaryDeep,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -819,15 +862,15 @@ class _MeScreenState extends ConsumerState<MeScreen> {
                       style: const TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.w800,
-                        color: Colors.white,
+                        color: DesignTokens.ink,
                       ),
                     ),
                     Text(
                       '${pet.name} · Lv.${pet.level} · ${_stageLabel(stage)}',
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: Colors.white.withValues(alpha: 0.88),
+                        color: DesignTokens.ink2,
                       ),
                     ),
                   ],
@@ -841,10 +884,10 @@ class _MeScreenState extends ConsumerState<MeScreen> {
             children: [
               Text(
                 '진화율',
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 11.5,
                   fontWeight: FontWeight.w700,
-                  color: Colors.white.withValues(alpha: 0.85),
+                  color: DesignTokens.ink2,
                 ),
               ),
               const Spacer(),
@@ -855,7 +898,7 @@ class _MeScreenState extends ConsumerState<MeScreen> {
                 style: TextStyle(
                   fontSize: 11.5,
                   fontWeight: FontWeight.w700,
-                  color: Colors.white.withValues(alpha: 0.88),
+                  color: theme.primaryDeep,
                   fontFeatures: const [FontFeature.tabularFigures()],
                 ),
               ),
@@ -866,34 +909,33 @@ class _MeScreenState extends ConsumerState<MeScreen> {
             borderRadius: BorderRadius.circular(999),
             child: Container(
               height: 8,
-              color: Colors.white.withValues(alpha: 0.18),
+              color: DesignTokens.line,
               child: FractionallySizedBox(
                 alignment: Alignment.centerLeft,
                 widthFactor: (evoPct / 100).clamp(0.0, 1.0),
-                child: Container(color: Colors.white),
+                child: Container(color: theme.primary),
               ),
             ),
           ),
           if (canEvolve && stage < 4) ...[
             const SizedBox(height: 10),
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.22),
+                color: theme.primarySoft,
                 borderRadius: BorderRadius.circular(999),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: const [
-                  Icon(Icons.auto_awesome, size: 13, color: Colors.white),
+                  Icon(Icons.auto_awesome, size: 13, color: DesignTokens.gold),
                   SizedBox(width: 5),
                   Text(
                     '진화 가능!',
                     style: TextStyle(
                       fontSize: 11.5,
                       fontWeight: FontWeight.w800,
-                      color: Colors.white,
+                      color: DesignTokens.ink,
                     ),
                   ),
                 ],
@@ -963,7 +1005,8 @@ class _MeScreenState extends ConsumerState<MeScreen> {
       padding: const EdgeInsets.symmetric(vertical: 12),
       decoration: BoxDecoration(
         color: theme.primarySoft,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: DesignTokens.line, width: 1),
       ),
       child: Column(
         children: [
@@ -1051,15 +1094,32 @@ class _MeScreenState extends ConsumerState<MeScreen> {
             ],
           ),
           const SizedBox(height: 12),
-          _lifeRow(Icons.directions_run, '걸음 수',
-              _formatNumber(pet.totalSteps), '보'),
+          _lifeRow(
+            Icons.directions_run,
+            '걸음 수',
+            _formatNumber(pet.totalSteps),
+            '보',
+          ),
           // '운동(분)'은 헬스커넥트 운동 세션이 있어야만 쌓여 대부분 0으로
           // 보이는 죽은 표시라 제거 (내부적으로는 행복/진화 축에 계속 반영)
-          _lifeRow(Icons.bedtime, '수면', _formatNumber(pet.totalIdleHours), '시간'),
-          _lifeRow(Icons.emoji_events, '배틀 승리',
-              _formatNumber(pet.battleVictoryCount), '회'),
-          _lifeRow(Icons.local_fire_department, '접속 연속',
-              _formatNumber(pet.consecutiveLoginDays), '일'),
+          _lifeRow(
+            Icons.bedtime,
+            '수면',
+            _formatNumber(pet.totalIdleHours),
+            '시간',
+          ),
+          _lifeRow(
+            Icons.emoji_events,
+            '배틀 승리',
+            _formatNumber(pet.battleVictoryCount),
+            '회',
+          ),
+          _lifeRow(
+            Icons.local_fire_department,
+            '접속 연속',
+            _formatNumber(pet.consecutiveLoginDays),
+            '일',
+          ),
         ],
       ),
     );
@@ -1118,12 +1178,7 @@ class _MeScreenState extends ConsumerState<MeScreen> {
 
   /// 진화 트리
   Widget _buildEvoTreeCard(Pet pet, SpeciesTheme theme) {
-    final stages = const [
-      (1, '털뭉치'),
-      (2, '유아기'),
-      (3, '성장기'),
-      (4, '성숙기'),
-    ];
+    final stages = const [(1, '털뭉치'), (2, '유아기'), (3, '성장기'), (4, '성숙기')];
     return AppCard(
       theme: theme,
       variant: AppCardVariant.flat,
@@ -1134,12 +1189,16 @@ class _MeScreenState extends ConsumerState<MeScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               for (var i = 0; i < stages.length; i++) ...[
-                _evoTreeNode(pet.evolutionType, stages[i].$1, stages[i].$2,
-                    theme,
-                    grade: pet.evolutionGrade,
-                    variant: colorVariantFor(pet),
-                    passed: pet.evolutionStage >= stages[i].$1,
-                    current: pet.evolutionStage == stages[i].$1),
+                _evoTreeNode(
+                  pet.evolutionType,
+                  stages[i].$1,
+                  stages[i].$2,
+                  theme,
+                  grade: pet.evolutionGrade,
+                  variant: colorVariantFor(pet),
+                  passed: pet.evolutionStage >= stages[i].$1,
+                  current: pet.evolutionStage == stages[i].$1,
+                ),
                 if (i < stages.length - 1) _dashedConnector(),
               ],
             ],
@@ -1170,7 +1229,7 @@ class _MeScreenState extends ConsumerState<MeScreen> {
             height: 52,
             decoration: BoxDecoration(
               color: current ? theme.primarySoft : DesignTokens.surfaceSoft,
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(8),
               border: current
                   ? Border.all(color: theme.primary, width: 2)
                   : Border.all(color: DesignTokens.line, width: 1),
@@ -1178,11 +1237,12 @@ class _MeScreenState extends ConsumerState<MeScreen> {
             alignment: Alignment.center,
             // 종 미결정(털뭉치) 상태의 미래 단계는 '?'로 표시
             child: PetMotionThumb(
-                type: type,
-                stage: stage,
-                grade: grade,
-                variant: variant,
-                size: 40),
+              type: type,
+              stage: stage,
+              grade: grade,
+              variant: variant,
+              size: 40,
+            ),
           ),
           const SizedBox(height: 4),
           Text(
@@ -1206,8 +1266,8 @@ class _MeScreenState extends ConsumerState<MeScreen> {
           builder: (context, constraints) {
             const dashWidth = 4.0;
             const dashSpace = 3.0;
-            final count =
-                (constraints.maxWidth / (dashWidth + dashSpace)).floor();
+            final count = (constraints.maxWidth / (dashWidth + dashSpace))
+                .floor();
             return Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: List.generate(

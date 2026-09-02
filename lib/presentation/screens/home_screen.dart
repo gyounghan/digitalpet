@@ -73,10 +73,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     for (final category in events.achievedNow) {
       _goalFlashTimers[category]?.cancel();
       _flashingGoals.add(category);
-      _goalFlashTimers[category] =
-          Timer(const Duration(milliseconds: 2600), () {
-        if (mounted) setState(() => _flashingGoals.remove(category));
-      });
+      _goalFlashTimers[category] = Timer(
+        const Duration(milliseconds: 2600),
+        () {
+          if (mounted) setState(() => _flashingGoals.remove(category));
+        },
+      );
     }
     if (events.achievedNow.isNotEmpty) setState(() {});
 
@@ -88,8 +90,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           duration: const Duration(milliseconds: 3200),
           content: Row(
             children: [
-              const Icon(Icons.celebration,
-                  size: 18, color: DesignTokens.gold),
+              const Icon(Icons.celebration, size: 18, color: DesignTokens.gold),
               const SizedBox(width: 8),
               Text(
                 '오늘 목표 세트 완성! +${events.setRewardExp} EXP',
@@ -120,7 +121,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
       await prefs.setEvolutionSeenStage(pet.evolutionStage);
       if (!PetTransitionEvents.shouldRevealEvolution(
-          seenStage: seenStage, pet: pet)) {
+        seenStage: seenStage,
+        pet: pet,
+      )) {
         return; // 2단계 전이는 종 결정 연출이 전담 — 기록만
       }
       if (!mounted) return;
@@ -187,55 +190,62 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    ref.listen(
-        petNotifierProvider(HomeScreen.defaultPetId), _onPetTransition);
+    ref.listen(petNotifierProvider(HomeScreen.defaultPetId), _onPetTransition);
     final petAsync = ref.watch(petNotifierProvider(HomeScreen.defaultPetId));
 
     return Scaffold(
       backgroundColor: DesignTokens.bg,
-      body: SafeArea(
-        child: petAsync.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (error, _) => Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.error_outline,
-                      size: 56, color: DesignTokens.bad),
-                  const SizedBox(height: 12),
-                  Text(
-                    '${AppStrings.error}: $error',
-                    style: const TextStyle(color: DesignTokens.bad),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 12),
-                  ElevatedButton(
-                    onPressed: () => ref
-                        .read(petNotifierProvider(HomeScreen.defaultPetId)
-                            .notifier)
-                        .refresh(),
-                    child: Text(AppStrings.retry),
-                  ),
-                ],
+      body: AppScaffoldBackground(
+        child: SafeArea(
+          child: petAsync.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (error, _) => Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      size: 56,
+                      color: DesignTokens.bad,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      '${AppStrings.error}: $error',
+                      style: const TextStyle(color: DesignTokens.bad),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      onPressed: () => ref
+                          .read(
+                            petNotifierProvider(
+                              HomeScreen.defaultPetId,
+                            ).notifier,
+                          )
+                          .refresh(),
+                      child: Text(AppStrings.retry),
+                    ),
+                  ],
+                ),
               ),
             ),
+            data: (pet) {
+              if (pet.isDead) {
+                return _buildDeadPetContent(context, ref, pet);
+              }
+              WidgetsBinding.instance.addPostFrameCallback((_) async {
+                if (!mounted) return;
+                await _maybeShowSpeciesReveal(pet);
+                if (!mounted) return;
+                // 각성(사신수→영물)이 떴으면 같은 틱의 단계 연출은 건너뛴다
+                final awakened = await _maybeShowAwakeningReveal(pet);
+                if (mounted && !awakened) await _maybeShowEvolutionReveal(pet);
+              });
+              return _buildPetContent(context, ref, pet);
+            },
           ),
-          data: (pet) {
-            if (pet.isDead) {
-              return _buildDeadPetContent(context, ref, pet);
-            }
-            WidgetsBinding.instance.addPostFrameCallback((_) async {
-              if (!mounted) return;
-              await _maybeShowSpeciesReveal(pet);
-              if (!mounted) return;
-              // 각성(사신수→영물)이 떴으면 같은 틱의 단계 연출은 건너뛴다
-              final awakened = await _maybeShowAwakeningReveal(pet);
-              if (mounted && !awakened) await _maybeShowEvolutionReveal(pet);
-            });
-            return _buildPetContent(context, ref, pet);
-          },
         ),
       ),
     );
@@ -301,7 +311,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         return false;
       }
       if (!PetTransitionEvents.shouldRevealAwakening(
-          seenTypeName: seenType, pet: pet)) {
+        seenTypeName: seenType,
+        pet: pet,
+      )) {
         return false;
       }
       await prefs.setRevealedSpeciesType(pet.evolutionType!.name);
@@ -370,7 +382,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         child: Text(
                           pet.name,
                           style: const TextStyle(
-                            fontSize: 20,
+                            fontSize: 24,
                             fontWeight: FontWeight.w800,
                             color: DesignTokens.ink,
                           ),
@@ -378,8 +390,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         ),
                       ),
                       const SizedBox(width: 6),
-                      const Icon(Icons.edit,
-                          size: 14, color: DesignTokens.ink3),
+                      const Icon(
+                        Icons.edit,
+                        size: 14,
+                        color: DesignTokens.ink3,
+                      ),
                     ],
                   ),
                   const SizedBox(height: 2),
@@ -432,7 +447,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
           color: theme.primarySoft,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(8),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -459,26 +474,93 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       child: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [theme.gradStart, theme.gradEnd],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              DesignTokens.sky.withValues(alpha: 0.28),
+              DesignTokens.paper.withValues(alpha: 0.92),
+              theme.primarySoft.withValues(alpha: 0.56),
+            ],
           ),
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: DesignTokens.line, width: 1),
           boxShadow: [
             BoxShadow(
-              color: theme.primary.withValues(alpha: 0.08),
-              blurRadius: 24,
-              offset: const Offset(0, 8),
+              color: const Color(0xFF4A3519).withValues(alpha: 0.09),
+              blurRadius: 22,
+              offset: const Offset(0, 10),
             ),
           ],
         ),
         // 종/기분 라벨은 상단 헤더에 이미 있으므로 카드는 순수 펫 무대로 둔다.
         // 펫을 톡 건드리면 반응 — 기분 좋으면 기뻐하고, 나쁘면 삐친다(화남).
-        child: Center(
-          child: GestureDetector(
-            onTap: () => _playTransientMotion(_pokeReaction(pet.mood)),
-            child: _buildPetSprite(pet, theme),
-          ),
+        child: Stack(
+          clipBehavior: Clip.hardEdge,
+          children: [
+            Positioned(
+              right: 34,
+              top: 34,
+              child: Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: DesignTokens.gold.withValues(alpha: 0.82),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: DesignTokens.gold.withValues(alpha: 0.18),
+                      blurRadius: 0,
+                      spreadRadius: 9,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Positioned(
+              left: 28,
+              top: 58,
+              child: Container(
+                width: 84,
+                height: 26,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.72),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+            ),
+            Positioned(
+              left: -26,
+              right: -26,
+              bottom: -24,
+              child: Container(
+                height: 96,
+                decoration: BoxDecoration(
+                  color: theme.primarySoft.withValues(alpha: 0.72),
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(120),
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              left: 88,
+              right: 88,
+              bottom: 54,
+              child: Container(
+                height: 16,
+                decoration: BoxDecoration(
+                  color: DesignTokens.ink.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+            ),
+            Center(
+              child: GestureDetector(
+                onTap: () => _playTransientMotion(_pokeReaction(pet.mood)),
+                child: _buildPetSprite(pet, theme),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -486,7 +568,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   /// 도트 모션 스프라이트 키 (공통 규칙 — 성숙기 등급 분기 포함)
   String? _motionSpriteKey(Pet pet) => motionSpriteKeyForStage(
-      pet.evolutionType, pet.evolutionStage, pet.evolutionGrade);
+    pet.evolutionType,
+    pet.evolutionStage,
+    pet.evolutionGrade,
+  );
 
   /// 펫 스테이지 스프라이트
   ///
@@ -497,7 +582,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       final motion = _transientMotion ?? motionForMood(pet.mood);
       // 털뭉치=베이지, 일반종=자연색(개체 변이), 사신수/그 외=테마색
       final (dotColor, accentColor) = dotColorsForKey(
-          spriteKey, pet.evolutionType, theme, colorVariantFor(pet));
+        spriteKey,
+        pet.evolutionType,
+        theme,
+        colorVariantFor(pet),
+      );
       return SizedBox(
         width: 300,
         height: 300,
@@ -520,15 +609,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       duration: const Duration(milliseconds: 800),
       dotColor: theme.primary,
       accentColor: theme.spriteAccent,
-      evolutionImagePath: getEvolutionMoodImagePath(
+      evolutionImagePath:
+          getEvolutionMoodImagePath(
             pet.evolutionType,
             pet.evolutionStage,
             pet.mood,
           ) ??
-          getEvolutionImagePath(
-            pet.evolutionType,
-            pet.evolutionStage,
-          ),
+          getEvolutionImagePath(pet.evolutionType, pet.evolutionStage),
     );
   }
 
@@ -557,7 +644,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(vertical: 13),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(8),
             ),
             elevation: 0,
           ),
@@ -584,7 +671,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         theme: theme,
         variant: AppCardVariant.flat,
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        radius: 16,
+        radius: 8,
         child: Column(
           children: [
             _goalRow(
@@ -731,7 +818,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   String _formatSteps(int steps) {
     if (steps < 1000) return '$steps';
     final k = steps / 1000.0;
-    return k == k.roundToDouble() ? '${k.round()}k' : '${k.toStringAsFixed(1)}k';
+    return k == k.roundToDouble()
+        ? '${k.round()}k'
+        : '${k.toStringAsFixed(1)}k';
   }
 
   /// 현재 레벨의 EXP 진행률 (%) — Pet.getRequiredExpForLevel 규칙과 동일
@@ -748,9 +837,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
     void showWakeSuccess() {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text(AppStrings.wakeSuccess)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text(AppStrings.wakeSuccess)));
       }
     }
 
@@ -793,7 +882,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           title: const Text(
             '펫 이름 변경',
             style: TextStyle(
-                color: DesignTokens.ink, fontWeight: FontWeight.w800),
+              color: DesignTokens.ink,
+              fontWeight: FontWeight.w800,
+            ),
           ),
           content: TextField(
             controller: controller,
@@ -816,8 +907,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 final newName = controller.text.trim();
                 if (newName.isNotEmpty) {
                   ref
-                      .read(petNotifierProvider(HomeScreen.defaultPetId)
-                          .notifier)
+                      .read(
+                        petNotifierProvider(HomeScreen.defaultPetId).notifier,
+                      )
                       .updateName(newName);
                 }
                 Navigator.of(context).pop();
@@ -830,4 +922,3 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 }
-
