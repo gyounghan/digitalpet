@@ -790,101 +790,141 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
     final myDef = (pet.battleDef * _battleStyle.defenseMultiplier).round();
     final myHp = pet.battleHp as int;
 
-    return AppCard(
-      theme: theme,
-      // 단색(primary) — 그라데이션 없이 종 테마색 그대로
-      variant: AppCardVariant.deep,
-      padding: const EdgeInsets.all(16),
+    final dodge =
+        (BattleWithActivityUseCase.dodgeChanceForStamina(pet.stamina as int) *
+                100)
+            .round();
+    // 시안 톤: 수련장 무대 — 하늘→풀밭 위에 펫을 크게 세우고 스탯은 하단 배지.
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [theme.gradStart, theme.gradEnd],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: theme.primary.withValues(alpha: 0.08),
+            blurRadius: 18,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            '내 펫',
-            style: TextStyle(
-              fontSize: 11.5,
-              fontWeight: FontWeight.w700,
-              color: Colors.white.withValues(alpha: 0.7),
-              letterSpacing: 0.8,
+          // 이름·레벨 (좌상단)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  pet.name,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: DesignTokens.ink,
+                  ),
+                ),
+                Text(
+                  'Lv.${pet.level} · ${SpeciesTheme.labelFor(pet.evolutionType)}',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: DesignTokens.ink3,
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Container(
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  // 밝은 배경 위에 실제 테마색 도트 모션 프레임을 그린다
-                  color: Colors.white.withValues(alpha: 0.92),
-                  borderRadius: BorderRadius.circular(14),
+          // 펫 무대 (지면 밴드 + 발밑 그림자 + 큰 스프라이트)
+          SizedBox(
+            height: 132,
+            child: Stack(
+              alignment: Alignment.bottomCenter,
+              children: [
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: Container(
+                    height: 34,
+                    color: theme.primary.withValues(alpha: 0.10),
+                  ),
                 ),
-                alignment: Alignment.center,
-                child: PetMotionThumb(
-                  type: pet.evolutionType,
-                  stage: pet.evolutionStage,
-                  grade: pet.evolutionGrade,
-                  variant: colorVariantFor(pet),
-                  size: 62,
+                Positioned(
+                  bottom: 20,
+                  child: Container(
+                    width: 96,
+                    height: 14,
+                    decoration: BoxDecoration(
+                      color: theme.primaryDeep.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(100),
+                    ),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      pet.name,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white,
-                      ),
-                    ),
-                    Text(
-                      'Lv.${pet.level} · ${SpeciesTheme.labelFor(pet.evolutionType)}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white.withValues(alpha: 0.85),
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Row(
-                      children: [
-                        _statBadge('HP', myHp),
-                        const SizedBox(width: 10),
-                        _statBadge('ATK', myAtk),
-                        const SizedBox(width: 10),
-                        _statBadge('DEF', myDef),
-                        const SizedBox(width: 10),
-                        // 회피율 — 오늘 걸음수 연동 (많이 걸을수록 민첩)
-                        Text(
-                          '회피 ${(BattleWithActivityUseCase.dodgeChanceForStamina(pet.stamina as int) * 100).round()}%',
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: PetMotionThumb(
+                    type: pet.evolutionType,
+                    stage: pet.evolutionStage,
+                    grade: pet.evolutionGrade,
+                    variant: colorVariantFor(pet),
+                    size: 118,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
+          ),
+          // 스탯 배지 행
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 14),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _statBadge('HP', '$myHp', theme),
+                _statBadge('ATK', '$myAtk', theme),
+                _statBadge('DEF', '$myDef', theme),
+                _statBadge('회피', '$dodge%', theme),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _statBadge(String label, int value) {
-    return Text(
-      '$label $value',
-      style: const TextStyle(
-        fontSize: 11,
-        fontWeight: FontWeight.w700,
-        color: Colors.white,
+  Widget _statBadge(String label, String value, SpeciesTheme theme) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: theme.primarySoft,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 10.5,
+              fontWeight: FontWeight.w700,
+              color: theme.primaryDeep.withValues(alpha: 0.7),
+            ),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+              color: theme.primaryDeep,
+            ),
+          ),
+        ],
       ),
     );
   }
