@@ -36,4 +36,24 @@ const Map<String, List<List<Color>>> hiddenSpeciesPalette = {
     [Color(0xFF45341B), Color(0xFFAEA087), Color(0xFFD1B57F), Color(0xFFDFCD90), Color(0xFFDFD1A4)],
     [Color(0xFF45341B), Color(0xFF453821), Color(0xFF664B19), Color(0xFF726229), Color(0xFF696350)],
   ],
+  'bear': [
+    [Color(0xFF271D14), Color(0xFF513722), Color(0xFF7D5332), Color(0xFF9F6C43), Color(0xFFDEA57A)],
+    [Color(0xFF271D14), Color(0xFF958980), Color(0xFFA99687), Color(0xFFB8A18E), Color(0xFFDEA57A)],
+    [Color(0xFF271D14), Color(0xFF2D2219), Color(0xFF402E20), Color(0xFF4E3827), Color(0xFF68503E)],
+  ],
+  'otter': [
+    [Color(0xFF261E19), Color(0xFF4B3626), Color(0xFF775135), Color(0xFF986A46), Color(0xFFE1C19D)],
+    [Color(0xFF261E19), Color(0xFF928981), Color(0xFFA69588), Color(0xFFB5A090), Color(0xFFE1C19D)],
+    [Color(0xFF261E19), Color(0xFF2B221B), Color(0xFF3D2D21), Color(0xFF4B3829), Color(0xFF6A5C4D)],
+  ],
+  'owl': [
+    [Color(0xFF31241B), Color(0xFF66442C), Color(0xFF94633E), Color(0xFFB99069), Color(0xFFDFC4A4)],
+    [Color(0xFF31241B), Color(0xFF9E8F84), Color(0xFFB39D8C), Color(0xFFC4B1A0), Color(0xFFDFC4A4)],
+    [Color(0xFF31241B), Color(0xFF36281E), Color(0xFF493525), Color(0xFF594837), Color(0xFF695D50)],
+  ],
+  'crane': [
+    [Color(0xFF2B2929), Color(0xFF9F221D), Color(0xFF7A7672), Color(0xFFBAB2AD), Color(0xFFF2ECE5)],
+    [Color(0xFF2B2929), Color(0xFFB8807D), Color(0xFFA7A5A4), Color(0xFFC4C0BE), Color(0xFFF2ECE5)],
+    [Color(0xFF2B2929), Color(0xFF4E1917), Color(0xFF3E3D3B), Color(0xFF595654), Color(0xFF716E6B)],
+  ],
 };

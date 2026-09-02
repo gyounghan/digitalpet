@@ -1131,6 +1131,16 @@ for _k, _v in HIDDEN_ART.items():
     SPECIES_ART[_k] = item
     TARGET_SIZE[_k] = len(_v["body"])
 
+# 날개를 편 히든 성숙기 스프라이트 — 주작 성숙기처럼 walk에서 날개를 퍼덕여
+# 다리 스텝만으로는 움직임이 없는 비행 포즈에 모션을 준다.
+# (x0, y0, x1, y1, inner) — inner는 몸에 붙은 쪽.
+_HIDDEN_WINGS = {
+    "owl3": [(0, 13, 12, 36, "right"), (44, 12, 55, 36, "left")],
+}
+for _wk, _wv in _HIDDEN_WINGS.items():
+    if _wk in SPECIES_ART:
+        SPECIES_ART[_wk]["wings"] = _wv
+
 
 def _make_normal_forms():
     """사신수/신수 아트에서 신수 요소를 제거한 '{종}2n'·'{종}3n' 일반종 아트 파생."""
@@ -1273,7 +1283,8 @@ def pose(
     # \ / (10시 10분)로 마주 보게 그려진다 (해태·황룡 포함).
     hidden_frontal = (
         key.startswith(("dokkaebi", "gumiho", "moonrabbit",
-                        "haetae", "hwangryong", "samjoko"))
+                        "haetae", "hwangryong", "samjoko",
+                        "bear", "otter", "owl", "crane"))
         and len(eye_rects) >= 2
     )
     frontal = key.startswith("tiger") or key == "fluff" or hidden_frontal

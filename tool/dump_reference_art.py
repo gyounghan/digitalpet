@@ -33,6 +33,11 @@ SPECIES = {
     "haetae": ("tool/refs/해테_눈입.png", False),
     "dokkaebi": ("tool/refs/도깨비_눈입.png", False),
     "hwangryong": ("tool/refs/황룡_눈입.png", False),
+    # 동물 영물(2차) — 전부 왼쪽을 봄(반전 불필요)
+    "bear": ("tool/refs/곰_눈입.png", False),
+    "otter": ("tool/refs/수달_눈입.png", False),
+    "owl": ("tool/refs/수리부엉이_눈입.png", False),
+    "crane": ("tool/refs/두루미_눈입.png", False),
 }
 
 # 스테이지별 목표 격자 (유아기 32 / 성장기 36 / 성숙기 56 — 기존 규칙)
@@ -46,6 +51,10 @@ EYE_HINT = {
     "haetae": (0.32, 0.36),
     "dokkaebi": (0.42, 0.30),
     "hwangryong": (0.30, 0.30),
+    "bear": (0.35, 0.30),
+    "otter": (0.30, 0.30),
+    "owl": (0.38, 0.32),
+    "crane": (0.32, 0.20),
 }
 
 # 수동 지정 폴백 — 마커 검출이 실패한 키만 여기에 적는다 (마커가 우선).

@@ -15,13 +15,10 @@ const Map<EvolutionType, String> _evolutionImagePrefix = {
   EvolutionType.haetae: 'haetae',
   EvolutionType.dokkaebi: 'dokkaebi',
   EvolutionType.hwangryong: 'hwangryong',
-  // TODO(스프라이트): 곰·수달·부엉이·두루미 도트 생성 전까지 기존 종 실루엣으로
-  // 임시 폴백(모양만 차용, 색은 각 종 테마 적용). 레퍼런스 도착 → dump_reference_art
-  // 로 실제 도트 생성 후 아래를 'bear'/'otter'/'owl'/'crane'로 교체할 것.
-  EvolutionType.bear: 'turtle',
-  EvolutionType.otter: 'moonrabbit',
-  EvolutionType.owl: 'samjoko',
-  EvolutionType.crane: 'bird',
+  EvolutionType.bear: 'bear',
+  EvolutionType.otter: 'otter',
+  EvolutionType.owl: 'owl',
+  EvolutionType.crane: 'crane',
 };
 
 /// EvolutionType의 이미지 파일 접두어(종 키) 반환

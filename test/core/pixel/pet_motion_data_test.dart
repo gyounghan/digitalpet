@@ -72,14 +72,18 @@ void main() {
       }
     });
 
-    test('설화 영물 6종은 5색 팔레트를 가진다', () {
+    test('영물 10종은 5색 팔레트를 가진다', () {
       for (final species in [
         'samjoko',
         'gumiho',
         'moonrabbit',
         'haetae',
         'dokkaebi',
-        'hwangryong'
+        'hwangryong',
+        'bear',
+        'otter',
+        'owl',
+        'crane',
       ]) {
         final pal = hiddenPaletteForSpriteKey('${species}2');
         expect(pal, isNotNull, reason: '$species 팔레트 없음');
@@ -208,7 +212,7 @@ void main() {
       expect(motionSpriteKeyFromAssetPath('assets/bird3.png'), 'bird3');
     });
 
-    test('진화 단계 → 모션 키 (10종 단일 디자인, 등급/n 분기 없음)', () {
+    test('진화 단계 → 모션 키 (14종 단일 디자인, 등급/n 분기 없음)', () {
       expect(motionSpriteKeyForStage(null, 1), 'fluff');
       expect(motionSpriteKeyForStage(EvolutionType.snake, 2), 'dragon1');
       // 등급과 무관하게 단일 라인 — 색만 변이로 달라진다
@@ -217,6 +221,11 @@ void main() {
       expect(motionSpriteKeyForStage(EvolutionType.bird, 4, 'mythical'), 'bird3');
       expect(motionSpriteKeyForStage(EvolutionType.bird, 4, 'normal'), 'bird3');
       expect(motionSpriteKeyForStage(EvolutionType.turtle, 4), 'turtle3');
+      // 동물 영물(2차 추가) — 실제 도트 키
+      expect(motionSpriteKeyForStage(EvolutionType.bear, 2), 'bear1');
+      expect(motionSpriteKeyForStage(EvolutionType.otter, 3), 'otter2');
+      expect(motionSpriteKeyForStage(EvolutionType.owl, 4), 'owl3');
+      expect(motionSpriteKeyForStage(EvolutionType.crane, 2), 'crane1');
       // 'n' 일반종 라인은 폐기 — 그런 키는 생성되지 않는다
       expect(motionFrames.keys.any((k) => k.endsWith('n')), isFalse);
       // 종 미결정 상태의 미래 단계는 null
