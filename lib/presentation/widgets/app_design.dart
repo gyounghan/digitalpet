@@ -35,7 +35,7 @@ class AppCard extends StatelessWidget {
     this.variant = AppCardVariant.normal,
     this.padding = const EdgeInsets.all(16),
     this.margin,
-    this.radius = 8,
+    this.radius = 18,
     this.gradient,
     this.onTap,
   });
@@ -54,19 +54,21 @@ class AppCard extends StatelessWidget {
       color: gradient == null ? bg : null,
       gradient: gradient,
       borderRadius: borderRadius,
-      border: Border.all(
-        color: variant == AppCardVariant.deep
-            ? theme.primaryDeep.withValues(alpha: 0.14)
-            : DesignTokens.line,
-        width: 1,
-      ),
+      border: variant == AppCardVariant.flat
+          ? Border.all(color: DesignTokens.line, width: 1)
+          : null,
       boxShadow: variant == AppCardVariant.flat
           ? null
           : [
               BoxShadow(
-                color: const Color(0xFF4A3519).withValues(alpha: 0.08),
-                blurRadius: 18,
-                offset: const Offset(0, 8),
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 14,
+                offset: const Offset(0, 6),
+              ),
+              BoxShadow(
+                color: DesignTokens.line,
+                blurRadius: 0,
+                offset: const Offset(0, 1),
               ),
             ],
     );
@@ -90,7 +92,10 @@ class AppCard extends StatelessWidget {
       );
     }
 
-    return Padding(padding: margin ?? EdgeInsets.zero, child: content);
+    return Padding(
+      padding: margin ?? EdgeInsets.zero,
+      child: content,
+    );
   }
 }
 
@@ -139,7 +144,11 @@ class AppPill extends StatelessWidget {
         theme.primaryDeep,
         Colors.transparent,
       ),
-      AppPillVariant.solid => (theme.primary, Colors.white, Colors.transparent),
+      AppPillVariant.solid => (
+        theme.primary,
+        Colors.white,
+        Colors.transparent,
+      ),
       AppPillVariant.dark => (
         DesignTokens.ink,
         Colors.white,
@@ -233,7 +242,12 @@ class ScreenTop extends StatelessWidget {
   final VoidCallback? onBack;
   final Widget? trailing;
 
-  const ScreenTop({super.key, required this.title, this.onBack, this.trailing});
+  const ScreenTop({
+    super.key,
+    required this.title,
+    this.onBack,
+    this.trailing,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -287,27 +301,6 @@ class _CircleButton extends StatelessWidget {
   }
 }
 
-/// 앱 전역 배경 — 화면 기능과 무관한 순수 시각 레이어.
-class AppScaffoldBackground extends StatelessWidget {
-  final Widget child;
-
-  const AppScaffoldBackground({super.key, required this.child});
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFFFFFAF1), Color(0xFFF4EAD8), Color(0xFFEDF3E3)],
-        ),
-      ),
-      child: child,
-    );
-  }
-}
-
 /// `.row` 클래스 매핑: 아이콘 + 제목/부제 + 화살표
 class AppListRow extends StatelessWidget {
   final Widget leading;
@@ -335,7 +328,7 @@ class AppListRow extends StatelessWidget {
       theme: theme,
       variant: tinted ? AppCardVariant.tinted : AppCardVariant.normal,
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      radius: 8,
+      radius: 14,
       onTap: onTap,
       child: Row(
         children: [
@@ -349,7 +342,7 @@ class AppListRow extends StatelessWidget {
                   title,
                   style: const TextStyle(
                     fontSize: 13.5,
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w700,
                     color: DesignTokens.ink,
                   ),
                 ),
@@ -360,7 +353,7 @@ class AppListRow extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 11.5,
                       fontWeight: FontWeight.w600,
-                      color: DesignTokens.ink2,
+                      color: DesignTokens.ink3,
                     ),
                   ),
                 ],
@@ -485,14 +478,14 @@ class SectionTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(4, 16, 4, 8),
+      padding: const EdgeInsets.fromLTRB(4, 14, 4, 8),
       child: Row(
         children: [
           Expanded(
             child: Text(
               title,
               style: const TextStyle(
-                fontSize: 14,
+                fontSize: 13.5,
                 fontWeight: FontWeight.w800,
                 color: DesignTokens.ink,
               ),

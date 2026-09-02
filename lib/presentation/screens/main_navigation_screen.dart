@@ -31,31 +31,24 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
   /// 탭 정의 — 랭킹은 feature flag가 켜졌을 때만 포함된다.
   static final List<_NavTab> _tabs = [
     _NavTab(
-      label: '홈',
-      icon: Icons.home_rounded,
-      builder: () => const HomeScreen(),
-    ),
+        label: '홈', icon: Icons.home_rounded, builder: () => const HomeScreen()),
     _NavTab(
-      label: '케어',
-      icon: Icons.favorite_rounded,
-      builder: () => const CareScreen(),
-    ),
+        label: '케어',
+        icon: Icons.favorite_rounded,
+        builder: () => const CareScreen()),
     _NavTab(
-      label: '배틀',
-      icon: Icons.sports_martial_arts_rounded,
-      builder: () => const BattleScreen(),
-    ),
+        label: '배틀',
+        icon: Icons.sports_martial_arts_rounded,
+        builder: () => const BattleScreen()),
     if (FeatureFlags.enableRanking)
       _NavTab(
-        label: '랭킹',
-        icon: Icons.emoji_events_rounded,
-        builder: () => const RankingScreen(),
-      ),
+          label: '랭킹',
+          icon: Icons.emoji_events_rounded,
+          builder: () => const RankingScreen()),
     _NavTab(
-      label: '도감',
-      icon: Icons.menu_book_rounded,
-      builder: () => const MeScreen(),
-    ),
+        label: '도감',
+        icon: Icons.menu_book_rounded,
+        builder: () => const MeScreen()),
   ];
 
   /// 탭 lazy 빌드 — 한 번이라도 방문한 탭만 실제 위젯 인스턴스를 생성·캐싱한다.
@@ -112,20 +105,21 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
 
   void _startPeriodicUpdate() {
     _periodicUpdateTimer?.cancel();
-    _periodicUpdateTimer = Timer.periodic(_foregroundPollInterval, (_) {
-      final petNotifier = ref.read(
-        petNotifierProvider(HomeScreen.defaultPetId).notifier,
-      );
-      petNotifier.onMinuteTick();
-    });
+    _periodicUpdateTimer = Timer.periodic(
+      _foregroundPollInterval,
+      (_) {
+        final petNotifier =
+            ref.read(petNotifierProvider(HomeScreen.defaultPetId).notifier);
+        petNotifier.onMinuteTick();
+      },
+    );
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
-    final petNotifier = ref.read(
-      petNotifierProvider(HomeScreen.defaultPetId).notifier,
-    );
+    final petNotifier =
+        ref.read(petNotifierProvider(HomeScreen.defaultPetId).notifier);
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.inactive) {
       petNotifier.onAppBackground();
@@ -149,33 +143,27 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
         children: List.generate(_screenCache.length, (i) {
           final visited = _screenCache[i] != null || i == _currentIndex;
           if (!visited) return const SizedBox.shrink();
-          return TickerMode(enabled: i == _currentIndex, child: _screenAt(i));
+          return TickerMode(
+            enabled: i == _currentIndex,
+            child: _screenAt(i),
+          );
         }),
       ),
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(18, 0, 18, 10),
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: DesignTokens.surface.withValues(alpha: 0.96),
-              border: Border.all(color: DesignTokens.line, width: 1),
-              borderRadius: BorderRadius.circular(22),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF4A3519).withValues(alpha: 0.10),
-                  blurRadius: 22,
-                  offset: const Offset(0, -6),
-                ),
-              ],
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(7),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: List.generate(
-                  _tabs.length,
-                  (index) => _buildNavItem(index),
-                ),
+      bottomNavigationBar: Container(
+        decoration: const BoxDecoration(
+          color: DesignTokens.surface,
+          border: Border(
+            top: BorderSide(color: DesignTokens.line, width: 1),
+          ),
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: List.generate(
+                _tabs.length,
+                (index) => _buildNavItem(index),
               ),
             ),
           ),
@@ -193,10 +181,10 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
       child: GestureDetector(
         onTap: () => setState(() => _currentIndex = index),
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 7),
+          padding: const EdgeInsets.symmetric(vertical: 6),
           decoration: BoxDecoration(
             color: isActive ? accent.primarySoft : Colors.transparent,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(12),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
