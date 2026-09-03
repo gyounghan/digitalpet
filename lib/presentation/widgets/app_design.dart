@@ -5,7 +5,7 @@ import '../../core/theme/species_theme.dart';
 /// 모든 위젯은 [SpeciesTheme]를 인자로 받아 종별 컬러를 따른다.
 
 enum AppCardVariant {
-  /// 일반 카드 (흰색 배경 + 부드러운 그림자)
+  /// 일반 카드 (흰색 배경 + 얕은 그림자)
   normal,
 
   /// 평면 카드 (1px 라인 보더)
@@ -35,7 +35,7 @@ class AppCard extends StatelessWidget {
     this.variant = AppCardVariant.normal,
     this.padding = const EdgeInsets.all(16),
     this.margin,
-    this.radius = 18,
+    this.radius = 8,
     this.gradient,
     this.onTap,
   });
@@ -92,10 +92,7 @@ class AppCard extends StatelessWidget {
       );
     }
 
-    return Padding(
-      padding: margin ?? EdgeInsets.zero,
-      child: content,
-    );
+    return Padding(padding: margin ?? EdgeInsets.zero, child: content);
   }
 }
 
@@ -144,11 +141,7 @@ class AppPill extends StatelessWidget {
         theme.primaryDeep,
         Colors.transparent,
       ),
-      AppPillVariant.solid => (
-        theme.primary,
-        Colors.white,
-        Colors.transparent,
-      ),
+      AppPillVariant.solid => (theme.primary, Colors.white, Colors.transparent),
       AppPillVariant.dark => (
         DesignTokens.ink,
         Colors.white,
@@ -242,12 +235,7 @@ class ScreenTop extends StatelessWidget {
   final VoidCallback? onBack;
   final Widget? trailing;
 
-  const ScreenTop({
-    super.key,
-    required this.title,
-    this.onBack,
-    this.trailing,
-  });
+  const ScreenTop({super.key, required this.title, this.onBack, this.trailing});
 
   @override
   Widget build(BuildContext context) {
@@ -328,7 +316,6 @@ class AppListRow extends StatelessWidget {
       theme: theme,
       variant: tinted ? AppCardVariant.tinted : AppCardVariant.normal,
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      radius: 14,
       onTap: onTap,
       child: Row(
         children: [

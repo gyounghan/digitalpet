@@ -76,10 +76,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     for (final category in events.achievedNow) {
       _goalFlashTimers[category]?.cancel();
       _flashingGoals.add(category);
-      _goalFlashTimers[category] =
-          Timer(const Duration(milliseconds: 2600), () {
-        if (mounted) setState(() => _flashingGoals.remove(category));
-      });
+      _goalFlashTimers[category] = Timer(
+        const Duration(milliseconds: 2600),
+        () {
+          if (mounted) setState(() => _flashingGoals.remove(category));
+        },
+      );
     }
     if (events.achievedNow.isNotEmpty) setState(() {});
 
@@ -91,8 +93,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           duration: const Duration(milliseconds: 3200),
           content: Row(
             children: [
-              const Icon(Icons.celebration,
-                  size: 18, color: DesignTokens.gold),
+              const Icon(Icons.celebration, size: 18, color: DesignTokens.gold),
               const SizedBox(width: 8),
               Text(
                 '오늘 목표 세트 완성! +${events.setRewardExp} EXP',
@@ -123,7 +124,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
       await prefs.setEvolutionSeenStage(pet.evolutionStage);
       if (!PetTransitionEvents.shouldRevealEvolution(
-          seenStage: seenStage, pet: pet)) {
+        seenStage: seenStage,
+        pet: pet,
+      )) {
         return; // 2단계 전이는 종 결정 연출이 전담 — 기록만
       }
       if (!mounted) return;
@@ -186,8 +189,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.error_outline,
-                      size: 56, color: DesignTokens.bad),
+                  const Icon(
+                    Icons.error_outline,
+                    size: 56,
+                    color: DesignTokens.bad,
+                  ),
                   const SizedBox(height: 12),
                   Text(
                     '${AppStrings.error}: $error',
@@ -197,8 +203,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   const SizedBox(height: 12),
                   ElevatedButton(
                     onPressed: () => ref
-                        .read(petNotifierProvider(_activePetId)
-                            .notifier)
+                        .read(petNotifierProvider(_activePetId).notifier)
                         .refresh(),
                     child: Text(AppStrings.retry),
                   ),
@@ -285,7 +290,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         return false;
       }
       if (!PetTransitionEvents.shouldRevealAwakening(
-          seenTypeName: seenType, pet: pet)) {
+        seenTypeName: seenType,
+        pet: pet,
+      )) {
         return false;
       }
       await prefs.setRevealedSpeciesType(pet.evolutionType!.name);
@@ -310,9 +317,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   Widget _buildPetContent(BuildContext context, WidgetRef ref, Pet pet) {
     final theme = SpeciesTheme.forType(pet.evolutionType);
-    // 시안 index.html 홈 구조 그대로:
+    // 최종 시안 홈 구조:
     // screen-top(인사말+이름+Lv) → pet-stage(말풍선·펫·그림자) →
-    // status-grid(포만감·기분·체력) → action-grid(먹이·놀기·휴식) →
+    // status-grid(포만감·기분·체력) → feed CTA + pet reaction hint →
     // routine-panel(오늘의 케어). 따뜻한 크림 세로 그라데이션 배경.
     return DecoratedBox(
       decoration: const BoxDecoration(
@@ -354,10 +361,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final greeting = hour < 6
         ? '고요한 새벽'
         : hour < 12
-            ? '오전 산책 후'
-            : hour < 18
-                ? '나른한 오후'
-                : '포근한 저녁';
+        ? '오전 산책 후'
+        : hour < 18
+        ? '나른한 오후'
+        : '포근한 저녁';
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -368,23 +375,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(greeting,
-                    style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w800,
-                        color: MockUI.muted)),
+                Text(
+                  greeting,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    color: MockUI.muted,
+                  ),
+                ),
                 const SizedBox(height: 3),
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Flexible(
-                      child: Text(pet.name,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                              fontSize: 23,
-                              fontWeight: FontWeight.w800,
-                              color: MockUI.ink,
-                              height: 1.1)),
+                      child: Text(
+                        pet.name,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 23,
+                          fontWeight: FontWeight.w800,
+                          color: MockUI.ink,
+                          height: 1.1,
+                        ),
+                      ),
                     ),
                     const SizedBox(width: 5),
                     const Icon(Icons.edit, size: 13, color: MockUI.muted),
@@ -419,7 +432,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
   }
 
-
   Widget _buildEventBanner(Pet pet, SpeciesTheme theme) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(18, 0, 18, 8),
@@ -428,7 +440,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
           color: theme.primarySoft,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(8),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -507,25 +519,30 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 185),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 13,
+                  vertical: 12,
+                ),
                 decoration: BoxDecoration(
                   color: MockUI.speechBg,
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: MockUI.speechBorder),
                   boxShadow: const [
                     BoxShadow(
-                        color: Color(0x1A382D1E),
-                        blurRadius: 18,
-                        offset: Offset(0, 10)),
+                      color: Color(0x1A382D1E),
+                      blurRadius: 18,
+                      offset: Offset(0, 10),
+                    ),
                   ],
                 ),
                 child: Text(
                   _moodMessage(pet.mood),
                   style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w800,
-                      color: MockUI.speechInk,
-                      height: 1.4),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: MockUI.speechInk,
+                    height: 1.4,
+                  ),
                 ),
               ),
             ),
@@ -537,7 +554,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   /// 도트 모션 스프라이트 키 (공통 규칙 — 성숙기 등급 분기 포함)
   String? _motionSpriteKey(Pet pet) => motionSpriteKeyForStage(
-      pet.evolutionType, pet.evolutionStage, pet.evolutionGrade);
+    pet.evolutionType,
+    pet.evolutionStage,
+    pet.evolutionGrade,
+  );
 
   /// 펫 스테이지 스프라이트
   ///
@@ -548,7 +568,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       final motion = _transientMotion ?? motionForMood(pet.mood);
       // 털뭉치=베이지, 일반종=자연색(개체 변이), 사신수/그 외=테마색
       final (dotColor, accentColor) = dotColorsForKey(
-          spriteKey, pet.evolutionType, theme, colorVariantFor(pet));
+        spriteKey,
+        pet.evolutionType,
+        theme,
+        colorVariantFor(pet),
+      );
       return SizedBox(
         width: 210,
         height: 210,
@@ -571,15 +595,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       duration: const Duration(milliseconds: 800),
       dotColor: theme.primary,
       accentColor: theme.spriteAccent,
-      evolutionImagePath: getEvolutionMoodImagePath(
+      evolutionImagePath:
+          getEvolutionMoodImagePath(
             pet.evolutionType,
             pet.evolutionStage,
             pet.mood,
           ) ??
-          getEvolutionImagePath(
-            pet.evolutionType,
-            pet.evolutionStage,
-          ),
+          getEvolutionImagePath(pet.evolutionType, pet.evolutionStage),
     );
   }
 
@@ -588,28 +610,31 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   /// 각 카드는 라벨(13 800) + 미터(8px, 트랙 meterTrack). 포만감green/기분gold/체력blue.
   Widget _buildStatusGrid(Pet pet) {
     Widget statCard(String label, int value, Color color) => Expanded(
-          child: Container(
-            padding: const EdgeInsets.fromLTRB(9, 10, 9, 10),
-            decoration: BoxDecoration(
-              color: MockUI.cardBg,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: MockUI.line),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(9, 10, 9, 10),
+        decoration: BoxDecoration(
+          color: MockUI.cardBg,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: MockUI.line),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+                color: MockUI.ink,
+              ),
             ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(label,
-                    style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w800,
-                        color: MockUI.ink)),
-                const SizedBox(height: 8),
-                _MockMeter(value: value / 100, color: color),
-              ],
-            ),
-          ),
-        );
+            const SizedBox(height: 8),
+            _MockMeter(value: value / 100, color: color),
+          ],
+        ),
+      ),
+    );
     // stretch 대신 IntrinsicHeight로 3카드 높이만 맞춘다(ListView 세로 무한
     // 높이에서 Row cross-stretch는 infinite height 예외를 낸다).
     return IntrinsicHeight(
@@ -626,17 +651,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  /// 액션 그리드 — 시안 .action-grid: 먹이·놀기·휴식 3개 pet-action.
-  /// 먹이=급식(기존), 놀기=joy 연출, 휴식=sleep 연출(수치 변화 없음).
+  /// 액션 영역 — 실제 상태 변화가 있는 먹이를 주 액션으로 둔다.
+  /// 펫 반응은 스테이지 터치로 이미 가능하므로 보조 안내로만 보여준다.
   Widget _buildActionGrid(WidgetRef ref, Pet pet) {
     final canFeed = ref.watch(canFeedPetUseCaseProvider).canFeed(pet);
     final hasMotion = _motionSpriteKey(pet) != null;
     return Row(
       children: [
         Expanded(
+          flex: 3,
           child: _ActionTile(
-            label: '먹이',
+            label: '먹이 주기',
             color: MockUI.green,
+            icon: Icons.restaurant_rounded,
+            primary: true,
             enabled: canFeed,
             onTap: () {
               ref.read(petNotifierProvider(_activePetId).notifier).feed();
@@ -646,18 +674,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ),
         const SizedBox(width: 8),
         Expanded(
-          child: _ActionTile(
-            label: '놀기',
-            color: MockUI.blue,
-            onTap: () => _playTransientMotion(PixelMotion.joy),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: _ActionTile(
-            label: '휴식',
-            color: MockUI.gold,
-            onTap: () => _playTransientMotion(PixelMotion.sleep),
+          flex: 2,
+          child: _ReactionHint(
+            label: '톡 터치',
+            message: '펫을 누르면\n감정이 보여요',
+            onTap: () => _playTransientMotion(_pokeReaction(pet.mood)),
           ),
         ),
       ],
@@ -670,10 +691,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final goals = TodayGoalProgress.fromPet(pet);
     final items = <(String, bool)>[
       ('식사 ${goals.feedProgress}/${goals.feedGoal}회', goals.feedDone),
-      ('걸음 ${_formatSteps(goals.steps)}/${_formatSteps(goals.stepsGoal)}보',
-          goals.exerciseDone),
-      ('수면 ${goals.sleepMinutes ~/ 60}/${goals.sleepGoalMinutes ~/ 60}시간',
-          goals.sleepDone),
+      (
+        '걸음 ${_formatSteps(goals.steps)}/${_formatSteps(goals.stepsGoal)}보',
+        goals.exerciseDone,
+      ),
+      (
+        '수면 ${goals.sleepMinutes ~/ 60}/${goals.sleepGoalMinutes ~/ 60}시간',
+        goals.sleepDone,
+      ),
     ];
     final doneCount = items.where((e) => e.$2).length;
     return Container(
@@ -689,16 +714,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('오늘의 케어',
-                  style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
-                      color: MockUI.ink)),
-              Text('$doneCount / ${items.length} 완료',
-                  style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w900,
-                      color: MockUI.muted)),
+              const Text(
+                '오늘의 케어',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                  color: MockUI.ink,
+                ),
+              ),
+              Text(
+                '$doneCount / ${items.length} 완료',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w900,
+                  color: MockUI.muted,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 12),
@@ -711,25 +742,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-
   /// 걸음 수 축약 표기 (3,200 → 3.2k)
   String _formatSteps(int steps) {
     if (steps < 1000) return '$steps';
     final k = steps / 1000.0;
-    return k == k.roundToDouble() ? '${k.round()}k' : '${k.toStringAsFixed(1)}k';
+    return k == k.roundToDouble()
+        ? '${k.round()}k'
+        : '${k.toStringAsFixed(1)}k';
   }
-
 
   /// 긴 잠에 빠진 펫 — 무료 깨우기(30/30/30) 또는 광고 깨우기(완전 회복)
   Widget _buildDeadPetContent(BuildContext context, WidgetRef ref, Pet pet) {
-    final notifier = ref.read(
-      petNotifierProvider(_activePetId).notifier,
-    );
+    final notifier = ref.read(petNotifierProvider(_activePetId).notifier);
     void showWakeSuccess() {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text(AppStrings.wakeSuccess)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text(AppStrings.wakeSuccess)));
       }
     }
 
@@ -772,14 +801,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           title: const Text(
             '펫 이름 변경',
             style: TextStyle(
-                color: DesignTokens.ink, fontWeight: FontWeight.w800),
+              color: DesignTokens.ink,
+              fontWeight: FontWeight.w800,
+            ),
           ),
           content: TextField(
             controller: controller,
             decoration: InputDecoration(
               hintText: '펫 이름을 입력하세요',
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(8),
               ),
             ),
             maxLength: 20,
@@ -795,8 +826,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 final newName = controller.text.trim();
                 if (newName.isNotEmpty) {
                   ref
-                      .read(petNotifierProvider(_activePetId)
-                          .notifier)
+                      .read(petNotifierProvider(_activePetId).notifier)
                       .updateName(newName);
                 }
                 Navigator.of(context).pop();
@@ -810,19 +840,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 }
 
-/// 시안 .pet-action — min-height 66, 색 26px 사각형 + 라벨(13 900).
-/// bg #f4f7ec, 테두리 #dbceb3, 텍스트 #365528. 먹이/놀기/휴식 공용.
+/// 최종 시안 홈 CTA — 실제 상태 변화가 있는 행동을 가장 크게 보여준다.
 class _ActionTile extends StatelessWidget {
   final String label;
   final Color color;
+  final IconData icon;
   final VoidCallback onTap;
   final bool enabled;
+  final bool primary;
 
   const _ActionTile({
     required this.label,
     required this.color,
+    required this.icon,
     required this.onTap,
     this.enabled = true,
+    this.primary = false,
   });
 
   @override
@@ -835,32 +868,117 @@ class _ActionTile extends StatelessWidget {
         child: Container(
           height: 66,
           decoration: BoxDecoration(
-            color: MockUI.actionBg,
+            color: primary ? color : MockUI.actionBg,
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: MockUI.actionBorder),
+            border: Border.all(
+              color: primary
+                  ? color.withValues(alpha: 0.72)
+                  : MockUI.actionBorder,
+            ),
           ),
-          child: Column(
+          child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
                 width: 26,
                 height: 26,
                 decoration: BoxDecoration(
-                  color: color,
+                  color: primary ? Colors.white.withValues(alpha: 0.26) : color,
                   borderRadius: BorderRadius.circular(7),
                 ),
+                child: Icon(
+                  icon,
+                  size: 17,
+                  color: primary ? Colors.white : MockUI.panel,
+                ),
               ),
-              const SizedBox(height: 6),
+              const SizedBox(width: 9),
               Text(
                 label,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w900,
-                  color: MockUI.actionInk,
+                  color: primary ? Colors.white : MockUI.actionInk,
                 ),
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 펫 스테이지 터치 기능을 눈에 띄게 알려주되, 별도 케어 기능처럼 보이지 않게 한다.
+class _ReactionHint extends StatelessWidget {
+  final String label;
+  final String message;
+  final VoidCallback onTap;
+
+  const _ReactionHint({
+    required this.label,
+    required this.message,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        height: 66,
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10),
+        decoration: BoxDecoration(
+          color: MockUI.actionBg,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: MockUI.actionBorder),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 26,
+              height: 26,
+              decoration: BoxDecoration(
+                color: MockUI.blue,
+                borderRadius: BorderRadius.circular(7),
+              ),
+              child: const Icon(
+                Icons.touch_app_rounded,
+                size: 17,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w900,
+                      color: MockUI.actionInk,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    message,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 10.5,
+                      height: 1.15,
+                      fontWeight: FontWeight.w700,
+                      color: MockUI.muted,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -899,11 +1017,14 @@ class _CoinPill extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 6),
-          Text(text,
-              style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w900,
-                  color: Color(0xFF6D4B05))),
+          Text(
+            text,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w900,
+              color: Color(0xFF6D4B05),
+            ),
+          ),
         ],
       ),
     );
@@ -972,14 +1093,16 @@ class _CheckLine extends StatelessWidget {
         ),
         const SizedBox(width: 9),
         Expanded(
-          child: Text(label,
-              style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF594F43))),
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF594F43),
+            ),
+          ),
         ),
       ],
     );
   }
 }
-

@@ -77,10 +77,13 @@ class _SpeciesRevealScreenState extends State<SpeciesRevealScreen>
   @override
   Widget build(BuildContext context) {
     final theme = SpeciesTheme.forType(_story.type);
-    final spriteKey =
-        motionSpriteKeyForStage(_story.type, 2) ?? 'fluff';
-    final (dotColor, accentColor) =
-        dotColorsForKey(spriteKey, _story.type, theme, widget.pet.colorVariant);
+    final spriteKey = motionSpriteKeyForStage(_story.type, 2) ?? 'fluff';
+    final (dotColor, accentColor) = dotColorsForKey(
+      spriteKey,
+      _story.type,
+      theme,
+      widget.pet.colorVariant,
+    );
 
     return Scaffold(
       backgroundColor: _stageBg,
@@ -177,7 +180,7 @@ class _SpeciesRevealScreenState extends State<SpeciesRevealScreen>
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
+                            borderRadius: BorderRadius.circular(8),
                           ),
                           elevation: 0,
                         ),
@@ -221,7 +224,7 @@ class _SpeciesRevealScreenState extends State<SpeciesRevealScreen>
               fontSize: 11.5,
               fontWeight: FontWeight.w800,
               color: theme.glow,
-              letterSpacing: 1.2,
+              letterSpacing: 0,
             ),
           ),
         ],

@@ -85,11 +85,19 @@ class _EvolutionRevealScreenState extends State<EvolutionRevealScreen>
   Widget build(BuildContext context) {
     final pet = widget.pet;
     final theme = SpeciesTheme.forType(pet.evolutionType);
-    final spriteKey = motionSpriteKeyForStage(
-            pet.evolutionType, pet.evolutionStage, pet.evolutionGrade) ??
+    final spriteKey =
+        motionSpriteKeyForStage(
+          pet.evolutionType,
+          pet.evolutionStage,
+          pet.evolutionGrade,
+        ) ??
         'fluff';
-    final (dotColor, accentColor) =
-        dotColorsForKey(spriteKey, pet.evolutionType, theme, pet.colorVariant);
+    final (dotColor, accentColor) = dotColorsForKey(
+      spriteKey,
+      pet.evolutionType,
+      theme,
+      pet.colorVariant,
+    );
     final stageLabel = AppStrings.stageLabels[pet.evolutionStage] ?? '';
     final formName = _formName;
 
@@ -177,7 +185,7 @@ class _EvolutionRevealScreenState extends State<EvolutionRevealScreen>
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
+                            borderRadius: BorderRadius.circular(8),
                           ),
                           elevation: 0,
                         ),
@@ -216,14 +224,14 @@ class _EvolutionRevealScreenState extends State<EvolutionRevealScreen>
           Text(
             _isMythical
                 ? (widget.pet.evolutionType?.isHiddenSpecies == true
-                    ? AppStrings.evolutionRevealBadgeHiddenMythical
-                    : AppStrings.evolutionRevealBadgeMythical)
+                      ? AppStrings.evolutionRevealBadgeHiddenMythical
+                      : AppStrings.evolutionRevealBadgeMythical)
                 : AppStrings.evolutionRevealBadge,
             style: TextStyle(
               fontSize: 11.5,
               fontWeight: FontWeight.w800,
               color: theme.glow,
-              letterSpacing: 1.2,
+              letterSpacing: 0,
             ),
           ),
         ],
