@@ -407,3 +407,58 @@ class DesignTokens {
   /// 목표 달성·보상 축하 강조색 (라이트 카드 위 금색)
   static const Color gold = Color(0xFFD99A0B);
 }
+
+/// 시안(design/archive/previous-ui-mock/index.html) 정확 팔레트.
+/// 화면 UI 크롬(카드·미터·액션)은 종 테마색이 아니라 이 고정 팔레트를 쓴다.
+/// (펫 스프라이트만 종 테마색으로 렌더)
+class MockUI {
+  MockUI._();
+
+  // 기본
+  static const Color ink = Color(0xFF24221F);
+  static const Color softInk = Color(0xFF5F594F);
+  static const Color muted = Color(0xFF81786B);
+  static const Color line = Color(0xFFE0D2B8);
+  static const Color lineStrong = Color(0xFFC9B58D);
+  static const Color panel = Color(0xFFFFFAF0);
+  static const Color card = Color(0xFFFFFDF7);
+
+  // 포인트 색
+  static const Color green = Color(0xFF7DA56D);
+  static const Color greenSoft = Color(0xFFE6F2D8);
+  static const Color gold = Color(0xFFF2BD43);
+  static const Color goldSoft = Color(0xFFFFF1BF);
+  static const Color coral = Color(0xFFE87058);
+  static const Color blue = Color(0xFF5F99B2);
+
+  // 화면 배경(따뜻한 크림 세로 그라데이션)
+  static const Color screenTop = Color(0xFFFFF9EA);
+  static const Color screenMid = Color(0xFFFFFDF8);
+  static const Color screenBottom = Color(0xFFF8F1DF);
+
+  // 펫 무대(하늘→풀밭) + 해
+  static const Color stageSky = Color(0xFFE4F5F1);
+  static const Color stageMid = Color(0xFFF7F5DC);
+  static const Color stageGrass = Color(0xFFDCE9BD);
+  static const Color stageBorder = Color(0xFFCBDCC5);
+  static const Color sun = Color(0xFFFFD868);
+
+  // 미터 트랙
+  static const Color meterTrack = Color(0xFFE8DCC8);
+
+  // 액션 타일
+  static const Color actionBg = Color(0xFFF4F7EC);
+  static const Color actionBorder = Color(0xFFDBCEB3);
+  static const Color actionInk = Color(0xFF365528);
+
+  // 말풍선
+  static const Color speechBg = Color(0xFFFFFDF8);
+  static const Color speechBorder = Color(0xFFDFC79F);
+  static const Color speechInk = Color(0xFF584735);
+
+  // 체크리스트 미완료 박스
+  static const Color checkTrack = Color(0xFFE0D4BD);
+
+  // 카드 배경(반투명 크림)
+  static const Color cardBg = Color(0xFFFDFBF4);
+}
