@@ -1,0 +1,1543 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Digital Pet Final Feature-Aligned Design Mock</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg-mint: #edf5e8;
+        --bg-cream: #fff4df;
+        --paper: #fffaf0;
+        --paper-2: #fffdf7;
+        --ink: #24221f;
+        --ink-2: #5d564b;
+        --muted: #817869;
+        --line: #e1d2b6;
+        --line-2: #cfbd95;
+        --deep: #28251f;
+        --green: #779f68;
+        --green-soft: #e5f1d7;
+        --gold: #f1ba3f;
+        --gold-soft: #fff1bf;
+        --coral: #e57058;
+        --coral-soft: #ffe9dd;
+        --blue: #5d99b2;
+        --blue-soft: #dceff2;
+        --purple-soft: #eadcf1;
+        --shadow: 0 22px 52px rgba(67, 58, 40, 0.14);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        background: var(--bg-mint);
+      }
+
+      body {
+        margin: 0;
+        min-width: 1180px;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at 8% 0%, rgba(218, 237, 224, 0.86), transparent 32%),
+          radial-gradient(circle at 90% 0%, rgba(255, 226, 177, 0.72), transparent 30%),
+          linear-gradient(115deg, var(--bg-mint) 0%, #f8f3e7 47%, var(--bg-cream) 100%);
+        font-family:
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+      }
+
+      img {
+        display: block;
+        max-width: 100%;
+      }
+
+      button {
+        font: inherit;
+      }
+
+      .proposal {
+        width: min(1500px, calc(100% - 80px));
+        margin: 0 auto;
+        padding: 34px 0 56px;
+      }
+
+      .top-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 460px;
+        gap: 42px;
+        align-items: end;
+        margin-bottom: 28px;
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        width: fit-content;
+        align-items: center;
+        border: 1px solid #c7dbb6;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.78);
+        padding: 8px 14px;
+        color: #557a49;
+        font-size: 13px;
+        font-weight: 900;
+      }
+
+      h1 {
+        max-width: 820px;
+        margin: 14px 0 16px;
+        font-size: 42px;
+        line-height: 1.14;
+        letter-spacing: 0;
+      }
+
+      .lead {
+        max-width: 860px;
+        margin: 0;
+        color: var(--ink-2);
+        font-size: 17px;
+        line-height: 1.75;
+      }
+
+      .analysis-box {
+        display: grid;
+        gap: 10px;
+      }
+
+      .analysis-item {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: rgba(255, 253, 247, 0.76);
+        padding: 13px 14px;
+      }
+
+      .analysis-item strong {
+        display: block;
+        margin-bottom: 4px;
+        font-size: 13px;
+      }
+
+      .analysis-item span {
+        display: block;
+        color: var(--ink-2);
+        font-size: 12px;
+        line-height: 1.45;
+      }
+
+      .source-strip {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+        margin-bottom: 28px;
+      }
+
+      .source-pill {
+        border: 1px solid #dacaa9;
+        border-radius: 8px;
+        background: rgba(255, 250, 239, 0.88);
+        padding: 10px 12px;
+        color: var(--ink-2);
+        font-size: 12px;
+        font-weight: 800;
+        line-height: 1.4;
+      }
+
+      .screen-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 18px;
+        align-items: start;
+      }
+
+      .screen-column {
+        display: grid;
+        gap: 10px;
+      }
+
+      .screen-label {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 8px;
+        align-items: end;
+        min-height: 28px;
+        padding: 0 8px;
+      }
+
+      .screen-label strong {
+        font-size: 17px;
+      }
+
+      .screen-label span {
+        color: var(--ink-2);
+        font-size: 12px;
+        font-weight: 900;
+      }
+
+      .phone {
+        overflow: hidden;
+        border: 10px solid var(--deep);
+        border-radius: 34px;
+        background: var(--paper);
+        box-shadow: var(--shadow);
+      }
+
+      .phone-screen {
+        display: flex;
+        min-height: 720px;
+        flex-direction: column;
+        gap: 10px;
+        border-radius: 22px;
+        background: linear-gradient(180deg, #fff9ea 0%, #fffdf8 73%, #f7efdc 100%);
+        padding: 18px 16px 12px;
+      }
+
+      .screen-top {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 8px;
+        align-items: start;
+      }
+
+      .screen-top small {
+        display: block;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 900;
+      }
+
+      .screen-top h2 {
+        margin: 3px 0 0;
+        font-size: 23px;
+        line-height: 1.1;
+        letter-spacing: 0;
+      }
+
+      .title-edit {
+        display: inline-grid;
+        grid-template-columns: auto 14px;
+        gap: 5px;
+        align-items: center;
+      }
+
+      .title-edit::after {
+        width: 12px;
+        height: 12px;
+        border-radius: 3px;
+        background: var(--line-2);
+        content: "";
+      }
+
+      .coin-pill {
+        display: inline-flex;
+        min-width: 72px;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        border: 1px solid #f0c05b;
+        border-radius: 999px;
+        background: #fff4cd;
+        padding: 7px 11px;
+        color: #6d4b05;
+        font-size: 13px;
+        font-weight: 900;
+      }
+
+      .coin-pill::before {
+        width: 14px;
+        height: 14px;
+        border-radius: 999px;
+        background: linear-gradient(135deg, #f8d46a, #efa72f);
+        content: "";
+      }
+
+      .banner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        border: 1px solid #e7cd91;
+        border-radius: 8px;
+        background: #fff5d8;
+        padding: 9px 11px;
+        color: #694e17;
+        font-size: 12px;
+        font-weight: 850;
+      }
+
+      .banner span:last-child {
+        color: #8f6519;
+        font-size: 11px;
+      }
+
+      .pet-stage,
+      .mini-stage,
+      .arena-stage {
+        position: relative;
+        overflow: hidden;
+        border: 1px solid #cbdcc5;
+        border-radius: 7px;
+        background:
+          radial-gradient(circle at 83% 15%, #ffd868 0 22px, transparent 23px),
+          linear-gradient(180deg, #e4f5f1 0%, #f7f5dc 64%, #dce9bd 65%, #dce9bd 100%);
+      }
+
+      .pet-stage {
+        display: grid;
+        min-height: 302px;
+        place-items: end center;
+      }
+
+      .pet-stage::after,
+      .mini-stage::after,
+      .arena-stage::after {
+        position: absolute;
+        right: 28px;
+        bottom: 20px;
+        left: 44px;
+        height: 16px;
+        border-radius: 999px;
+        background: rgba(102, 92, 71, 0.12);
+        content: "";
+      }
+
+      .speech {
+        position: absolute;
+        top: 44px;
+        left: 18px;
+        z-index: 2;
+        max-width: 185px;
+        border: 1px solid #dfc79f;
+        border-radius: 8px;
+        background: rgba(255, 253, 248, 0.96);
+        padding: 12px 13px;
+        color: #584735;
+        font-size: 13px;
+        font-weight: 850;
+        line-height: 1.4;
+        box-shadow: 0 10px 18px rgba(56, 45, 30, 0.1);
+      }
+
+      .stage-pet {
+        position: relative;
+        z-index: 1;
+        width: 214px;
+        image-rendering: pixelated;
+      }
+
+      .stat-grid,
+      .info-grid,
+      .battle-stat-grid {
+        display: grid;
+        gap: 8px;
+      }
+
+      .stat-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .battle-stat-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+
+      .stat-card,
+      .routine-panel,
+      .care-row,
+      .focus-panel,
+      .battle-card,
+      .style-panel,
+      .record-panel,
+      .featured-pet,
+      .growth-path,
+      .slot-card,
+      .account-panel,
+      .tree-panel {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: rgba(255, 253, 247, 0.9);
+      }
+
+      .stat-card {
+        padding: 10px 9px;
+      }
+
+      .stat-card strong {
+        display: block;
+        margin-bottom: 8px;
+        font-size: 13px;
+      }
+
+      .meter {
+        height: 8px;
+        overflow: hidden;
+        border-radius: 999px;
+        background: #e8dcc8;
+      }
+
+      .meter.tall {
+        height: 11px;
+      }
+
+      .meter > span {
+        display: block;
+        height: 100%;
+        border-radius: inherit;
+      }
+
+      .green > span {
+        background: var(--green);
+      }
+
+      .gold > span {
+        background: var(--gold);
+      }
+
+      .blue > span {
+        background: var(--blue);
+      }
+
+      .coral > span {
+        background: var(--coral);
+      }
+
+      .home-actions {
+        display: grid;
+        grid-template-columns: 1.4fr 1fr;
+        gap: 8px;
+      }
+
+      .primary-action,
+      .secondary-action,
+      .small-action {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: 46px;
+        border: 0;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 900;
+      }
+
+      .primary-action {
+        background: var(--green);
+        color: #ffffff;
+      }
+
+      .secondary-action {
+        border: 1px solid #d8ceb7;
+        background: #f7f7ed;
+        color: #415e36;
+      }
+
+      .primary-action::before,
+      .secondary-action::before,
+      .small-action::before {
+        width: 20px;
+        height: 20px;
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.42);
+        content: "";
+      }
+
+      .routine-panel {
+        display: grid;
+        gap: 11px;
+        padding: 14px;
+      }
+
+      .panel-heading {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+
+      .panel-heading strong {
+        font-size: 14px;
+      }
+
+      .panel-heading span {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 900;
+      }
+
+      .check-line {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        color: #594f43;
+        font-size: 13px;
+        font-weight: 850;
+      }
+
+      .check-line::before {
+        flex: 0 0 auto;
+        width: 17px;
+        height: 17px;
+        border-radius: 5px;
+        background: #e0d4bd;
+        content: "";
+      }
+
+      .check-line.done::before {
+        background: var(--green);
+      }
+
+      .focus-panel {
+        position: relative;
+        display: grid;
+        grid-template-columns: 128px 1fr;
+        gap: 10px;
+        min-height: 178px;
+        overflow: hidden;
+        border-color: #cfded1;
+        background:
+          radial-gradient(circle at 18% 15%, rgba(255, 222, 125, 0.26), transparent 34%),
+          linear-gradient(180deg, #eaf7f7 0%, #fffdf4 100%);
+        padding: 14px;
+      }
+
+      .focus-panel::after {
+        position: absolute;
+        right: 34px;
+        bottom: 16px;
+        left: 26px;
+        height: 13px;
+        border-radius: 999px;
+        background: rgba(102, 92, 71, 0.11);
+        content: "";
+      }
+
+      .focus-panel img {
+        position: relative;
+        z-index: 1;
+        align-self: end;
+        width: 130px;
+        image-rendering: pixelated;
+      }
+
+      .focus-copy {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        min-width: 0;
+        flex-direction: column;
+        justify-content: center;
+      }
+
+      .focus-copy h3 {
+        margin: 0 0 8px;
+        font-size: 18px;
+        line-height: 1.35;
+        letter-spacing: 0;
+      }
+
+      .focus-copy p {
+        margin: 0 0 12px;
+        color: var(--ink-2);
+        font-size: 12px;
+        line-height: 1.5;
+      }
+
+      .care-list {
+        display: grid;
+        gap: 8px;
+      }
+
+      .care-row {
+        display: grid;
+        grid-template-columns: 42px 1fr auto;
+        gap: 11px;
+        align-items: center;
+        padding: 11px;
+      }
+
+      .care-icon {
+        display: grid;
+        width: 42px;
+        height: 42px;
+        place-items: center;
+        border-radius: 8px;
+        color: rgba(36, 34, 31, 0.62);
+        font-size: 20px;
+        font-weight: 900;
+      }
+
+      .care-icon.water {
+        background: var(--blue-soft);
+      }
+
+      .care-icon.feed {
+        background: #f4dfae;
+      }
+
+      .care-icon.nap,
+      .care-icon.focus {
+        background: var(--purple-soft);
+      }
+
+      .care-icon.shake {
+        background: #ece3c4;
+      }
+
+      .care-row strong {
+        display: block;
+        margin-bottom: 3px;
+        font-size: 13px;
+      }
+
+      .care-row p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 11px;
+        line-height: 1.35;
+      }
+
+      .small-action {
+        min-height: 34px;
+        border: 1px solid #bed0b3;
+        background: #f2f9ea;
+        padding: 0 12px;
+        color: #486b39;
+        font-size: 12px;
+      }
+
+      .small-action::before {
+        display: none;
+      }
+
+      .mission-row {
+        display: grid;
+        gap: 5px;
+      }
+
+      .mission-row strong {
+        color: var(--ink);
+        font-size: 12px;
+      }
+
+      .battle-card {
+        overflow: hidden;
+        background: linear-gradient(180deg, #e4f5f1 0%, #f7f5dc 66%, #e2e4bd 100%);
+      }
+
+      .mini-stage {
+        display: grid;
+        min-height: 164px;
+        place-items: end center;
+      }
+
+      .mini-stage img {
+        position: relative;
+        z-index: 1;
+        width: 128px;
+        image-rendering: pixelated;
+      }
+
+      .pet-card-copy {
+        padding: 13px 14px 14px;
+      }
+
+      .pet-card-copy h3 {
+        margin: 0 0 3px;
+        font-size: 18px;
+        letter-spacing: 0;
+      }
+
+      .pet-card-copy p {
+        margin: 0 0 10px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .stat-badge {
+        display: flex;
+        min-width: 0;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fffdf8;
+        padding: 6px 4px;
+        font-size: 10.5px;
+        font-weight: 900;
+      }
+
+      .stat-badge span {
+        color: var(--muted);
+      }
+
+      .style-panel {
+        display: grid;
+        gap: 9px;
+        padding: 12px;
+      }
+
+      .style-row {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 7px;
+      }
+
+      .style-chip {
+        display: grid;
+        min-height: 52px;
+        place-items: center;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #f7f4eb;
+        color: var(--ink-2);
+        font-size: 12px;
+        font-weight: 900;
+      }
+
+      .style-chip.active {
+        border-color: var(--green);
+        background: var(--green-soft);
+        color: #3e642f;
+      }
+
+      .mode-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .mode-button {
+        display: grid;
+        min-height: 58px;
+        place-items: center;
+        border: 0;
+        border-radius: 8px;
+        background: var(--green);
+        color: #ffffff;
+        font-size: 13px;
+        font-weight: 900;
+      }
+
+      .mode-button.alt {
+        border: 1px solid #bfd0b3;
+        background: #f2f9ea;
+        color: #486b39;
+      }
+
+      .wild-card {
+        display: grid;
+        grid-template-columns: 62px 1fr auto;
+        gap: 10px;
+        align-items: center;
+        border: 1px solid #e9bc82;
+        border-radius: 8px;
+        background: #fff2df;
+        padding: 10px;
+      }
+
+      .wild-card img {
+        width: 58px;
+        image-rendering: pixelated;
+      }
+
+      .wild-card strong {
+        display: block;
+        font-size: 13px;
+      }
+
+      .wild-card span {
+        display: block;
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 800;
+      }
+
+      .arena-stage {
+        display: grid;
+        min-height: 190px;
+        padding: 14px;
+      }
+
+      .versus-row {
+        position: relative;
+        z-index: 2;
+        display: grid;
+        grid-template-columns: 1fr 44px 1fr;
+        gap: 8px;
+        align-items: center;
+      }
+
+      .fighter {
+        border: 1px solid #e3c98f;
+        border-radius: 8px;
+        background: rgba(255, 253, 248, 0.94);
+        padding: 9px;
+      }
+
+      .fighter b {
+        display: block;
+        margin-bottom: 7px;
+        font-size: 12px;
+      }
+
+      .vs {
+        display: grid;
+        width: 44px;
+        height: 44px;
+        place-items: center;
+        border-radius: 999px;
+        background: var(--coral);
+        color: #ffffff;
+        font-size: 13px;
+        font-weight: 900;
+      }
+
+      .fighters {
+        position: absolute;
+        right: 18px;
+        bottom: 34px;
+        left: 20px;
+        z-index: 1;
+        display: flex;
+        align-items: end;
+        justify-content: center;
+        gap: 42px;
+      }
+
+      .fighters img {
+        width: 104px;
+        image-rendering: pixelated;
+      }
+
+      .turn-panel {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fffdf8;
+        padding: 11px 12px;
+      }
+
+      .turn-line {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        color: #554b3e;
+        font-size: 12px;
+        font-weight: 850;
+      }
+
+      .turn-line + .turn-line {
+        margin-top: 7px;
+      }
+
+      .featured-pet {
+        display: grid;
+        grid-template-columns: 112px 1fr;
+        gap: 13px;
+        align-items: center;
+        padding: 14px;
+        background: #fff5db;
+      }
+
+      .featured-pet img {
+        width: 108px;
+        image-rendering: pixelated;
+      }
+
+      .featured-pet h3 {
+        margin: 0 0 6px;
+        font-size: 22px;
+        letter-spacing: 0;
+      }
+
+      .featured-pet p {
+        margin: 0 0 10px;
+        color: var(--ink-2);
+        font-size: 12px;
+        line-height: 1.45;
+      }
+
+      .tag-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+
+      .tag {
+        border-radius: 999px;
+        background: #eadfc7;
+        padding: 5px 8px;
+        color: #6c593e;
+        font-size: 11px;
+        font-weight: 900;
+      }
+
+      .info-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .info-tile {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fffdf8;
+        padding: 10px;
+      }
+
+      .info-tile span {
+        display: block;
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 900;
+      }
+
+      .info-tile strong {
+        display: block;
+        margin-top: 3px;
+        font-size: 18px;
+      }
+
+      .growth-path,
+      .tree-panel,
+      .account-panel {
+        display: grid;
+        gap: 12px;
+        padding: 13px;
+      }
+
+      .path-steps {
+        display: grid;
+        grid-template-columns: auto 1fr auto 1fr auto;
+        align-items: center;
+        gap: 7px;
+      }
+
+      .path-step {
+        display: grid;
+        width: 42px;
+        height: 42px;
+        place-items: center;
+        border: 1px solid #e4c996;
+        border-radius: 999px;
+        background: #fffdf8;
+        color: #6b5430;
+        font-size: 11px;
+        font-weight: 900;
+      }
+
+      .path-step.current {
+        background: #fff1ca;
+      }
+
+      .path-line {
+        height: 3px;
+        border-radius: 999px;
+        background: #d8ccb4;
+      }
+
+      .path-line.done {
+        background: #b6c8a3;
+      }
+
+      .slot-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 9px;
+      }
+
+      .slot-card {
+        display: grid;
+        min-height: 108px;
+        place-items: center;
+        padding: 10px 8px;
+        text-align: center;
+      }
+
+      .slot-card.active {
+        border: 2px solid var(--green);
+        background: var(--green-soft);
+      }
+
+      .slot-card img {
+        width: 74px;
+        height: 50px;
+        object-fit: contain;
+        image-rendering: pixelated;
+      }
+
+      .slot-card strong {
+        display: block;
+        margin-top: 5px;
+        font-size: 13px;
+      }
+
+      .slot-card span {
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 800;
+      }
+
+      .tree-list {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 7px;
+      }
+
+      .tree-node {
+        border: 1px solid #ded2b8;
+        border-radius: 8px;
+        background: #fffdf8;
+        padding: 8px 9px;
+        font-size: 11px;
+        font-weight: 900;
+      }
+
+      .tree-node span {
+        display: block;
+        margin-top: 2px;
+        color: var(--muted);
+        font-size: 10px;
+      }
+
+      .account-panel {
+        background: #f9fbf0;
+      }
+
+      .account-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+
+      .email-action {
+        background: #3f6531;
+      }
+
+      .kakao-action {
+        background: #fee500;
+        color: rgba(0, 0, 0, 0.84);
+      }
+
+      .bottom-nav {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 6px;
+        margin-top: auto;
+        border: 1px solid #ead5aa;
+        border-radius: 999px;
+        background: rgba(255, 253, 248, 0.94);
+        padding: 7px;
+      }
+
+      .nav-item {
+        display: grid;
+        gap: 4px;
+        justify-items: center;
+        border-radius: 16px;
+        padding: 6px 3px;
+        color: #5c5348;
+        font-size: 10px;
+        font-weight: 900;
+      }
+
+      .nav-item::before {
+        width: 18px;
+        height: 18px;
+        border-radius: 6px;
+        background: #e3d7bf;
+        content: "";
+      }
+
+      .nav-item.active {
+        background: var(--green-soft);
+        color: #3f6531;
+      }
+
+      .nav-item.active::before {
+        background: var(--green);
+      }
+
+      .foot-note {
+        max-width: 980px;
+        margin: 20px 0 0;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.6;
+      }
+
+      code {
+        border-radius: 5px;
+        background: rgba(214, 162, 62, 0.16);
+        padding: 2px 5px;
+        color: #5b4214;
+      }
+
+      @media (max-width: 1320px) {
+        body {
+          min-width: 0;
+        }
+
+        .proposal {
+          width: min(100% - 34px, 920px);
+        }
+
+        .top-grid {
+          grid-template-columns: 1fr;
+          gap: 20px;
+        }
+
+        .source-strip {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .screen-grid {
+          grid-template-columns: repeat(2, minmax(310px, 1fr));
+        }
+      }
+
+      @media (max-width: 740px) {
+        .proposal {
+          width: min(100% - 20px, 360px);
+          padding-top: 18px;
+        }
+
+        h1 {
+          font-size: 31px;
+        }
+
+        .lead {
+          font-size: 15px;
+        }
+
+        .source-strip,
+        .screen-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="proposal">
+      <header class="top-grid">
+        <div>
+          <span class="eyebrow">Feature-aligned final draft</span>
+          <h1>기능은 그대로 두고, 펫이 먼저 보이는 최종 디자인안</h1>
+          <p class="lead">
+            현재 코드에 있는 홈, 케어, 배틀, 도감 기능만 사용했습니다. 이전 시안의 따뜻한 톤과 큰 펫 스테이지는 유지하고,
+            수동 배틀 버튼이나 새 수집 기능처럼 없는 동작은 제외했습니다.
+          </p>
+        </div>
+
+        <section class="analysis-box" aria-label="현재 코드 분석 요약">
+          <div class="analysis-item">
+            <strong>탭 구조</strong>
+            <span>홈, 케어, 배틀, 도감. 랭킹은 feature flag 기본값상 숨김.</span>
+          </div>
+          <div class="analysis-item">
+            <strong>주요 돌봄</strong>
+            <span>먹이, 물, 간편 급식, 낮잠 15분, 집중 25분, 흔들기 30초.</span>
+          </div>
+          <div class="analysis-item">
+            <strong>배틀 구조</strong>
+            <span>공격 선택식이 아니라 스타일 선택 후 자동 턴 진행/결과 확인.</span>
+          </div>
+          <div class="analysis-item">
+            <strong>도감 구조</strong>
+            <span>현재 펫 프로필, 성장 경로, 스탯, 최대 2마리 슬롯, 진화 트리.</span>
+          </div>
+        </section>
+      </header>
+
+      <section class="source-strip" aria-label="기능 출처">
+        <div class="source-pill">Home: <code>home_screen.dart</code></div>
+        <div class="source-pill">Care: <code>care_screen.dart</code></div>
+        <div class="source-pill">Battle: <code>battle_screen.dart</code></div>
+        <div class="source-pill">Dex: <code>me_screen.dart</code></div>
+      </section>
+
+      <section class="screen-grid" aria-label="최종 디자인 화면">
+        <article class="screen-column" data-source="lib/presentation/screens/home_screen.dart">
+          <div class="screen-label">
+            <strong>홈</strong>
+            <span>펫 관찰 + 오늘 목표</span>
+          </div>
+          <div class="phone">
+            <div class="phone-screen">
+              <div class="screen-top">
+                <div>
+                  <small>오전 산책 후</small>
+                  <h2 class="title-edit">구미호</h2>
+                </div>
+                <div class="coin-pill">Lv.8</div>
+              </div>
+
+              <div class="banner" data-existing-feature="sync-permission-banner">
+                <span>활동 동기화가 기다리고 있어요</span>
+                <span>권한 확인</span>
+              </div>
+
+              <section class="pet-stage" data-existing-feature="pet-stage-tap-reaction">
+                <div class="speech">오늘은 기분이 좋아요. 꼬리도 살랑 흔드네요.</div>
+                <img class="stage-pet" src="../previous-ui-mock/pet-gumiho.png" alt="구미호 픽셀 펫" />
+              </section>
+
+              <div class="stat-grid" data-existing-feature="hunger-happiness-stamina">
+                <div class="stat-card">
+                  <strong>포만감</strong>
+                  <div class="meter green"><span style="width: 72%"></span></div>
+                </div>
+                <div class="stat-card">
+                  <strong>기분</strong>
+                  <div class="meter gold"><span style="width: 78%"></span></div>
+                </div>
+                <div class="stat-card">
+                  <strong>체력</strong>
+                  <div class="meter blue"><span style="width: 58%"></span></div>
+                </div>
+              </div>
+
+              <div class="home-actions">
+                <button class="primary-action" type="button" data-existing-feature="feed">먹이 주기</button>
+                <button class="secondary-action" type="button" data-existing-feature="pet-touch-motion">펫 반응</button>
+              </div>
+
+              <section class="routine-panel" data-existing-feature="today-goals">
+                <div class="panel-heading">
+                  <strong>오늘의 케어</strong>
+                  <span>1 / 3 완료</span>
+                </div>
+                <div class="check-line done">식사 1/2회</div>
+                <div class="check-line">걸음 3.2k/6k보</div>
+                <div class="check-line">수면 4/7시간</div>
+              </section>
+
+              <nav class="bottom-nav" aria-label="하단 탭">
+                <span class="nav-item active">홈</span>
+                <span class="nav-item">케어</span>
+                <span class="nav-item">배틀</span>
+                <span class="nav-item">도감</span>
+              </nav>
+            </div>
+          </div>
+        </article>
+
+        <article class="screen-column" data-source="lib/presentation/screens/care_screen.dart">
+          <div class="screen-label">
+            <strong>케어</strong>
+            <span>실제 돌봄 행동</span>
+          </div>
+          <div class="phone">
+            <div class="phone-screen">
+              <div class="screen-top">
+                <div>
+                  <small>케어 타임</small>
+                  <h2>달토끼</h2>
+                </div>
+                <div class="coin-pill">Lv.8</div>
+              </div>
+
+              <section class="focus-panel" data-existing-feature="priority-care">
+                <img src="../previous-ui-mock/pet-moonrabbit.png" alt="달토끼 픽셀 펫" />
+                <div class="focus-copy">
+                  <h3>지금은 물이 가장 필요해요</h3>
+                  <p>한 잔이면 기력과 기분이 같이 올라요.</p>
+                  <button class="primary-action" type="button" data-existing-feature="drink-water">물 주기</button>
+                </div>
+              </section>
+
+              <div class="care-list">
+                <section class="care-row" data-existing-feature="drink-water">
+                  <span class="care-icon water">물</span>
+                  <div>
+                    <strong>물 마시기</strong>
+                    <p>기력 +2 · 오늘 3/8잔</p>
+                  </div>
+                  <button class="small-action" type="button">주기</button>
+                </section>
+                <section class="care-row" data-existing-feature="alternative-feed">
+                  <span class="care-icon feed">밥</span>
+                  <div>
+                    <strong>간편 급식</strong>
+                    <p>식사 시간대 1회 · 오늘 1/3회</p>
+                  </div>
+                  <button class="small-action" type="button">주기</button>
+                </section>
+                <section class="care-row" data-existing-feature="alternative-sleep">
+                  <span class="care-icon nap">잠</span>
+                  <div>
+                    <strong>낮잠 모드 15분</strong>
+                    <p>끝나면 기력이 회복돼요</p>
+                  </div>
+                  <button class="small-action" type="button">시작</button>
+                </section>
+                <section class="care-row" data-existing-feature="focus-session">
+                  <span class="care-icon focus">집</span>
+                  <div>
+                    <strong>집중 모드 25분</strong>
+                    <p>폰 내려놓기 · 오늘 1/4회</p>
+                  </div>
+                  <button class="small-action" type="button">시작</button>
+                </section>
+                <section class="care-row" data-existing-feature="shake-bonus">
+                  <span class="care-icon shake">흔</span>
+                  <div>
+                    <strong>흔들기 보너스 30초</strong>
+                    <p>1회 = 5걸음 · 오늘 0/1회</p>
+                  </div>
+                  <button class="small-action" type="button">시작</button>
+                </section>
+              </div>
+
+              <section class="routine-panel" data-existing-feature="missions">
+                <div class="panel-heading">
+                  <strong>진행 중 미션</strong>
+                  <span>2 / 9 완료</span>
+                </div>
+                <div class="mission-row">
+                  <strong>산책 매니아</strong>
+                  <div class="meter green"><span style="width: 64%"></span></div>
+                </div>
+                <div class="mission-row">
+                  <strong>숙면 습관</strong>
+                  <div class="meter blue"><span style="width: 42%"></span></div>
+                </div>
+              </section>
+
+              <nav class="bottom-nav" aria-label="하단 탭">
+                <span class="nav-item">홈</span>
+                <span class="nav-item active">케어</span>
+                <span class="nav-item">배틀</span>
+                <span class="nav-item">도감</span>
+              </nav>
+            </div>
+          </div>
+        </article>
+
+        <article class="screen-column" data-source="lib/presentation/screens/battle_screen.dart">
+          <div class="screen-label">
+            <strong>배틀</strong>
+            <span>스타일 선택 + 자동 전투</span>
+          </div>
+          <div class="phone">
+            <div class="phone-screen">
+              <div class="screen-top">
+                <div>
+                  <small>수련의 시간</small>
+                  <h2>수련장</h2>
+                </div>
+                <div class="coin-pill">Lv.8</div>
+              </div>
+
+              <section class="battle-card" data-existing-feature="my-pet-battle-card">
+                <div class="mini-stage">
+                  <img src="../previous-ui-mock/pet-gumiho.png" alt="배틀 내 펫 구미호" />
+                </div>
+                <div class="pet-card-copy">
+                  <h3>구미호</h3>
+                  <p>Lv.8 · 전투 전 컨디션 반영</p>
+                  <div class="battle-stat-grid">
+                    <div class="stat-badge"><span>HP</span>128</div>
+                    <div class="stat-badge"><span>ATK</span>28</div>
+                    <div class="stat-badge"><span>DEF</span>23</div>
+                    <div class="stat-badge"><span>회피</span>12%</div>
+                  </div>
+                </div>
+              </section>
+
+              <section class="style-panel" data-existing-feature="battle-style">
+                <div class="panel-heading">
+                  <strong>배틀 스타일</strong>
+                  <span>전투 전 선택</span>
+                </div>
+                <div class="style-row">
+                  <div class="style-chip">공격형</div>
+                  <div class="style-chip active">균형형</div>
+                  <div class="style-chip">방어형</div>
+                </div>
+              </section>
+
+              <section class="wild-card" data-existing-feature="wild-encounter">
+                <img src="../previous-ui-mock/pet-haetae.png" alt="야생 해태" />
+                <div>
+                  <strong>야생의 기척!</strong>
+                  <span>한도와 무관 · 이기면 보너스 EXP</span>
+                </div>
+                <button class="small-action" type="button">싸운다</button>
+              </section>
+
+              <div class="mode-grid" data-existing-feature="battle-modes">
+                <button class="mode-button" type="button">AI 대전</button>
+                <button class="mode-button alt" type="button">친구방 만들기</button>
+                <button class="mode-button alt" type="button">코드로 참가</button>
+                <button class="mode-button alt" type="button">최근 전적</button>
+              </div>
+
+              <section class="arena-stage" data-existing-feature="auto-turn-arena">
+                <div class="versus-row">
+                  <div class="fighter">
+                    <b>구미호</b>
+                    <div class="meter green tall"><span style="width: 78%"></span></div>
+                  </div>
+                  <div class="vs">VS</div>
+                  <div class="fighter">
+                    <b>도깨비</b>
+                    <div class="meter coral tall"><span style="width: 56%"></span></div>
+                  </div>
+                </div>
+                <div class="fighters">
+                  <img src="../previous-ui-mock/pet-gumiho.png" alt="아군 구미호" />
+                  <img src="../previous-ui-mock/pet-dokkaebi.png" alt="상대 도깨비" />
+                </div>
+              </section>
+
+              <section class="turn-panel" data-existing-feature="turn-log-result">
+                <div class="turn-line">
+                  <span>R2 · 나: 꼬리 불꽃</span>
+                  <span>-24</span>
+                </div>
+                <div class="turn-line">
+                  <span>결과: +50 EXP</span>
+                  <span>한번 더</span>
+                </div>
+              </section>
+
+              <nav class="bottom-nav" aria-label="하단 탭">
+                <span class="nav-item">홈</span>
+                <span class="nav-item">케어</span>
+                <span class="nav-item active">배틀</span>
+                <span class="nav-item">도감</span>
+              </nav>
+            </div>
+          </div>
+        </article>
+
+        <article class="screen-column" data-source="lib/presentation/screens/me_screen.dart">
+          <div class="screen-label">
+            <strong>도감</strong>
+            <span>현재 펫 + 성장 기록</span>
+          </div>
+          <div class="phone">
+            <div class="phone-screen">
+              <div class="screen-top">
+                <div>
+                  <small>신화 펫 도감</small>
+                  <h2>발견한 친구들</h2>
+                </div>
+                <div class="coin-pill">1 / 14</div>
+              </div>
+
+              <section class="featured-pet" data-existing-feature="featured-pet">
+                <img src="../previous-ui-mock/pet-gumiho.png" alt="도감 대표 구미호" />
+                <div>
+                  <h3>구미호</h3>
+                  <p>호기심이 많고 애정 표현이 빠른 불꽃 꼬리 펫.</p>
+                  <div class="tag-row">
+                    <span class="tag">미식</span>
+                    <span class="tag">민첩</span>
+                  </div>
+                </div>
+              </section>
+
+              <div class="info-grid" data-existing-feature="featured-info">
+                <div class="info-tile">
+                  <span>친밀도</span>
+                  <strong>78</strong>
+                </div>
+                <div class="info-tile">
+                  <span>성장</span>
+                  <strong>성장</strong>
+                </div>
+                <div class="info-tile">
+                  <span>레벨</span>
+                  <strong>Lv.8</strong>
+                </div>
+              </div>
+
+              <section class="growth-path" data-existing-feature="growth-path">
+                <div class="panel-heading">
+                  <strong>성장 경로</strong>
+                  <span>다음 단계까지 42%</span>
+                </div>
+                <div class="path-steps">
+                  <span class="path-step">유아</span>
+                  <span class="path-line done"></span>
+                  <span class="path-step current">성장</span>
+                  <span class="path-line"></span>
+                  <span class="path-step">성숙</span>
+                </div>
+              </section>
+
+              <section class="routine-panel" data-existing-feature="battle-lifetime-stats">
+                <div class="panel-heading">
+                  <strong>전투 스탯</strong>
+                  <span>누적 12승</span>
+                </div>
+                <div class="battle-stat-grid">
+                  <div class="stat-badge"><span>HP</span>128</div>
+                  <div class="stat-badge"><span>ATK</span>28</div>
+                  <div class="stat-badge"><span>DEF</span>23</div>
+                  <div class="stat-badge"><span>걸음</span>42k</div>
+                </div>
+              </section>
+
+              <section class="slot-grid" data-existing-feature="pet-slots-max-2">
+                <div class="slot-card active">
+                  <img src="../previous-ui-mock/pet-gumiho.png" alt="첫 번째 펫 구미호" />
+                  <strong>구미호</strong>
+                  <span>활성 · Lv.8</span>
+                </div>
+                <div class="slot-card">
+                  <img src="../previous-ui-mock/pet-moonrabbit.png" alt="두 번째 펫 달토끼" />
+                  <strong>달토끼</strong>
+                  <span>탭하여 전환</span>
+                </div>
+              </section>
+
+              <section class="tree-panel" data-existing-feature="evolution-tree">
+                <div class="panel-heading">
+                  <strong>진화 트리</strong>
+                  <span>조건 기반</span>
+                </div>
+                <div class="tree-list">
+                  <div class="tree-node">구미호<span>급식 극단</span></div>
+                  <div class="tree-node">삼족오<span>걸음 극단</span></div>
+                  <div class="tree-node">도깨비<span>전투 승수</span></div>
+                  <div class="tree-node">황룡<span>균형 육성</span></div>
+                </div>
+              </section>
+
+              <section class="account-panel" data-existing-feature="account-and-restart">
+                <div class="panel-heading">
+                  <strong>계정</strong>
+                  <span>서버 저장</span>
+                </div>
+                <div class="account-actions">
+                  <button class="mode-button email-action" type="button">이메일 로그인</button>
+                  <button class="mode-button kakao-action" type="button">카카오 시작</button>
+                </div>
+              </section>
+
+              <nav class="bottom-nav" aria-label="하단 탭">
+                <span class="nav-item">홈</span>
+                <span class="nav-item">케어</span>
+                <span class="nav-item">배틀</span>
+                <span class="nav-item active">도감</span>
+              </nav>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <p class="foot-note">
+        구현 시 제외할 것: 새 수동 공격 버튼, 랜덤 온라인 대전 기본 노출, 2마리 슬롯을 넘는 신규 수집 관리 기능.
+        홈의 `펫 반응`은 현재 코드의 터치 모션 성격이므로 스탯 변화 액션처럼 확장하지 않습니다.
+      </p>
+    </main>
+  </body>
+</html>
