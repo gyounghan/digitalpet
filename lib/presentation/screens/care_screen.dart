@@ -4,6 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/pet_provider.dart';
 import '../providers/active_pet_provider.dart';
 import '../widgets/app_design.dart';
+import '../widgets/mock_ui_widgets.dart';
+import '../widgets/pet_motion_thumb.dart';
+import '../widgets/pixel_motion_animation.dart' show colorVariantFor;
 import '../../core/theme/species_theme.dart';
 import '../../core/constants/app_strings.dart';
 import '../../domain/entities/pet.dart';
@@ -66,7 +69,7 @@ class _CareScreenState extends ConsumerState<CareScreen> {
     ref.watch(activePetIdProvider); // 활성 펫 전환 시 rebuild 구독
     final petAsync = ref.watch(petNotifierProvider(_activePetId));
     return Scaffold(
-      backgroundColor: DesignTokens.bg,
+      backgroundColor: MockUI.screenTop,
       body: SafeArea(
         child: petAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),
@@ -79,43 +82,163 @@ class _CareScreenState extends ConsumerState<CareScreen> {
 
   Widget _buildContent(Pet pet) {
     final theme = SpeciesTheme.forType(pet.evolutionType);
-    return Column(
-      children: [
-        ScreenTop(
-          title: '케어',
-          trailing: AppPill(
-            text: '자동',
-            theme: theme,
-            variant: AppPillVariant.outline,
-            icon: Icons.auto_awesome,
-          ),
+    // 시안 케어: screen-top → focus-panel(우선 행동) → care-list(급식·물·낮잠·
+    // 집중·흔들기) → 오늘의 루틴. 따뜻한 크림 그라데이션 배경.
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [MockUI.screenTop, MockUI.screenMid, MockUI.screenBottom],
+          stops: [0.0, 0.72, 1.0],
         ),
-        Expanded(
+      ),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 460),
           child: ListView(
-            padding: const EdgeInsets.fromLTRB(18, 0, 18, 18),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
             children: [
-              const SizedBox(height: 4),
-              // 현재 상태 — 대체 행동의 효과를 보는 화면이므로 여기서 노출
-              _buildStatusCard(pet, theme),
-              const SizedBox(height: 14),
-              // 능동 건강 습관 — 갓생몬 컨셉
-              _buildFocusRow(pet, theme),
-              const SizedBox(height: 6),
+              MockScreenTop(
+                eyebrow: '케어 타임',
+                title: pet.name,
+                trailing: MockCoinPill('Lv.${pet.level}'),
+              ),
+              const SizedBox(height: 10),
+              _buildFocusPanel(pet, theme),
+              const SizedBox(height: 10),
               _buildWaterRow(pet, theme),
-              const SizedBox(height: 6),
-              // 대체 케어 — 바쁠 때 직접 채우는 행동
+              const SizedBox(height: 8),
               _buildAltFeedRow(pet, theme),
-              const SizedBox(height: 6),
+              const SizedBox(height: 8),
               _buildAltSleepRow(pet, theme),
-              const SizedBox(height: 6),
+              const SizedBox(height: 8),
+              _buildFocusRow(pet, theme),
+              const SizedBox(height: 8),
               _buildShakeRow(pet, theme),
-              const SizedBox(height: 16),
-              const SectionTitle(title: '미션'),
+              const SizedBox(height: 12),
+              _buildStatusCard(pet, theme),
+              const SizedBox(height: 12),
               _buildMissionsCard(pet, theme),
             ],
           ),
         ),
-      ],
+      ),
+    );
+  }
+
+  /// 시안 .focus-panel — 우선 행동 1개를 크게 추천(펫 + 헤드라인 + 버튼).
+  /// 가장 필요한 케어(물/급식/낮잠/집중)를 스탯으로 골라 보여준다.
+  Widget _buildFocusPanel(Pet pet, SpeciesTheme theme) {
+    // 우선순위: 물(기력 낮고 가능) → 급식(포만감 낮고 가능) → 낮잠(기력 낮음) → 집중.
+    final altFeed = ref.read(alternativeFeedPetUseCaseProvider);
+    final String headline;
+    final String desc;
+    final String button;
+    final bool enabled;
+    final VoidCallback? onTap;
+    if (pet.canDrinkWater && pet.stamina <= 60) {
+      headline = '지금은 물이 가장 필요해요';
+      desc = '한 잔이면 기력과 기분이 같이 올라요.';
+      button = '물 주기';
+      enabled = true;
+      onTap = () => ref
+          .read(petNotifierProvider(_activePetId).notifier)
+          .performDrinkWater();
+    } else if (pet.hunger <= 55 && altFeed.canUse(pet)) {
+      headline = '슬슬 배가 고파요';
+      desc = '간편 급식으로 포만감을 채워줄까요?';
+      button = '급식';
+      enabled = true;
+      onTap = () => ref
+          .read(petNotifierProvider(_activePetId).notifier)
+          .performAlternativeFeed();
+    } else if (pet.stamina <= 45 && _napTimer == null) {
+      headline = '조금 지쳐 보여요';
+      desc = '낮잠으로 전투 전 체력을 천천히 채웁니다.';
+      button = '낮잠';
+      enabled = true;
+      onTap = () => _startNapMode(ref);
+    } else {
+      headline = '오늘도 함께 정진해요';
+      desc = '집중 모드로 폰을 내려놓고 같이 성장해요.';
+      button = '집중';
+      enabled = !pet.isDead && pet.canFocus && _focusTimer == null;
+      onTap = enabled ? () => _startFocusMode(ref) : null;
+    }
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(7),
+        border: Border.all(color: const Color(0xFFCFDED1)),
+        gradient: const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFFEAF7F7), Color(0xFFFFFDF4)],
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          SizedBox(
+            width: 116,
+            height: 128,
+            child: Align(
+              alignment: Alignment.bottomCenter,
+              child: PetMotionThumb(
+                type: pet.evolutionType,
+                stage: pet.evolutionStage,
+                grade: pet.evolutionGrade,
+                variant: colorVariantFor(pet),
+                size: 116,
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(headline,
+                    style: const TextStyle(
+                        fontSize: 18,
+                        height: 1.35,
+                        fontWeight: FontWeight.w800,
+                        color: MockUI.ink)),
+                const SizedBox(height: 10),
+                Text(desc,
+                    style: const TextStyle(
+                        fontSize: 13,
+                        height: 1.5,
+                        fontWeight: FontWeight.w600,
+                        color: MockUI.softInk)),
+                const SizedBox(height: 14),
+                Opacity(
+                  opacity: enabled ? 1.0 : 0.45,
+                  child: GestureDetector(
+                    onTap: enabled ? onTap : null,
+                    behavior: HitTestBehavior.opaque,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 18, vertical: 11),
+                      decoration: BoxDecoration(
+                        color: MockUI.green,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(button,
+                          style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -322,18 +445,17 @@ class _CareScreenState extends ConsumerState<CareScreen> {
     final done = used >= goal;
     final enabled = !pet.isDead && !done && _focusTimer == null;
 
-    return AppListRow(
-      theme: theme,
-      tinted: enabled,
-      leading: Icon(Icons.self_improvement,
-          color: enabled ? theme.primaryDeep : DesignTokens.ink3, size: 20),
+    return MockCareRow(
+      icon: Icons.self_improvement,
+      iconBg: const Color(0xFFE6D7F1),
       title: '집중 모드 (${FocusSessionUseCase.sessionMinutes}분)',
       subtitle: _focusTimer != null
           ? '집중 중... 폰을 내려놓아요'
           : done
-              ? '오늘 집중 목표 달성! 🎯 ($used/$goal)'
+              ? '오늘 집중 목표 달성! ($used/$goal)'
               : '폰 내려놓고 집중하면 성장 · 오늘 $used/$goal회',
-      trailing: _trailingPill(enabled, theme),
+      buttonLabel: _focusTimer != null ? '진행' : '시작',
+      enabled: enabled,
       onTap: enabled ? () => _startFocusMode(ref) : null,
     );
   }
@@ -489,16 +611,15 @@ class _CareScreenState extends ConsumerState<CareScreen> {
     final done = used >= goal;
     final enabled = !pet.isDead && !done;
 
-    return AppListRow(
-      theme: theme,
-      tinted: enabled,
-      leading: Icon(Icons.local_drink,
-          color: enabled ? theme.primaryDeep : DesignTokens.ink3, size: 20),
-      title: '물마시기',
+    return MockCareRow(
+      icon: Icons.local_drink,
+      iconBg: const Color(0xFFD5EDF3),
+      title: '물 마시기',
       subtitle: done
-          ? '오늘 수분 목표 달성! 💧 ($used/$goal잔)'
+          ? '오늘 수분 목표 달성! ($used/$goal잔)'
           : '한 잔당 기력 +${DrinkWaterUseCase.staminaPerCup} · 오늘 $used/$goal잔',
-      trailing: _trailingPill(enabled, theme),
+      buttonLabel: '주기',
+      enabled: enabled,
       onTap: enabled
           ? () async {
               final before = pet.todayWaterCount;
@@ -540,14 +661,13 @@ class _CareScreenState extends ConsumerState<CareScreen> {
       subtitle = '이 시간대는 이미 급식했어요';
     }
 
-    return AppListRow(
-      theme: theme,
-      tinted: enabled,
-      leading: Icon(Icons.local_dining,
-          color: enabled ? theme.primaryDeep : DesignTokens.ink3, size: 20),
+    return MockCareRow(
+      icon: Icons.local_dining,
+      iconBg: const Color(0xFFF2DEAE),
       title: '간편 급식',
       subtitle: subtitle,
-      trailing: _trailingPill(enabled, theme),
+      buttonLabel: '주기',
+      enabled: enabled,
       onTap: enabled
           ? () async {
               final applied = await ref
@@ -572,15 +692,15 @@ class _CareScreenState extends ConsumerState<CareScreen> {
     final used = pet.todayAlternativeSleepCount;
     final max = AlternativeSleepPetUseCase.maxAlternativeSleepsPerDay;
 
-    return AppListRow(
-      theme: theme,
-      leading: Icon(Icons.bedtime,
-          color: enabled ? theme.primaryDeep : DesignTokens.ink3, size: 20),
+    return MockCareRow(
+      icon: Icons.bedtime,
+      iconBg: const Color(0xFFE6D7F1),
       title: '낮잠 모드 (15분)',
       subtitle: _napTimer != null
           ? '진행 중...'
           : '오늘 $used/$max회 사용 · 끝나면 기력 회복',
-      trailing: _trailingPill(enabled, theme),
+      buttonLabel: _napTimer != null ? '진행' : '시작',
+      enabled: enabled,
       onTap: enabled ? () => _startNapMode(ref) : null,
     );
   }
@@ -591,26 +711,16 @@ class _CareScreenState extends ConsumerState<CareScreen> {
     final used = pet.todayAlternativeExerciseCount;
     final max = ShakeStepBonusUseCase.maxSessionsPerDay;
 
-    return AppListRow(
-      theme: theme,
-      leading: Icon(Icons.vibration,
-          color: enabled ? theme.primaryDeep : DesignTokens.ink3, size: 20),
+    return MockCareRow(
+      icon: Icons.vibration,
+      iconBg: const Color(0xFFE9E1C6),
       title: '흔들기 보너스 (30초)',
       subtitle: _shakeTimer != null
           ? '흔드는 중...'
           : '오늘 $used/$max회 · 1회 = ${ShakeStepBonusUseCase.stepsPerShake}걸음',
-      trailing: _trailingPill(enabled, theme),
+      buttonLabel: _shakeTimer != null ? '진행' : '시작',
+      enabled: enabled,
       onTap: enabled ? () => _startShakeSession(ref) : null,
-    );
-  }
-
-  Widget _trailingPill(bool enabled, SpeciesTheme theme) {
-    return AppPill(
-      text: enabled ? '시작' : '대기',
-      theme: theme,
-      variant: enabled ? AppPillVariant.solid : AppPillVariant.outline,
-      fontSize: 10,
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
     );
   }
 

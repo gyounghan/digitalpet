@@ -135,7 +135,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: DesignTokens.bg,
+      backgroundColor: MockUI.screenBottom,
       // 비활성 탭의 Ticker/애니메이션 자동 정지 (CPU/배터리 절약)
       // + 미방문 탭은 빈 SizedBox로 둬서 첫 빌드 비용 회피 (lazy 빌드)
       body: IndexedStack(
@@ -149,18 +149,18 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
           );
         }),
       ),
-      bottomNavigationBar: Container(
-        decoration: const BoxDecoration(
-          color: DesignTokens.surface,
-          border: Border(
-            top: BorderSide(color: DesignTokens.line, width: 1),
-          ),
-        ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+      // 시안 .bottom-nav — 떠 있는 알약형(라운드 999 + 테두리 + 크림 배경).
+      bottomNavigationBar: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+          child: Container(
+            padding: const EdgeInsets.all(7),
+            decoration: BoxDecoration(
+              color: MockUI.card,
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(color: const Color(0xFFEAD5AA)),
+            ),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: List.generate(
                 _tabs.length,
                 (index) => _buildNavItem(index),
@@ -175,32 +175,34 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
   Widget _buildNavItem(int index) {
     final isActive = _currentIndex == index;
     final tab = _tabs[index];
-    const accent = SpeciesTheme.defaultTheme;
+    const activeColor = Color(0xFF3F6531);
+    const inactiveColor = Color(0xFF5C5348);
 
     return Expanded(
       child: GestureDetector(
         onTap: () => setState(() => _currentIndex = index),
+        behavior: HitTestBehavior.opaque,
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 6),
+          padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 3),
           decoration: BoxDecoration(
-            color: isActive ? accent.primarySoft : Colors.transparent,
-            borderRadius: BorderRadius.circular(12),
+            color: isActive ? MockUI.greenSoft : Colors.transparent,
+            borderRadius: BorderRadius.circular(16),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
                 tab.icon,
-                color: isActive ? accent.primaryDeep : DesignTokens.ink3,
-                size: 22,
+                color: isActive ? MockUI.green : const Color(0xFF9A8F7C),
+                size: 18,
               ),
-              const SizedBox(height: 3),
+              const SizedBox(height: 4),
               Text(
                 tab.label,
                 style: TextStyle(
-                  fontSize: 10.5,
-                  color: isActive ? accent.primaryDeep : DesignTokens.ink3,
-                  fontWeight: FontWeight.w700,
+                  fontSize: 10,
+                  color: isActive ? activeColor : inactiveColor,
+                  fontWeight: FontWeight.w900,
                 ),
               ),
             ],
