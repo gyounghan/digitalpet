@@ -9,7 +9,6 @@ import '../widgets/app_design.dart';
 import '../../core/theme/species_theme.dart';
 import '../../core/constants/app_strings.dart';
 import '../../domain/entities/pet.dart';
-import '../../domain/usecases/calculate_daily_goals_score_usecase.dart';
 import '../../domain/usecases/pet_transition_events.dart';
 import '../../domain/usecases/today_goal_progress.dart';
 import '../../core/utils/pet_image_helper.dart';
@@ -171,25 +170,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     });
   }
 
-  String _getMoodText(PetMood mood) {
-    switch (mood) {
-      case PetMood.happy:
-        return AppStrings.moodHappy;
-      case PetMood.normal:
-        return AppStrings.moodNormal;
-      case PetMood.hungry:
-        return AppStrings.moodHungry;
-      case PetMood.sleepy:
-        return AppStrings.moodSleepy;
-      case PetMood.tired:
-        return AppStrings.moodTired;
-      case PetMood.sad:
-        return AppStrings.moodSad;
-      case PetMood.dead:
-        return AppStrings.moodDead;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     ref.watch(activePetIdProvider); // 활성 펫 전환 시 rebuild 구독
@@ -331,71 +311,31 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   Widget _buildPetContent(BuildContext context, WidgetRef ref, Pet pet) {
     final theme = SpeciesTheme.forType(pet.evolutionType);
-    final expPct = _calcExpPct(pet.exp, pet.level);
-
+    // 시안 홈 구조: 상단바 → 인사말+이름 → 말풍선(기분) → 펫 무대 →
+    // 상태(포만감·기분·체력) → 액션(먹이·놀기·휴식) → 오늘의 케어 체크리스트.
     return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 460),
         child: Column(
           children: [
-            _buildHeader(context, ref, pet),
-            _buildExpStrip(pet, theme, expPct),
-            const SizedBox(height: 4),
-            SyncPermissionBanner(theme: theme),
-            if (pet.todayEvent.isNotEmpty && pet.todayEvent != 'normal')
-              _buildEventBanner(pet, theme),
-            // 펫 스테이지는 내용(300)에 맞춰 높이를 잡는다 (카드가 과하게
-            // 늘어나지 않도록 Expanded 대신 Flexible — 남는 공간은 아래로).
-            Flexible(child: _buildPetStage(pet, theme)),
-            // 상호작용 행: 밥주기(급식) · 쓰담(joy 연출) · 휴식(sleep 연출)
-            _buildInteractionRow(ref, pet, theme),
-            _buildTodayGoalsCard(pet, theme),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeader(BuildContext context, WidgetRef ref, Pet pet) {
-    // 메뉴/설정 아이콘 제거 → 펫 이름/종/기분만 단순 표시
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 10, 18, 6),
-      child: GestureDetector(
-        onTap: () => _showNameEditDialog(context, ref, pet),
-        child: Row(
-          children: [
+            _buildTopBar(),
+            _buildGreetingHeader(context, ref, pet, theme),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(18, 0, 18, 16),
                 children: [
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Flexible(
-                        child: Text(
-                          pet.name,
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w800,
-                            color: DesignTokens.ink,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      const Icon(Icons.edit,
-                          size: 14, color: DesignTokens.ink3),
-                    ],
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '${SpeciesTheme.labelFor(pet.evolutionType)} · ${_getMoodText(pet.mood)}',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: DesignTokens.ink3,
-                    ),
-                  ),
+                  _buildSpeechBubble(pet, theme),
+                  const SizedBox(height: 8),
+                  _buildPetStage(pet, theme),
+                  const SizedBox(height: 10),
+                  SyncPermissionBanner(theme: theme),
+                  if (pet.todayEvent.isNotEmpty && pet.todayEvent != 'normal')
+                    _buildEventBanner(pet, theme),
+                  _buildStatusMiniRow(pet, theme),
+                  const SizedBox(height: 12),
+                  _buildActionRow(ref, pet, theme),
+                  const SizedBox(height: 14),
+                  _buildTodayCareCard(pet, theme),
                 ],
               ),
             ),
@@ -405,29 +345,131 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  Widget _buildExpStrip(Pet pet, SpeciesTheme theme, int expPct) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 0, 18, 8),
+  /// 상단바 — 시안: 좌측 탭명 '홈' · 우측 부제 '관찰과 애착'.
+  Widget _buildTopBar() {
+    return const Padding(
+      padding: EdgeInsets.fromLTRB(18, 12, 18, 6),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          AppPill(
-            text: 'Lv.${pet.level}',
-            theme: theme,
-            variant: AppPillVariant.themed,
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: AppMeter(
-              value: expPct.toDouble(),
-              theme: theme,
-              tone: AppMeterTone.themed,
-              height: 10,
-            ),
-          ),
+          Text('홈',
+              style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  color: DesignTokens.ink)),
+          Text('관찰과 애착',
+              style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: DesignTokens.ink3)),
         ],
       ),
     );
   }
+
+  /// 인사말 헤더 — 시안: 시간대 인사말(작게) + 펫 이름(크게) + 우측 Lv 필.
+  /// (코인/재화는 현재 없는 기능이라 Lv 필로 대체)
+  Widget _buildGreetingHeader(
+      BuildContext context, WidgetRef ref, Pet pet, SpeciesTheme theme) {
+    final hour = DateTime.now().hour;
+    final greeting = hour < 6
+        ? '고요한 새벽'
+        : hour < 12
+            ? '오전 산책 후'
+            : hour < 18
+                ? '나른한 오후'
+                : '포근한 저녁';
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(18, 0, 18, 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(
+            child: GestureDetector(
+              onTap: () => _showNameEditDialog(context, ref, pet),
+              behavior: HitTestBehavior.opaque,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(greeting,
+                      style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: DesignTokens.ink3)),
+                  const SizedBox(height: 1),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Flexible(
+                        child: Text(pet.name,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.w800,
+                                color: DesignTokens.ink)),
+                      ),
+                      const SizedBox(width: 5),
+                      const Icon(Icons.edit, size: 13, color: DesignTokens.ink3),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          AppPill(
+              text: 'Lv.${pet.level}',
+              theme: theme,
+              variant: AppPillVariant.themed),
+        ],
+      ),
+    );
+  }
+
+  /// 기분 말풍선 — 시안: 펫 위 흰 말풍선에 상태 한마디.
+  Widget _buildSpeechBubble(Pet pet, SpeciesTheme theme) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.only(left: 4),
+        constraints: const BoxConstraints(maxWidth: 300),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: DesignTokens.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: DesignTokens.line),
+        ),
+        child: Text(
+          _moodMessage(pet.mood),
+          style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: DesignTokens.ink2,
+              height: 1.4),
+        ),
+      ),
+    );
+  }
+
+  /// mood → 말풍선 대사 (기존 mood 데이터만 사용, 새 기능 아님).
+  String _moodMessage(PetMood mood) {
+    switch (mood) {
+      case PetMood.happy:
+        return '오늘은 기분이 좋아요. 꼬리도 살랑 흔드네요.';
+      case PetMood.normal:
+        return '평온한 하루예요. 함께 있어 좋아요.';
+      case PetMood.hungry:
+        return '배가 고파요… 먹이 좀 주실래요?';
+      case PetMood.sleepy:
+        return '눈이 슬슬 감겨요. 잠깐 쉬고 싶어요.';
+      case PetMood.tired:
+        return '오늘은 조금 지쳤어요. 쉬어갈까요?';
+      case PetMood.sad:
+        return '기운이 없어요… 놀아주면 좋겠어요.';
+      case PetMood.dead:
+        return '…';
+    }
+  }
+
 
   Widget _buildEventBanner(Pet pet, SpeciesTheme theme) {
     return Padding(
@@ -459,65 +501,72 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Widget _buildPetStage(Pet pet, SpeciesTheme theme) {
-    // 시안 톤: 하늘(위)→풀밭(아래) 서식지 무대. 펫을 크게 세우고 바닥
-    // 플랫폼(둥근 잔디 밴드 + 그림자)으로 "진짜 키우는" 느낌을 준다.
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 0, 18, 12),
-      child: Container(
-        clipBehavior: Clip.antiAlias,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [theme.gradStart, theme.gradEnd],
-          ),
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: theme.primary.withValues(alpha: 0.08),
-              blurRadius: 24,
-              offset: const Offset(0, 8),
-            ),
-          ],
+    // 시안 서식지 무대: 하늘→풀밭 + 우상단 해 + 바닥 플랫폼·그림자 + 큰 펫.
+    return Container(
+      height: 250,
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [theme.gradStart, theme.gradEnd],
         ),
-        child: Stack(
-          alignment: Alignment.bottomCenter,
-          children: [
-            // 바닥 풀밭 밴드 (테마색을 옅게 깐 둥근 지면)
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: Container(
-                height: 54,
-                decoration: BoxDecoration(
-                  color: theme.primary.withValues(alpha: 0.10),
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(80),
-                    topRight: Radius.circular(80),
-                  ),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: theme.primary.withValues(alpha: 0.08),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Stack(
+        alignment: Alignment.bottomCenter,
+        children: [
+          // 우상단 해
+          Positioned(
+            top: 14,
+            right: 16,
+            child: Icon(Icons.wb_sunny_rounded,
+                size: 26, color: DesignTokens.gold.withValues(alpha: 0.9)),
+          ),
+          // 바닥 풀밭 밴드
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: Container(
+              height: 48,
+              decoration: BoxDecoration(
+                color: theme.primary.withValues(alpha: 0.10),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(70),
+                  topRight: Radius.circular(70),
                 ),
               ),
             ),
-            // 펫 발밑 그림자 (접지감)
-            Positioned(
-              bottom: 30,
-              child: Container(
-                width: 150,
-                height: 20,
-                decoration: BoxDecoration(
-                  color: theme.primaryDeep.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(100),
-                ),
+          ),
+          // 발밑 그림자
+          Positioned(
+            bottom: 28,
+            child: Container(
+              width: 130,
+              height: 18,
+              decoration: BoxDecoration(
+                color: theme.primaryDeep.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(100),
               ),
             ),
-            // 펫 — 톡 건드리면 반응(기분 좋으면 joy, 나쁘면 angry)
-            GestureDetector(
+          ),
+          // 펫 — 톡 건드리면 반응(기분 좋으면 joy, 나쁘면 angry)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: GestureDetector(
               onTap: () => _playTransientMotion(_pokeReaction(pet.mood)),
               child: _buildPetSprite(pet, theme),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -537,15 +586,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       final (dotColor, accentColor) = dotColorsForKey(
           spriteKey, pet.evolutionType, theme, colorVariantFor(pet));
       return SizedBox(
-        width: 300,
-        height: 300,
+        width: 210,
+        height: 210,
         child: Align(
           alignment: Alignment.bottomCenter,
           child: PixelMotionAnimation(
             spriteKey: spriteKey,
             motion: motion,
-            width: 270,
-            height: 270,
+            width: 195,
+            height: 195,
             dotColor: dotColor,
             accentColor: accentColor,
             colorVariant: colorVariantFor(pet),
@@ -570,217 +619,147 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  /// 홈 상호작용 행 — 밥주기(급식) · 쓰담(joy 연출) · 휴식(sleep 연출).
-  /// 시안의 "직접 돌보는" 감을 위해 큰 펫 무대 바로 아래 3버튼으로 배치.
-  /// 쓰담·휴식은 수치 변화 없는 순수 반응 모션(기존 톡 반응과 동일 방식).
-  Widget _buildInteractionRow(WidgetRef ref, Pet pet, SpeciesTheme theme) {
+  /// 상태 미니 행 — 시안: 포만감·기분·체력 3열, 라벨 + 짧은 컬러 바.
+  Widget _buildStatusMiniRow(Pet pet, SpeciesTheme theme) {
+    Widget stat(String label, int value, Color color) => Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label,
+                  style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: DesignTokens.ink3)),
+              const SizedBox(height: 5),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: LinearProgressIndicator(
+                  value: (value / 100).clamp(0.0, 1.0),
+                  minHeight: 7,
+                  backgroundColor: color.withValues(alpha: 0.18),
+                  valueColor: AlwaysStoppedAnimation(color),
+                ),
+              ),
+            ],
+          ),
+        );
+    return Row(
+      children: [
+        stat('포만감', pet.hunger, DesignTokens.good),
+        const SizedBox(width: 12),
+        stat('기분', pet.happiness, DesignTokens.gold),
+        const SizedBox(width: 12),
+        stat('체력', pet.stamina, const Color(0xFF56A3EC)),
+      ],
+    );
+  }
+
+  /// 액션 행 — 시안: 먹이·놀기·휴식 3개의 정사각 파스텔 카드.
+  /// 먹이=급식(기존), 놀기=joy 연출, 휴식=sleep 연출(수치 변화 없음).
+  Widget _buildActionRow(WidgetRef ref, Pet pet, SpeciesTheme theme) {
     final canFeed = ref.watch(canFeedPetUseCaseProvider).canFeed(pet);
     final hasMotion = _motionSpriteKey(pet) != null;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 0, 18, 8),
-      child: Row(
-        children: [
-          Expanded(
-            flex: 3,
-            child: _InteractionButton(
-              icon: Icons.restaurant,
-              label: AppStrings.feed,
-              theme: theme,
-              filled: true,
-              enabled: canFeed,
-              onTap: () {
-                ref
-                    .read(petNotifierProvider(_activePetId).notifier)
-                    .feed();
-                if (hasMotion) _playTransientMotion(PixelMotion.eat);
-              },
-            ),
+    return Row(
+      children: [
+        Expanded(
+          child: _ActionTile(
+            icon: Icons.restaurant,
+            label: '먹이',
+            color: DesignTokens.good,
+            enabled: canFeed,
+            onTap: () {
+              ref.read(petNotifierProvider(_activePetId).notifier).feed();
+              if (hasMotion) _playTransientMotion(PixelMotion.eat);
+            },
           ),
-          const SizedBox(width: 8),
-          Expanded(
-            flex: 2,
-            child: _InteractionButton(
-              icon: Icons.back_hand,
-              label: '쓰담',
-              theme: theme,
-              onTap: () => _playTransientMotion(PixelMotion.joy),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            flex: 2,
-            child: _InteractionButton(
-              icon: Icons.bedtime,
-              label: '휴식',
-              theme: theme,
-              onTap: () => _playTransientMotion(PixelMotion.sleep),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// 오늘의 목표 카드 — 식사/걸음/수면 목표 진행 3줄 + 보상 안내 1줄.
-  ///
-  /// 목표 하나마다 개별 EXP, 셋 다 채우면 세트 EXP가 추가된다.
-  /// "무엇을 채워야 세트가 완성되는지"를 보여주는 유일한 곳.
-  /// [TodayGoalProgress]로 pet 데이터만으로 동기 계산 (FutureBuilder 불필요).
-  /// 스탯(hunger 등) 상세 수치는 케어 화면으로 이동 — 홈은 기분 텍스트로 요약.
-  Widget _buildTodayGoalsCard(Pet pet, SpeciesTheme theme) {
-    final goals = TodayGoalProgress.fromPet(pet);
-    final todaySets = pet.todaySetExpClaimed;
-    final nextReward =
-        CalculateDailyGoalsScoreUseCase.setExpBase >> todaySets.clamp(0, 31);
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 0, 18, 14),
-      child: AppCard(
-        theme: theme,
-        variant: AppCardVariant.flat,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        radius: 16,
-        child: Column(
-          children: [
-            _goalRow(
-              icon: Icons.restaurant,
-              label: '식사',
-              valueText: '${goals.feedProgress}/${goals.feedGoal}회',
-              ratio: goals.feedRatio,
-              done: goals.feedDone,
-              flash: _flashingGoals.contains(GoalCategory.feed),
-              theme: theme,
-            ),
-            const SizedBox(height: 8),
-            _goalRow(
-              icon: Icons.directions_run,
-              label: '걸음',
-              valueText:
-                  '${_formatSteps(goals.steps)}/${_formatSteps(goals.stepsGoal)}보',
-              ratio: goals.exerciseRatio,
-              done: goals.exerciseDone,
-              flash: _flashingGoals.contains(GoalCategory.exercise),
-              theme: theme,
-            ),
-            const SizedBox(height: 8),
-            _goalRow(
-              icon: Icons.bedtime,
-              label: '수면',
-              valueText:
-                  '${goals.sleepMinutes ~/ 60}/${goals.sleepGoalMinutes ~/ 60}시간',
-              ratio: goals.sleepRatio,
-              done: goals.sleepDone,
-              flash: _flashingGoals.contains(GoalCategory.sleep),
-              theme: theme,
-            ),
-            const SizedBox(height: 10),
-            // 세트 진행 (셋 다 채우면 1세트 — 반감 EXP 보상)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.task_alt, size: 13, color: theme.primaryDeep),
-                const SizedBox(width: 5),
-                Text(
-                  todaySets > 0
-                      ? '오늘 $todaySets세트 완성 · 다음 세트 +$nextReward EXP'
-                      : '하나마다 +${CalculateDailyGoalsScoreUseCase.expPerCategory} EXP · 세트 +$nextReward EXP',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: theme.primaryDeep,
-                    fontFeatures: const [FontFeature.tabularFigures()],
-                  ),
-                ),
-              ],
-            ),
-          ],
         ),
-      ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _ActionTile(
+            icon: Icons.sports_esports,
+            label: '놀기',
+            color: const Color(0xFF56A3EC),
+            onTap: () => _playTransientMotion(PixelMotion.joy),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _ActionTile(
+            icon: Icons.bedtime,
+            label: '휴식',
+            color: DesignTokens.gold,
+            onTap: () => _playTransientMotion(PixelMotion.sleep),
+          ),
+        ),
+      ],
     );
   }
 
-  /// 목표 한 줄 — 아이콘 + 라벨 + 진행바 + 수치 (달성 시 체크·good 톤)
-  ///
-  /// [flash]가 true인 동안(달성 직후 2.6초) 줄 전체를 금색으로 강조하고
-  /// 수치 대신 "목표 달성!"을 보여준다 — 누적식 표시가 다음 목표로 확장될 때
-  /// 달성 순간이 묻히지 않도록.
-  Widget _goalRow({
-    required IconData icon,
-    required String label,
-    required String valueText,
-    required double ratio,
-    required bool done,
-    required SpeciesTheme theme,
-    bool flash = false,
-  }) {
-    final color = flash
-        ? DesignTokens.gold
-        : (done ? DesignTokens.good : theme.primaryDeep);
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 350),
-      curve: Curves.easeOut,
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-      decoration: BoxDecoration(
-        color: flash
-            ? DesignTokens.gold.withValues(alpha: 0.13)
-            : Colors.transparent,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
+  /// 오늘의 케어 — 시안: 제목 + 'N/M 완료' + 목표 체크리스트 행.
+  /// 기존 오늘 목표(식사·걸음·수면) 데이터를 체크리스트로 표현.
+  Widget _buildTodayCareCard(Pet pet, SpeciesTheme theme) {
+    final goals = TodayGoalProgress.fromPet(pet);
+    final items = <(String, bool)>[
+      ('식사 목표 ${goals.feedProgress}/${goals.feedGoal}회', goals.feedDone),
+      ('걸음 목표 ${_formatSteps(goals.steps)}/${_formatSteps(goals.stepsGoal)}보',
+          goals.exerciseDone),
+      ('수면 목표 ${goals.sleepMinutes ~/ 60}/${goals.sleepGoalMinutes ~/ 60}시간',
+          goals.sleepDone),
+    ];
+    final doneCount = items.where((e) => e.$2).length;
+    return AppCard(
+      theme: theme,
+      variant: AppCardVariant.flat,
+      radius: 16,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            flash ? Icons.celebration : (done ? Icons.check_circle : icon),
-            size: 15,
-            color: color,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('오늘의 케어',
+                  style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      color: DesignTokens.ink)),
+              Text('$doneCount / ${items.length} 완료',
+                  style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      color: theme.primary)),
+            ],
           ),
-          const SizedBox(width: 7),
-          SizedBox(
-            width: 34,
-            child: Text(
-              label,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: DesignTokens.ink2,
+          const SizedBox(height: 8),
+          for (final (label, done) in items)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 3),
+              child: Row(
+                children: [
+                  Icon(
+                    done ? Icons.check_circle : Icons.radio_button_unchecked,
+                    size: 17,
+                    color: done ? DesignTokens.good : DesignTokens.ink3,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(label,
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w600,
+                          color: done ? DesignTokens.ink3 : DesignTokens.ink2,
+                          decoration:
+                              done ? TextDecoration.lineThrough : null,
+                        )),
+                  ),
+                ],
               ),
             ),
-          ),
-          Expanded(
-            child: AppMeter(
-              value: flash ? 100 : ratio * 100,
-              theme: theme,
-              tone: done || flash ? AppMeterTone.good : AppMeterTone.themed,
-              height: 7,
-            ),
-          ),
-          const SizedBox(width: 8),
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 250),
-            child: flash
-                ? Text(
-                    AppStrings.goalAchievedFlash,
-                    key: const ValueKey('flash'),
-                    style: const TextStyle(
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w800,
-                      color: DesignTokens.gold,
-                    ),
-                  )
-                : Text(
-                    valueText,
-                    key: const ValueKey('value'),
-                    style: const TextStyle(
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w700,
-                      color: DesignTokens.ink3,
-                      fontFeatures: [FontFeature.tabularFigures()],
-                    ),
-                  ),
-          ),
         ],
       ),
     );
   }
+
 
   /// 걸음 수 축약 표기 (3,200 → 3.2k)
   String _formatSteps(int steps) {
@@ -789,12 +768,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return k == k.roundToDouble() ? '${k.round()}k' : '${k.toStringAsFixed(1)}k';
   }
 
-  /// 현재 레벨의 EXP 진행률 (%) — Pet.getRequiredExpForLevel 규칙과 동일
-  int _calcExpPct(int exp, int level) {
-    final needed = Pet.getRequiredExpForLevel(level);
-    if (needed <= 0) return 0;
-    return ((exp / needed) * 100).clamp(0, 100).round();
-  }
 
   /// 긴 잠에 빠진 펫 — 무료 깨우기(30/30/30) 또는 광고 깨우기(완전 회복)
   Widget _buildDeadPetContent(BuildContext context, WidgetRef ref, Pet pet) {
@@ -886,57 +859,60 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 }
 
-/// 홈 상호작용 버튼 — 시안 톤의 둥근 파스텔 버튼.
-/// [filled]면 테마 딥컬러로 채운 주요 버튼(밥주기), 아니면 옅은 소프트 버튼.
-class _InteractionButton extends StatelessWidget {
+/// 홈 액션 타일 — 시안: 컬러 아이콘 정사각 + 라벨. 먹이/놀기/휴식 공용.
+class _ActionTile extends StatelessWidget {
   final IconData icon;
   final String label;
-  final SpeciesTheme theme;
+  final Color color;
   final VoidCallback onTap;
-  final bool filled;
   final bool enabled;
 
-  const _InteractionButton({
+  const _ActionTile({
     required this.icon,
     required this.label,
-    required this.theme,
+    required this.color,
     required this.onTap,
-    this.filled = false,
     this.enabled = true,
   });
 
   @override
   Widget build(BuildContext context) {
-    final Color bg = filled ? theme.primaryDeep : theme.primarySoft;
-    final Color fg = filled ? Colors.white : theme.primaryDeep;
-    final content = Container(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 20, color: fg),
-          const SizedBox(height: 3),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12.5,
-              fontWeight: FontWeight.w800,
-              color: fg,
-            ),
-          ),
-        ],
-      ),
-    );
     return Opacity(
       opacity: enabled ? 1.0 : 0.4,
       child: GestureDetector(
         onTap: enabled ? onTap : null,
         behavior: HitTestBehavior.opaque,
-        child: content,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: DesignTokens.surface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: DesignTokens.line),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.16),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, size: 21, color: color),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w800,
+                  color: DesignTokens.ink2,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
