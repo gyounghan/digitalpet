@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/pet_provider.dart';
 import '../providers/active_pet_provider.dart';
 import '../widgets/app_design.dart';
+import '../widgets/mock_ui_widgets.dart';
 import '../widgets/pet_motion_thumb.dart';
 import '../widgets/pixel_motion_animation.dart';
 import '../widgets/pixel_pet_image.dart';
@@ -727,7 +728,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
     final petAsync = ref.watch(petNotifierProvider(_activePetId));
 
     return Scaffold(
-      backgroundColor: DesignTokens.bg,
+      backgroundColor: MockUI.screenTop,
       body: SafeArea(
         child: petAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),
@@ -747,14 +748,30 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
   Widget _buildLobby(dynamic pet) {
     final theme = SpeciesTheme.forType(pet.evolutionType);
 
-    return Column(
-      children: [
-        const ScreenTop(title: '배틀'),
-        Expanded(
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(18, 0, 18, 18),
-            children: [
-              _buildMyPetCard(pet, theme),
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [MockUI.screenTop, MockUI.screenMid, MockUI.screenBottom],
+          stops: [0.0, 0.72, 1.0],
+        ),
+      ),
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
+            child: MockScreenTop(
+              eyebrow: '수련의 시간',
+              title: '수련장',
+              trailing: MockCoinPill('Lv.${pet.level}'),
+            ),
+          ),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              children: [
+                _buildMyPetCard(pet, theme),
               const SizedBox(height: 10),
               if (!isLoading && _pendingWild != null) ...[
                 _buildWildEncounterCard(pet, theme),
@@ -781,10 +798,11 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
                 },
               ),
               _buildHistorySection(theme),
-            ],
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -798,30 +816,25 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
         (BattleWithActivityUseCase.dodgeChanceForStamina(pet.stamina as int) *
                 100)
             .round();
-    // 시안 톤: 수련장 무대 — 하늘→풀밭 위에 펫을 크게 세우고 스탯은 하단 배지.
+    // 시안 .arena 톤: 하늘→풀밭 크림 위에 펫을 세우고 스탯은 하단 배지.
     return Container(
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        gradient: LinearGradient(
+        gradient: const LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [theme.gradStart, theme.gradEnd],
+          colors: [MockUI.stageSky, MockUI.stageMid, MockUI.stageGrass],
+          stops: [0.0, 0.66, 1.0],
         ),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: theme.primary.withValues(alpha: 0.08),
-            blurRadius: 18,
-            offset: const Offset(0, 6),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(7),
+        border: Border.all(color: const Color(0xFFD8C69E)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // 이름·레벨 (좌상단)
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -830,7 +843,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w800,
-                    color: DesignTokens.ink,
+                    color: MockUI.ink,
                   ),
                 ),
                 Text(
@@ -838,7 +851,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
                   style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: DesignTokens.ink3,
+                    color: MockUI.muted,
                   ),
                 ),
               ],
@@ -856,7 +869,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
                   bottom: 0,
                   child: Container(
                     height: 34,
-                    color: theme.primary.withValues(alpha: 0.10),
+                    color: const Color(0x1F665C47),
                   ),
                 ),
                 Positioned(
@@ -865,7 +878,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
                     width: 96,
                     height: 14,
                     decoration: BoxDecoration(
-                      color: theme.primaryDeep.withValues(alpha: 0.12),
+                      color: const Color(0x1F665C47),
                       borderRadius: BorderRadius.circular(100),
                     ),
                   ),
@@ -903,29 +916,30 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
 
   Widget _statBadge(String label, String value, SpeciesTheme theme) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
       decoration: BoxDecoration(
-        color: theme.primarySoft,
-        borderRadius: BorderRadius.circular(12),
+        color: MockUI.card,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: MockUI.line),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
             label,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 10.5,
-              fontWeight: FontWeight.w700,
-              color: theme.primaryDeep.withValues(alpha: 0.7),
+              fontWeight: FontWeight.w800,
+              color: MockUI.muted,
             ),
           ),
           const SizedBox(width: 4),
           Text(
             value,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 13,
-              fontWeight: FontWeight.w800,
-              color: theme.primaryDeep,
+              fontWeight: FontWeight.w900,
+              color: MockUI.ink,
             ),
           ),
         ],

@@ -8,6 +8,7 @@ import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart' as kakao;
 import '../providers/pet_provider.dart';
 import '../providers/active_pet_provider.dart';
 import '../widgets/app_design.dart';
+import '../widgets/mock_ui_widgets.dart';
 import '../widgets/pet_motion_thumb.dart';
 import '../widgets/pixel_motion_animation.dart' show colorVariantFor;
 import '../../core/theme/species_theme.dart';
@@ -115,18 +116,6 @@ class _MeScreenState extends ConsumerState<MeScreen> {
   String _stageLabel(int stage) =>
       AppStrings.stageLabels[stage.clamp(1, 4)] ?? '털뭉치';
 
-  String _stageName(EvolutionType? type, int stage, String grade) {
-    if (stage <= 1) return '털뭉치';
-    if (type == null) return '???';
-    final typeName = type.name;
-    // 10종 단일 성장 라인 — 등급별 다른 종(독수리 등) 없이 명예 라인만.
-    if (stage == 2) return AppStrings.stage2Names[typeName] ?? '???';
-    if (stage == 3) {
-      return AppStrings.stage3Names[typeName]?['superior'] ?? '???';
-    }
-    return AppStrings.stage4Names[typeName]?['mythical'] ?? '???';
-  }
-
   int _requiredLevelForStage(int currentStage) {
     switch (currentStage) {
       case 1:
@@ -150,7 +139,7 @@ class _MeScreenState extends ConsumerState<MeScreen> {
     ref.watch(activePetIdProvider); // 활성 펫 전환 시 rebuild 구독
     final petAsync = ref.watch(petNotifierProvider(_activePetId));
     return Scaffold(
-      backgroundColor: DesignTokens.bg,
+      backgroundColor: MockUI.screenTop,
       body: SafeArea(
         child: petAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),
@@ -167,15 +156,33 @@ class _MeScreenState extends ConsumerState<MeScreen> {
   Widget _buildContent(Pet pet) {
     final theme = SpeciesTheme.forType(pet.evolutionType);
     final canEvolve = _canEvolve(pet);
-    return Column(
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [MockUI.screenTop, MockUI.screenMid, MockUI.screenBottom],
+          stops: [0.0, 0.72, 1.0],
+        ),
+      ),
+      child: Column(
       children: [
-        const ScreenTop(title: '도감'),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
+          child: MockScreenTop(
+            eyebrow: '신화 펫 도감',
+            title: '발견한 친구들',
+            trailing: MockCoinPill(_dexProgressLabel(pet)),
+          ),
+        ),
         Expanded(
           child: ListView(
-            padding: const EdgeInsets.fromLTRB(18, 0, 18, 18),
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
             children: [
-              _buildProfileCard(pet, theme, canEvolve),
+              _buildFeaturedPet(pet, theme),
               const SizedBox(height: 10),
+              _buildGrowthPath(pet),
+              const SizedBox(height: 12),
               _buildBattleStats(pet, theme),
               const SizedBox(height: 10),
               _buildLifetimeStats(pet, theme),
@@ -230,7 +237,257 @@ class _MeScreenState extends ConsumerState<MeScreen> {
           ),
         ),
       ],
+      ),
     );
+  }
+
+  /// 도감 진행 라벨 — 발현한 종 수 / 전체(코인 필 자리).
+  String _dexProgressLabel(Pet pet) {
+    final discovered = pet.evolutionType != null ? 1 : 0;
+    return '$discovered / 14';
+  }
+
+  /// 시안 .featured-pet — 대표 펫(이미지 + 이름 + 설명 + 태그) + info-grid.
+  Widget _buildFeaturedPet(Pet pet, SpeciesTheme theme) {
+    final label = SpeciesTheme.labelFor(pet.evolutionType);
+    final desc = _speciesBlurb(pet.evolutionType);
+    final tags = _speciesTags(pet.evolutionType);
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(15),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFF5DB),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: MockUI.line),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              SizedBox(
+                width: 110,
+                height: 96,
+                child: Center(
+                  child: PetMotionThumb(
+                    type: pet.evolutionType,
+                    stage: pet.evolutionStage,
+                    grade: pet.evolutionGrade,
+                    variant: colorVariantFor(pet),
+                    size: 96,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(label,
+                        style: const TextStyle(
+                            fontSize: 23,
+                            fontWeight: FontWeight.w800,
+                            color: MockUI.ink)),
+                    const SizedBox(height: 8),
+                    Text(desc,
+                        style: const TextStyle(
+                            fontSize: 12,
+                            height: 1.5,
+                            fontWeight: FontWeight.w600,
+                            color: MockUI.softInk)),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: [for (final t in tags) _dexTag(t)],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+                child: MockInfoTile(
+                    label: '친밀도', value: '${pet.happiness}')),
+            const SizedBox(width: 8),
+            Expanded(
+                child: MockInfoTile(
+                    label: '성장', value: _stageLabel(pet.evolutionStage))),
+            const SizedBox(width: 8),
+            Expanded(
+                child: MockInfoTile(
+                    label: '레벨', value: 'Lv.${pet.level}')),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _dexTag(String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEADFC7),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(text,
+          style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w900,
+              color: Color(0xFF6C593E))),
+    );
+  }
+
+  /// 시안 .growth-path — 유아→성장→성숙 단계 + '다음 단계까지 %'.
+  Widget _buildGrowthPath(Pet pet) {
+    final stage = pet.evolutionStage; // 1 털뭉치 / 2 유아 / 3 성장 / 4 성숙
+    final pct =
+        ((pet.exp / Pet.getRequiredExpForLevel(pet.level)) * 100)
+            .clamp(0, 100)
+            .round();
+    Widget step(String label, int atStage) {
+      final current = stage == atStage;
+      final passed = stage > atStage;
+      return Container(
+        width: 46,
+        height: 46,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: current
+              ? const Color(0xFFFFF1CA)
+              : (passed ? MockUI.greenSoft : MockUI.card),
+          border: Border.all(color: const Color(0xFFE4C996)),
+        ),
+        child: Text(label,
+            style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w900,
+                color: Color(0xFF6B5430))),
+      );
+    }
+
+    Widget line(bool done) => Expanded(
+          child: Container(
+            height: 3,
+            margin: const EdgeInsets.symmetric(horizontal: 6),
+            decoration: BoxDecoration(
+              color: done ? const Color(0xFFB6C8A3) : const Color(0xFFD8CCB4),
+              borderRadius: BorderRadius.circular(999),
+            ),
+          ),
+        );
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FBEF),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: MockUI.line),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('성장 경로',
+                  style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      color: MockUI.ink)),
+              Text(stage >= 4 ? '최종 단계' : '다음 단계까지 $pct%',
+                  style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w900,
+                      color: MockUI.muted)),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              step('유아', 2),
+              line(stage > 2),
+              step('성장', 3),
+              line(stage > 3),
+              step('성숙', 4),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _speciesBlurb(EvolutionType? type) {
+    if (type == null) return '아직 종이 정해지지 않은 신비로운 털뭉치.';
+    switch (type) {
+      case EvolutionType.gumiho:
+        return '호기심이 많고 애정 표현이 빠른 불꽃 꼬리 펫.';
+      case EvolutionType.samjoko:
+        return '태양을 향해 달리는 전설의 세 발 까마귀.';
+      case EvolutionType.moonrabbit:
+        return '달빛 아래 꿀잠이 특기인 몽글한 친구.';
+      case EvolutionType.haetae:
+        return '하루도 빠짐없이 곁을 지키는 수호수.';
+      case EvolutionType.dokkaebi:
+        return '싸움도 장난처럼 즐기는 개구쟁이.';
+      case EvolutionType.hwangryong:
+        return '무엇 하나 빠짐없는 오방의 중심.';
+      case EvolutionType.bear:
+        return '느긋하게 내공을 쌓는 인내의 곰.';
+      case EvolutionType.otter:
+        return '물과 노는 걸 좋아하는 장난꾸러기 정령.';
+      case EvolutionType.owl:
+        return '밤에 더 또렷해지는 집중의 지혜자.';
+      case EvolutionType.crane:
+        return '몸과 마음을 정갈히 가꾸는 균형의 선비.';
+      case EvolutionType.bird:
+        return '신나는 걸 좋아하는 기동형 주작.';
+      case EvolutionType.snake:
+        return '느긋하고 영리한 마법형 청룡.';
+      case EvolutionType.tiger:
+        return '몸 쓰는 걸 좋아하는 든든한 백호.';
+      case EvolutionType.turtle:
+        return '차분하고 묵직한 방어형 현무.';
+    }
+  }
+
+  List<String> _speciesTags(EvolutionType? type) {
+    switch (type) {
+      case EvolutionType.bird:
+        return ['활발', '자유'];
+      case EvolutionType.snake:
+        return ['차분', '자유'];
+      case EvolutionType.tiger:
+        return ['활발', '규칙'];
+      case EvolutionType.turtle:
+        return ['차분', '규칙'];
+      case EvolutionType.samjoko:
+        return ['걸음왕', '활발'];
+      case EvolutionType.gumiho:
+        return ['미식', '민첩'];
+      case EvolutionType.moonrabbit:
+        return ['꿀잠', '차분'];
+      case EvolutionType.haetae:
+        return ['개근', '수호'];
+      case EvolutionType.dokkaebi:
+        return ['싸움꾼', '장난'];
+      case EvolutionType.hwangryong:
+        return ['균형', '완벽'];
+      case EvolutionType.bear:
+        return ['인내', '디톡스'];
+      case EvolutionType.otter:
+        return ['물', '건강'];
+      case EvolutionType.owl:
+        return ['집중', '지혜'];
+      case EvolutionType.crane:
+        return ['정갈', '균형'];
+      case null:
+        return ['미결정'];
+    }
   }
 
   /// 수집 그리드 — 키우는 펫 슬롯(최대 [kMaxPets]). 탭하면 활성 펫 전환,
@@ -875,153 +1132,6 @@ class _MeScreenState extends ConsumerState<MeScreen> {
     );
   }
 
-  /// 상단 프로필 카드 (deep gradient)
-  Widget _buildProfileCard(Pet pet, SpeciesTheme theme, bool canEvolve) {
-    final stage = pet.evolutionStage;
-    final requiredLevel = _requiredLevelForStage(stage);
-    final stageName = _stageName(pet.evolutionType, stage, pet.evolutionGrade);
-    // 진화율: 다음 단계까지 레벨 진행도 (현재 stage가 최종이면 100%)
-    final evoPct = stage >= 4
-        ? 100
-        : requiredLevel <= 0
-            ? 0
-            : ((pet.level / requiredLevel) * 100).clamp(0, 100).round();
-
-    return AppCard(
-      theme: theme,
-      gradient: LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [theme.primary, theme.primaryDeep],
-      ),
-      padding: const EdgeInsets.all(18),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 96,
-                height: 96,
-                decoration: BoxDecoration(
-                  // 밝은 배경 위에 실제 테마색 도트 모션 프레임을 그린다
-                  color: Colors.white.withValues(alpha: 0.92),
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                alignment: Alignment.center,
-                child: PetMotionThumb(
-                  type: pet.evolutionType,
-                  stage: stage,
-                  grade: pet.evolutionGrade,
-                  variant: colorVariantFor(pet),
-                  size: 78,
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      SpeciesTheme.labelFor(pet.evolutionType),
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white.withValues(alpha: 0.7),
-                        letterSpacing: 0.6,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      stageName,
-                      style: const TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white,
-                      ),
-                    ),
-                    Text(
-                      '${pet.name} · Lv.${pet.level} · ${_stageLabel(stage)}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white.withValues(alpha: 0.88),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          // 진화율 게이지
-          Row(
-            children: [
-              Text(
-                '진화율',
-                style: TextStyle(
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white.withValues(alpha: 0.85),
-                ),
-              ),
-              const Spacer(),
-              Text(
-                stage >= 4
-                    ? '최종 단계'
-                    : '$evoPct% · Lv.${pet.level}/$requiredLevel',
-                style: TextStyle(
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white.withValues(alpha: 0.88),
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(999),
-            child: Container(
-              height: 8,
-              color: Colors.white.withValues(alpha: 0.18),
-              child: FractionallySizedBox(
-                alignment: Alignment.centerLeft,
-                widthFactor: (evoPct / 100).clamp(0.0, 1.0),
-                child: Container(color: Colors.white),
-              ),
-            ),
-          ),
-          if (canEvolve && stage < 4) ...[
-            const SizedBox(height: 10),
-            Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.22),
-                borderRadius: BorderRadius.circular(999),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: const [
-                  Icon(Icons.auto_awesome, size: 13, color: Colors.white),
-                  SizedBox(width: 5),
-                  Text(
-                    '진화 가능!',
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.white,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
 
   /// 전투 스탯 카드 — HP/ATK/DEF + 종 특성
   /// 실제 전투(BattleWithActivityUseCase)와 동일한 Pet getter를 사용해 일치 보장.
