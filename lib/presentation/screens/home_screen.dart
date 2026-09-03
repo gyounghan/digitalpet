@@ -596,6 +596,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               border: Border.all(color: MockUI.line),
             ),
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(label,
@@ -609,15 +610,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
           ),
         );
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        statCard('포만감', pet.hunger, MockUI.green),
-        const SizedBox(width: 8),
-        statCard('기분', pet.happiness, MockUI.gold),
-        const SizedBox(width: 8),
-        statCard('체력', pet.stamina, MockUI.blue),
-      ],
+    // stretch 대신 IntrinsicHeight로 3카드 높이만 맞춘다(ListView 세로 무한
+    // 높이에서 Row cross-stretch는 infinite height 예외를 낸다).
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          statCard('포만감', pet.hunger, MockUI.green),
+          const SizedBox(width: 8),
+          statCard('기분', pet.happiness, MockUI.gold),
+          const SizedBox(width: 8),
+          statCard('체력', pet.stamina, MockUI.blue),
+        ],
+      ),
     );
   }
 
