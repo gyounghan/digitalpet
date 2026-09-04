@@ -301,13 +301,13 @@
 
     .reference-grid {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 8px;
       margin-top: 12px;
     }
 
     .ref-card {
-      min-height: 158px;
+      min-height: 148px;
       padding: 9px;
       border: 1px solid var(--line);
       border-radius: 8px;
@@ -317,7 +317,7 @@
     .ref-card img {
       display: block;
       width: 100%;
-      height: 118px;
+      height: 108px;
       object-fit: contain;
       image-rendering: pixelated;
     }
@@ -482,17 +482,17 @@
   <main class="page">
     <header class="top">
       <div>
-        <p class="eyebrow">레퍼런스 고정 모션 스파이크</p>
-        <h1>구미호 유아기 다시 제작</h1>
+        <p class="eyebrow">앉은 포즈와 걷기 포즈 분리</p>
+        <h1>구미호 유아기 걷기 재제작</h1>
       </div>
-      <div class="pill">원본 기반 40x40</div>
+      <div class="pill">standing key 분리</div>
     </header>
 
     <section class="layout" aria-label="구미호 유아기 모션 미리보기">
       <div class="stage-card">
         <div class="stage">
           <div class="sun" aria-hidden="true"></div>
-          <div class="speech" id="speech">원본 유아기 실루엣을 먼저 고정하고, 몸통 바운스와 짧은 발 디딤만 얹었습니다.</div>
+          <div class="speech" id="speech">걷기는 앉은 원본이 아니라 새 standing key pose에서 만들었습니다. 유아기 얼굴은 유지하고 몸/다리만 서 있는 구조로 다시 잡았습니다.</div>
           <div class="ground" id="ground" aria-hidden="true"></div>
           <div class="sprite-wrap" id="spriteWrap">
             <div class="sprite" id="sprite" role="img" aria-label="구미호 유아기 픽셀 모션"></div>
@@ -502,9 +502,9 @@
           </div>
         </div>
         <div class="stage-footer">
-          <div class="metric"><span>기준</span><strong>원본 crop</strong></div>
+          <div class="metric"><span>기준</span><strong id="baseMetric">standing key</strong></div>
           <div class="metric"><span>현재 프레임</span><strong id="frameMetric">1 / 6</strong></div>
-          <div class="metric"><span>목표</span><strong>총총 움직임</strong></div>
+          <div class="metric"><span>목표</span><strong id="goalMetric">앉은 느낌 제거</strong></div>
         </div>
       </div>
 
@@ -536,25 +536,29 @@
           </div>
           <div class="ref-card">
             <img src="gumiho-baby-pixel-40.png" alt="40x40으로 정리한 구미호 유아기 기준 스프라이트">
-            <span>40x40 기준</span>
+            <span>앉은 40px</span>
+          </div>
+          <div class="ref-card">
+            <img src="gumiho-stand-key.png" alt="걷기용으로 새로 만든 구미호 유아기 standing key pose">
+            <span>걷기 key pose</span>
           </div>
         </div>
 
         <div class="rule-list">
           <div class="mini-card">
             <span>수정 방향</span>
-            <strong>닮음 먼저, 모션은 작게</strong>
-            <p>얼굴과 꼬리 형태가 깨지면 아무리 움직여도 펫처럼 안 보입니다.</p>
+            <strong>베이스 포즈 분리</strong>
+            <p>대기와 먹기는 앉은 유아기 원본을 쓰고, 걷기만 새로 세운 key pose를 씁니다.</p>
           </div>
           <div class="mini-card">
             <span>걷기</span>
-            <strong>아기 여우 총총</strong>
-            <p>서서 걷는 네발짐승보다, 작은 몸이 들썩이고 발만 짧게 바뀌는 쪽으로 잡았습니다.</p>
+            <strong>standing key 기반</strong>
+            <p>유아기 얼굴과 꼬리 인상은 유지하되, 몸통과 네 다리는 서 있는 구조로 새로 잡았습니다.</p>
           </div>
           <div class="mini-card">
             <span>먹기</span>
-            <strong>고개 숙임과 한입</strong>
-            <p>몸 전체를 바꾸지 않고 머리 위치, 입, 음식 픽셀만 변하게 했습니다.</p>
+            <strong>앉은 원본 유지</strong>
+            <p>먹기는 앉은 상태가 자연스러워서 원본 crop 기반 고개 움직임만 사용합니다.</p>
           </div>
         </div>
       </aside>
@@ -575,6 +579,8 @@
     const sprite = document.getElementById("sprite");
     const framesRoot = document.getElementById("frames");
     const frameMetric = document.getElementById("frameMetric");
+    const baseMetric = document.getElementById("baseMetric");
+    const goalMetric = document.getElementById("goalMetric");
     const speed = document.getElementById("speed");
     const speedValue = document.getElementById("speedValue");
     const markerToggle = document.getElementById("markerToggle");
@@ -594,12 +600,12 @@
 
     const markerPositions = {
       walk: [
-        { left: [10.5, 17.6], right: [19.5, 17.6], mouth: [15.5, 22.2], shadow: 1 },
-        { left: [10.5, 16.6], right: [19.5, 16.6], mouth: [15.5, 21.2], shadow: 0.94 },
-        { left: [10.5, 17.6], right: [19.5, 17.6], mouth: [15.5, 22.2], shadow: 0.98 },
-        { left: [10.5, 18.6], right: [19.5, 18.6], mouth: [15.5, 23.2], shadow: 1.08 },
-        { left: [10.5, 16.6], right: [19.5, 16.6], mouth: [15.5, 21.2], shadow: 1 },
-        { left: [10.5, 17.6], right: [19.5, 17.6], mouth: [15.5, 22.2], shadow: 0.95 }
+        { left: [9.5, 16.4], right: [18.5, 16.4], mouth: [14.5, 19.4], shadow: 1 },
+        { left: [9.5, 15.4], right: [18.5, 15.4], mouth: [14.5, 18.4], shadow: 0.94 },
+        { left: [9.5, 16.4], right: [18.5, 16.4], mouth: [14.5, 19.4], shadow: 0.98 },
+        { left: [9.5, 17.4], right: [18.5, 17.4], mouth: [14.5, 20.4], shadow: 1.08 },
+        { left: [9.5, 16.4], right: [18.5, 16.4], mouth: [14.5, 19.4], shadow: 1 },
+        { left: [9.5, 15.4], right: [18.5, 15.4], mouth: [14.5, 18.4], shadow: 0.95 }
       ],
       eat: [
         { left: [10.5, 17.6], right: [19.5, 17.6], mouth: [15.5, 22.2], shadow: 1 },
@@ -613,14 +619,18 @@
 
     const copy = {
       walk: {
-        speech: "원본 유아기 실루엣을 먼저 고정하고, 몸통 바운스와 짧은 발 디딤만 얹었습니다.",
+        speech: "걷기는 앉은 원본이 아니라 새 standing key pose에서 만들었습니다. 유아기 얼굴은 유지하고 몸/다리만 서 있는 구조로 다시 잡았습니다.",
         title: "걷기 프레임",
-        hint: "작은 몸 바운스 + 짧은 앞발/뒷발 변화"
+        hint: "standing key pose 기반 40x40 시트",
+        base: "standing key",
+        goal: "앉은 느낌 제거"
       },
       eat: {
-        speech: "먹기는 캐릭터를 새로 그리지 않고, 고개 숙임과 한입 픽셀만 작게 바꿨습니다.",
+        speech: "먹기는 앉은 상태가 자연스러워서 원본 유아기 포즈를 유지했습니다. 고개 숙임과 한입 픽셀만 작게 바뀝니다.",
         title: "먹기 프레임",
-        hint: "밥그릇 + 고개 숙임 + 입 모양 변화"
+        hint: "앉은 40px 기반 밥그릇 + 고개 숙임",
+        base: "앉은 40px",
+        goal: "먹는 느낌 유지"
       }
     };
 
@@ -674,6 +684,8 @@
       speech.textContent = copy[mode].speech;
       stripTitle.textContent = copy[mode].title;
       stripHint.textContent = copy[mode].hint;
+      baseMetric.textContent = copy[mode].base;
+      goalMetric.textContent = copy[mode].goal;
     }
 
     function render() {
