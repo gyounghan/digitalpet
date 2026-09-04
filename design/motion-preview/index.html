@@ -1,0 +1,904 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>구미호 유아기 모션 프리뷰</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #24221f;
+      --soft-ink: #5f594f;
+      --muted: #81786b;
+      --line: #e0d2b8;
+      --line-strong: #c9b58d;
+      --panel: #fffaf0;
+      --card: #fffdf7;
+      --green: #7da56d;
+      --green-soft: #e6f2d8;
+      --gold: #f2bd43;
+      --gold-soft: #fff1bf;
+      --coral: #e87058;
+      --blue: #5f99b2;
+      --sky: #e4f5f1;
+      --mid: #f7f5dc;
+      --grass: #dce9bd;
+      --track: #e8dcc8;
+      --shadow: rgba(87, 75, 55, 0.22);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        linear-gradient(180deg, #fff9ea 0%, #fffdf8 70%, #f8f1df 100%);
+      color: var(--ink);
+      font-family:
+        -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo",
+        "Noto Sans KR", "Segoe UI", sans-serif;
+      letter-spacing: 0;
+    }
+
+    button,
+    input {
+      font: inherit;
+    }
+
+    .motion-page {
+      width: min(1120px, 100%);
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+
+    .eyebrow {
+      margin: 0 0 4px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(25px, 4vw, 38px);
+      line-height: 1.08;
+      font-weight: 900;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 88px;
+      padding: 8px 12px;
+      border: 1px solid #f0c05b;
+      border-radius: 999px;
+      background: #fff4cd;
+      color: #6d4b05;
+      font-size: 13px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .pill::before {
+      content: "";
+      width: 14px;
+      height: 14px;
+      margin-right: 7px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #f8d46a, #efa72f);
+    }
+
+    .preview-shell {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(300px, 0.9fr);
+      gap: 14px;
+      align-items: stretch;
+    }
+
+    .stage-panel,
+    .inspector,
+    .frame-strip,
+    .rule-card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(253, 251, 244, 0.92);
+    }
+
+    .stage-panel {
+      overflow: hidden;
+    }
+
+    .stage {
+      position: relative;
+      min-height: 430px;
+      display: grid;
+      place-items: center;
+      padding: 22px;
+      background:
+        linear-gradient(180deg, var(--sky) 0%, var(--mid) 63%, var(--grass) 100%);
+    }
+
+    .sun {
+      position: absolute;
+      top: 28px;
+      right: 34px;
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: #ffd868;
+      box-shadow: 0 0 22px rgba(255, 216, 104, 0.45);
+    }
+
+    .ground {
+      position: absolute;
+      left: 18%;
+      right: 18%;
+      bottom: 58px;
+      height: 18px;
+      border-radius: 999px;
+      background: var(--shadow);
+    }
+
+    .big-canvas {
+      position: relative;
+      width: min(320px, 74vw);
+      height: min(320px, 74vw);
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      z-index: 1;
+    }
+
+    .speech {
+      position: absolute;
+      left: 22px;
+      top: 22px;
+      max-width: 250px;
+      padding: 12px 14px;
+      border: 1px solid #dfc79f;
+      border-radius: 8px;
+      background: #fffdf8;
+      color: #584735;
+      font-size: 13px;
+      line-height: 1.45;
+      font-weight: 800;
+      z-index: 2;
+    }
+
+    .stage-footer {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      padding: 10px;
+      background: var(--panel);
+      border-top: 1px solid var(--line);
+    }
+
+    .metric {
+      min-height: 64px;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--card);
+    }
+
+    .metric span {
+      display: block;
+      margin-bottom: 3px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 900;
+    }
+
+    .metric strong {
+      display: block;
+      color: var(--ink);
+      font-size: 18px;
+      font-weight: 900;
+    }
+
+    .inspector {
+      padding: 14px;
+    }
+
+    .control-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .motion-button {
+      flex: 1;
+      min-height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--card);
+      color: var(--soft-ink);
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .motion-button[aria-pressed="true"] {
+      border-color: #6e945f;
+      background: var(--green);
+      color: #fff;
+    }
+
+    .tool-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 12px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--card);
+    }
+
+    .tool-row label {
+      color: var(--soft-ink);
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .tool-row input[type="range"] {
+      width: 100%;
+      accent-color: var(--green);
+    }
+
+    .toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      min-height: 42px;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--card);
+      color: var(--soft-ink);
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .toggle input {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--green);
+    }
+
+    .rule-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .rule-card {
+      padding: 12px;
+      min-height: 96px;
+    }
+
+    .rule-card span {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 900;
+    }
+
+    .rule-card strong {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--ink);
+      font-size: 14px;
+      font-weight: 900;
+    }
+
+    .rule-card p {
+      margin: 0;
+      color: var(--soft-ink);
+      font-size: 12px;
+      line-height: 1.45;
+      font-weight: 700;
+    }
+
+    .frame-strip {
+      grid-column: 1 / -1;
+      padding: 14px;
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .section-title h2 {
+      margin: 0;
+      font-size: 14px;
+      font-weight: 900;
+    }
+
+    .section-title span {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .frames {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(100px, 1fr));
+      gap: 8px;
+    }
+
+    .frame-card {
+      padding: 8px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--card);
+    }
+
+    .frame-card.active {
+      border-color: #6e945f;
+      background: var(--green-soft);
+    }
+
+    .frame-canvas {
+      display: block;
+      width: 100%;
+      aspect-ratio: 1;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+
+    .frame-card span {
+      display: block;
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 900;
+      text-align: center;
+    }
+
+    .notes {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    @media (max-width: 860px) {
+      .motion-page {
+        padding: 16px;
+      }
+
+      .preview-shell {
+        grid-template-columns: 1fr;
+      }
+
+      .stage {
+        min-height: 360px;
+      }
+
+      .frames,
+      .notes {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 520px) {
+      .topbar,
+      .stage-footer {
+        grid-template-columns: 1fr;
+      }
+
+      .topbar {
+        display: block;
+      }
+
+      .pill {
+        margin-top: 12px;
+      }
+
+      .speech {
+        position: static;
+        max-width: none;
+        margin-bottom: 12px;
+      }
+
+      .stage {
+        display: flex;
+        flex-direction: column;
+        min-height: 360px;
+      }
+
+      .sun {
+        width: 28px;
+        height: 28px;
+      }
+
+      .ground {
+        left: 16%;
+        right: 16%;
+        bottom: 48px;
+      }
+
+      .frames,
+      .rule-grid,
+      .notes {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="motion-page">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">픽셀 모션 스파이크</p>
+        <h1>구미호 유아기 기준 포즈</h1>
+      </div>
+      <div class="pill">6프레임</div>
+    </header>
+
+    <section class="preview-shell" aria-label="구미호 모션 프리뷰">
+      <div class="stage-panel">
+        <div class="stage">
+          <div class="sun" aria-hidden="true"></div>
+          <div class="speech" id="speech">걷기는 다리만 흔들지 않고 몸, 머리, 꼬리가 같이 박자를 탑니다.</div>
+          <div class="ground" aria-hidden="true"></div>
+          <canvas id="heroCanvas" class="big-canvas" width="32" height="32" aria-label="구미호 유아기 픽셀 애니메이션"></canvas>
+        </div>
+        <div class="stage-footer">
+          <div class="metric"><span>눈 기준점</span><strong id="eyeMetric">고정</strong></div>
+          <div class="metric"><span>현재 프레임</span><strong id="frameMetric">1 / 6</strong></div>
+          <div class="metric"><span>설계 방식</span><strong>부위 분리</strong></div>
+        </div>
+      </div>
+
+      <aside class="inspector" aria-label="모션 설정">
+        <div class="control-row" role="group" aria-label="모션 선택">
+          <button class="motion-button" type="button" data-mode="walk" aria-pressed="true">걷기</button>
+          <button class="motion-button" type="button" data-mode="eat" aria-pressed="false">먹기</button>
+        </div>
+
+        <div class="tool-row">
+          <label for="speed">재생 속도</label>
+          <output id="speedValue" for="speed">820ms</output>
+          <input id="speed" type="range" min="520" max="1200" step="20" value="820" aria-label="한 사이클 재생 시간">
+        </div>
+
+        <label class="toggle">
+          눈 위치 표시
+          <input id="eyeToggle" type="checkbox" checked>
+        </label>
+
+        <div class="rule-grid">
+          <div class="rule-card">
+            <span>01</span>
+            <strong>눈 먼저 고정</strong>
+            <p>눈을 지운 새 기준 얼굴 위에 눈 좌표를 다시 찍고, 표정은 그 주변 픽셀만 바꿉니다.</p>
+          </div>
+          <div class="rule-card">
+            <span>02</span>
+            <strong>포즈 통일</strong>
+            <p>원본 이미지의 제각각 포즈는 참고만 하고, 앱용 기본 자세를 새로 만듭니다.</p>
+          </div>
+          <div class="rule-card">
+            <span>03</span>
+            <strong>다리 접지</strong>
+            <p>걷기는 앞발과 뒷발이 번갈아 바닥에 닿아야 몸이 미끄러져 보이지 않습니다.</p>
+          </div>
+          <div class="rule-card">
+            <span>04</span>
+            <strong>먹기 리듬</strong>
+            <p>먹이는 고개 숙임, 한입, 씹기, 만족 표정이 있어야 살아있는 느낌이 납니다.</p>
+          </div>
+        </div>
+      </aside>
+
+      <section class="frame-strip" aria-label="프레임 스트립">
+        <div class="section-title">
+          <h2 id="stripTitle">걷기 프레임</h2>
+          <span id="stripHint">몸통 바운스 + 다리 교차 + 꼬리 지연</span>
+        </div>
+        <div class="frames" id="frames"></div>
+        <div class="notes">
+          <div class="rule-card">
+            <span>현재 앱</span>
+            <strong>3프레임 루프</strong>
+            <p>귀엽게 흔들리는 정도는 가능하지만, 발 디딤과 먹는 리듬은 부족합니다.</p>
+          </div>
+          <div class="rule-card">
+            <span>추천</span>
+            <strong>6~8프레임</strong>
+            <p>걷기와 먹기는 최소 6프레임부터 동작의 원인이 보이기 시작합니다.</p>
+          </div>
+          <div class="rule-card">
+            <span>확장</span>
+            <strong>종별 템플릿</strong>
+            <p>네발, 두발, 토끼, 새 템플릿을 만든 뒤 각 펫 특징만 얹는 방식이 안전합니다.</p>
+          </div>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    const palette = {
+      outline: "#231915",
+      bodyDark: "#8e3d1c",
+      body: "#d76424",
+      bodyLight: "#ef8b36",
+      cream: "#fff2cf",
+      creamShade: "#e9c68e",
+      pink: "#f29ca1",
+      eye: "#101014",
+      shine: "#ffffff",
+      gold: "#f2bd43",
+      bowl: "#6b4b35",
+      bowlDark: "#3b2921",
+      food: "#fff4d4",
+      mark: "#3e84b6",
+      grid: "rgba(60, 52, 39, 0.16)",
+      anchor: "#111111"
+    };
+
+    const walkFrames = [
+      { bodyY: 0, headY: 0, tailY: 0, tailX: 0, earY: 0, legA: 0, legB: 1, shadow: 1.00 },
+      { bodyY: -1, headY: -1, tailY: -1, tailX: 0, earY: -1, legA: -1, legB: 1, shadow: 0.92 },
+      { bodyY: 0, headY: 0, tailY: -1, tailX: 1, earY: 0, legA: -2, legB: 2, shadow: 0.98 },
+      { bodyY: 1, headY: 0, tailY: 0, tailX: 0, earY: 0, legA: 1, legB: -1, shadow: 1.08 },
+      { bodyY: 0, headY: -1, tailY: 1, tailX: -1, earY: -1, legA: 2, legB: -2, shadow: 1.00 },
+      { bodyY: -1, headY: 0, tailY: 0, tailX: 0, earY: 0, legA: 1, legB: 0, shadow: 0.94 }
+    ];
+
+    const eatFrames = [
+      { bodyY: 0, headX: 0, headY: 0, tailY: 0, mouth: 0, chew: 0, food: 3, crumb: 0, shadow: 1.00 },
+      { bodyY: 0, headX: -1, headY: 1, tailY: 0, mouth: 1, chew: 0, food: 3, crumb: 0, shadow: 1.02 },
+      { bodyY: 1, headX: -2, headY: 2, tailY: 1, mouth: 2, chew: 0, food: 2, crumb: 1, shadow: 1.08 },
+      { bodyY: 0, headX: -1, headY: 0, tailY: 0, mouth: 0, chew: 1, food: 2, crumb: 0, shadow: 1.00 },
+      { bodyY: 0, headX: 0, headY: 0, tailY: -1, mouth: 0, chew: 2, food: 1, crumb: 0, shadow: 0.98 },
+      { bodyY: -1, headX: 0, headY: -1, tailY: -1, mouth: 3, chew: 0, food: 1, crumb: 2, shadow: 0.94 }
+    ];
+
+    let mode = "walk";
+    let frame = 0;
+    let lastFrameAt = 0;
+    let cycleMs = 820;
+    let showEyes = true;
+
+    const heroCanvas = document.getElementById("heroCanvas");
+    const framesRoot = document.getElementById("frames");
+    const frameMetric = document.getElementById("frameMetric");
+    const eyeMetric = document.getElementById("eyeMetric");
+    const speech = document.getElementById("speech");
+    const stripTitle = document.getElementById("stripTitle");
+    const stripHint = document.getElementById("stripHint");
+    const speed = document.getElementById("speed");
+    const speedValue = document.getElementById("speedValue");
+    const eyeToggle = document.getElementById("eyeToggle");
+    const motionButtons = Array.from(document.querySelectorAll(".motion-button"));
+
+    function pixel(ctx, x, y, w, h, color) {
+      ctx.fillStyle = color;
+      ctx.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h));
+    }
+
+    function linePixels(ctx, points, color) {
+      ctx.fillStyle = color;
+      for (const [x, y, w = 1, h = 1] of points) {
+        ctx.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h));
+      }
+    }
+
+    function clear(ctx) {
+      ctx.clearRect(0, 0, 32, 32);
+      ctx.imageSmoothingEnabled = false;
+    }
+
+    function drawGrid(ctx) {
+      ctx.strokeStyle = palette.grid;
+      ctx.lineWidth = 0.06;
+      for (let i = 0; i <= 32; i += 4) {
+        ctx.beginPath();
+        ctx.moveTo(i, 0);
+        ctx.lineTo(i, 32);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(0, i);
+        ctx.lineTo(32, i);
+        ctx.stroke();
+      }
+    }
+
+    function drawShadow(ctx, scale) {
+      const width = Math.round(15 * scale);
+      const start = Math.round(16 - width / 2);
+      pixel(ctx, start, 27, width, 1, "rgba(69, 58, 42, 0.24)");
+      pixel(ctx, start + 2, 28, width - 4, 1, "rgba(69, 58, 42, 0.16)");
+    }
+
+    function drawTail(ctx, f, eating) {
+      const x = 21 + (f.tailX || 0);
+      const y = 15 + (f.tailY || 0);
+      linePixels(ctx, [
+        [x + 2, y - 1, 4, 1], [x + 1, y, 6, 1], [x, y + 1, 8, 1],
+        [x, y + 2, 9, 2], [x + 1, y + 4, 8, 2], [x + 2, y + 6, 6, 2],
+        [x + 3, y + 8, 4, 1]
+      ], palette.outline);
+      linePixels(ctx, [
+        [x + 2, y, 4, 1], [x + 1, y + 1, 5, 1], [x + 1, y + 2, 6, 2],
+        [x + 2, y + 4, 5, 2], [x + 3, y + 6, 3, 2]
+      ], eating ? palette.bodyLight : palette.body);
+      linePixels(ctx, [
+        [x + 6, y + 1, 2, 1], [x + 7, y + 2, 2, 3], [x + 6, y + 5, 2, 2],
+        [x + 5, y + 7, 1, 1]
+      ], palette.cream);
+      linePixels(ctx, [
+        [x + 2, y + 5, 1, 2], [x + 3, y + 7, 1, 1]
+      ], palette.bodyDark);
+    }
+
+    function drawLegs(ctx, f, eating) {
+      const y = 21 + (f.bodyY || 0);
+      if (eating) {
+        linePixels(ctx, [
+          [10, y + 4, 3, 3], [19, y + 4, 3, 3], [12, y + 7, 3, 1], [20, y + 7, 3, 1]
+        ], palette.outline);
+        linePixels(ctx, [
+          [11, y + 4, 2, 3], [20, y + 4, 2, 3]
+        ], palette.bodyDark);
+        return;
+      }
+      const a = f.legA || 0;
+      const b = f.legB || 0;
+      linePixels(ctx, [
+        [10 + a, y + 3, 3, 5], [11 + a, y + 8, 4, 1],
+        [18 + b, y + 3, 3, 5], [18 + b, y + 8, 4, 1],
+        [13 - b, y + 4, 2, 4], [20 - a, y + 4, 2, 4]
+      ], palette.outline);
+      linePixels(ctx, [
+        [11 + a, y + 3, 2, 5], [18 + b, y + 3, 2, 5],
+        [14 - b, y + 4, 1, 4], [20 - a, y + 4, 1, 4]
+      ], palette.bodyDark);
+    }
+
+    function drawBody(ctx, f) {
+      const y = 17 + (f.bodyY || 0);
+      linePixels(ctx, [
+        [9, y, 13, 1], [8, y + 1, 15, 2], [9, y + 3, 14, 4],
+        [10, y + 7, 11, 2], [12, y + 9, 7, 1]
+      ], palette.outline);
+      linePixels(ctx, [
+        [10, y + 1, 11, 2], [10, y + 3, 12, 3], [11, y + 6, 9, 2]
+      ], palette.body);
+      linePixels(ctx, [
+        [11, y + 2, 4, 5], [12, y + 7, 3, 1]
+      ], palette.cream);
+      linePixels(ctx, [
+        [18, y + 2, 3, 4], [19, y + 6, 2, 1]
+      ], palette.bodyDark);
+    }
+
+    function drawEars(ctx, headX, headY, earY) {
+      const y = headY + (earY || 0);
+      linePixels(ctx, [
+        [7 + headX, y + 4, 2, 5], [8 + headX, y + 2, 3, 4],
+        [9 + headX, y + 1, 3, 3], [10 + headX, y, 2, 2],
+        [20 + headX, y + 4, 2, 5], [19 + headX, y + 2, 3, 4],
+        [18 + headX, y + 1, 3, 3], [18 + headX, y, 2, 2]
+      ], palette.outline);
+      linePixels(ctx, [
+        [8 + headX, y + 4, 1, 4], [9 + headX, y + 3, 2, 3],
+        [10 + headX, y + 2, 1, 2], [20 + headX, y + 4, 1, 4],
+        [19 + headX, y + 3, 2, 3], [19 + headX, y + 2, 1, 2]
+      ], palette.body);
+      linePixels(ctx, [
+        [9 + headX, y + 5, 1, 2], [10 + headX, y + 4, 1, 1],
+        [19 + headX, y + 5, 1, 2], [20 + headX, y + 4, 1, 1]
+      ], palette.pink);
+    }
+
+    function drawHead(ctx, f, eating) {
+      const headX = f.headX || 0;
+      const headY = 7 + (f.headY || 0);
+      drawEars(ctx, headX, headY, f.earY || 0);
+      linePixels(ctx, [
+        [8 + headX, headY + 6, 14, 1], [7 + headX, headY + 7, 16, 3],
+        [8 + headX, headY + 10, 15, 2], [9 + headX, headY + 12, 13, 2],
+        [11 + headX, headY + 14, 9, 1]
+      ], palette.outline);
+      linePixels(ctx, [
+        [9 + headX, headY + 6, 12, 1], [8 + headX, headY + 7, 14, 3],
+        [9 + headX, headY + 10, 12, 2], [10 + headX, headY + 12, 10, 1]
+      ], palette.body);
+      linePixels(ctx, [
+        [10 + headX, headY + 11, 10, 2], [12 + headX, headY + 13, 6, 2],
+        [9 + headX, headY + 12, 2, 1], [19 + headX, headY + 12, 2, 1]
+      ], palette.cream);
+      linePixels(ctx, [
+        [10 + headX, headY + 10, 2, 1], [20 + headX, headY + 10, 2, 1]
+      ], "#f18a72");
+      drawEyes(ctx, headX, headY, f.chew || 0, showEyes);
+      drawMouth(ctx, headX, headY, f.mouth || 0, eating);
+      linePixels(ctx, [
+        [13 + headX, headY + 8, 1, 1], [18 + headX, headY + 8, 1, 1]
+      ], palette.cream);
+    }
+
+    function drawEyes(ctx, headX, headY, chew, anchors) {
+      const leftX = 11 + headX;
+      const rightX = 18 + headX;
+      const y = 10 + headY;
+      const cheekLift = chew === 2 ? 1 : 0;
+      linePixels(ctx, [
+        [leftX, y, 2, 3], [rightX, y, 2, 3]
+      ], palette.eye);
+      linePixels(ctx, [
+        [leftX + 1, y, 1, 1], [rightX + 1, y, 1, 1]
+      ], palette.shine);
+      if (chew > 0) {
+        linePixels(ctx, [
+          [leftX - 1, y + 3 + cheekLift, 2, 1],
+          [rightX + 1, y + 3 + cheekLift, 2, 1]
+        ], "#e86f58");
+      }
+      if (!anchors) return;
+      linePixels(ctx, [
+        [leftX - 1, y - 2, 4, 1], [leftX, y - 3, 2, 1],
+        [rightX - 1, y - 2, 4, 1], [rightX, y - 3, 2, 1]
+      ], palette.anchor);
+    }
+
+    function drawMouth(ctx, headX, headY, mouth, eating) {
+      const baseX = 15 + headX;
+      const baseY = 14 + headY;
+      pixel(ctx, baseX, baseY, 2, 1, palette.eye);
+      if (mouth === 1) {
+        pixel(ctx, baseX - 1, baseY + 1, 1, 1, palette.eye);
+        pixel(ctx, baseX + 2, baseY + 1, 1, 1, palette.eye);
+      } else if (mouth === 2) {
+        pixel(ctx, baseX, baseY + 1, 3, 1, palette.eye);
+        pixel(ctx, baseX + 1, baseY + 2, 1, 1, "#c75342");
+      } else if (mouth === 3) {
+        pixel(ctx, baseX - 1, baseY, 1, 1, palette.eye);
+        pixel(ctx, baseX + 2, baseY, 1, 1, palette.eye);
+        pixel(ctx, baseX, baseY + 1, 2, 1, palette.eye);
+      } else if (eating) {
+        pixel(ctx, baseX - 1, baseY + 1, 1, 1, palette.eye);
+        pixel(ctx, baseX + 2, baseY + 1, 1, 1, palette.eye);
+      } else {
+        pixel(ctx, baseX - 1, baseY + 1, 1, 1, palette.eye);
+        pixel(ctx, baseX + 2, baseY + 1, 1, 1, palette.eye);
+      }
+    }
+
+    function drawBowl(ctx, f) {
+      linePixels(ctx, [
+        [1, 24, 8, 1], [0, 25, 10, 2], [2, 27, 6, 1]
+      ], palette.bowlDark);
+      linePixels(ctx, [
+        [1, 25, 8, 1], [2, 26, 6, 1]
+      ], palette.bowl);
+      const food = Math.max(1, f.food || 1);
+      for (let i = 0; i < food; i++) {
+        pixel(ctx, 2 + i * 2, 23 - (i % 2), 2, 2, palette.food);
+        pixel(ctx, 3 + i * 2, 22 - (i % 2), 1, 1, palette.creamShade);
+      }
+      if (f.crumb === 1) {
+        pixel(ctx, 8, 22, 1, 1, palette.food);
+        pixel(ctx, 10, 24, 1, 1, palette.creamShade);
+      }
+      if (f.crumb === 2) {
+        pixel(ctx, 20, 12, 1, 1, palette.gold);
+        pixel(ctx, 22, 11, 1, 1, palette.gold);
+      }
+    }
+
+    function drawSprite(canvas, selectedMode, selectedFrame, options = {}) {
+      const ctx = canvas.getContext("2d");
+      clear(ctx);
+      const frames = selectedMode === "walk" ? walkFrames : eatFrames;
+      const f = frames[selectedFrame % frames.length];
+      const eating = selectedMode === "eat";
+      showEyes = options.showEyes ?? showEyes;
+      drawShadow(ctx, f.shadow);
+      if (eating) drawBowl(ctx, f);
+      drawTail(ctx, f, eating);
+      drawLegs(ctx, f, eating);
+      drawBody(ctx, f);
+      drawHead(ctx, f, eating);
+      if (options.grid) drawGrid(ctx);
+    }
+
+    function renderFrameStrip() {
+      framesRoot.innerHTML = "";
+      const frames = mode === "walk" ? walkFrames : eatFrames;
+      for (let i = 0; i < frames.length; i++) {
+        const card = document.createElement("div");
+        card.className = "frame-card" + (i === frame ? " active" : "");
+        const canvas = document.createElement("canvas");
+        canvas.width = 32;
+        canvas.height = 32;
+        canvas.className = "frame-canvas";
+        canvas.setAttribute("aria-label", `${mode} ${i + 1}번 프레임`);
+        const label = document.createElement("span");
+        label.textContent = `F${i + 1}`;
+        card.append(canvas, label);
+        framesRoot.appendChild(card);
+        drawSprite(canvas, mode, i, { showEyes, grid: true });
+      }
+    }
+
+    function updateText() {
+      frameMetric.textContent = `${frame + 1} / 6`;
+      eyeMetric.textContent = showEyes ? "표시 중" : "고정";
+      if (mode === "walk") {
+        speech.textContent = "걷기는 다리만 흔들지 않고 몸, 머리, 꼬리가 같이 박자를 탑니다.";
+        stripTitle.textContent = "걷기 프레임";
+        stripHint.textContent = "몸통 바운스 + 다리 교차 + 꼬리 지연";
+      } else {
+        speech.textContent = "먹기는 고개 숙임, 한입, 씹기, 만족 표정을 분리해야 자연스럽습니다.";
+        stripTitle.textContent = "먹기 프레임";
+        stripHint.textContent = "음식 보기 + 고개 숙임 + 씹기 + 만족";
+      }
+    }
+
+    function render() {
+      drawSprite(heroCanvas, mode, frame, { showEyes, grid: false });
+      renderFrameStrip();
+      updateText();
+    }
+
+    function loop(now) {
+      const frameMs = cycleMs / 6;
+      if (now - lastFrameAt >= frameMs) {
+        frame = (frame + 1) % 6;
+        lastFrameAt = now;
+        render();
+      }
+      requestAnimationFrame(loop);
+    }
+
+    motionButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        mode = button.dataset.mode;
+        frame = 0;
+        motionButtons.forEach((item) => {
+          item.setAttribute("aria-pressed", String(item === button));
+        });
+        render();
+      });
+    });
+
+    speed.addEventListener("input", () => {
+      cycleMs = Number(speed.value);
+      speedValue.textContent = `${cycleMs}ms`;
+    });
+
+    eyeToggle.addEventListener("change", () => {
+      showEyes = eyeToggle.checked;
+      render();
+    });
+
+    render();
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
