@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>구미호 유아기 모션 프리뷰</title>
+  <title>구미호 유아기 모션 재작업</title>
   <style>
     :root {
       color-scheme: light;
@@ -11,20 +11,15 @@
       --soft-ink: #5f594f;
       --muted: #81786b;
       --line: #e0d2b8;
-      --line-strong: #c9b58d;
       --panel: #fffaf0;
       --card: #fffdf7;
       --green: #7da56d;
       --green-soft: #e6f2d8;
       --gold: #f2bd43;
-      --gold-soft: #fff1bf;
-      --coral: #e87058;
-      --blue: #5f99b2;
       --sky: #e4f5f1;
       --mid: #f7f5dc;
       --grass: #dce9bd;
-      --track: #e8dcc8;
-      --shadow: rgba(87, 75, 55, 0.22);
+      --shadow: rgba(80, 70, 52, 0.22);
     }
 
     * {
@@ -34,8 +29,7 @@
     body {
       margin: 0;
       min-height: 100vh;
-      background:
-        linear-gradient(180deg, #fff9ea 0%, #fffdf8 70%, #f8f1df 100%);
+      background: linear-gradient(180deg, #fff9ea 0%, #fffdf8 70%, #f8f1df 100%);
       color: var(--ink);
       font-family:
         -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo",
@@ -48,13 +42,13 @@
       font: inherit;
     }
 
-    .motion-page {
+    .page {
       width: min(1120px, 100%);
       margin: 0 auto;
       padding: 24px;
     }
 
-    .topbar {
+    .top {
       display: flex;
       align-items: flex-start;
       justify-content: space-between;
@@ -63,14 +57,19 @@
     }
 
     .eyebrow {
-      margin: 0 0 4px;
+      margin: 0 0 5px;
       color: var(--muted);
       font-size: 12px;
       font-weight: 800;
     }
 
-    h1 {
+    h1,
+    h2,
+    p {
       margin: 0;
+    }
+
+    h1 {
       font-size: clamp(25px, 4vw, 38px);
       line-height: 1.08;
       font-weight: 900;
@@ -80,7 +79,7 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      min-width: 88px;
+      min-width: 102px;
       padding: 8px 12px;
       border: 1px solid #f0c05b;
       border-radius: 999px;
@@ -100,39 +99,54 @@
       background: linear-gradient(135deg, #f8d46a, #efa72f);
     }
 
-    .preview-shell {
+    .layout {
       display: grid;
-      grid-template-columns: minmax(0, 1.1fr) minmax(300px, 0.9fr);
+      grid-template-columns: minmax(0, 1.08fr) minmax(320px, 0.92fr);
       gap: 14px;
-      align-items: stretch;
+      align-items: start;
     }
 
-    .stage-panel,
-    .inspector,
-    .frame-strip,
-    .rule-card {
+    .stage-card,
+    .side-card,
+    .strip-card,
+    .mini-card {
       border: 1px solid var(--line);
       border-radius: 8px;
-      background: rgba(253, 251, 244, 0.92);
+      background: rgba(253, 251, 244, 0.94);
     }
 
-    .stage-panel {
+    .stage-card {
       overflow: hidden;
     }
 
     .stage {
       position: relative;
-      min-height: 430px;
+      min-height: 450px;
       display: grid;
       place-items: center;
       padding: 22px;
-      background:
-        linear-gradient(180deg, var(--sky) 0%, var(--mid) 63%, var(--grass) 100%);
+      background: linear-gradient(180deg, var(--sky) 0%, var(--mid) 63%, var(--grass) 100%);
+    }
+
+    .speech {
+      position: absolute;
+      top: 22px;
+      left: 22px;
+      max-width: 270px;
+      padding: 12px 14px;
+      border: 1px solid #dfc79f;
+      border-radius: 8px;
+      background: #fffdf8;
+      color: #584735;
+      font-size: 13px;
+      line-height: 1.45;
+      font-weight: 800;
+      z-index: 2;
     }
 
     .sun {
       position: absolute;
-      top: 28px;
+      top: 30px;
       right: 34px;
       width: 38px;
       height: 38px;
@@ -143,37 +157,54 @@
 
     .ground {
       position: absolute;
-      left: 18%;
-      right: 18%;
-      bottom: 58px;
-      height: 18px;
+      left: 19%;
+      right: 19%;
+      bottom: 74px;
+      height: 20px;
       border-radius: 999px;
       background: var(--shadow);
+      transform-origin: center;
     }
 
-    .big-canvas {
+    .sprite-wrap {
       position: relative;
-      width: min(320px, 74vw);
-      height: min(320px, 74vw);
-      image-rendering: pixelated;
-      image-rendering: crisp-edges;
+      width: 280px;
+      height: 280px;
       z-index: 1;
     }
 
-    .speech {
+    .sprite {
+      width: 280px;
+      height: 280px;
+      background-image: url("gumiho-walk-sheet.png");
+      background-size: 1680px 280px;
+      background-repeat: no-repeat;
+      background-position: 0 0;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+
+    .marker {
       position: absolute;
-      left: 22px;
-      top: 22px;
-      max-width: 250px;
-      padding: 12px 14px;
-      border: 1px solid #dfc79f;
-      border-radius: 8px;
-      background: #fffdf8;
-      color: #584735;
-      font-size: 13px;
-      line-height: 1.45;
-      font-weight: 800;
-      z-index: 2;
+      display: none;
+      width: 17px;
+      height: 17px;
+      border: 2px solid #111;
+      border-radius: 50%;
+      background: rgba(236, 0, 226, 0.78);
+      box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.8);
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+    }
+
+    .marker.mouth {
+      width: 15px;
+      height: 15px;
+      background: rgba(0, 211, 218, 0.82);
+    }
+
+    .show-markers .marker {
+      display: block;
     }
 
     .stage-footer {
@@ -208,17 +239,17 @@
       font-weight: 900;
     }
 
-    .inspector {
+    .side-card {
       padding: 14px;
     }
 
-    .control-row {
+    .controls {
       display: flex;
       gap: 8px;
       margin-bottom: 12px;
     }
 
-    .motion-button {
+    .mode-button {
       flex: 1;
       min-height: 42px;
       border: 1px solid var(--line);
@@ -229,48 +260,37 @@
       cursor: pointer;
     }
 
-    .motion-button[aria-pressed="true"] {
+    .mode-button[aria-pressed="true"] {
       border-color: #6e945f;
       background: var(--green);
       color: #fff;
     }
 
-    .tool-row {
+    .range-row,
+    .toggle {
       display: grid;
       grid-template-columns: 1fr auto;
       gap: 8px;
       align-items: center;
-      margin-bottom: 12px;
+      margin-bottom: 10px;
       padding: 12px;
       border: 1px solid var(--line);
       border-radius: 8px;
       background: var(--card);
-    }
-
-    .tool-row label {
       color: var(--soft-ink);
       font-size: 12px;
       font-weight: 900;
     }
 
-    .tool-row input[type="range"] {
+    .range-row input {
+      grid-column: 1 / -1;
       width: 100%;
       accent-color: var(--green);
     }
 
     .toggle {
       display: flex;
-      align-items: center;
       justify-content: space-between;
-      gap: 10px;
-      min-height: 42px;
-      padding: 10px 12px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: var(--card);
-      color: var(--soft-ink);
-      font-size: 12px;
-      font-weight: 900;
     }
 
     .toggle input {
@@ -279,43 +299,72 @@
       accent-color: var(--green);
     }
 
-    .rule-grid {
+    .reference-grid {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 8px;
       margin-top: 12px;
     }
 
-    .rule-card {
-      padding: 12px;
-      min-height: 96px;
+    .ref-card {
+      min-height: 158px;
+      padding: 9px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--card);
     }
 
-    .rule-card span {
+    .ref-card img {
       display: block;
-      margin-bottom: 6px;
+      width: 100%;
+      height: 118px;
+      object-fit: contain;
+      image-rendering: pixelated;
+    }
+
+    .ref-card span {
+      display: block;
+      margin-top: 7px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 900;
+      text-align: center;
+    }
+
+    .rule-list {
+      display: grid;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .mini-card {
+      padding: 12px;
+    }
+
+    .mini-card span {
+      display: block;
+      margin-bottom: 5px;
       color: var(--muted);
       font-size: 11px;
       font-weight: 900;
     }
 
-    .rule-card strong {
+    .mini-card strong {
       display: block;
-      margin-bottom: 6px;
+      margin-bottom: 5px;
       color: var(--ink);
       font-size: 14px;
       font-weight: 900;
     }
 
-    .rule-card p {
-      margin: 0;
+    .mini-card p {
       color: var(--soft-ink);
       font-size: 12px;
       line-height: 1.45;
       font-weight: 700;
     }
 
-    .frame-strip {
+    .strip-card {
       grid-column: 1 / -1;
       padding: 14px;
     }
@@ -329,7 +378,6 @@
     }
 
     .section-title h2 {
-      margin: 0;
       font-size: 14px;
       font-weight: 900;
     }
@@ -342,31 +390,33 @@
 
     .frames {
       display: grid;
-      grid-template-columns: repeat(6, minmax(100px, 1fr));
+      grid-template-columns: repeat(6, minmax(92px, 1fr));
       gap: 8px;
     }
 
-    .frame-card {
+    .frame {
       padding: 8px;
       border: 1px solid var(--line);
       border-radius: 8px;
       background: var(--card);
     }
 
-    .frame-card.active {
+    .frame.active {
       border-color: #6e945f;
       background: var(--green-soft);
     }
 
-    .frame-canvas {
-      display: block;
+    .thumb {
       width: 100%;
       aspect-ratio: 1;
+      background-image: url("gumiho-walk-sheet.png");
+      background-size: 600% 100%;
+      background-repeat: no-repeat;
       image-rendering: pixelated;
       image-rendering: crisp-edges;
     }
 
-    .frame-card span {
+    .frame span {
       display: block;
       margin-top: 6px;
       color: var(--muted);
@@ -375,39 +425,22 @@
       text-align: center;
     }
 
-    .notes {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 8px;
-      margin-top: 14px;
-    }
-
-    @media (max-width: 860px) {
-      .motion-page {
-        padding: 16px;
-      }
-
-      .preview-shell {
+    @media (max-width: 900px) {
+      .layout {
         grid-template-columns: 1fr;
       }
 
       .stage {
-        min-height: 360px;
-      }
-
-      .frames,
-      .notes {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        min-height: 390px;
       }
     }
 
-    @media (max-width: 520px) {
-      .topbar,
-      .stage-footer {
-        grid-template-columns: 1fr;
+    @media (max-width: 560px) {
+      .page {
+        padding: 16px;
       }
 
-      .topbar {
+      .top {
         display: block;
       }
 
@@ -422,465 +455,249 @@
       }
 
       .stage {
+        min-height: 360px;
         display: flex;
         flex-direction: column;
-        min-height: 360px;
       }
 
-      .sun {
-        width: 28px;
-        height: 28px;
+      .sprite-wrap,
+      .sprite {
+        width: 240px;
+        height: 240px;
       }
 
-      .ground {
-        left: 16%;
-        right: 16%;
-        bottom: 48px;
+      .sprite {
+        background-size: 1440px 240px;
       }
 
-      .frames,
-      .rule-grid,
-      .notes {
+      .stage-footer,
+      .reference-grid,
+      .frames {
         grid-template-columns: 1fr;
       }
     }
   </style>
 </head>
 <body>
-  <main class="motion-page">
-    <header class="topbar">
+  <main class="page">
+    <header class="top">
       <div>
-        <p class="eyebrow">픽셀 모션 스파이크</p>
-        <h1>구미호 유아기 기준 포즈</h1>
+        <p class="eyebrow">레퍼런스 고정 모션 스파이크</p>
+        <h1>구미호 유아기 다시 제작</h1>
       </div>
-      <div class="pill">6프레임</div>
+      <div class="pill">원본 기반 40x40</div>
     </header>
 
-    <section class="preview-shell" aria-label="구미호 모션 프리뷰">
-      <div class="stage-panel">
+    <section class="layout" aria-label="구미호 유아기 모션 미리보기">
+      <div class="stage-card">
         <div class="stage">
           <div class="sun" aria-hidden="true"></div>
-          <div class="speech" id="speech">걷기는 다리만 흔들지 않고 몸, 머리, 꼬리가 같이 박자를 탑니다.</div>
-          <div class="ground" aria-hidden="true"></div>
-          <canvas id="heroCanvas" class="big-canvas" width="32" height="32" aria-label="구미호 유아기 픽셀 애니메이션"></canvas>
+          <div class="speech" id="speech">원본 유아기 실루엣을 먼저 고정하고, 몸통 바운스와 짧은 발 디딤만 얹었습니다.</div>
+          <div class="ground" id="ground" aria-hidden="true"></div>
+          <div class="sprite-wrap" id="spriteWrap">
+            <div class="sprite" id="sprite" role="img" aria-label="구미호 유아기 픽셀 모션"></div>
+            <div class="marker eye" id="eyeLeft"></div>
+            <div class="marker eye" id="eyeRight"></div>
+            <div class="marker mouth" id="mouth"></div>
+          </div>
         </div>
         <div class="stage-footer">
-          <div class="metric"><span>눈 기준점</span><strong id="eyeMetric">고정</strong></div>
+          <div class="metric"><span>기준</span><strong>원본 crop</strong></div>
           <div class="metric"><span>현재 프레임</span><strong id="frameMetric">1 / 6</strong></div>
-          <div class="metric"><span>설계 방식</span><strong>부위 분리</strong></div>
+          <div class="metric"><span>목표</span><strong>총총 움직임</strong></div>
         </div>
       </div>
 
-      <aside class="inspector" aria-label="모션 설정">
-        <div class="control-row" role="group" aria-label="모션 선택">
-          <button class="motion-button" type="button" data-mode="walk" aria-pressed="true">걷기</button>
-          <button class="motion-button" type="button" data-mode="eat" aria-pressed="false">먹기</button>
+      <aside class="side-card" aria-label="비교와 설정">
+        <div class="controls" role="group" aria-label="모션 선택">
+          <button class="mode-button" type="button" data-mode="walk" aria-pressed="true">걷기</button>
+          <button class="mode-button" type="button" data-mode="eat" aria-pressed="false">먹기</button>
         </div>
 
-        <div class="tool-row">
+        <div class="range-row">
           <label for="speed">재생 속도</label>
-          <output id="speedValue" for="speed">820ms</output>
-          <input id="speed" type="range" min="520" max="1200" step="20" value="820" aria-label="한 사이클 재생 시간">
+          <output id="speedValue" for="speed">840ms</output>
+          <input id="speed" type="range" min="540" max="1280" step="20" value="840" aria-label="한 사이클 재생 시간">
         </div>
 
         <label class="toggle">
-          눈 위치 표시
-          <input id="eyeToggle" type="checkbox" checked>
+          눈/입 기준 표시
+          <input id="markerToggle" type="checkbox">
         </label>
 
-        <div class="rule-grid">
-          <div class="rule-card">
-            <span>01</span>
-            <strong>눈 먼저 고정</strong>
-            <p>눈을 지운 새 기준 얼굴 위에 눈 좌표를 다시 찍고, 표정은 그 주변 픽셀만 바꿉니다.</p>
+        <div class="reference-grid">
+          <div class="ref-card">
+            <img src="gumiho-baby-clean.png" alt="원본 구미호 유아기 crop">
+            <span>원본 crop</span>
           </div>
-          <div class="rule-card">
-            <span>02</span>
-            <strong>포즈 통일</strong>
-            <p>원본 이미지의 제각각 포즈는 참고만 하고, 앱용 기본 자세를 새로 만듭니다.</p>
+          <div class="ref-card">
+            <img src="gumiho-baby-reference.png" alt="눈과 입 기준이 표시된 구미호 유아기 crop">
+            <span>눈/입 기준</span>
           </div>
-          <div class="rule-card">
-            <span>03</span>
-            <strong>다리 접지</strong>
-            <p>걷기는 앞발과 뒷발이 번갈아 바닥에 닿아야 몸이 미끄러져 보이지 않습니다.</p>
+          <div class="ref-card">
+            <img src="gumiho-baby-pixel-40.png" alt="40x40으로 정리한 구미호 유아기 기준 스프라이트">
+            <span>40x40 기준</span>
           </div>
-          <div class="rule-card">
-            <span>04</span>
-            <strong>먹기 리듬</strong>
-            <p>먹이는 고개 숙임, 한입, 씹기, 만족 표정이 있어야 살아있는 느낌이 납니다.</p>
+        </div>
+
+        <div class="rule-list">
+          <div class="mini-card">
+            <span>수정 방향</span>
+            <strong>닮음 먼저, 모션은 작게</strong>
+            <p>얼굴과 꼬리 형태가 깨지면 아무리 움직여도 펫처럼 안 보입니다.</p>
+          </div>
+          <div class="mini-card">
+            <span>걷기</span>
+            <strong>아기 여우 총총</strong>
+            <p>서서 걷는 네발짐승보다, 작은 몸이 들썩이고 발만 짧게 바뀌는 쪽으로 잡았습니다.</p>
+          </div>
+          <div class="mini-card">
+            <span>먹기</span>
+            <strong>고개 숙임과 한입</strong>
+            <p>몸 전체를 바꾸지 않고 머리 위치, 입, 음식 픽셀만 변하게 했습니다.</p>
           </div>
         </div>
       </aside>
 
-      <section class="frame-strip" aria-label="프레임 스트립">
+      <section class="strip-card" aria-label="프레임 스트립">
         <div class="section-title">
           <h2 id="stripTitle">걷기 프레임</h2>
-          <span id="stripHint">몸통 바운스 + 다리 교차 + 꼬리 지연</span>
+          <span id="stripHint">원본 기반 40x40 스프라이트 시트</span>
         </div>
         <div class="frames" id="frames"></div>
-        <div class="notes">
-          <div class="rule-card">
-            <span>현재 앱</span>
-            <strong>3프레임 루프</strong>
-            <p>귀엽게 흔들리는 정도는 가능하지만, 발 디딤과 먹는 리듬은 부족합니다.</p>
-          </div>
-          <div class="rule-card">
-            <span>추천</span>
-            <strong>6~8프레임</strong>
-            <p>걷기와 먹기는 최소 6프레임부터 동작의 원인이 보이기 시작합니다.</p>
-          </div>
-          <div class="rule-card">
-            <span>확장</span>
-            <strong>종별 템플릿</strong>
-            <p>네발, 두발, 토끼, 새 템플릿을 만든 뒤 각 펫 특징만 얹는 방식이 안전합니다.</p>
-          </div>
-        </div>
       </section>
     </section>
   </main>
 
   <script>
-    const palette = {
-      outline: "#231915",
-      bodyDark: "#8e3d1c",
-      body: "#d76424",
-      bodyLight: "#ef8b36",
-      cream: "#fff2cf",
-      creamShade: "#e9c68e",
-      pink: "#f29ca1",
-      eye: "#101014",
-      shine: "#ffffff",
-      gold: "#f2bd43",
-      bowl: "#6b4b35",
-      bowlDark: "#3b2921",
-      food: "#fff4d4",
-      mark: "#3e84b6",
-      grid: "rgba(60, 52, 39, 0.16)",
-      anchor: "#111111"
-    };
-
-    const walkFrames = [
-      { bodyY: 0, headY: 0, tailY: 0, tailX: 0, earY: 0, legA: 0, legB: 1, shadow: 1.00 },
-      { bodyY: -1, headY: -1, tailY: -1, tailX: 0, earY: -1, legA: -1, legB: 1, shadow: 0.92 },
-      { bodyY: 0, headY: 0, tailY: -1, tailX: 1, earY: 0, legA: -2, legB: 2, shadow: 0.98 },
-      { bodyY: 1, headY: 0, tailY: 0, tailX: 0, earY: 0, legA: 1, legB: -1, shadow: 1.08 },
-      { bodyY: 0, headY: -1, tailY: 1, tailX: -1, earY: -1, legA: 2, legB: -2, shadow: 1.00 },
-      { bodyY: -1, headY: 0, tailY: 0, tailX: 0, earY: 0, legA: 1, legB: 0, shadow: 0.94 }
-    ];
-
-    const eatFrames = [
-      { bodyY: 0, headX: 0, headY: 0, tailY: 0, mouth: 0, chew: 0, food: 3, crumb: 0, shadow: 1.00 },
-      { bodyY: 0, headX: -1, headY: 1, tailY: 0, mouth: 1, chew: 0, food: 3, crumb: 0, shadow: 1.02 },
-      { bodyY: 1, headX: -2, headY: 2, tailY: 1, mouth: 2, chew: 0, food: 2, crumb: 1, shadow: 1.08 },
-      { bodyY: 0, headX: -1, headY: 0, tailY: 0, mouth: 0, chew: 1, food: 2, crumb: 0, shadow: 1.00 },
-      { bodyY: 0, headX: 0, headY: 0, tailY: -1, mouth: 0, chew: 2, food: 1, crumb: 0, shadow: 0.98 },
-      { bodyY: -1, headX: 0, headY: -1, tailY: -1, mouth: 3, chew: 0, food: 1, crumb: 2, shadow: 0.94 }
-    ];
-
-    let mode = "walk";
-    let frame = 0;
-    let lastFrameAt = 0;
-    let cycleMs = 820;
-    let showEyes = true;
-
-    const heroCanvas = document.getElementById("heroCanvas");
+    const modeButtons = Array.from(document.querySelectorAll(".mode-button"));
+    const spriteWrap = document.getElementById("spriteWrap");
+    const sprite = document.getElementById("sprite");
     const framesRoot = document.getElementById("frames");
     const frameMetric = document.getElementById("frameMetric");
-    const eyeMetric = document.getElementById("eyeMetric");
-    const speech = document.getElementById("speech");
-    const stripTitle = document.getElementById("stripTitle");
-    const stripHint = document.getElementById("stripHint");
     const speed = document.getElementById("speed");
     const speedValue = document.getElementById("speedValue");
-    const eyeToggle = document.getElementById("eyeToggle");
-    const motionButtons = Array.from(document.querySelectorAll(".motion-button"));
+    const markerToggle = document.getElementById("markerToggle");
+    const eyeLeft = document.getElementById("eyeLeft");
+    const eyeRight = document.getElementById("eyeRight");
+    const mouth = document.getElementById("mouth");
+    const speech = document.getElementById("speech");
+    const ground = document.getElementById("ground");
+    const stripTitle = document.getElementById("stripTitle");
+    const stripHint = document.getElementById("stripHint");
 
-    function pixel(ctx, x, y, w, h, color) {
-      ctx.fillStyle = color;
-      ctx.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h));
-    }
+    const frameCount = 6;
+    let mode = "walk";
+    let frame = 0;
+    let cycleMs = 840;
+    let lastFrameAt = 0;
 
-    function linePixels(ctx, points, color) {
-      ctx.fillStyle = color;
-      for (const [x, y, w = 1, h = 1] of points) {
-        ctx.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h));
+    const markerPositions = {
+      walk: [
+        { left: [10.5, 17.6], right: [19.5, 17.6], mouth: [15.5, 22.2], shadow: 1 },
+        { left: [10.5, 16.6], right: [19.5, 16.6], mouth: [15.5, 21.2], shadow: 0.94 },
+        { left: [10.5, 17.6], right: [19.5, 17.6], mouth: [15.5, 22.2], shadow: 0.98 },
+        { left: [10.5, 18.6], right: [19.5, 18.6], mouth: [15.5, 23.2], shadow: 1.08 },
+        { left: [10.5, 16.6], right: [19.5, 16.6], mouth: [15.5, 21.2], shadow: 1 },
+        { left: [10.5, 17.6], right: [19.5, 17.6], mouth: [15.5, 22.2], shadow: 0.95 }
+      ],
+      eat: [
+        { left: [10.5, 17.6], right: [19.5, 17.6], mouth: [15.5, 22.2], shadow: 1 },
+        { left: [9.5, 18.6], right: [18.5, 18.6], mouth: [14.5, 23.2], shadow: 1.03 },
+        { left: [8.5, 19.6], right: [17.5, 19.6], mouth: [13.5, 24.2], shadow: 1.08 },
+        { left: [9.5, 18.6], right: [18.5, 18.6], mouth: [14.5, 23.2], shadow: 1.02 },
+        { left: [10.5, 17.6], right: [19.5, 17.6], mouth: [15.5, 22.2], shadow: 0.98 },
+        { left: [10.5, 16.6], right: [19.5, 16.6], mouth: [15.5, 21.2], shadow: 0.95 }
+      ]
+    };
+
+    const copy = {
+      walk: {
+        speech: "원본 유아기 실루엣을 먼저 고정하고, 몸통 바운스와 짧은 발 디딤만 얹었습니다.",
+        title: "걷기 프레임",
+        hint: "작은 몸 바운스 + 짧은 앞발/뒷발 변화"
+      },
+      eat: {
+        speech: "먹기는 캐릭터를 새로 그리지 않고, 고개 숙임과 한입 픽셀만 작게 바꿨습니다.",
+        title: "먹기 프레임",
+        hint: "밥그릇 + 고개 숙임 + 입 모양 변화"
       }
+    };
+
+    function sheetFor(currentMode) {
+      return currentMode === "walk" ? "gumiho-walk-sheet.png" : "gumiho-eat-sheet.png";
     }
 
-    function clear(ctx) {
-      ctx.clearRect(0, 0, 32, 32);
-      ctx.imageSmoothingEnabled = false;
+    function setSpriteFrame() {
+      const sheet = sheetFor(mode);
+      const size = sprite.clientWidth || 280;
+      sprite.style.backgroundImage = `url("${sheet}")`;
+      sprite.style.backgroundSize = `${size * frameCount}px ${size}px`;
+      sprite.style.backgroundPosition = `-${frame * size}px 0`;
+      ground.style.transform = `scaleX(${markerPositions[mode][frame].shadow})`;
     }
 
-    function drawGrid(ctx) {
-      ctx.strokeStyle = palette.grid;
-      ctx.lineWidth = 0.06;
-      for (let i = 0; i <= 32; i += 4) {
-        ctx.beginPath();
-        ctx.moveTo(i, 0);
-        ctx.lineTo(i, 32);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(0, i);
-        ctx.lineTo(32, i);
-        ctx.stroke();
-      }
+    function setMarker(el, point) {
+      const size = sprite.clientWidth || 280;
+      const scale = size / 40;
+      el.style.left = `${point[0] * scale}px`;
+      el.style.top = `${point[1] * scale}px`;
     }
 
-    function drawShadow(ctx, scale) {
-      const width = Math.round(15 * scale);
-      const start = Math.round(16 - width / 2);
-      pixel(ctx, start, 27, width, 1, "rgba(69, 58, 42, 0.24)");
-      pixel(ctx, start + 2, 28, width - 4, 1, "rgba(69, 58, 42, 0.16)");
+    function updateMarkers() {
+      const points = markerPositions[mode][frame];
+      setMarker(eyeLeft, points.left);
+      setMarker(eyeRight, points.right);
+      setMarker(mouth, points.mouth);
+      spriteWrap.classList.toggle("show-markers", markerToggle.checked);
     }
 
-    function drawTail(ctx, f, eating) {
-      const x = 21 + (f.tailX || 0);
-      const y = 15 + (f.tailY || 0);
-      linePixels(ctx, [
-        [x + 2, y - 1, 4, 1], [x + 1, y, 6, 1], [x, y + 1, 8, 1],
-        [x, y + 2, 9, 2], [x + 1, y + 4, 8, 2], [x + 2, y + 6, 6, 2],
-        [x + 3, y + 8, 4, 1]
-      ], palette.outline);
-      linePixels(ctx, [
-        [x + 2, y, 4, 1], [x + 1, y + 1, 5, 1], [x + 1, y + 2, 6, 2],
-        [x + 2, y + 4, 5, 2], [x + 3, y + 6, 3, 2]
-      ], eating ? palette.bodyLight : palette.body);
-      linePixels(ctx, [
-        [x + 6, y + 1, 2, 1], [x + 7, y + 2, 2, 3], [x + 6, y + 5, 2, 2],
-        [x + 5, y + 7, 1, 1]
-      ], palette.cream);
-      linePixels(ctx, [
-        [x + 2, y + 5, 1, 2], [x + 3, y + 7, 1, 1]
-      ], palette.bodyDark);
-    }
-
-    function drawLegs(ctx, f, eating) {
-      const y = 21 + (f.bodyY || 0);
-      if (eating) {
-        linePixels(ctx, [
-          [10, y + 4, 3, 3], [19, y + 4, 3, 3], [12, y + 7, 3, 1], [20, y + 7, 3, 1]
-        ], palette.outline);
-        linePixels(ctx, [
-          [11, y + 4, 2, 3], [20, y + 4, 2, 3]
-        ], palette.bodyDark);
-        return;
-      }
-      const a = f.legA || 0;
-      const b = f.legB || 0;
-      linePixels(ctx, [
-        [10 + a, y + 3, 3, 5], [11 + a, y + 8, 4, 1],
-        [18 + b, y + 3, 3, 5], [18 + b, y + 8, 4, 1],
-        [13 - b, y + 4, 2, 4], [20 - a, y + 4, 2, 4]
-      ], palette.outline);
-      linePixels(ctx, [
-        [11 + a, y + 3, 2, 5], [18 + b, y + 3, 2, 5],
-        [14 - b, y + 4, 1, 4], [20 - a, y + 4, 1, 4]
-      ], palette.bodyDark);
-    }
-
-    function drawBody(ctx, f) {
-      const y = 17 + (f.bodyY || 0);
-      linePixels(ctx, [
-        [9, y, 13, 1], [8, y + 1, 15, 2], [9, y + 3, 14, 4],
-        [10, y + 7, 11, 2], [12, y + 9, 7, 1]
-      ], palette.outline);
-      linePixels(ctx, [
-        [10, y + 1, 11, 2], [10, y + 3, 12, 3], [11, y + 6, 9, 2]
-      ], palette.body);
-      linePixels(ctx, [
-        [11, y + 2, 4, 5], [12, y + 7, 3, 1]
-      ], palette.cream);
-      linePixels(ctx, [
-        [18, y + 2, 3, 4], [19, y + 6, 2, 1]
-      ], palette.bodyDark);
-    }
-
-    function drawEars(ctx, headX, headY, earY) {
-      const y = headY + (earY || 0);
-      linePixels(ctx, [
-        [7 + headX, y + 4, 2, 5], [8 + headX, y + 2, 3, 4],
-        [9 + headX, y + 1, 3, 3], [10 + headX, y, 2, 2],
-        [20 + headX, y + 4, 2, 5], [19 + headX, y + 2, 3, 4],
-        [18 + headX, y + 1, 3, 3], [18 + headX, y, 2, 2]
-      ], palette.outline);
-      linePixels(ctx, [
-        [8 + headX, y + 4, 1, 4], [9 + headX, y + 3, 2, 3],
-        [10 + headX, y + 2, 1, 2], [20 + headX, y + 4, 1, 4],
-        [19 + headX, y + 3, 2, 3], [19 + headX, y + 2, 1, 2]
-      ], palette.body);
-      linePixels(ctx, [
-        [9 + headX, y + 5, 1, 2], [10 + headX, y + 4, 1, 1],
-        [19 + headX, y + 5, 1, 2], [20 + headX, y + 4, 1, 1]
-      ], palette.pink);
-    }
-
-    function drawHead(ctx, f, eating) {
-      const headX = f.headX || 0;
-      const headY = 7 + (f.headY || 0);
-      drawEars(ctx, headX, headY, f.earY || 0);
-      linePixels(ctx, [
-        [8 + headX, headY + 6, 14, 1], [7 + headX, headY + 7, 16, 3],
-        [8 + headX, headY + 10, 15, 2], [9 + headX, headY + 12, 13, 2],
-        [11 + headX, headY + 14, 9, 1]
-      ], palette.outline);
-      linePixels(ctx, [
-        [9 + headX, headY + 6, 12, 1], [8 + headX, headY + 7, 14, 3],
-        [9 + headX, headY + 10, 12, 2], [10 + headX, headY + 12, 10, 1]
-      ], palette.body);
-      linePixels(ctx, [
-        [10 + headX, headY + 11, 10, 2], [12 + headX, headY + 13, 6, 2],
-        [9 + headX, headY + 12, 2, 1], [19 + headX, headY + 12, 2, 1]
-      ], palette.cream);
-      linePixels(ctx, [
-        [10 + headX, headY + 10, 2, 1], [20 + headX, headY + 10, 2, 1]
-      ], "#f18a72");
-      drawEyes(ctx, headX, headY, f.chew || 0, showEyes);
-      drawMouth(ctx, headX, headY, f.mouth || 0, eating);
-      linePixels(ctx, [
-        [13 + headX, headY + 8, 1, 1], [18 + headX, headY + 8, 1, 1]
-      ], palette.cream);
-    }
-
-    function drawEyes(ctx, headX, headY, chew, anchors) {
-      const leftX = 11 + headX;
-      const rightX = 18 + headX;
-      const y = 10 + headY;
-      const cheekLift = chew === 2 ? 1 : 0;
-      linePixels(ctx, [
-        [leftX, y, 2, 3], [rightX, y, 2, 3]
-      ], palette.eye);
-      linePixels(ctx, [
-        [leftX + 1, y, 1, 1], [rightX + 1, y, 1, 1]
-      ], palette.shine);
-      if (chew > 0) {
-        linePixels(ctx, [
-          [leftX - 1, y + 3 + cheekLift, 2, 1],
-          [rightX + 1, y + 3 + cheekLift, 2, 1]
-        ], "#e86f58");
-      }
-      if (!anchors) return;
-      linePixels(ctx, [
-        [leftX - 1, y - 2, 4, 1], [leftX, y - 3, 2, 1],
-        [rightX - 1, y - 2, 4, 1], [rightX, y - 3, 2, 1]
-      ], palette.anchor);
-    }
-
-    function drawMouth(ctx, headX, headY, mouth, eating) {
-      const baseX = 15 + headX;
-      const baseY = 14 + headY;
-      pixel(ctx, baseX, baseY, 2, 1, palette.eye);
-      if (mouth === 1) {
-        pixel(ctx, baseX - 1, baseY + 1, 1, 1, palette.eye);
-        pixel(ctx, baseX + 2, baseY + 1, 1, 1, palette.eye);
-      } else if (mouth === 2) {
-        pixel(ctx, baseX, baseY + 1, 3, 1, palette.eye);
-        pixel(ctx, baseX + 1, baseY + 2, 1, 1, "#c75342");
-      } else if (mouth === 3) {
-        pixel(ctx, baseX - 1, baseY, 1, 1, palette.eye);
-        pixel(ctx, baseX + 2, baseY, 1, 1, palette.eye);
-        pixel(ctx, baseX, baseY + 1, 2, 1, palette.eye);
-      } else if (eating) {
-        pixel(ctx, baseX - 1, baseY + 1, 1, 1, palette.eye);
-        pixel(ctx, baseX + 2, baseY + 1, 1, 1, palette.eye);
-      } else {
-        pixel(ctx, baseX - 1, baseY + 1, 1, 1, palette.eye);
-        pixel(ctx, baseX + 2, baseY + 1, 1, 1, palette.eye);
-      }
-    }
-
-    function drawBowl(ctx, f) {
-      linePixels(ctx, [
-        [1, 24, 8, 1], [0, 25, 10, 2], [2, 27, 6, 1]
-      ], palette.bowlDark);
-      linePixels(ctx, [
-        [1, 25, 8, 1], [2, 26, 6, 1]
-      ], palette.bowl);
-      const food = Math.max(1, f.food || 1);
-      for (let i = 0; i < food; i++) {
-        pixel(ctx, 2 + i * 2, 23 - (i % 2), 2, 2, palette.food);
-        pixel(ctx, 3 + i * 2, 22 - (i % 2), 1, 1, palette.creamShade);
-      }
-      if (f.crumb === 1) {
-        pixel(ctx, 8, 22, 1, 1, palette.food);
-        pixel(ctx, 10, 24, 1, 1, palette.creamShade);
-      }
-      if (f.crumb === 2) {
-        pixel(ctx, 20, 12, 1, 1, palette.gold);
-        pixel(ctx, 22, 11, 1, 1, palette.gold);
-      }
-    }
-
-    function drawSprite(canvas, selectedMode, selectedFrame, options = {}) {
-      const ctx = canvas.getContext("2d");
-      clear(ctx);
-      const frames = selectedMode === "walk" ? walkFrames : eatFrames;
-      const f = frames[selectedFrame % frames.length];
-      const eating = selectedMode === "eat";
-      showEyes = options.showEyes ?? showEyes;
-      drawShadow(ctx, f.shadow);
-      if (eating) drawBowl(ctx, f);
-      drawTail(ctx, f, eating);
-      drawLegs(ctx, f, eating);
-      drawBody(ctx, f);
-      drawHead(ctx, f, eating);
-      if (options.grid) drawGrid(ctx);
-    }
-
-    function renderFrameStrip() {
+    function renderFrames() {
       framesRoot.innerHTML = "";
-      const frames = mode === "walk" ? walkFrames : eatFrames;
-      for (let i = 0; i < frames.length; i++) {
+      const sheet = sheetFor(mode);
+      for (let i = 0; i < frameCount; i += 1) {
         const card = document.createElement("div");
-        card.className = "frame-card" + (i === frame ? " active" : "");
-        const canvas = document.createElement("canvas");
-        canvas.width = 32;
-        canvas.height = 32;
-        canvas.className = "frame-canvas";
-        canvas.setAttribute("aria-label", `${mode} ${i + 1}번 프레임`);
+        card.className = "frame" + (i === frame ? " active" : "");
+        const thumb = document.createElement("div");
+        thumb.className = "thumb";
+        thumb.style.backgroundImage = `url("${sheet}")`;
+        thumb.style.backgroundPosition = `${i * 20}% 0`;
         const label = document.createElement("span");
         label.textContent = `F${i + 1}`;
-        card.append(canvas, label);
+        card.append(thumb, label);
         framesRoot.appendChild(card);
-        drawSprite(canvas, mode, i, { showEyes, grid: true });
       }
     }
 
-    function updateText() {
-      frameMetric.textContent = `${frame + 1} / 6`;
-      eyeMetric.textContent = showEyes ? "표시 중" : "고정";
-      if (mode === "walk") {
-        speech.textContent = "걷기는 다리만 흔들지 않고 몸, 머리, 꼬리가 같이 박자를 탑니다.";
-        stripTitle.textContent = "걷기 프레임";
-        stripHint.textContent = "몸통 바운스 + 다리 교차 + 꼬리 지연";
-      } else {
-        speech.textContent = "먹기는 고개 숙임, 한입, 씹기, 만족 표정을 분리해야 자연스럽습니다.";
-        stripTitle.textContent = "먹기 프레임";
-        stripHint.textContent = "음식 보기 + 고개 숙임 + 씹기 + 만족";
-      }
+    function renderText() {
+      frameMetric.textContent = `${frame + 1} / ${frameCount}`;
+      speech.textContent = copy[mode].speech;
+      stripTitle.textContent = copy[mode].title;
+      stripHint.textContent = copy[mode].hint;
     }
 
     function render() {
-      drawSprite(heroCanvas, mode, frame, { showEyes, grid: false });
-      renderFrameStrip();
-      updateText();
+      setSpriteFrame();
+      updateMarkers();
+      renderFrames();
+      renderText();
     }
 
     function loop(now) {
-      const frameMs = cycleMs / 6;
+      const frameMs = cycleMs / frameCount;
       if (now - lastFrameAt >= frameMs) {
-        frame = (frame + 1) % 6;
+        frame = (frame + 1) % frameCount;
         lastFrameAt = now;
         render();
       }
       requestAnimationFrame(loop);
     }
 
-    motionButtons.forEach((button) => {
+    modeButtons.forEach((button) => {
       button.addEventListener("click", () => {
         mode = button.dataset.mode;
         frame = 0;
-        motionButtons.forEach((item) => {
+        modeButtons.forEach((item) => {
           item.setAttribute("aria-pressed", String(item === button));
         });
         render();
@@ -892,10 +709,8 @@
       speedValue.textContent = `${cycleMs}ms`;
     });
 
-    eyeToggle.addEventListener("change", () => {
-      showEyes = eyeToggle.checked;
-      render();
-    });
+    markerToggle.addEventListener("change", render);
+    window.addEventListener("resize", render);
 
     render();
     requestAnimationFrame(loop);
