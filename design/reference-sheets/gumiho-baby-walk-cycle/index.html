@@ -1,0 +1,620 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>구미호 유아기 걷기 모션 프리뷰</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #25211c;
+      --soft-ink: #655b4f;
+      --muted: #887b6c;
+      --line: #e2d1b6;
+      --panel: #fffaf0;
+      --card: #fffdf8;
+      --green: #78a069;
+      --green-dark: #547947;
+      --gold: #f4bc43;
+      --sky: #dcf0ec;
+      --field: #dce9bd;
+      --shadow: rgba(68, 56, 40, 0.2);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: linear-gradient(180deg, #fff7e7 0%, #fffdf8 58%, #f5eddc 100%);
+      color: var(--ink);
+      font-family:
+        -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo",
+        "Noto Sans KR", "Segoe UI", sans-serif;
+      letter-spacing: 0;
+    }
+
+    button,
+    input {
+      font: inherit;
+    }
+
+    .page {
+      width: min(1120px, 100%);
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    .top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .eyebrow,
+    h1,
+    p {
+      margin: 0;
+    }
+
+    .eyebrow {
+      margin-bottom: 5px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    h1 {
+      font-size: clamp(26px, 4vw, 38px);
+      line-height: 1.08;
+      font-weight: 900;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      min-width: 116px;
+      padding: 8px 12px;
+      border: 1px solid #f0c05b;
+      border-radius: 999px;
+      background: #fff4ce;
+      color: #6f4c05;
+      font-size: 13px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .pill::before {
+      content: "";
+      width: 13px;
+      height: 13px;
+      margin-right: 7px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #ffd96e, #efa330);
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.12fr) minmax(300px, 0.88fr);
+      gap: 14px;
+      align-items: start;
+    }
+
+    .stage-card,
+    .side-card,
+    .strip-card,
+    .frame-card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255, 253, 247, 0.95);
+    }
+
+    .stage-card {
+      overflow: hidden;
+    }
+
+    .stage {
+      position: relative;
+      min-height: 520px;
+      overflow: hidden;
+      background:
+        linear-gradient(180deg, var(--sky) 0%, #f8f4d9 66%, var(--field) 100%);
+    }
+
+    .sun {
+      position: absolute;
+      top: 30px;
+      right: 34px;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: #ffd86b;
+      box-shadow: 0 0 28px rgba(255, 216, 107, 0.48);
+    }
+
+    .track {
+      position: absolute;
+      left: 44px;
+      right: 44px;
+      bottom: 78px;
+      height: 74px;
+      border-radius: 999px;
+      background:
+        radial-gradient(ellipse at center, rgba(84, 75, 58, 0.18) 0%, rgba(84, 75, 58, 0.1) 40%, transparent 70%);
+    }
+
+    .pet-runner {
+      position: absolute;
+      left: 50%;
+      bottom: 62px;
+      width: 360px;
+      height: 360px;
+      transform: translateX(-50%);
+      transition: transform 180ms ease;
+      will-change: transform;
+    }
+
+    .pet-runner.travel {
+      animation: travel 4.8s linear infinite;
+    }
+
+    .pet-shadow {
+      position: absolute;
+      left: 17%;
+      right: 17%;
+      bottom: 18px;
+      height: 24px;
+      border-radius: 999px;
+      background: var(--shadow);
+      transform-origin: center;
+    }
+
+    .pet {
+      position: absolute;
+      inset: 0;
+      background-image: url("gumiho-baby-walk-cycle-sheet-512.png");
+      background-size: 2160px 360px;
+      background-repeat: no-repeat;
+      background-position: 0 0;
+      transform-origin: center bottom;
+      will-change: background-position, transform;
+    }
+
+    .hud {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      padding: 10px;
+      border-top: 1px solid var(--line);
+      background: var(--panel);
+    }
+
+    .metric {
+      min-height: 64px;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--card);
+    }
+
+    .metric span {
+      display: block;
+      margin-bottom: 3px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 900;
+    }
+
+    .metric strong {
+      display: block;
+      color: var(--ink);
+      font-size: 18px;
+      font-weight: 900;
+    }
+
+    .side-card {
+      padding: 14px;
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .control-button {
+      min-height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--card);
+      color: var(--soft-ink);
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .control-button[aria-pressed="true"] {
+      border-color: var(--green-dark);
+      background: var(--green);
+      color: #fff;
+    }
+
+    .range-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 10px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--card);
+      color: var(--soft-ink);
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .range-row input {
+      grid-column: 1 / -1;
+      width: 100%;
+      accent-color: var(--green);
+    }
+
+    .preview-card {
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--card);
+    }
+
+    .preview-card img {
+      display: block;
+      width: 100%;
+      height: auto;
+      object-fit: contain;
+    }
+
+    .note {
+      display: grid;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .note-item {
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+    }
+
+    .note-item span {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 900;
+    }
+
+    .note-item strong {
+      display: block;
+      color: var(--ink);
+      font-size: 14px;
+      font-weight: 900;
+    }
+
+    .strip-card {
+      grid-column: 1 / -1;
+      padding: 14px;
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .section-title h2 {
+      margin: 0;
+      font-size: 14px;
+      font-weight: 900;
+    }
+
+    .section-title span {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .frames {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(92px, 1fr));
+      gap: 8px;
+    }
+
+    .frame-card {
+      padding: 8px;
+    }
+
+    .frame-card.active {
+      border-color: var(--green-dark);
+      background: #eef7df;
+    }
+
+    .frame-thumb {
+      width: 100%;
+      aspect-ratio: 1;
+      background-image: url("gumiho-baby-walk-cycle-sheet-512.png");
+      background-size: 600% 100%;
+      background-repeat: no-repeat;
+    }
+
+    .frame-card span {
+      display: block;
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 900;
+      text-align: center;
+    }
+
+    @keyframes travel {
+      0% {
+        transform: translateX(calc(-50% - 170px));
+      }
+
+      50% {
+        transform: translateX(calc(-50% + 170px));
+      }
+
+      100% {
+        transform: translateX(calc(-50% - 170px));
+      }
+    }
+
+    @media (max-width: 900px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .stage {
+        min-height: 460px;
+      }
+    }
+
+    @media (max-width: 560px) {
+      .page {
+        padding: 16px;
+      }
+
+      .top {
+        display: block;
+      }
+
+      .pill {
+        margin-top: 12px;
+      }
+
+      .stage {
+        min-height: 390px;
+      }
+
+      .pet-runner {
+        width: 280px;
+        height: 280px;
+        bottom: 60px;
+      }
+
+      .pet {
+        background-size: 1680px 280px;
+      }
+
+      .pet-runner.travel {
+        animation-name: travel-small;
+      }
+
+      .hud,
+      .frames {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @keyframes travel-small {
+      0% {
+        transform: translateX(calc(-50% - 42px));
+      }
+
+      50% {
+        transform: translateX(calc(-50% + 42px));
+      }
+
+      100% {
+        transform: translateX(calc(-50% - 42px));
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="top">
+      <div>
+        <p class="eyebrow">일러스트 프레임 적용 테스트</p>
+        <h1>구미호 유아기 걷기 모션</h1>
+      </div>
+      <div class="pill">6 frame loop</div>
+    </header>
+
+    <section class="layout" aria-label="구미호 유아기 걷기 모션 미리보기">
+      <div class="stage-card">
+        <div class="stage">
+          <div class="sun" aria-hidden="true"></div>
+          <div class="track" aria-hidden="true"></div>
+          <div class="pet-runner" id="petRunner">
+            <div class="pet" id="pet" role="img" aria-label="구미호 유아기 걷기 애니메이션"></div>
+            <div class="pet-shadow" id="petShadow" aria-hidden="true"></div>
+          </div>
+        </div>
+
+        <div class="hud">
+          <div class="metric"><span>프레임</span><strong id="frameMetric">1 / 6</strong></div>
+          <div class="metric"><span>속도</span><strong id="speedMetric">660ms</strong></div>
+          <div class="metric"><span>모드</span><strong id="modeMetric">제자리</strong></div>
+        </div>
+      </div>
+
+      <aside class="side-card" aria-label="걷기 모션 설정">
+        <div class="controls" role="group" aria-label="재생 설정">
+          <button class="control-button" type="button" id="playButton" aria-pressed="true">재생</button>
+          <button class="control-button" type="button" id="travelButton" aria-pressed="false">앞으로</button>
+        </div>
+
+        <div class="range-row">
+          <label for="speed">한 사이클</label>
+          <output id="speedValue" for="speed">660ms</output>
+          <input id="speed" type="range" min="420" max="1200" step="20" value="660">
+        </div>
+
+        <div class="range-row">
+          <label for="scale">크기</label>
+          <output id="scaleValue" for="scale">360px</output>
+          <input id="scale" type="range" min="240" max="420" step="10" value="360">
+        </div>
+
+        <div class="preview-card">
+          <img src="gumiho-baby-walk-cycle-preview.png" alt="구미호 유아기 걷기 6프레임 시트">
+        </div>
+
+        <div class="note">
+          <div class="note-item">
+            <span>입력</span>
+            <strong>512x512 투명 PNG 6장</strong>
+          </div>
+          <div class="note-item">
+            <span>적용 방식</span>
+            <strong>스프라이트 시트 background-position</strong>
+          </div>
+          <div class="note-item">
+            <span>앱 적용 시</span>
+            <strong>프레임 간격만 맞추면 바로 재생 가능</strong>
+          </div>
+        </div>
+      </aside>
+
+      <section class="strip-card" aria-label="개별 프레임">
+        <div class="section-title">
+          <h2>프레임 스트립</h2>
+          <span>gumiho-baby-walk-cycle-sheet-512.png</span>
+        </div>
+        <div class="frames" id="frames"></div>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    const frameCount = 6;
+    const petRunner = document.getElementById("petRunner");
+    const pet = document.getElementById("pet");
+    const petShadow = document.getElementById("petShadow");
+    const frameMetric = document.getElementById("frameMetric");
+    const speedMetric = document.getElementById("speedMetric");
+    const modeMetric = document.getElementById("modeMetric");
+    const speed = document.getElementById("speed");
+    const speedValue = document.getElementById("speedValue");
+    const scale = document.getElementById("scale");
+    const scaleValue = document.getElementById("scaleValue");
+    const playButton = document.getElementById("playButton");
+    const travelButton = document.getElementById("travelButton");
+    const framesRoot = document.getElementById("frames");
+
+    let frame = 0;
+    let cycleMs = Number(speed.value);
+    let lastFrameAt = 0;
+    let playing = true;
+    let traveling = false;
+
+    function setPetFrame() {
+      const size = pet.clientWidth || Number(scale.value);
+      pet.style.backgroundSize = `${size * frameCount}px ${size}px`;
+      pet.style.backgroundPosition = `-${frame * size}px 0`;
+      pet.style.transform = `translateY(${[0, -5, 0, 4, -3, 0][frame]}px)`;
+      petShadow.style.transform = `scaleX(${[1.04, 0.94, 1, 1.08, 0.96, 1][frame]})`;
+      frameMetric.textContent = `${frame + 1} / ${frameCount}`;
+    }
+
+    function renderFrames() {
+      framesRoot.innerHTML = "";
+      for (let i = 0; i < frameCount; i += 1) {
+        const card = document.createElement("div");
+        card.className = "frame-card" + (i === frame ? " active" : "");
+        const thumb = document.createElement("div");
+        thumb.className = "frame-thumb";
+        thumb.style.backgroundPosition = `${i * 20}% 0`;
+        const label = document.createElement("span");
+        label.textContent = `F${i + 1}`;
+        card.append(thumb, label);
+        card.addEventListener("click", () => {
+          frame = i;
+          setPetFrame();
+          renderFrames();
+        });
+        framesRoot.appendChild(card);
+      }
+    }
+
+    function setScale() {
+      const size = Number(scale.value);
+      petRunner.style.width = `${size}px`;
+      petRunner.style.height = `${size}px`;
+      scaleValue.textContent = `${size}px`;
+      setPetFrame();
+    }
+
+    function setTravelMode() {
+      petRunner.classList.toggle("travel", traveling);
+      travelButton.setAttribute("aria-pressed", String(traveling));
+      modeMetric.textContent = traveling ? "앞으로" : "제자리";
+    }
+
+    function loop(now) {
+      const frameMs = cycleMs / frameCount;
+      if (playing && now - lastFrameAt >= frameMs) {
+        frame = (frame + 1) % frameCount;
+        lastFrameAt = now;
+        setPetFrame();
+        renderFrames();
+      }
+      requestAnimationFrame(loop);
+    }
+
+    playButton.addEventListener("click", () => {
+      playing = !playing;
+      playButton.textContent = playing ? "재생" : "정지";
+      playButton.setAttribute("aria-pressed", String(playing));
+    });
+
+    travelButton.addEventListener("click", () => {
+      traveling = !traveling;
+      setTravelMode();
+    });
+
+    speed.addEventListener("input", () => {
+      cycleMs = Number(speed.value);
+      speedValue.textContent = `${cycleMs}ms`;
+      speedMetric.textContent = `${cycleMs}ms`;
+    });
+
+    scale.addEventListener("input", setScale);
+    window.addEventListener("resize", setPetFrame);
+
+    setScale();
+    setTravelMode();
+    renderFrames();
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
