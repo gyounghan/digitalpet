@@ -31,24 +31,31 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
   /// 탭 정의 — 랭킹은 feature flag가 켜졌을 때만 포함된다.
   static final List<_NavTab> _tabs = [
     _NavTab(
-        label: '홈', icon: Icons.home_rounded, builder: () => const HomeScreen()),
+      label: '홈',
+      icon: Icons.home_rounded,
+      builder: () => const HomeScreen(),
+    ),
     _NavTab(
-        label: '케어',
-        icon: Icons.favorite_rounded,
-        builder: () => const CareScreen()),
+      label: '케어',
+      icon: Icons.favorite_rounded,
+      builder: () => const CareScreen(),
+    ),
     _NavTab(
-        label: '배틀',
-        icon: Icons.sports_martial_arts_rounded,
-        builder: () => const BattleScreen()),
+      label: '배틀',
+      icon: Icons.sports_martial_arts_rounded,
+      builder: () => const BattleScreen(),
+    ),
     if (FeatureFlags.enableRanking)
       _NavTab(
-          label: '랭킹',
-          icon: Icons.emoji_events_rounded,
-          builder: () => const RankingScreen()),
+        label: '랭킹',
+        icon: Icons.emoji_events_rounded,
+        builder: () => const RankingScreen(),
+      ),
     _NavTab(
-        label: '도감',
-        icon: Icons.menu_book_rounded,
-        builder: () => const MeScreen()),
+      label: '도감',
+      icon: Icons.menu_book_rounded,
+      builder: () => const MeScreen(),
+    ),
   ];
 
   /// 탭 lazy 빌드 — 한 번이라도 방문한 탭만 실제 위젯 인스턴스를 생성·캐싱한다.
@@ -105,21 +112,20 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
 
   void _startPeriodicUpdate() {
     _periodicUpdateTimer?.cancel();
-    _periodicUpdateTimer = Timer.periodic(
-      _foregroundPollInterval,
-      (_) {
-        final petNotifier =
-            ref.read(petNotifierProvider(HomeScreen.defaultPetId).notifier);
-        petNotifier.onMinuteTick();
-      },
-    );
+    _periodicUpdateTimer = Timer.periodic(_foregroundPollInterval, (_) {
+      final petNotifier = ref.read(
+        petNotifierProvider(HomeScreen.defaultPetId).notifier,
+      );
+      petNotifier.onMinuteTick();
+    });
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
-    final petNotifier =
-        ref.read(petNotifierProvider(HomeScreen.defaultPetId).notifier);
+    final petNotifier = ref.read(
+      petNotifierProvider(HomeScreen.defaultPetId).notifier,
+    );
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.inactive) {
       petNotifier.onAppBackground();
@@ -143,10 +149,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
         children: List.generate(_screenCache.length, (i) {
           final visited = _screenCache[i] != null || i == _currentIndex;
           if (!visited) return const SizedBox.shrink();
-          return TickerMode(
-            enabled: i == _currentIndex,
-            child: _screenAt(i),
-          );
+          return TickerMode(enabled: i == _currentIndex, child: _screenAt(i));
         }),
       ),
       // 시안 .bottom-nav — 떠 있는 알약형(라운드 999 + 테두리 + 크림 배경).
@@ -158,7 +161,14 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
             decoration: BoxDecoration(
               color: MockUI.card,
               borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: const Color(0xFFEAD5AA)),
+              border: Border.all(color: MockUI.line),
+              boxShadow: [
+                BoxShadow(
+                  color: MockUI.lineStrong.withValues(alpha: 0.18),
+                  blurRadius: 0,
+                  offset: const Offset(0, 5),
+                ),
+              ],
             ),
             child: Row(
               children: List.generate(
@@ -175,8 +185,8 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
   Widget _buildNavItem(int index) {
     final isActive = _currentIndex == index;
     final tab = _tabs[index];
-    const activeColor = Color(0xFF3F6531);
-    const inactiveColor = Color(0xFF5C5348);
+    const activeColor = MockUI.actionInk;
+    const inactiveColor = MockUI.muted;
 
     return Expanded(
       child: GestureDetector(
@@ -193,7 +203,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen>
             children: [
               Icon(
                 tab.icon,
-                color: isActive ? MockUI.green : const Color(0xFF9A8F7C),
+                color: isActive ? MockUI.blue : MockUI.muted,
                 size: 18,
               ),
               const SizedBox(height: 4),

@@ -755,8 +755,8 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
             child: MockScreenTop(
-              eyebrow: '수련의 시간',
-              title: '수련장',
+              eyebrow: '경기 전',
+              title: '출전 준비',
               trailing: MockCoinPill('Lv.${pet.level}'),
             ),
           ),
@@ -809,7 +809,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
         (BattleWithActivityUseCase.dodgeChanceForStamina(pet.stamina as int) *
                 100)
             .round();
-    // 시안 .arena 톤: 하늘→풀밭 크림 위에 펫을 세우고 스탯은 하단 배지.
+    // 출전 준비 카드: 펫은 크게, 숫자는 작은 배지로만 둔다.
     return Container(
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
@@ -819,8 +819,15 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
           colors: [MockUI.stageSky, MockUI.stageMid, MockUI.stageGrass],
           stops: [0.0, 0.66, 1.0],
         ),
-        borderRadius: BorderRadius.circular(7),
-        border: Border.all(color: const Color(0xFFD8C69E)),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: MockUI.stageBorder, width: 2),
+        boxShadow: [
+          BoxShadow(
+            color: MockUI.blue.withValues(alpha: 0.16),
+            blurRadius: 0,
+            offset: const Offset(0, 6),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -852,10 +859,29 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
           ),
           // 펫 무대 (지면 밴드 + 발밑 그림자 + 큰 스프라이트)
           SizedBox(
-            height: 132,
+            height: 146,
             child: Stack(
               alignment: Alignment.bottomCenter,
               children: [
+                Positioned(
+                  top: 10,
+                  right: 18,
+                  child: Container(
+                    width: 28,
+                    height: 28,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: MockUI.gold,
+                      boxShadow: [
+                        BoxShadow(
+                          color: MockUI.gold.withValues(alpha: 0.24),
+                          blurRadius: 0,
+                          spreadRadius: 7,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
                 Positioned(
                   left: 0,
                   right: 0,
@@ -880,7 +906,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
                     stage: pet.evolutionStage,
                     grade: pet.evolutionGrade,
                     variant: colorVariantFor(pet),
-                    size: 118,
+                    size: 128,
                   ),
                 ),
               ],
@@ -939,23 +965,33 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
 
   /// 공격형/균형형/방어형 선택 카드
   Widget _buildStyleSelector(SpeciesTheme theme) {
-    return AppCard(
-      theme: theme,
-      variant: AppCardVariant.flat,
+    return Container(
       padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: MockUI.cardBg,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: MockUI.line),
+        boxShadow: [
+          BoxShadow(
+            color: MockUI.lineStrong.withValues(alpha: 0.12),
+            blurRadius: 0,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.tune, size: 14, color: theme.primaryDeep),
+              const Icon(Icons.tune, size: 14, color: MockUI.blue),
               const SizedBox(width: 6),
-              Text(
+              const Text(
                 '배틀 스타일',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w800,
-                  color: theme.primaryDeep,
+                  color: MockUI.ink,
                   letterSpacing: 0,
                 ),
               ),
@@ -987,11 +1023,20 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
-          color: selected ? theme.primarySoft : DesignTokens.surfaceSoft,
+          color: selected ? MockUI.goldSoft : MockUI.actionBg,
           borderRadius: BorderRadius.circular(8),
           border: selected
-              ? Border.all(color: theme.primary, width: 1.5)
-              : Border.all(color: DesignTokens.line, width: 1),
+              ? Border.all(color: MockUI.gold, width: 1.5)
+              : Border.all(color: MockUI.actionBorder, width: 1),
+          boxShadow: selected
+              ? [
+                  BoxShadow(
+                    color: MockUI.gold.withValues(alpha: 0.18),
+                    blurRadius: 0,
+                    offset: const Offset(0, 3),
+                  ),
+                ]
+              : null,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -999,7 +1044,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
             Icon(
               icon,
               size: 18,
-              color: selected ? theme.primaryDeep : DesignTokens.ink3,
+              color: selected ? const Color(0xFF73510B) : MockUI.blue,
             ),
             const SizedBox(height: 4),
             Text(
@@ -1007,7 +1052,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
               style: TextStyle(
                 fontSize: 11.5,
                 fontWeight: FontWeight.w800,
-                color: selected ? theme.primaryDeep : DesignTokens.ink2,
+                color: selected ? const Color(0xFF73510B) : MockUI.softInk,
               ),
             ),
           ],
@@ -1027,12 +1072,19 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [oppTheme.gradStart, DesignTokens.surface],
+          colors: [oppTheme.gradStart, MockUI.cardBg],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: oppTheme.primary.withValues(alpha: 0.4)),
+        border: Border.all(color: MockUI.line),
+        boxShadow: [
+          BoxShadow(
+            color: oppTheme.primary.withValues(alpha: 0.12),
+            blurRadius: 0,
+            offset: const Offset(0, 5),
+          ),
+        ],
       ),
       child: Column(
         children: [
@@ -1057,8 +1109,8 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
                       '부스럭... 야생의 기척!',
                       style: TextStyle(
                         fontSize: 11.5,
-                        fontWeight: FontWeight.w700,
-                        color: DesignTokens.ink3,
+                        fontWeight: FontWeight.w800,
+                        color: MockUI.muted,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -1072,10 +1124,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
                     ),
                     const Text(
                       '한도와 무관 · 이기면 보너스 EXP',
-                      style: TextStyle(
-                        fontSize: 10.5,
-                        color: DesignTokens.ink3,
-                      ),
+                      style: TextStyle(fontSize: 10.5, color: MockUI.muted),
                     ),
                   ],
                 ),
@@ -1099,8 +1148,8 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
                 child: OutlinedButton(
                   onPressed: _fleeWildEncounter,
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: DesignTokens.ink3,
-                    side: const BorderSide(color: DesignTokens.line),
+                    foregroundColor: MockUI.softInk,
+                    side: const BorderSide(color: MockUI.line),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
@@ -1178,8 +1227,8 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
           textAlign: TextAlign.center,
           style: const TextStyle(
             fontSize: 11.5,
-            fontWeight: FontWeight.w600,
-            color: DesignTokens.ink3,
+            fontWeight: FontWeight.w800,
+            color: MockUI.muted,
           ),
         ),
       ],
@@ -1265,126 +1314,144 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
     final myTheme = SpeciesTheme.forType(pet.evolutionType);
     final oppTheme = SpeciesTheme.forType(_opponentType);
 
-    return ColoredBox(
-      color: MockUI.screenMid,
-      child: Column(
-        children: [
-          // 상단: 상대 진영 (정보 위 → 스프라이트 아래, 마주보도록 반전)
-          Expanded(
-            child: Container(
-              width: double.infinity,
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [MockUI.stageSky, MockUI.stageMid, MockUI.panel],
-                  stops: [0.0, 0.62, 1.0],
-                ),
-              ),
-              child: Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
-                    child: _fighterInfoBar(
-                      name: opponentName ?? '상대',
-                      level: opponentLevel ?? (pet.level as int),
-                      hp: opponentPetHp,
-                      maxHp: opponentMaxHp,
-                      theme: oppTheme,
-                      mine: false,
-                    ),
+    return Container(
+      color: MockUI.battleBottom,
+      child: DecoratedBox(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [MockUI.battleTop, MockUI.battleMid, MockUI.battleBottom],
+            stops: [0.0, 0.52, 1.0],
+          ),
+        ),
+        child: Column(
+          children: [
+            // 상단: 상대 진영 (정보 위 → 스프라이트 아래, 마주보도록 반전)
+            Expanded(
+              child: Container(
+                width: double.infinity,
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Color(0x3324304A),
+                      Color(0x1AFFC84D),
+                      Color(0x0024304A),
+                    ],
+                    stops: [0.0, 0.62, 1.0],
                   ),
-                  Expanded(
-                    child: Center(
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          _arenaGroundShadow(size: 128),
-                          _arenaSprite(
-                            type: _opponentType,
-                            // 온라인: 매칭 정보의 상대 단계 / AI: 내 단계 미러링
-                            stage:
-                                _opponentStage ?? (pet.evolutionStage as int),
-                            grade: _opponentGrade,
-                            variant: _opponentVariant,
-                            theme: oppTheme,
-                            motion: _opponentTurnMotion(),
-                            size: 140,
-                            flip: true,
-                          ),
-                          ..._panelEffectOverlay(
-                            minePanel: false,
-                            ownTheme: oppTheme,
-                            attackerTheme: myTheme,
-                            size: 120,
-                          ),
-                        ],
+                ),
+                child: Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+                      child: _fighterInfoBar(
+                        name: opponentName ?? '상대',
+                        level: opponentLevel ?? (pet.level as int),
+                        hp: opponentPetHp,
+                        maxHp: opponentMaxHp,
+                        theme: oppTheme,
+                        mine: false,
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          // 중앙: 턴 로그 / 결과 밴드
-          battleResult == null
-              ? _buildTurnBand(myTheme)
-              : _buildResultBand(myTheme),
-          // 하단: 내 펫 진영 (스프라이트 위 → 정보 아래)
-          Expanded(
-            child: Container(
-              width: double.infinity,
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.bottomCenter,
-                  end: Alignment.topCenter,
-                  colors: [MockUI.stageGrass, MockUI.stageMid, MockUI.panel],
-                  stops: [0.0, 0.66, 1.0],
-                ),
-              ),
-              child: Column(
-                children: [
-                  Expanded(
-                    child: Center(
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          _arenaGroundShadow(size: 148),
-                          _arenaSprite(
-                            type: pet.evolutionType,
-                            stage: pet.evolutionStage as int,
-                            grade: (pet.evolutionGrade as String?) ?? '',
-                            variant: colorVariantFor(pet),
-                            theme: myTheme,
-                            motion: _myTurnMotion(),
-                            size: 160,
-                          ),
-                          ..._panelEffectOverlay(
-                            minePanel: true,
-                            ownTheme: myTheme,
-                            attackerTheme: oppTheme,
-                            size: 135,
-                          ),
-                        ],
+                    Expanded(
+                      child: Center(
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            _arenaGroundShadow(size: 128),
+                            _arenaSprite(
+                              type: _opponentType,
+                              // 온라인: 매칭 정보의 상대 단계 / AI: 내 단계 미러링
+                              stage:
+                                  _opponentStage ?? (pet.evolutionStage as int),
+                              grade: _opponentGrade,
+                              variant: _opponentVariant,
+                              theme: oppTheme,
+                              motion: _opponentTurnMotion(),
+                              size: 140,
+                              flip: true,
+                            ),
+                            ..._panelEffectOverlay(
+                              minePanel: false,
+                              ownTheme: oppTheme,
+                              attackerTheme: myTheme,
+                              size: 120,
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
-                    child: _fighterInfoBar(
-                      name: '${pet.name} (나)',
-                      level: pet.level as int,
-                      hp: ourPetHp,
-                      maxHp: ourMaxHp,
-                      theme: myTheme,
-                      mine: true,
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+            // 중앙: 턴 로그 / 결과 밴드
+            battleResult == null
+                ? _buildTurnBand(myTheme)
+                : _buildResultBand(myTheme),
+            // 하단: 내 펫 진영 (스프라이트 위 → 정보 아래)
+            Expanded(
+              child: Container(
+                width: double.infinity,
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.bottomCenter,
+                    end: Alignment.topCenter,
+                    colors: [
+                      Color(0x33FFC84D),
+                      Color(0x1439AFFF),
+                      Color(0x0024304A),
+                    ],
+                    stops: [0.0, 0.66, 1.0],
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    Expanded(
+                      child: Center(
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            _arenaGroundShadow(size: 148),
+                            _arenaSprite(
+                              type: pet.evolutionType,
+                              stage: pet.evolutionStage as int,
+                              grade: (pet.evolutionGrade as String?) ?? '',
+                              variant: colorVariantFor(pet),
+                              theme: myTheme,
+                              motion: _myTurnMotion(),
+                              size: 160,
+                            ),
+                            ..._panelEffectOverlay(
+                              minePanel: true,
+                              ownTheme: myTheme,
+                              attackerTheme: oppTheme,
+                              size: 135,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
+                      child: _fighterInfoBar(
+                        name: '${pet.name} (나)',
+                        level: pet.level as int,
+                        hp: ourPetHp,
+                        maxHp: ourMaxHp,
+                        theme: myTheme,
+                        mine: true,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1396,7 +1463,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
         width: size,
         height: 16,
         decoration: BoxDecoration(
-          color: const Color(0x1F665C47),
+          color: Colors.black.withValues(alpha: 0.24),
           borderRadius: BorderRadius.circular(999),
         ),
       ),
@@ -1531,9 +1598,9 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
     return Container(
       padding: const EdgeInsets.all(11),
       decoration: BoxDecoration(
-        color: MockUI.cardBg.withValues(alpha: 0.92),
+        color: MockUI.battleGlass,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: MockUI.line),
+        border: Border.all(color: MockUI.battleLine),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1547,7 +1614,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w800,
-                    color: MockUI.ink,
+                    color: MockUI.battleText,
                   ),
                 ),
               ),
@@ -1556,7 +1623,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
                 style: const TextStyle(
                   fontSize: 12.5,
                   fontWeight: FontWeight.w800,
-                  color: MockUI.softInk,
+                  color: MockUI.battleTextMuted,
                   fontFeatures: [FontFeature.tabularFigures()],
                 ),
               ),
@@ -1571,7 +1638,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
                   theme: theme,
                   tone: mine ? AppMeterTone.good : AppMeterTone.bad,
                   height: 11,
-                  trackColor: MockUI.meterTrack,
+                  trackColor: Colors.white24,
                 ),
               ),
               const SizedBox(width: 8),
@@ -1580,7 +1647,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
                 style: const TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w800,
-                  color: MockUI.muted,
+                  color: MockUI.battleTextMuted,
                   fontFeatures: [FontFeature.tabularFigures()],
                 ),
               ),
@@ -1601,10 +1668,10 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       decoration: const BoxDecoration(
-        color: MockUI.cardBg,
+        color: MockUI.battleGlass,
         border: Border(
-          top: BorderSide(color: MockUI.line, width: 1),
-          bottom: BorderSide(color: MockUI.line, width: 1),
+          top: BorderSide(color: MockUI.battleLine, width: 1),
+          bottom: BorderSide(color: MockUI.battleLine, width: 1),
         ),
       ),
       child: turn == null
@@ -1621,11 +1688,11 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
                 ),
                 const SizedBox(width: 10),
                 const Text(
-                  '전투 시작!',
+                  '경기 중 · 전투 시작!',
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w800,
-                    color: MockUI.softInk,
+                    color: MockUI.battleTextMuted,
                   ),
                 ),
               ],
@@ -1670,7 +1737,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
                     actor: '나',
                     skillName: turn.playerSkillName,
                     damage: turn.playerDamage,
-                    color: theme.primaryDeep,
+                    color: MockUI.battleText,
                   ),
                 if (_actionPhase == -1) const SizedBox(height: 2),
                 if (_actionPhase != 0)
@@ -1678,7 +1745,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
                     actor: '상대',
                     skillName: turn.opponentSkillName,
                     damage: turn.opponentDamage,
-                    color: MockUI.softInk,
+                    color: MockUI.battleTextMuted,
                   ),
               ],
             ),
@@ -1719,7 +1786,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w800,
-              color: MockUI.muted,
+              color: MockUI.battleTextMuted,
             ),
           ),
       ],
@@ -1733,10 +1800,10 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
       decoration: const BoxDecoration(
-        color: MockUI.cardBg,
+        color: MockUI.battleGlass,
         border: Border(
-          top: BorderSide(color: MockUI.line, width: 1),
-          bottom: BorderSide(color: MockUI.line, width: 1),
+          top: BorderSide(color: MockUI.battleLine, width: 1),
+          bottom: BorderSide(color: MockUI.battleLine, width: 1),
         ),
       ),
       child: Column(
@@ -1761,7 +1828,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
                 style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.w900,
-                  color: win ? theme.primaryDeep : MockUI.ink,
+                  color: win ? MockUI.gold : MockUI.battleText,
                   fontFeatures: const [FontFeature.tabularFigures()],
                 ),
               ),
@@ -1774,8 +1841,8 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
                 (win ? AppStrings.battleVictory : AppStrings.battleDefeat),
             style: const TextStyle(
               fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: MockUI.muted,
+              fontWeight: FontWeight.w800,
+              color: MockUI.battleTextMuted,
             ),
           ),
           if (narration != null && narration!.lines.isNotEmpty) ...[
@@ -1784,11 +1851,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(
-                    Icons.chat_bubble_outline,
-                    size: 13,
-                    color: theme.primaryDeep,
-                  ),
+                  Icon(Icons.chat_bubble_outline, size: 13, color: MockUI.gold),
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
@@ -1796,8 +1859,8 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
                       style: const TextStyle(
                         fontSize: 12,
                         height: 1.45,
-                        fontWeight: FontWeight.w600,
-                        color: MockUI.softInk,
+                        fontWeight: FontWeight.w700,
+                        color: MockUI.battleTextMuted,
                       ),
                     ),
                   ),
@@ -1934,10 +1997,8 @@ class _BigButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 주요 버튼은 primaryDeep — primary는 종에 따라(특히 현무 라임색) 흰 글자
-    // 대비가 부족하다. 글로우 그림자는 흰 서피스 위에서 얼룩처럼 보여 제거.
-    final bg = primary ? MockUI.green : MockUI.cardBg;
-    final fg = primary ? Colors.white : MockUI.ink;
+    final bg = primary ? MockUI.coral : MockUI.cardBg;
+    final fg = primary ? Colors.white : MockUI.actionInk;
     return Material(
       color: bg,
       borderRadius: BorderRadius.circular(8),
@@ -1948,8 +2009,18 @@ class _BigButton extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 16),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(8),
-            // primary 버튼은 글로우 없이 순수 단색 플랫으로 둔다
-            border: primary ? null : Border.all(color: MockUI.line, width: 1),
+            border: primary
+                ? Border.all(color: MockUI.coral.withValues(alpha: 0.72))
+                : Border.all(color: theme.primary.withValues(alpha: 0.22)),
+            boxShadow: [
+              BoxShadow(
+                color: primary
+                    ? MockUI.coral.withValues(alpha: 0.28)
+                    : MockUI.blue.withValues(alpha: 0.16),
+                blurRadius: 0,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,

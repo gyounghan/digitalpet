@@ -15,9 +15,16 @@ class MockCoinPill extends StatelessWidget {
       constraints: const BoxConstraints(minWidth: 72),
       padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF4CD),
+        color: MockUI.goldSoft,
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: const Color(0xFFF0C05B)),
+        border: Border.all(color: MockUI.gold.withValues(alpha: 0.72)),
+        boxShadow: [
+          BoxShadow(
+            color: MockUI.gold.withValues(alpha: 0.18),
+            blurRadius: 0,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -36,11 +43,14 @@ class MockCoinPill extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 6),
-          Text(text,
-              style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w900,
-                  color: Color(0xFF6D4B05))),
+          Text(
+            text,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w900,
+              color: Color(0xFF73510B),
+            ),
+          ),
         ],
       ),
     );
@@ -67,21 +77,29 @@ class MockScreenTop extends StatelessWidget {
     final head = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(eyebrow,
-            style: const TextStyle(
-                fontSize: 12, fontWeight: FontWeight.w800, color: MockUI.muted)),
+        Text(
+          eyebrow,
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w800,
+            color: MockUI.muted,
+          ),
+        ),
         const SizedBox(height: 3),
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Flexible(
-              child: Text(title,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                      fontSize: 23,
-                      fontWeight: FontWeight.w800,
-                      color: MockUI.ink,
-                      height: 1.1)),
+              child: Text(
+                title,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 23,
+                  fontWeight: FontWeight.w800,
+                  color: MockUI.ink,
+                  height: 1.1,
+                ),
+              ),
             ),
             if (onTitleTap != null) ...[
               const SizedBox(width: 5),
@@ -100,7 +118,8 @@ class MockScreenTop extends StatelessWidget {
               : GestureDetector(
                   onTap: onTitleTap,
                   behavior: HitTestBehavior.opaque,
-                  child: head),
+                  child: head,
+                ),
         ),
         if (trailing != null) trailing!,
       ],
@@ -113,7 +132,12 @@ class MockMeter extends StatelessWidget {
   final double value; // 0~1
   final Color color;
   final double height;
-  const MockMeter({super.key, required this.value, required this.color, this.height = 8});
+  const MockMeter({
+    super.key,
+    required this.value,
+    required this.color,
+    this.height = 8,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -160,11 +184,14 @@ class MockCheckLine extends StatelessWidget {
         ),
         const SizedBox(width: 9),
         Expanded(
-          child: Text(label,
-              style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF594F43))),
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF594F43),
+            ),
+          ),
         ),
       ],
     );
@@ -193,6 +220,13 @@ class MockRoutinePanel extends StatelessWidget {
         color: bg,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: MockUI.line),
+        boxShadow: [
+          BoxShadow(
+            color: MockUI.lineStrong.withValues(alpha: 0.12),
+            blurRadius: 0,
+            offset: const Offset(0, 5),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -200,16 +234,22 @@ class MockRoutinePanel extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(title,
-                  style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
-                      color: MockUI.ink)),
-              Text(trailing,
-                  style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w900,
-                      color: MockUI.muted)),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                  color: MockUI.ink,
+                ),
+              ),
+              Text(
+                trailing,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w900,
+                  color: MockUI.muted,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 12),
@@ -252,6 +292,13 @@ class MockCareRow extends StatelessWidget {
         color: MockUI.cardBg,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: MockUI.line),
+        boxShadow: [
+          BoxShadow(
+            color: MockUI.lineStrong.withValues(alpha: 0.12),
+            blurRadius: 0,
+            offset: const Offset(0, 5),
+          ),
+        ],
       ),
       child: Row(
         children: [
@@ -270,18 +317,24 @@ class MockCareRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(title,
-                    style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w800,
-                        color: MockUI.ink)),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: MockUI.ink,
+                  ),
+                ),
                 const SizedBox(height: 2),
-                Text(subtitle,
-                    style: const TextStyle(
-                        fontSize: 11,
-                        height: 1.35,
-                        fontWeight: FontWeight.w600,
-                        color: MockUI.muted)),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    height: 1.35,
+                    fontWeight: FontWeight.w600,
+                    color: MockUI.muted,
+                  ),
+                ),
               ],
             ),
           ),
@@ -293,13 +346,16 @@ class MockCareRow extends StatelessWidget {
   }
 }
 
-/// .mini-button — 테두리 #bfd0b3, bg #f2f9ea, 텍스트 #486b39.
+/// .mini-button — 밝은 하늘색 보조 버튼.
 class _MiniButton extends StatelessWidget {
   final String label;
   final bool enabled;
   final VoidCallback? onTap;
-  const _MiniButton(
-      {required this.label, required this.enabled, required this.onTap});
+  const _MiniButton({
+    required this.label,
+    required this.enabled,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -311,15 +367,25 @@ class _MiniButton extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
-            color: const Color(0xFFF2F9EA),
+            color: MockUI.actionBg,
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: const Color(0xFFBFD0B3)),
+            border: Border.all(color: MockUI.actionBorder),
+            boxShadow: [
+              BoxShadow(
+                color: MockUI.blue.withValues(alpha: 0.16),
+                blurRadius: 0,
+                offset: const Offset(0, 3),
+              ),
+            ],
           ),
-          child: Text(label,
-              style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w900,
-                  color: Color(0xFF486B39))),
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w900,
+              color: MockUI.actionInk,
+            ),
+          ),
         ),
       ),
     );
@@ -345,13 +411,23 @@ class MockInfoTile extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(label,
-              style: const TextStyle(
-                  fontSize: 11, fontWeight: FontWeight.w900, color: MockUI.muted)),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w900,
+              color: MockUI.muted,
+            ),
+          ),
           const SizedBox(height: 3),
-          Text(value,
-              style: const TextStyle(
-                  fontSize: 19, fontWeight: FontWeight.w800, color: MockUI.ink)),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 19,
+              fontWeight: FontWeight.w800,
+              color: MockUI.ink,
+            ),
+          ),
         ],
       ),
     );

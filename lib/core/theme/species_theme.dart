@@ -255,92 +255,90 @@ class SpeciesTheme {
     final v = variant.clamp(0, 3);
     final palettes = switch (type) {
       EvolutionType.bird => const [
-          (Color(0xFF9A7B4E), Color(0xFFD8C39A)), // 갈색 수리
-          (Color(0xFF8B93A0), Color(0xFFCED4DC)), // 회색 새
-          (Color(0xFFCBBB98), Color(0xFFEDE4CF)), // 흰/베이지 새
-          (Color(0xFF6E6862), Color(0xFF9A948C)), // 검은 새 (눈 대비 위해 소폭 밝게)
-        ],
+        (Color(0xFF9A7B4E), Color(0xFFD8C39A)), // 갈색 수리
+        (Color(0xFF8B93A0), Color(0xFFCED4DC)), // 회색 새
+        (Color(0xFFCBBB98), Color(0xFFEDE4CF)), // 흰/베이지 새
+        (Color(0xFF6E6862), Color(0xFF9A948C)), // 검은 새 (눈 대비 위해 소폭 밝게)
+      ],
       EvolutionType.snake => const [
-          (Color(0xFF5E9B49), Color(0xFFE7DFBF)), // 초록 뱀
-          (Color(0xFF3E8E8A), Color(0xFFCFE3DF)), // 청록 뱀
-          (Color(0xFFB79A52), Color(0xFFE9DEB8)), // 황갈 뱀
-          (Color(0xFFA85A44), Color(0xFFE2C4B0)), // 적갈 뱀
-        ],
+        (Color(0xFF5E9B49), Color(0xFFE7DFBF)), // 초록 뱀
+        (Color(0xFF3E8E8A), Color(0xFFCFE3DF)), // 청록 뱀
+        (Color(0xFFB79A52), Color(0xFFE9DEB8)), // 황갈 뱀
+        (Color(0xFFA85A44), Color(0xFFE2C4B0)), // 적갈 뱀
+      ],
       EvolutionType.tiger => const [
-          (Color(0xFFE0913F), Color(0xFFF3E4C8)), // 주황 호랑이
-          (Color(0xFFB9BEC6), Color(0xFFEDEFF3)), // 회백 호랑이
-          (Color(0xFFCBA13E), Color(0xFFF0E4BE)), // 황금 호랑이
-          (Color(0xFF6E6760), Color(0xFF9A9288)), // 흑 호랑이 (눈 대비 위해 소폭 밝게)
-        ],
+        (Color(0xFFE0913F), Color(0xFFF3E4C8)), // 주황 호랑이
+        (Color(0xFFB9BEC6), Color(0xFFEDEFF3)), // 회백 호랑이
+        (Color(0xFFCBA13E), Color(0xFFF0E4BE)), // 황금 호랑이
+        (Color(0xFF6E6760), Color(0xFF9A9288)), // 흑 호랑이 (눈 대비 위해 소폭 밝게)
+      ],
       EvolutionType.turtle => const [
-          (Color(0xFF6E8F52), Color(0xFF9C7A4C)), // 올리브 거북
-          (Color(0xFF4C8A72), Color(0xFF8C7048)), // 청록 거북
-          (Color(0xFF9A8748), Color(0xFFB08C50)), // 황갈 거북
-          (Color(0xFF4A6B3E), Color(0xFF7A5E3C)), // 짙은초록 거북
-        ],
+        (Color(0xFF6E8F52), Color(0xFF9C7A4C)), // 올리브 거북
+        (Color(0xFF4C8A72), Color(0xFF8C7048)), // 청록 거북
+        (Color(0xFF9A8748), Color(0xFFB08C50)), // 황갈 거북
+        (Color(0xFF4A6B3E), Color(0xFF7A5E3C)), // 짙은초록 거북
+      ],
       EvolutionType.samjoko => const [
-          (Color(0xFF4B4B54), Color(0xFF8E8E96)), // 회흑 까마귀
-          (Color(0xFF6E5A46), Color(0xFFA88C6A)), // 갈색 까마귀
-          (Color(0xFF5A6474), Color(0xFF9AA6B8)), // 청회 까마귀
-          (Color(0xFF3E3E46), Color(0xFF787880)), // 짙은 흑 까마귀
-        ],
+        (Color(0xFF4B4B54), Color(0xFF8E8E96)), // 회흑 까마귀
+        (Color(0xFF6E5A46), Color(0xFFA88C6A)), // 갈색 까마귀
+        (Color(0xFF5A6474), Color(0xFF9AA6B8)), // 청회 까마귀
+        (Color(0xFF3E3E46), Color(0xFF787880)), // 짙은 흑 까마귀
+      ],
       EvolutionType.gumiho => const [
-          (Color(0xFFD9853E), Color(0xFFF6E3C8)), // 주황 여우
-          (Color(0xFF8E93A2), Color(0xFFE2E6EE)), // 은여우
-          (Color(0xFFD9CDB8), Color(0xFFF4EFE2)), // 백여우
-          (Color(0xFF57504A), Color(0xFF8B837B)), // 흑여우
-        ],
+        (Color(0xFFD9853E), Color(0xFFF6E3C8)), // 주황 여우
+        (Color(0xFF8E93A2), Color(0xFFE2E6EE)), // 은여우
+        (Color(0xFFD9CDB8), Color(0xFFF4EFE2)), // 백여우
+        (Color(0xFF57504A), Color(0xFF8B837B)), // 흑여우
+      ],
       EvolutionType.moonrabbit => const [
-          (Color(0xFFD9D4CC), Color(0xFFF5F2EC)), // 흰 토끼
-          (Color(0xFF9BA0A8), Color(0xFFD6DAE0)), // 회 토끼
-          (Color(0xFFA98D66), Color(0xFFE0CDAA)), // 갈색 토끼
-          (Color(0xFF57534E), Color(0xFF8D8983)), // 검은 토끼
-        ],
+        (Color(0xFFD9D4CC), Color(0xFFF5F2EC)), // 흰 토끼
+        (Color(0xFF9BA0A8), Color(0xFFD6DAE0)), // 회 토끼
+        (Color(0xFFA98D66), Color(0xFFE0CDAA)), // 갈색 토끼
+        (Color(0xFF57534E), Color(0xFF8D8983)), // 검은 토끼
+      ],
       EvolutionType.haetae => const [
-          (Color(0xFF8E9299), Color(0xFFC8CCD2)), // 돌회 해치
-          (Color(0xFF7E8A62), Color(0xFFB7C29A)), // 청동 해치
-          (Color(0xFFBCA878), Color(0xFFE6DCC0)), // 모래 해치
-          (Color(0xFF4E5258), Color(0xFF83888E)), // 흑요 해치
-        ],
+        (Color(0xFF8E9299), Color(0xFFC8CCD2)), // 돌회 해치
+        (Color(0xFF7E8A62), Color(0xFFB7C29A)), // 청동 해치
+        (Color(0xFFBCA878), Color(0xFFE6DCC0)), // 모래 해치
+        (Color(0xFF4E5258), Color(0xFF83888E)), // 흑요 해치
+      ],
       EvolutionType.dokkaebi => const [
-          (Color(0xFFC05548), Color(0xFFEFC0B8)), // 홍 도깨비
-          (Color(0xFF4E6FA8), Color(0xFFBFD0E8)), // 청 도깨비
-          (Color(0xFF5E8A5A), Color(0xFFC2DCC0)), // 녹 도깨비
-          (Color(0xFFC9A94E), Color(0xFFEEDFB0)), // 황 도깨비
-        ],
+        (Color(0xFFC05548), Color(0xFFEFC0B8)), // 홍 도깨비
+        (Color(0xFF4E6FA8), Color(0xFFBFD0E8)), // 청 도깨비
+        (Color(0xFF5E8A5A), Color(0xFFC2DCC0)), // 녹 도깨비
+        (Color(0xFFC9A94E), Color(0xFFEEDFB0)), // 황 도깨비
+      ],
       EvolutionType.hwangryong => const [
-          (Color(0xFFC9A227), Color(0xFFF0E1B0)), // 금 구렁이
-          (Color(0xFFD9D2C0), Color(0xFFF4F0E4)), // 백금 구렁이
-          (Color(0xFFC08040), Color(0xFFEDD5B5)), // 적금 구렁이
-          (Color(0xFF8A8A5A), Color(0xFFD5D5AC)), // 청금 구렁이
-        ],
+        (Color(0xFFC9A227), Color(0xFFF0E1B0)), // 금 구렁이
+        (Color(0xFFD9D2C0), Color(0xFFF4F0E4)), // 백금 구렁이
+        (Color(0xFFC08040), Color(0xFFEDD5B5)), // 적금 구렁이
+        (Color(0xFF8A8A5A), Color(0xFFD5D5AC)), // 청금 구렁이
+      ],
       EvolutionType.bear => const [
-          (Color(0xFF8B5E3C), Color(0xFFE8D2B0)), // 갈색 곰
-          (Color(0xFF6E5A50), Color(0xFFCFC3B4)), // 회갈 곰
-          (Color(0xFFB08A5A), Color(0xFFE9D9BE)), // 밝은갈 곰
-          (Color(0xFF4E3B2C), Color(0xFF8A7358)), // 흑갈 곰
-        ],
+        (Color(0xFF8B5E3C), Color(0xFFE8D2B0)), // 갈색 곰
+        (Color(0xFF6E5A50), Color(0xFFCFC3B4)), // 회갈 곰
+        (Color(0xFFB08A5A), Color(0xFFE9D9BE)), // 밝은갈 곰
+        (Color(0xFF4E3B2C), Color(0xFF8A7358)), // 흑갈 곰
+      ],
       EvolutionType.otter => const [
-          (Color(0xFF7C6551), Color(0xFFE6D8C0)), // 갈색 수달
-          (Color(0xFF5E7A76), Color(0xFFCADFDB)), // 청록 수달
-          (Color(0xFFAA8E6E), Color(0xFFE7D8C0)), // 모래 수달
-          (Color(0xFF4A4038), Color(0xFF867A6E)), // 짙은갈 수달
-        ],
+        (Color(0xFF7C6551), Color(0xFFE6D8C0)), // 갈색 수달
+        (Color(0xFF5E7A76), Color(0xFFCADFDB)), // 청록 수달
+        (Color(0xFFAA8E6E), Color(0xFFE7D8C0)), // 모래 수달
+        (Color(0xFF4A4038), Color(0xFF867A6E)), // 짙은갈 수달
+      ],
       EvolutionType.owl => const [
-          (Color(0xFF5A4B6E), Color(0xFFE8D9A8)), // 보라 부엉이
-          (Color(0xFF6E5A46), Color(0xFFDDCBA8)), // 갈색 부엉이
-          (Color(0xFF8A8290), Color(0xFFDCD6E0)), // 회 부엉이
-          (Color(0xFF3E3448), Color(0xFF7A6E88)), // 흑보라 부엉이
-        ],
+        (Color(0xFF5A4B6E), Color(0xFFE8D9A8)), // 보라 부엉이
+        (Color(0xFF6E5A46), Color(0xFFDDCBA8)), // 갈색 부엉이
+        (Color(0xFF8A8290), Color(0xFFDCD6E0)), // 회 부엉이
+        (Color(0xFF3E3448), Color(0xFF7A6E88)), // 흑보라 부엉이
+      ],
       EvolutionType.crane => const [
-          (Color(0xFFC9D2DC), Color(0xFFD6432E)), // 백색 두루미(붉은볏)
-          (Color(0xFFB6BEC8), Color(0xFFE0844A)), // 회백 두루미
-          (Color(0xFFD9CDB8), Color(0xFFD6432E)), // 재두루미
-          (Color(0xFF8A929C), Color(0xFFB03A2A)), // 청회 두루미
-        ],
-      null => const [
-          (Color(0xFF4A5A78), Color(0xFFDDE3EC)),
-        ],
+        (Color(0xFFC9D2DC), Color(0xFFD6432E)), // 백색 두루미(붉은볏)
+        (Color(0xFFB6BEC8), Color(0xFFE0844A)), // 회백 두루미
+        (Color(0xFFD9CDB8), Color(0xFFD6432E)), // 재두루미
+        (Color(0xFF8A929C), Color(0xFFB03A2A)), // 청회 두루미
+      ],
+      null => const [(Color(0xFF4A5A78), Color(0xFFDDE3EC))],
     };
     return palettes[v % palettes.length];
   }
@@ -392,73 +390,83 @@ class SpeciesTheme {
 class DesignTokens {
   DesignTokens._();
 
-  static const Color ink = Color(0xFF1A1A1F);
-  static const Color ink2 = Color(0xFF4A4A55);
-  static const Color ink3 = Color(0xFF8A8A95);
-  static const Color line = Color(0x141414CC); // rgba(20,20,30,0.08)
-  static const Color line2 = Color(0x241414CC); // rgba(20,20,30,0.14)
-  static const Color bg = Color(0xFFF7F4EE);
-  static const Color surface = Color(0xFFFFFFFF);
-  static const Color surfaceSoft = Color(0xFFF4F1EC);
-  static const Color good = Color(0xFF2E9B6B);
-  static const Color warn = Color(0xFFE2843A);
-  static const Color bad = Color(0xFFD9484F);
+  static const Color ink = Color(0xFF26324A);
+  static const Color ink2 = Color(0xFF536076);
+  static const Color ink3 = Color(0xFF7B8598);
+  static const Color line = Color(0x52FFAE63);
+  static const Color line2 = Color(0x66FFAE63);
+  static const Color bg = Color(0xFFEAF8FF);
+  static const Color surface = Color(0xFFFFFEF8);
+  static const Color surfaceSoft = Color(0xFFECF8FF);
+  static const Color good = Color(0xFF2FBF71);
+  static const Color warn = Color(0xFFFFA24D);
+  static const Color bad = Color(0xFFFF6F61);
 
   /// 목표 달성·보상 축하 강조색 (라이트 카드 위 금색)
-  static const Color gold = Color(0xFFD99A0B);
+  static const Color gold = Color(0xFFFFC84D);
 }
 
-/// 시안(design/archive/previous-ui-mock/index.html) 정확 팔레트.
+/// 시안(design/previous-feel-final-proposal/index.html) 팔레트.
 /// 화면 UI 크롬(카드·미터·액션)은 종 테마색이 아니라 이 고정 팔레트를 쓴다.
 /// (펫 스프라이트만 종 테마색으로 렌더)
 class MockUI {
   MockUI._();
 
   // 기본
-  static const Color ink = Color(0xFF24221F);
-  static const Color softInk = Color(0xFF5F594F);
-  static const Color muted = Color(0xFF81786B);
-  static const Color line = Color(0xFFE0D2B8);
-  static const Color lineStrong = Color(0xFFC9B58D);
-  static const Color panel = Color(0xFFFFFAF0);
-  static const Color card = Color(0xFFFFFDF7);
+  static const Color ink = Color(0xFF26324A);
+  static const Color softInk = Color(0xFF536076);
+  static const Color muted = Color(0xFF7B8598);
+  static const Color line = Color(0x75FFAE63);
+  static const Color lineStrong = Color(0xFFFFAE63);
+  static const Color panel = Color(0xFFFFF8E8);
+  static const Color card = Color(0xFFFFFEF8);
 
   // 포인트 색
-  static const Color green = Color(0xFF7DA56D);
-  static const Color greenSoft = Color(0xFFE6F2D8);
-  static const Color gold = Color(0xFFF2BD43);
-  static const Color goldSoft = Color(0xFFFFF1BF);
-  static const Color coral = Color(0xFFE87058);
-  static const Color blue = Color(0xFF5F99B2);
+  static const Color green = Color(0xFF2FBF71);
+  static const Color greenSoft = Color(0xFFDCFFF0);
+  static const Color gold = Color(0xFFFFC84D);
+  static const Color goldSoft = Color(0xFFFFF0B8);
+  static const Color coral = Color(0xFFFF6F61);
+  static const Color blue = Color(0xFF4BA3FF);
+  static const Color violet = Color(0xFF7A6CFF);
 
-  // 화면 배경(따뜻한 크림 세로 그라데이션)
-  static const Color screenTop = Color(0xFFFFF9EA);
-  static const Color screenMid = Color(0xFFFFFDF8);
-  static const Color screenBottom = Color(0xFFF8F1DF);
+  // 화면 배경(하늘빛 + 포근한 크림)
+  static const Color screenTop = Color(0xFFEAF8FF);
+  static const Color screenMid = Color(0xFFFFFEFD);
+  static const Color screenBottom = Color(0xFFFFF0E9);
 
   // 펫 무대(하늘→풀밭) + 해
-  static const Color stageSky = Color(0xFFE4F5F1);
-  static const Color stageMid = Color(0xFFF7F5DC);
-  static const Color stageGrass = Color(0xFFDCE9BD);
-  static const Color stageBorder = Color(0xFFCBDCC5);
-  static const Color sun = Color(0xFFFFD868);
+  static const Color stageSky = Color(0xFFBFF4FF);
+  static const Color stageMid = Color(0xFFE9FBFF);
+  static const Color stageGrass = Color(0xFFC9EF73);
+  static const Color stageBorder = Color(0xFF8BD8FF);
+  static const Color sun = Color(0xFFFFC84D);
 
   // 미터 트랙
-  static const Color meterTrack = Color(0xFFE8DCC8);
+  static const Color meterTrack = Color(0xFFE8EDF6);
 
   // 액션 타일
-  static const Color actionBg = Color(0xFFF4F7EC);
-  static const Color actionBorder = Color(0xFFDBCEB3);
-  static const Color actionInk = Color(0xFF365528);
+  static const Color actionBg = Color(0xFFEDF8FF);
+  static const Color actionBorder = Color(0x754BA3FF);
+  static const Color actionInk = Color(0xFF2869B1);
 
   // 말풍선
-  static const Color speechBg = Color(0xFFFFFDF8);
-  static const Color speechBorder = Color(0xFFDFC79F);
+  static const Color speechBg = Color(0xFFFFFEF8);
+  static const Color speechBorder = Color(0x94FFAE63);
   static const Color speechInk = Color(0xFF584735);
 
   // 체크리스트 미완료 박스
-  static const Color checkTrack = Color(0xFFE0D4BD);
+  static const Color checkTrack = Color(0xFFD8E2F0);
 
   // 카드 배경(반투명 크림)
-  static const Color cardBg = Color(0xFFFDFBF4);
+  static const Color cardBg = Color(0xFFFFFEF8);
+
+  // 배틀 전용 밤 경기장
+  static const Color battleTop = Color(0xFF23305C);
+  static const Color battleMid = Color(0xFF34537A);
+  static const Color battleBottom = Color(0xFF1E2B48);
+  static const Color battleLine = Color(0x528BD8FF);
+  static const Color battleGlass = Color(0x1AFFFFFF);
+  static const Color battleText = Color(0xFFFFF9E8);
+  static const Color battleTextMuted = Color(0xC7FFF9E8);
 }

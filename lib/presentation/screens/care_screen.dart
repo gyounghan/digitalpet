@@ -20,11 +20,9 @@ import '../../domain/usecases/alternative_sleep_pet_usecase.dart';
 import '../../domain/usecases/shake_step_bonus_usecase.dart';
 import '../../data/datasources/shake_detector.dart';
 
-/// 케어 화면 — "바쁠 때 쓰는 대체 행동" 한 가지 목적
+/// 케어 화면 — 기존 누적 기록과 미션을 모험 수첩처럼 보여준다.
 ///
-/// 간편 급식 / 낮잠 모드 / 흔들기만 제공한다.
-/// 자동 감지(걸음·수면)는 홈의 세트 카드, 진화 트리는 도감 탭에 있으므로
-/// 중복을 피해 여기서는 제거했다.
+/// 숨김 처리된 대체 행동들은 기능을 삭제하지 않고 이 화면에서 노출만 중단했다.
 class CareScreen extends ConsumerStatefulWidget {
   const CareScreen({super.key});
 
@@ -82,8 +80,6 @@ class _CareScreenState extends ConsumerState<CareScreen> {
 
   Widget _buildContent(Pet pet) {
     final theme = SpeciesTheme.forType(pet.evolutionType);
-    // 시안 케어: screen-top → focus-panel(우선 행동) → care-list(급식·물·낮잠·
-    // 집중·흔들기) → 오늘의 루틴. 따뜻한 크림 그라데이션 배경.
     return DecoratedBox(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
@@ -100,24 +96,16 @@ class _CareScreenState extends ConsumerState<CareScreen> {
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
             children: [
               MockScreenTop(
-                eyebrow: '케어 타임',
-                title: pet.name,
-                trailing: MockCoinPill('Lv.${pet.level}'),
+                eyebrow: '모험 수첩',
+                title: '칭호와 퀘스트',
+                trailing: MockCoinPill('${pet.consecutiveLoginDays}일'),
               ),
               const SizedBox(height: 10),
-              _buildFocusPanel(pet, theme),
+              _buildQuestHero(pet, theme),
               const SizedBox(height: 10),
-              _buildWaterRow(pet, theme),
+              _buildTitleCard(pet, theme),
               const SizedBox(height: 8),
-              _buildAltFeedRow(pet, theme),
-              const SizedBox(height: 8),
-              _buildAltSleepRow(pet, theme),
-              const SizedBox(height: 8),
-              _buildFocusRow(pet, theme),
-              const SizedBox(height: 8),
-              _buildShakeRow(pet, theme),
-              const SizedBox(height: 12),
-              _buildStatusCard(pet, theme),
+              _buildAchievementGrid(pet, theme),
               const SizedBox(height: 12),
               _buildMissionsCard(pet, theme),
             ],
@@ -127,8 +115,312 @@ class _CareScreenState extends ConsumerState<CareScreen> {
     );
   }
 
+  Widget _buildQuestHero(Pet pet, SpeciesTheme theme) {
+    final next = MissionCatalog.all.where((m) => !m.isComplete(pet)).toList()
+      ..sort((a, b) => b.ratio(pet).compareTo(a.ratio(pet)));
+    final nextMission = next.isNotEmpty ? next.first : MissionCatalog.all.last;
+    final completed = MissionCatalog.completedCount(pet);
+
+    return Container(
+      constraints: const BoxConstraints(minHeight: 178),
+      padding: const EdgeInsets.all(14),
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: MockUI.stageBorder, width: 2),
+        gradient: const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFFC9F6FF), Color(0xFFFFF4CF), MockUI.stageGrass],
+          stops: [0.0, 0.68, 1.0],
+        ),
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            right: 10,
+            top: 8,
+            child: Container(
+              width: 28,
+              height: 28,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: MockUI.gold,
+                boxShadow: [
+                  BoxShadow(
+                    color: MockUI.gold.withValues(alpha: 0.24),
+                    blurRadius: 0,
+                    spreadRadius: 7,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Positioned(
+            left: 14,
+            right: 22,
+            bottom: 12,
+            child: Container(
+              height: 14,
+              decoration: BoxDecoration(
+                color: const Color(0x2134444F),
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+          ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              SizedBox(
+                width: 142,
+                height: 150,
+                child: Align(
+                  alignment: Alignment.bottomCenter,
+                  child: PetMotionThumb(
+                    type: pet.evolutionType,
+                    stage: pet.evolutionStage,
+                    grade: pet.evolutionGrade,
+                    variant: colorVariantFor(pet),
+                    size: 132,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 5),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _TinyBadge(
+                        text: '연속 접속 ${pet.consecutiveLoginDays}일',
+                        color: MockUI.coral,
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        '작은 기록이 펫의 이름표가 돼요',
+                        style: TextStyle(
+                          fontSize: 20,
+                          height: 1.24,
+                          fontWeight: FontWeight.w900,
+                          color: MockUI.ink,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        '완료 미션 $completed/${MissionCatalog.all.length} · 다음 목표 ${nextMission.title}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          height: 1.48,
+                          fontWeight: FontWeight.w700,
+                          color: MockUI.softInk,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTitleCard(Pet pet, SpeciesTheme theme) {
+    final title = _titleForPet(pet);
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: MockUI.cardBg,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: theme.primary.withValues(alpha: 0.24)),
+        boxShadow: [
+          BoxShadow(
+            color: MockUI.lineStrong.withValues(alpha: 0.12),
+            blurRadius: 0,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '장착 칭호: $title',
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w900,
+                    color: MockUI.ink,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  _titleDescription(title),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    height: 1.45,
+                    fontWeight: FontWeight.w700,
+                    color: MockUI.softInk,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Container(
+            width: 54,
+            height: 54,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: const LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Color(0xFFFFF2A8), MockUI.gold],
+              ),
+              border: Border.all(color: MockUI.lineStrong),
+              boxShadow: [
+                BoxShadow(
+                  color: MockUI.gold.withValues(alpha: 0.24),
+                  blurRadius: 0,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: const Center(
+              child: Text(
+                '칭호',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w900,
+                  color: Color(0xFF73510B),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAchievementGrid(Pet pet, SpeciesTheme theme) {
+    return Row(
+      children: [
+        Expanded(
+          child: _achievementCard(
+            '연속 접속',
+            '${pet.consecutiveLoginDays}일',
+            _goalProgressLabel('개근왕', 14 - pet.consecutiveLoginDays, '일'),
+            MockUI.coral,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _achievementCard(
+            '배틀 승리',
+            '${pet.battleVictoryCount}승',
+            _goalProgressLabel('백전노장', 10 - pet.battleVictoryCount, '승'),
+            MockUI.violet,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _achievementCard(
+    String label,
+    String value,
+    String desc,
+    Color color,
+  ) {
+    return Container(
+      constraints: const BoxConstraints(minHeight: 92),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Colors.white, color.withValues(alpha: 0.12)],
+        ),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withValues(alpha: 0.28)),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.12),
+            blurRadius: 0,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 10.5,
+              fontWeight: FontWeight.w900,
+              color: MockUI.muted,
+            ),
+          ),
+          const SizedBox(height: 5),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
+              color: MockUI.ink,
+            ),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            desc,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 10.5,
+              fontWeight: FontWeight.w800,
+              color: MockUI.muted,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _goalProgressLabel(String title, int remaining, String unit) =>
+      remaining <= 0 ? '$title 달성' : '$title까지 $remaining$unit';
+
+  String _titleForPet(Pet pet) {
+    if (pet.battleVictoryCount >= 10) return '백전노장';
+    if (pet.consecutiveLoginDays >= 14) return '개근왕';
+    if (pet.feedAchievedCount >= 20) return '미식가';
+    if (pet.sleepAchievedCount >= 10) return '숙면 수호자';
+    if (pet.goalStreakCount >= 7 || pet.consecutiveLoginDays >= 7) {
+      return '성실한 동행자';
+    }
+    return '새싹 동행자';
+  }
+
+  String _titleDescription(String title) {
+    return switch (title) {
+      '백전노장' => '배틀 기록에서 얻은 당당한 이름표입니다.',
+      '개근왕' => '연속 접속을 꾸준히 이어온 펫에게 어울려요.',
+      '미식가' => '밥 시간을 착실히 챙긴 기록이 쌓였어요.',
+      '숙면 수호자' => '휴식 리듬을 잘 지켜온 펫에게 붙는 칭호입니다.',
+      '성실한 동행자' => '매일 조금씩 함께한 기록에서 얻은 칭호입니다.',
+      _ => '아직 자라는 중인 펫의 첫 번째 이름표입니다.',
+    };
+  }
+
   /// 시안 .focus-panel — 우선 행동 1개를 크게 추천(펫 + 헤드라인 + 버튼).
   /// 가장 필요한 케어(물/급식/낮잠/집중)를 스탯으로 골라 보여준다.
+  // ignore: unused_element
   Widget _buildFocusPanel(Pet pet, SpeciesTheme theme) {
     // 우선순위: 물(기력 낮고 가능) → 급식(포만감 낮고 가능) → 낮잠(기력 낮음) → 집중.
     final altFeed = ref.read(alternativeFeedPetUseCaseProvider);
@@ -255,6 +547,7 @@ class _CareScreenState extends ConsumerState<CareScreen> {
 
   /// 현재 상태 카드 — 포만감/행복/기력 실제 스탯 3줄 (홈에서 이동).
   /// 대체 행동(급식/낮잠/흔들기)의 효과가 바로 반영되는 곳이라 여기에 둔다.
+  // ignore: unused_element
   Widget _buildStatusCard(Pet pet, SpeciesTheme theme) {
     return AppCard(
       theme: theme,
@@ -330,10 +623,20 @@ class _CareScreenState extends ConsumerState<CareScreen> {
         : incomplete.take(3).toList();
     final hiddenCount = total - visible.length;
 
-    return AppCard(
-      theme: theme,
-      variant: AppCardVariant.flat,
+    return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: MockUI.cardBg,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: MockUI.line),
+        boxShadow: [
+          BoxShadow(
+            color: MockUI.lineStrong.withValues(alpha: 0.12),
+            blurRadius: 0,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -341,24 +644,24 @@ class _CareScreenState extends ConsumerState<CareScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
-                '미션을 달성하면 그 성향의 종으로 자란다',
+                '주요 퀘스트',
                 style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: DesignTokens.ink3,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w900,
+                  color: MockUI.ink,
                 ),
               ),
               Text(
                 '$done/$total',
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 12,
-                  fontWeight: FontWeight.w800,
-                  color: theme.primary,
+                  fontWeight: FontWeight.w900,
+                  color: MockUI.muted,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 10),
           for (final m in visible) _missionRow(m, pet, theme),
           if (total > 3)
             Center(
@@ -390,8 +693,31 @@ class _CareScreenState extends ConsumerState<CareScreen> {
 
   Widget _missionRow(Mission m, Pet pet, SpeciesTheme theme) {
     final complete = m.isComplete(pet);
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(11),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Colors.white, complete ? MockUI.greenSoft : MockUI.actionBg],
+        ),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: complete
+              ? MockUI.green.withValues(alpha: 0.35)
+              : MockUI.blue.withValues(alpha: 0.32),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: (complete ? MockUI.green : MockUI.blue).withValues(
+              alpha: 0.1,
+            ),
+            blurRadius: 0,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -400,7 +726,7 @@ class _CareScreenState extends ConsumerState<CareScreen> {
               Icon(
                 complete ? Icons.check_circle : Icons.radio_button_unchecked,
                 size: 16,
-                color: complete ? DesignTokens.good : DesignTokens.ink3,
+                color: complete ? MockUI.green : MockUI.muted,
               ),
               const SizedBox(width: 6),
               Expanded(
@@ -408,8 +734,8 @@ class _CareScreenState extends ConsumerState<CareScreen> {
                   m.title,
                   style: TextStyle(
                     fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: complete ? DesignTokens.ink2 : DesignTokens.ink3,
+                    fontWeight: FontWeight.w900,
+                    color: MockUI.ink,
                   ),
                 ),
               ),
@@ -423,7 +749,7 @@ class _CareScreenState extends ConsumerState<CareScreen> {
                   m.axis.label,
                   style: TextStyle(
                     fontSize: 10,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w900,
                     color: theme.primary,
                   ),
                 ),
@@ -440,12 +766,17 @@ class _CareScreenState extends ConsumerState<CareScreen> {
                   theme: theme,
                   tone: complete ? AppMeterTone.good : AppMeterTone.themed,
                   height: 6,
+                  trackColor: MockUI.meterTrack,
                 ),
               ),
               const SizedBox(width: 8),
               Text(
                 '${m.progress(pet)}/${m.target}',
-                style: const TextStyle(fontSize: 10, color: DesignTokens.ink3),
+                style: const TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w800,
+                  color: MockUI.muted,
+                ),
               ),
             ],
           ),
@@ -459,6 +790,7 @@ class _CareScreenState extends ConsumerState<CareScreen> {
   /// 물마시기 — 하루 수분 목표(8잔). 능동 건강 습관(갓생몬 컨셉).
   /// 집중 모드(뽀모도로) — 25분 폰 내려놓고 집중하면 펫이 함께 성장.
   /// 갓생 정체성의 핵심: 생산성·디지털 웰빙. 낮잠(기력)과 달리 성장(EXP·행복).
+  // ignore: unused_element
   Widget _buildFocusRow(Pet pet, SpeciesTheme theme) {
     final used = pet.needsGoalReset ? 0 : pet.todayFocusCount;
     final goal = Pet.focusGoalCount;
@@ -640,6 +972,7 @@ class _CareScreenState extends ConsumerState<CareScreen> {
     );
   }
 
+  // ignore: unused_element
   Widget _buildWaterRow(Pet pet, SpeciesTheme theme) {
     final used = pet.needsGoalReset ? 0 : pet.todayWaterCount;
     final goal = Pet.waterGoalCount;
@@ -679,6 +1012,7 @@ class _CareScreenState extends ConsumerState<CareScreen> {
     );
   }
 
+  // ignore: unused_element
   Widget _buildAltFeedRow(Pet pet, SpeciesTheme theme) {
     final useCase = ref.read(alternativeFeedPetUseCaseProvider);
     // 정식 급식과 동일 규칙: 식사 시간대 + 슬롯 공유(시간대당 정식/간편 합쳐
@@ -723,6 +1057,7 @@ class _CareScreenState extends ConsumerState<CareScreen> {
     );
   }
 
+  // ignore: unused_element
   Widget _buildAltSleepRow(Pet pet, SpeciesTheme theme) {
     final useCase = ref.read(alternativeSleepPetUseCaseProvider);
     final enabled = useCase.canUse(pet) && _napTimer == null;
@@ -740,6 +1075,7 @@ class _CareScreenState extends ConsumerState<CareScreen> {
     );
   }
 
+  // ignore: unused_element
   Widget _buildShakeRow(Pet pet, SpeciesTheme theme) {
     final useCase = ref.read(shakeStepBonusUseCaseProvider);
     final enabled = useCase.canUse(pet) && _shakeTimer == null;
@@ -1033,6 +1369,39 @@ class _CareScreenState extends ConsumerState<CareScreen> {
           ),
         );
       },
+    );
+  }
+}
+
+class _TinyBadge extends StatelessWidget {
+  final String text;
+  final Color color;
+
+  const _TinyBadge({required this.text, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      constraints: const BoxConstraints(minHeight: 28),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withValues(alpha: 0.32)),
+      ),
+      child: Text(
+        text,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w900,
+          color: color == MockUI.coral
+              ? const Color(0xFFB9473F)
+              : MockUI.actionInk,
+        ),
+      ),
     );
   }
 }

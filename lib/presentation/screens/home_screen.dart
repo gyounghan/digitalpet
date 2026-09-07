@@ -8,6 +8,8 @@ import '../widgets/pixel_motion_animation.dart';
 import '../../core/theme/species_theme.dart';
 import '../../core/constants/app_strings.dart';
 import '../../domain/entities/pet.dart';
+import '../../domain/constants/mission_catalog.dart';
+import '../../domain/usecases/drink_water_usecase.dart';
 import '../../domain/usecases/pet_transition_events.dart';
 import '../../domain/usecases/today_goal_progress.dart';
 import '../../core/utils/pet_image_helper.dart';
@@ -317,10 +319,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   Widget _buildPetContent(BuildContext context, WidgetRef ref, Pet pet) {
     final theme = SpeciesTheme.forType(pet.evolutionType);
-    // 최종 시안 홈 구조:
+    // previous-feel 최종안 홈 구조:
     // screen-top(인사말+이름+Lv) → pet-stage(말풍선·펫·그림자) →
-    // status-grid(포만감·기분·체력) → feed CTA + pet reaction hint →
-    // routine-panel(오늘의 케어). 따뜻한 크림 세로 그라데이션 배경.
+    // status-grid(포만감·기분·기력) → 밥/물 CTA → 오늘의 수첩.
     return DecoratedBox(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
@@ -384,24 +385,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ),
                 ),
                 const SizedBox(height: 3),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Flexible(
-                      child: Text(
-                        pet.name,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 23,
-                          fontWeight: FontWeight.w800,
-                          color: MockUI.ink,
-                          height: 1.1,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 5),
-                    const Icon(Icons.edit, size: 13, color: MockUI.muted),
-                  ],
+                Text(
+                  pet.name,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 23,
+                    fontWeight: FontWeight.w800,
+                    color: MockUI.ink,
+                    height: 1.1,
+                  ),
                 ),
               ],
             ),
@@ -462,14 +454,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Widget _buildPetStage(Pet pet, SpeciesTheme theme) {
-    // 시안 .pet-stage: 테두리 1px + 라운드 7 + 우상단 해(radial) +
+    // 시안 .pet-stage: 밝은 테두리 + 우상단 해(radial) +
     // 하늘→풀밭 gradient + 좌상단 말풍선 + 하단 펫 + 바닥 그림자 타원.
     return Container(
-      height: 292,
+      height: 340,
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(7),
-        border: Border.all(color: MockUI.stageBorder),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: MockUI.stageBorder, width: 2),
         gradient: const LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
@@ -489,11 +481,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             top: 18,
             right: 24,
             child: Container(
-              width: 30,
-              height: 30,
-              decoration: const BoxDecoration(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: MockUI.sun,
+                boxShadow: [
+                  BoxShadow(
+                    color: MockUI.sun.withValues(alpha: 0.24),
+                    blurRadius: 0,
+                    spreadRadius: 8,
+                  ),
+                ],
               ),
             ),
           ),
@@ -574,15 +573,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         colorVariantFor(pet),
       );
       return SizedBox(
-        width: 210,
-        height: 210,
+        width: 236,
+        height: 236,
         child: Align(
           alignment: Alignment.bottomCenter,
           child: PixelMotionAnimation(
             spriteKey: spriteKey,
             motion: motion,
-            width: 195,
-            height: 195,
+            width: 220,
+            height: 220,
             dotColor: dotColor,
             accentColor: accentColor,
             colorVariant: colorVariantFor(pet),
@@ -641,28 +640,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          statCard('포만감', pet.hunger, MockUI.green),
+          statCard('포만감', pet.hunger, MockUI.coral),
           const SizedBox(width: 8),
           statCard('기분', pet.happiness, MockUI.gold),
           const SizedBox(width: 8),
-          statCard('체력', pet.stamina, MockUI.blue),
+          statCard('기력', pet.stamina, MockUI.green),
         ],
       ),
     );
   }
 
-  /// 액션 영역 — 실제 상태 변화가 있는 먹이를 주 액션으로 둔다.
-  /// 펫 반응은 스테이지 터치로 이미 가능하므로 보조 안내로만 보여준다.
+  /// 액션 영역 — 실제 존재하는 밥/물 행동만 홈에 노출한다.
   Widget _buildActionGrid(WidgetRef ref, Pet pet) {
     final canFeed = ref.watch(canFeedPetUseCaseProvider).canFeed(pet);
     final hasMotion = _motionSpriteKey(pet) != null;
     return Row(
       children: [
         Expanded(
-          flex: 3,
           child: _ActionTile(
-            label: '먹이 주기',
-            color: MockUI.green,
+            label: '밥 주기',
+            color: MockUI.coral,
             icon: Icons.restaurant_rounded,
             primary: true,
             enabled: canFeed,
@@ -674,30 +671,58 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ),
         const SizedBox(width: 8),
         Expanded(
-          flex: 2,
-          child: _ReactionHint(
-            label: '톡 터치',
-            message: '펫을 누르면\n감정이 보여요',
-            onTap: () => _playTransientMotion(_pokeReaction(pet.mood)),
+          child: _ActionTile(
+            label: '물 주기',
+            color: MockUI.blue,
+            icon: Icons.local_drink_rounded,
+            enabled: pet.canDrinkWater,
+            onTap: () async {
+              final before = pet.needsGoalReset ? 0 : pet.todayWaterCount;
+              final applied = await ref
+                  .read(petNotifierProvider(_activePetId).notifier)
+                  .performDrinkWater();
+              if (!mounted) return;
+              final reachedGoal = before + 1 >= Pet.waterGoalCount;
+              final text = !applied
+                  ? '오늘 수분 목표를 이미 채웠어요.'
+                  : reachedGoal
+                  ? '수분 목표 달성! 완료 보너스 +${DrinkWaterUseCase.completionExp} EXP'
+                  : '물 주기 완료. 펫도 한 모금, 주인도 지금 물 한 잔 마셔요.';
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(SnackBar(content: Text(text)));
+            },
           ),
         ),
       ],
     );
   }
 
-  /// 오늘의 케어 — 시안 .routine-panel: 헤딩(제목 + 'N/M 완료') + check-line들.
-  /// 기존 오늘 목표(식사·걸음·수면) 데이터를 체크리스트로 표현.
+  /// 오늘의 수첩 — 기존 일일 목표와 주요 미션을 게임식 체크리스트로 표현.
   Widget _buildRoutinePanel(Pet pet) {
     final goals = TodayGoalProgress.fromPet(pet);
+    final doneMissions = MissionCatalog.completedCount(pet);
+    final totalMissions = MissionCatalog.all.length;
+    final loginMission = MissionCatalog.all.firstWhere(
+      (m) => m.id == 'login_14',
+    );
+    final battleMission = MissionCatalog.all.firstWhere(
+      (m) => m.id == 'battle_10',
+    );
     final items = <(String, bool)>[
       ('식사 ${goals.feedProgress}/${goals.feedGoal}회', goals.feedDone),
       (
         '걸음 ${_formatSteps(goals.steps)}/${_formatSteps(goals.stepsGoal)}보',
         goals.exerciseDone,
       ),
+      ('칭호: ${_titleForPet(pet)}', doneMissions > 0),
       (
-        '수면 ${goals.sleepMinutes ~/ 60}/${goals.sleepGoalMinutes ~/ 60}시간',
-        goals.sleepDone,
+        '${loginMission.title} ${loginMission.progress(pet)}/${loginMission.target}일',
+        loginMission.isComplete(pet),
+      ),
+      (
+        '${battleMission.title} ${battleMission.progress(pet)}/${battleMission.target}승',
+        battleMission.isComplete(pet),
       ),
     ];
     final doneCount = items.where((e) => e.$2).length;
@@ -715,7 +740,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
-                '오늘의 케어',
+                '오늘의 수첩',
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w800,
@@ -723,7 +748,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ),
               ),
               Text(
-                '$doneCount / ${items.length} 완료',
+                '$doneCount / ${items.length} 체크 · 미션 $doneMissions/$totalMissions',
                 style: const TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w900,
@@ -749,6 +774,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return k == k.roundToDouble()
         ? '${k.round()}k'
         : '${k.toStringAsFixed(1)}k';
+  }
+
+  String _titleForPet(Pet pet) {
+    if (pet.battleVictoryCount >= 10) return '백전노장';
+    if (pet.consecutiveLoginDays >= 14) return '개근왕';
+    if (pet.feedAchievedCount >= 20) return '미식가';
+    if (pet.sleepAchievedCount >= 10) return '숙면 수호자';
+    if (pet.goalStreakCount >= 7 || pet.consecutiveLoginDays >= 7) {
+      return '성실한 동행자';
+    }
+    return '새싹 동행자';
   }
 
   /// 긴 잠에 빠진 펫 — 무료 깨우기(30/30/30) 또는 광고 깨우기(완전 회복)
@@ -868,13 +904,29 @@ class _ActionTile extends StatelessWidget {
         child: Container(
           height: 66,
           decoration: BoxDecoration(
-            color: primary ? color : MockUI.actionBg,
+            gradient: primary
+                ? LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [color.withValues(alpha: 0.88), color],
+                  )
+                : null,
+            color: primary ? null : MockUI.actionBg,
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
               color: primary
                   ? color.withValues(alpha: 0.72)
                   : MockUI.actionBorder,
             ),
+            boxShadow: [
+              BoxShadow(
+                color: primary
+                    ? color.withValues(alpha: 0.28)
+                    : MockUI.blue.withValues(alpha: 0.16),
+                blurRadius: 0,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -883,13 +935,15 @@ class _ActionTile extends StatelessWidget {
                 width: 26,
                 height: 26,
                 decoration: BoxDecoration(
-                  color: primary ? Colors.white.withValues(alpha: 0.26) : color,
+                  color: primary
+                      ? Colors.white.withValues(alpha: 0.26)
+                      : color.withValues(alpha: 0.14),
                   borderRadius: BorderRadius.circular(7),
                 ),
                 child: Icon(
                   icon,
                   size: 17,
-                  color: primary ? Colors.white : MockUI.panel,
+                  color: primary ? Colors.white : color,
                 ),
               ),
               const SizedBox(width: 9),
@@ -909,82 +963,6 @@ class _ActionTile extends StatelessWidget {
   }
 }
 
-/// 펫 스테이지 터치 기능을 눈에 띄게 알려주되, 별도 케어 기능처럼 보이지 않게 한다.
-class _ReactionHint extends StatelessWidget {
-  final String label;
-  final String message;
-  final VoidCallback onTap;
-
-  const _ReactionHint({
-    required this.label,
-    required this.message,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        height: 66,
-        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10),
-        decoration: BoxDecoration(
-          color: MockUI.actionBg,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: MockUI.actionBorder),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 26,
-              height: 26,
-              decoration: BoxDecoration(
-                color: MockUI.blue,
-                borderRadius: BorderRadius.circular(7),
-              ),
-              child: const Icon(
-                Icons.touch_app_rounded,
-                size: 17,
-                color: Colors.white,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w900,
-                      color: MockUI.actionInk,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    message,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 10.5,
-                      height: 1.15,
-                      fontWeight: FontWeight.w700,
-                      color: MockUI.muted,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 /// 시안 .coin-pill — 금색 원형 dot + 텍스트(여기선 Lv). bg #fff4cd, 테두리 #f0c05b.
 class _CoinPill extends StatelessWidget {
   final String text;
@@ -996,9 +974,16 @@ class _CoinPill extends StatelessWidget {
       constraints: const BoxConstraints(minWidth: 72),
       padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF4CD),
+        color: MockUI.goldSoft,
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: const Color(0xFFF0C05B)),
+        border: Border.all(color: MockUI.gold.withValues(alpha: 0.72)),
+        boxShadow: [
+          BoxShadow(
+            color: MockUI.gold.withValues(alpha: 0.18),
+            blurRadius: 0,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -1022,7 +1007,7 @@ class _CoinPill extends StatelessWidget {
             style: const TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w900,
-              color: Color(0xFF6D4B05),
+              color: Color(0xFF73510B),
             ),
           ),
         ],
