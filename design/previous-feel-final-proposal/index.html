@@ -1,0 +1,1231 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Digital Pet Previous-Feel Final Proposal</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --page: #eff6ea;
+        --page-warm: #fff4df;
+        --paper: #fffaf0;
+        --card: #fffdf7;
+        --ink: #24221f;
+        --ink-soft: #5f594f;
+        --muted: #81786b;
+        --line: #e0d2b8;
+        --line-strong: #c9b58d;
+        --green: #779f68;
+        --green-soft: #e6f2d8;
+        --gold: #efb83d;
+        --gold-soft: #fff1bf;
+        --coral: #e87058;
+        --blue: #5f99b2;
+        --sky: #e4f5f1;
+        --grass: #dce9bd;
+        --deep: #28251f;
+        --shadow: 0 26px 58px rgba(67, 57, 41, 0.14);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        background: var(--page);
+      }
+
+      body {
+        margin: 0;
+        color: var(--ink);
+        background: linear-gradient(115deg, var(--page) 0%, #fbf4e8 48%, var(--page-warm) 100%);
+        font-family:
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+      }
+
+      img {
+        display: block;
+        max-width: 100%;
+      }
+
+      button {
+        font: inherit;
+      }
+
+      .page {
+        width: min(1180px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 28px 0 46px;
+      }
+
+      .intro {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 360px;
+        gap: 28px;
+        align-items: end;
+        margin-bottom: 20px;
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        width: fit-content;
+        align-items: center;
+        border: 1px solid #c8dcb7;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.72);
+        padding: 8px 13px;
+        color: #567a4c;
+        font-size: 13px;
+        font-weight: 850;
+      }
+
+      h1 {
+        max-width: 760px;
+        margin: 13px 0 12px;
+        font-size: clamp(30px, 3.5vw, 42px);
+        line-height: 1.16;
+        letter-spacing: 0;
+      }
+
+      .lead {
+        max-width: 780px;
+        margin: 0;
+        color: var(--ink-soft);
+        font-size: 16px;
+        line-height: 1.72;
+      }
+
+      .rules {
+        display: grid;
+        gap: 8px;
+      }
+
+      .rule {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: rgba(255, 253, 247, 0.76);
+        padding: 12px 13px;
+      }
+
+      .rule strong {
+        display: block;
+        margin-bottom: 4px;
+        font-size: 13px;
+      }
+
+      .rule span {
+        display: block;
+        color: var(--ink-soft);
+        font-size: 12px;
+        line-height: 1.45;
+      }
+
+      .workspace {
+        display: grid;
+        grid-template-columns: 440px minmax(0, 1fr);
+        gap: 28px;
+        align-items: start;
+      }
+
+      .phone {
+        overflow: hidden;
+        border: 10px solid var(--deep);
+        border-radius: 34px;
+        background: var(--paper);
+        box-shadow: var(--shadow);
+      }
+
+      .phone-screen {
+        position: relative;
+        display: flex;
+        min-height: 760px;
+        flex-direction: column;
+        overflow: hidden;
+        border-radius: 22px;
+        background: linear-gradient(180deg, #fff9ea 0%, #fffdf8 73%, #f8f1df 100%);
+      }
+
+      .screen {
+        display: none;
+        flex: 1;
+        padding: 18px 16px 88px;
+      }
+
+      .screen.active {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .screen-top {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 10px;
+        align-items: start;
+      }
+
+      .screen-top small {
+        display: block;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 850;
+      }
+
+      .screen-top h2 {
+        margin: 3px 0 0;
+        font-size: 23px;
+        line-height: 1.1;
+        letter-spacing: 0;
+      }
+
+      .coin-pill,
+      .small-pill {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid #f0c05b;
+        border-radius: 999px;
+        background: #fff4cd;
+        color: #6d4b05;
+        font-size: 13px;
+        font-weight: 900;
+      }
+
+      .coin-pill {
+        min-width: 72px;
+        gap: 6px;
+        padding: 7px 11px;
+      }
+
+      .coin-pill::before {
+        width: 14px;
+        height: 14px;
+        border-radius: 999px;
+        background: linear-gradient(135deg, #f8d46a, #efa72f);
+        content: "";
+      }
+
+      .small-pill {
+        padding: 6px 9px;
+        font-size: 11px;
+      }
+
+      .pet-stage {
+        position: relative;
+        display: grid;
+        min-height: 405px;
+        place-items: end center;
+        overflow: hidden;
+        border: 1px solid #cbdcc5;
+        border-radius: 7px;
+        background:
+          linear-gradient(180deg, var(--sky) 0%, #f7f5dc 64%, var(--grass) 65%, var(--grass) 100%);
+      }
+
+      .pet-stage::before {
+        position: absolute;
+        top: 22px;
+        right: 26px;
+        width: 34px;
+        height: 34px;
+        border-radius: 999px;
+        background: #ffd868;
+        content: "";
+      }
+
+      .stage-shadow,
+      .arena-shadow {
+        position: absolute;
+        right: 34px;
+        bottom: 24px;
+        left: 42px;
+        height: 17px;
+        border-radius: 999px;
+        background: rgba(102, 92, 71, 0.12);
+      }
+
+      .speech {
+        position: absolute;
+        top: 44px;
+        left: 18px;
+        z-index: 2;
+        max-width: 188px;
+        border: 1px solid #dfc79f;
+        border-radius: 8px;
+        background: rgba(255, 253, 248, 0.96);
+        padding: 12px 13px;
+        color: #584735;
+        font-size: 13px;
+        font-weight: 800;
+        line-height: 1.4;
+        box-shadow: 0 10px 18px rgba(56, 45, 30, 0.1);
+      }
+
+      .stage-pet {
+        position: relative;
+        z-index: 1;
+        width: 230px;
+        image-rendering: pixelated;
+      }
+
+      .quiet-bar {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .stat-card,
+      .care-row,
+      .simple-card,
+      .dex-card,
+      .tree-card {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: rgba(255, 253, 247, 0.9);
+      }
+
+      .stat-card {
+        padding: 10px 9px;
+      }
+
+      .stat-card strong {
+        display: block;
+        margin-bottom: 8px;
+        font-size: 13px;
+      }
+
+      .meter {
+        height: 8px;
+        overflow: hidden;
+        border-radius: 999px;
+        background: #e8dcc8;
+      }
+
+      .meter > span {
+        display: block;
+        height: 100%;
+        border-radius: inherit;
+      }
+
+      .green > span {
+        background: var(--green);
+      }
+
+      .gold > span {
+        background: var(--gold);
+      }
+
+      .blue > span {
+        background: var(--blue);
+      }
+
+      .home-actions {
+        display: grid;
+        grid-template-columns: 1.5fr 1fr;
+        gap: 8px;
+      }
+
+      .primary-action,
+      .light-action,
+      .small-action {
+        display: inline-flex;
+        min-height: 46px;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 900;
+      }
+
+      .primary-action {
+        border: 0;
+        background: var(--green);
+        color: #ffffff;
+      }
+
+      .light-action {
+        border: 1px solid #d8ceb7;
+        background: #f7f7ed;
+        color: #415e36;
+      }
+
+      .routine {
+        display: grid;
+        gap: 10px;
+        padding: 13px 14px;
+      }
+
+      .panel-heading {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+
+      .panel-heading strong {
+        font-size: 14px;
+      }
+
+      .panel-heading span {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 850;
+      }
+
+      .check-line {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        color: #594f43;
+        font-size: 13px;
+        font-weight: 800;
+      }
+
+      .check-line::before {
+        flex: 0 0 auto;
+        width: 17px;
+        height: 17px;
+        border-radius: 5px;
+        background: #e0d4bd;
+        content: "";
+      }
+
+      .check-line.done::before {
+        background: var(--green);
+      }
+
+      .focus-panel {
+        position: relative;
+        display: grid;
+        grid-template-columns: 132px 1fr;
+        gap: 12px;
+        min-height: 180px;
+        overflow: hidden;
+        border: 1px solid #cfded1;
+        border-radius: 7px;
+        background: linear-gradient(180deg, #eaf7f7 0%, #fffdf4 100%);
+        padding: 14px;
+      }
+
+      .focus-panel::after {
+        position: absolute;
+        right: 32px;
+        bottom: 17px;
+        left: 24px;
+        height: 13px;
+        border-radius: 999px;
+        background: rgba(102, 92, 71, 0.1);
+        content: "";
+      }
+
+      .focus-panel img {
+        position: relative;
+        z-index: 1;
+        align-self: end;
+        width: 132px;
+        image-rendering: pixelated;
+      }
+
+      .focus-copy {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        min-width: 0;
+        flex-direction: column;
+        justify-content: center;
+      }
+
+      .focus-copy h3 {
+        margin: 0 0 9px;
+        font-size: 18px;
+        line-height: 1.35;
+        letter-spacing: 0;
+      }
+
+      .focus-copy p {
+        margin: 0 0 13px;
+        color: var(--ink-soft);
+        font-size: 12px;
+        line-height: 1.5;
+      }
+
+      .care-list {
+        display: grid;
+        gap: 8px;
+      }
+
+      .care-row {
+        display: grid;
+        grid-template-columns: 40px 1fr auto;
+        gap: 10px;
+        align-items: center;
+        padding: 10px;
+      }
+
+      .care-icon {
+        display: grid;
+        width: 40px;
+        height: 40px;
+        place-items: center;
+        border-radius: 8px;
+        background: var(--green-soft);
+        color: #466b39;
+        font-size: 13px;
+        font-weight: 950;
+      }
+
+      .care-icon.blue {
+        background: #dceff2;
+        color: #33667a;
+      }
+
+      .care-icon.gold {
+        background: #f6e2ae;
+        color: #72500d;
+      }
+
+      .care-icon.lavender {
+        background: #eadcf1;
+        color: #665077;
+      }
+
+      .care-row strong {
+        display: block;
+        margin-bottom: 3px;
+        font-size: 13px;
+      }
+
+      .care-row p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 11px;
+        line-height: 1.35;
+      }
+
+      .small-action {
+        min-height: 34px;
+        border: 1px solid #bfd0b3;
+        background: #f2f9ea;
+        padding: 0 12px;
+        color: #486b39;
+        font-size: 12px;
+      }
+
+      .battle-screen {
+        padding: 0 0 74px;
+        background: #11120f;
+      }
+
+      .battle-full {
+        position: relative;
+        display: grid;
+        min-height: 686px;
+        grid-template-rows: auto 1fr auto;
+        overflow: hidden;
+        padding: 14px;
+        background:
+          linear-gradient(180deg, rgba(41, 54, 49, 0.95) 0%, rgba(70, 82, 58, 0.95) 52%, rgba(36, 33, 28, 0.98) 100%);
+        color: #fffdf5;
+      }
+
+      .battle-full::before {
+        position: absolute;
+        inset: 0;
+        background:
+          linear-gradient(0deg, rgba(255, 218, 123, 0.12), transparent 36%),
+          repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.04) 0 1px, transparent 1px 28px);
+        content: "";
+        pointer-events: none;
+      }
+
+      .battle-hud {
+        position: relative;
+        z-index: 2;
+        display: grid;
+        gap: 8px;
+      }
+
+      .hp-card {
+        display: grid;
+        gap: 6px;
+        border: 1px solid rgba(255, 244, 205, 0.32);
+        border-radius: 8px;
+        background: rgba(255, 250, 240, 0.1);
+        padding: 9px 10px;
+        backdrop-filter: blur(8px);
+      }
+
+      .hp-card .label {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        color: #fff8e4;
+        font-size: 12px;
+        font-weight: 850;
+      }
+
+      .hp-track {
+        height: 8px;
+        overflow: hidden;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.22);
+      }
+
+      .hp-track span {
+        display: block;
+        height: 100%;
+        border-radius: inherit;
+        background: #9bcf73;
+      }
+
+      .battle-arena {
+        position: relative;
+        z-index: 1;
+        display: grid;
+        align-items: center;
+      }
+
+      .fighter {
+        position: absolute;
+        z-index: 2;
+        image-rendering: pixelated;
+      }
+
+      .fighter.enemy {
+        top: 72px;
+        right: 24px;
+        width: 142px;
+        transform: scaleX(-1);
+      }
+
+      .fighter.mine {
+        bottom: 72px;
+        left: 26px;
+        width: 160px;
+      }
+
+      .arena-shadow.enemy {
+        top: 238px;
+        right: 34px;
+        bottom: auto;
+        left: auto;
+        width: 132px;
+      }
+
+      .arena-shadow.mine {
+        right: auto;
+        bottom: 72px;
+        left: 30px;
+        width: 156px;
+      }
+
+      .turn-band {
+        position: relative;
+        z-index: 3;
+        align-self: center;
+        border: 1px solid rgba(255, 244, 205, 0.34);
+        border-radius: 8px;
+        background: rgba(255, 250, 240, 0.12);
+        padding: 12px 13px;
+        backdrop-filter: blur(8px);
+      }
+
+      .turn-band strong {
+        display: block;
+        margin-bottom: 4px;
+        color: #fff9e8;
+        font-size: 14px;
+      }
+
+      .turn-band span {
+        color: rgba(255, 249, 232, 0.78);
+        font-size: 12px;
+        font-weight: 750;
+      }
+
+      .battle-bottom {
+        position: relative;
+        z-index: 3;
+        display: grid;
+        gap: 8px;
+      }
+
+      .style-row,
+      .mode-row {
+        display: grid;
+        gap: 7px;
+      }
+
+      .style-row {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .mode-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .style-chip,
+      .mode-chip {
+        display: grid;
+        min-height: 38px;
+        place-items: center;
+        border: 1px solid rgba(255, 244, 205, 0.26);
+        border-radius: 8px;
+        background: rgba(255, 250, 240, 0.1);
+        color: rgba(255, 249, 232, 0.86);
+        font-size: 12px;
+        font-weight: 900;
+      }
+
+      .style-chip.active,
+      .mode-chip.primary {
+        border-color: #f1cf75;
+        background: rgba(241, 207, 117, 0.22);
+        color: #fff4cd;
+      }
+
+      .dex-feature {
+        position: relative;
+        display: grid;
+        grid-template-columns: 148px 1fr;
+        gap: 12px;
+        align-items: center;
+        overflow: hidden;
+        border: 1px solid #cbdcc5;
+        border-radius: 7px;
+        background: linear-gradient(180deg, var(--sky) 0%, #fff5db 68%, var(--grass) 100%);
+        padding: 14px;
+      }
+
+      .dex-feature img {
+        position: relative;
+        z-index: 1;
+        width: 148px;
+        image-rendering: pixelated;
+      }
+
+      .dex-feature h3 {
+        margin: 0 0 5px;
+        font-size: 20px;
+        letter-spacing: 0;
+      }
+
+      .dex-feature p {
+        margin: 0 0 10px;
+        color: var(--ink-soft);
+        font-size: 12px;
+        line-height: 1.5;
+      }
+
+      .tag-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+
+      .tag {
+        border: 1px solid #d8ceb7;
+        border-radius: 999px;
+        background: #fffdf8;
+        padding: 5px 8px;
+        color: #5d554b;
+        font-size: 10px;
+        font-weight: 850;
+      }
+
+      .section-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 2px 2px 0;
+      }
+
+      .section-title strong {
+        font-size: 14px;
+      }
+
+      .section-title span {
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 850;
+      }
+
+      .dex-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .dex-card {
+        display: grid;
+        min-height: 112px;
+        place-items: center;
+        padding: 8px;
+        text-align: center;
+      }
+
+      .dex-card img {
+        width: 74px;
+        image-rendering: pixelated;
+      }
+
+      .dex-card b {
+        display: block;
+        margin-top: 4px;
+        font-size: 11px;
+      }
+
+      .dex-card.locked {
+        color: #9b9284;
+      }
+
+      .dex-card.locked img {
+        filter: grayscale(1);
+        opacity: 0.48;
+      }
+
+      .tree-card {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 7px;
+        padding: 11px;
+      }
+
+      .tree-step {
+        display: grid;
+        min-height: 54px;
+        place-items: center;
+        border: 1px solid #e2d4bd;
+        border-radius: 8px;
+        background: #f7f4eb;
+        color: #5f594f;
+        font-size: 11px;
+        font-weight: 900;
+        text-align: center;
+      }
+
+      .tree-step.active {
+        border-color: #b7cf9d;
+        background: var(--green-soft);
+        color: #3f6531;
+      }
+
+      .bottom-nav {
+        position: absolute;
+        right: 14px;
+        bottom: 12px;
+        left: 14px;
+        z-index: 10;
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 3px;
+        border: 1px solid #ead5aa;
+        border-radius: 999px;
+        background: rgba(255, 253, 247, 0.97);
+        padding: 7px;
+        box-shadow: 0 12px 28px rgba(62, 53, 38, 0.12);
+      }
+
+      .nav-button {
+        display: grid;
+        min-height: 48px;
+        place-items: center;
+        border: 0;
+        border-radius: 18px;
+        background: transparent;
+        color: #5c5348;
+        cursor: pointer;
+        font-size: 11px;
+        font-weight: 900;
+      }
+
+      .nav-button.active {
+        background: var(--green-soft);
+        color: #3f6531;
+      }
+
+      .notes {
+        display: grid;
+        gap: 12px;
+      }
+
+      .note-card {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: rgba(255, 253, 247, 0.78);
+        padding: 16px;
+      }
+
+      .note-card h2 {
+        margin: 0 0 10px;
+        font-size: 17px;
+        letter-spacing: 0;
+      }
+
+      .note-card p {
+        margin: 0;
+        color: var(--ink-soft);
+        font-size: 13px;
+        line-height: 1.62;
+      }
+
+      .note-card ul {
+        margin: 0;
+        padding-left: 18px;
+        color: var(--ink-soft);
+        font-size: 13px;
+        line-height: 1.72;
+      }
+
+      .note-card li + li {
+        margin-top: 3px;
+      }
+
+      @media (max-width: 900px) {
+        .intro,
+        .workspace {
+          grid-template-columns: 1fr;
+        }
+
+        .phone {
+          width: min(100%, 440px);
+          margin: 0 auto;
+        }
+      }
+
+      @media (max-width: 480px) {
+        .page {
+          width: min(100% - 20px, 1180px);
+          padding-top: 18px;
+        }
+
+        .phone-screen {
+          min-height: 720px;
+        }
+
+        .screen {
+          padding-inline: 13px;
+        }
+
+        .pet-stage {
+          min-height: 360px;
+        }
+
+        .stage-pet {
+          width: 210px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <section class="intro" aria-label="디자인 제안 요약">
+        <div>
+          <span class="eyebrow">Previous feel / feature aligned</span>
+          <h1>펫이 먼저 보이는 마지막 디자인 제안</h1>
+          <p class="lead">
+            기능은 현재 앱 범위 안에 두고, previous 시안의 조용한 온도와 단순한 화면 밀도로 되돌린 버전입니다.
+            홈은 펫을 크게 보고, 케어와 도감은 필요한 정보만 남기고, 배틀은 풀스크린 감각으로 정리했습니다.
+          </p>
+        </div>
+        <div class="rules">
+          <div class="rule">
+            <strong>기능 추가 없음</strong>
+            <span>먹이, 물, 낮잠, 집중, 흔들기, 배틀, 도감처럼 현재 코드에 있는 흐름만 화면에 둡니다.</span>
+          </div>
+          <div class="rule">
+            <strong>UI보다 펫 우선</strong>
+            <span>큰 스테이지와 여백을 먼저 두고, 수치와 버튼은 하단에 낮게 깔았습니다.</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="workspace">
+        <div class="phone" aria-label="앱 화면 미리보기">
+          <div class="phone-screen">
+            <section class="screen active" data-screen="home">
+              <div class="screen-top">
+                <div>
+                  <small>포근한 오후</small>
+                  <h2>여우비</h2>
+                </div>
+                <div class="coin-pill">Lv.8</div>
+              </div>
+
+              <div class="pet-stage">
+                <div class="speech">배가 조금 고파요. 그래도 같이 있어서 좋아요.</div>
+                <div class="stage-shadow"></div>
+                <img
+                  class="stage-pet"
+                  src="../archive/previous-ui-mock/pet-gumiho.png"
+                  alt="구미호 펫"
+                />
+              </div>
+
+              <div class="quiet-bar">
+                <div class="stat-card">
+                  <strong>포만감</strong>
+                  <div class="meter green"><span style="width: 62%"></span></div>
+                </div>
+                <div class="stat-card">
+                  <strong>행복</strong>
+                  <div class="meter gold"><span style="width: 78%"></span></div>
+                </div>
+                <div class="stat-card">
+                  <strong>기력</strong>
+                  <div class="meter blue"><span style="width: 54%"></span></div>
+                </div>
+              </div>
+
+              <div class="home-actions">
+                <button class="primary-action">밥 주기</button>
+                <button class="light-action">이름 변경</button>
+              </div>
+
+              <div class="simple-card routine">
+                <div class="panel-heading">
+                  <strong>오늘의 목표</strong>
+                  <span>2 / 4</span>
+                </div>
+                <div class="check-line done">물 마시기 5 / 8</div>
+                <div class="check-line done">걸음 4,200 / 6,000</div>
+                <div class="check-line">집중 0 / 2</div>
+              </div>
+            </section>
+
+            <section class="screen" data-screen="care">
+              <div class="screen-top">
+                <div>
+                  <small>케어 타임</small>
+                  <h2>여우비</h2>
+                </div>
+                <div class="coin-pill">Lv.8</div>
+              </div>
+
+              <div class="focus-panel">
+                <img src="../archive/previous-ui-mock/pet-gumiho.png" alt="케어 중인 구미호" />
+                <div class="focus-copy">
+                  <h3>지금은 물이 가장 필요해요</h3>
+                  <p>한 잔이면 기력과 기분이 같이 올라요.</p>
+                  <button class="primary-action">물 주기</button>
+                </div>
+              </div>
+
+              <div class="care-list">
+                <div class="care-row">
+                  <div class="care-icon blue">물</div>
+                  <div>
+                    <strong>물 주기</strong>
+                    <p>오늘 5 / 8잔</p>
+                  </div>
+                  <button class="small-action">실행</button>
+                </div>
+                <div class="care-row">
+                  <div class="care-icon gold">밥</div>
+                  <div>
+                    <strong>간편 급식</strong>
+                    <p>포만감이 낮을 때 사용</p>
+                  </div>
+                  <button class="small-action">급식</button>
+                </div>
+                <div class="care-row">
+                  <div class="care-icon lavender">잠</div>
+                  <div>
+                    <strong>낮잠 모드</strong>
+                    <p>기력을 천천히 회복</p>
+                  </div>
+                  <button class="small-action">시작</button>
+                </div>
+                <div class="care-row">
+                  <div class="care-icon">집</div>
+                  <div>
+                    <strong>집중 모드</strong>
+                    <p>폰을 내려놓고 함께 성장</p>
+                  </div>
+                  <button class="small-action">시작</button>
+                </div>
+                <div class="care-row">
+                  <div class="care-icon">흔</div>
+                  <div>
+                    <strong>흔들기 보너스</strong>
+                    <p>짧은 활동으로 걸음 보너스</p>
+                  </div>
+                  <button class="small-action">시작</button>
+                </div>
+              </div>
+            </section>
+
+            <section class="screen battle-screen" data-screen="battle">
+              <div class="battle-full">
+                <div class="battle-hud">
+                  <div class="hp-card">
+                    <div class="label"><span>야생의 해태</span><span>82 / 100</span></div>
+                    <div class="hp-track"><span style="width: 82%"></span></div>
+                  </div>
+                  <div class="hp-card">
+                    <div class="label"><span>여우비</span><span>74 / 100</span></div>
+                    <div class="hp-track"><span style="width: 74%"></span></div>
+                  </div>
+                </div>
+
+                <div class="battle-arena">
+                  <div class="arena-shadow enemy"></div>
+                  <img
+                    class="fighter enemy"
+                    src="../archive/previous-ui-mock/pet-haetae.png"
+                    alt="상대 해태"
+                  />
+                  <div class="turn-band">
+                    <strong>전투 진행 중</strong>
+                    <span>여우비의 활동 점수가 공격에 반영됐어요.</span>
+                  </div>
+                  <div class="arena-shadow mine"></div>
+                  <img
+                    class="fighter mine"
+                    src="../archive/previous-ui-mock/pet-gumiho.png"
+                    alt="내 구미호"
+                  />
+                </div>
+
+                <div class="battle-bottom">
+                  <div class="style-row" aria-label="배틀 스타일">
+                    <div class="style-chip active">균형형</div>
+                    <div class="style-chip">공격형</div>
+                    <div class="style-chip">방어형</div>
+                  </div>
+                  <div class="mode-row" aria-label="배틀 모드">
+                    <div class="mode-chip primary">AI 대전</div>
+                    <div class="mode-chip">온라인 대전</div>
+                    <div class="mode-chip">친구 방</div>
+                    <div class="mode-chip">코드 참가</div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="screen" data-screen="dex">
+              <div class="screen-top">
+                <div>
+                  <small>신화 펫 도감</small>
+                  <h2>발견한 친구들</h2>
+                </div>
+                <div class="coin-pill">1 / 14</div>
+              </div>
+
+              <div class="dex-feature">
+                <img src="../archive/previous-ui-mock/pet-gumiho.png" alt="대표 구미호" />
+                <div>
+                  <h3>구미호</h3>
+                  <p>민첩하고 호기심 많은 신화 펫. 성장할수록 꼬리와 불빛이 풍성해집니다.</p>
+                  <div class="tag-row">
+                    <span class="tag">유아기</span>
+                    <span class="tag">민첩</span>
+                    <span class="tag">불꽃</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="section-title">
+                <strong>수집 앨범</strong>
+                <span>현재 발견 기준</span>
+              </div>
+              <div class="dex-grid">
+                <div class="dex-card">
+                  <img src="../archive/previous-ui-mock/pet-gumiho.png" alt="구미호" />
+                  <b>구미호</b>
+                </div>
+                <div class="dex-card locked">
+                  <img src="../archive/previous-ui-mock/pet-dokkaebi.png" alt="도깨비" />
+                  <b>미발견</b>
+                </div>
+                <div class="dex-card locked">
+                  <img src="../archive/previous-ui-mock/pet-haetae.png" alt="해태" />
+                  <b>미발견</b>
+                </div>
+                <div class="dex-card locked">
+                  <img src="../archive/previous-ui-mock/pet-moonrabbit.png" alt="달토끼" />
+                  <b>미발견</b>
+                </div>
+                <div class="dex-card locked">
+                  <img src="../archive/previous-ui-mock/pet-hwangryong.png" alt="황룡" />
+                  <b>미발견</b>
+                </div>
+                <div class="dex-card locked">
+                  <img src="../archive/previous-ui-mock/pet-samjoko.png" alt="삼족오" />
+                  <b>미발견</b>
+                </div>
+              </div>
+
+              <div class="section-title">
+                <strong>진화 트리</strong>
+                <span>Lv.10 필요</span>
+              </div>
+              <div class="tree-card">
+                <div class="tree-step active">털뭉치</div>
+                <div class="tree-step active">유아기</div>
+                <div class="tree-step">성장기</div>
+                <div class="tree-step">성숙기</div>
+              </div>
+            </section>
+
+            <nav class="bottom-nav" aria-label="미리보기 탭">
+              <button class="nav-button active" type="button" data-target="home">홈</button>
+              <button class="nav-button" type="button" data-target="care">케어</button>
+              <button class="nav-button" type="button" data-target="battle">배틀</button>
+              <button class="nav-button" type="button" data-target="dex">도감</button>
+            </nav>
+          </div>
+        </div>
+
+        <aside class="notes" aria-label="적용 메모">
+          <div class="note-card">
+            <h2>이번 버전에서 뺀 것</h2>
+            <ul>
+              <li>현재 코드에 없는 놀기, 휴식, 공격 선택 버튼</li>
+              <li>과한 안내 문구와 여러 겹의 정보 카드</li>
+              <li>도감 첫 화면을 복잡하게 만드는 계정/초기화 노출</li>
+            </ul>
+          </div>
+          <div class="note-card">
+            <h2>남긴 것</h2>
+            <ul>
+              <li>홈: 펫, 상태 3개, 밥 주기, 오늘 목표</li>
+              <li>케어: 물, 급식, 낮잠, 집중, 흔들기</li>
+              <li>배틀: 현재 방식의 자동 진행과 배틀 모드, 스타일</li>
+              <li>도감: 대표 펫, 수집 앨범, 진화 단계</li>
+            </ul>
+          </div>
+          <div class="note-card">
+            <h2>적용 방향</h2>
+            <p>
+              실제 앱에 적용한다면 기존 로직과 provider는 그대로 두고, 위젯 배치와 색상 토큰,
+              카드 밀도, 배틀 화면 레이아웃만 조정하는 쪽이 가장 안전합니다.
+            </p>
+          </div>
+        </aside>
+      </section>
+    </main>
+
+    <script>
+      const buttons = document.querySelectorAll(".nav-button");
+      const screens = document.querySelectorAll(".screen");
+
+      buttons.forEach((button) => {
+        button.addEventListener("click", () => {
+          const target = button.dataset.target;
+          buttons.forEach((item) => item.classList.toggle("active", item === button));
+          screens.forEach((screen) => {
+            screen.classList.toggle("active", screen.dataset.screen === target);
+          });
+        });
+      });
+    </script>
+  </body>
+</html>
