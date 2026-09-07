@@ -331,6 +331,22 @@
         gap: 8px;
       }
 
+      .water-notice {
+        display: none;
+        border: 1px solid #bdd9dd;
+        border-radius: 8px;
+        background: #edf8f7;
+        padding: 10px 12px;
+        color: #315f67;
+        font-size: 12px;
+        font-weight: 850;
+        line-height: 1.45;
+      }
+
+      .water-notice.show {
+        display: block;
+      }
+
       .primary-action,
       .light-action,
       .small-action {
@@ -517,6 +533,96 @@
         font-size: 12px;
       }
 
+      .title-card {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 12px;
+        align-items: center;
+        padding: 13px 14px;
+      }
+
+      .title-card strong {
+        display: block;
+        margin-bottom: 4px;
+        font-size: 15px;
+      }
+
+      .title-card p {
+        margin: 0;
+        color: var(--ink-soft);
+        font-size: 12px;
+        line-height: 1.45;
+      }
+
+      .title-medal {
+        display: grid;
+        width: 54px;
+        height: 54px;
+        place-items: center;
+        border: 1px solid #efc96e;
+        border-radius: 999px;
+        background: #fff2c4;
+        color: #71520f;
+        font-size: 12px;
+        font-weight: 950;
+      }
+
+      .achievement-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .achievement-card {
+        display: grid;
+        gap: 5px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: rgba(255, 253, 247, 0.9);
+        padding: 12px;
+      }
+
+      .achievement-card small {
+        color: var(--muted);
+        font-size: 10.5px;
+        font-weight: 850;
+      }
+
+      .achievement-card strong {
+        font-size: 13px;
+      }
+
+      .quest-list {
+        display: grid;
+        gap: 8px;
+      }
+
+      .quest-row {
+        display: grid;
+        gap: 7px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: rgba(255, 253, 247, 0.9);
+        padding: 11px 12px;
+      }
+
+      .quest-row .quest-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+
+      .quest-row strong {
+        font-size: 13px;
+      }
+
+      .quest-row span {
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 850;
+      }
+
       .battle-screen {
         padding: 0 0 74px;
         background: #11120f;
@@ -542,6 +648,143 @@
           repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.04) 0 1px, transparent 1px 28px);
         content: "";
         pointer-events: none;
+      }
+
+      .battle-tabs {
+        position: relative;
+        z-index: 4;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 6px;
+      }
+
+      .battle-tab {
+        min-height: 38px;
+        border: 1px solid rgba(255, 244, 205, 0.26);
+        border-radius: 8px;
+        background: rgba(255, 250, 240, 0.08);
+        color: rgba(255, 249, 232, 0.74);
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 900;
+      }
+
+      .battle-tab.active {
+        border-color: #f1cf75;
+        background: rgba(241, 207, 117, 0.22);
+        color: #fff4cd;
+      }
+
+      .battle-state {
+        position: relative;
+        z-index: 2;
+        display: none;
+        min-height: 626px;
+      }
+
+      .battle-state.active {
+        display: grid;
+        gap: 10px;
+      }
+
+      .battle-state.before {
+        grid-template-rows: auto auto auto 1fr;
+      }
+
+      .battle-lobby-card,
+      .battle-detail-card,
+      .battle-result-card,
+      .battle-timeline {
+        border: 1px solid rgba(255, 244, 205, 0.3);
+        border-radius: 8px;
+        background: rgba(255, 250, 240, 0.1);
+        padding: 12px;
+        backdrop-filter: blur(8px);
+      }
+
+      .battle-detail-card,
+      .battle-result-card,
+      .battle-timeline {
+        display: grid;
+        gap: 10px;
+      }
+
+      .battle-lobby-card {
+        display: grid;
+        grid-template-columns: 128px 1fr;
+        gap: 12px;
+        align-items: end;
+        min-height: 180px;
+      }
+
+      .battle-lobby-card img {
+        width: 128px;
+        image-rendering: pixelated;
+      }
+
+      .battle-lobby-card h3,
+      .battle-result-card h3 {
+        margin: 0 0 5px;
+        color: #fff9e8;
+        font-size: 20px;
+        letter-spacing: 0;
+      }
+
+      .battle-lobby-card p,
+      .battle-result-card p {
+        margin: 0;
+        color: rgba(255, 249, 232, 0.78);
+        font-size: 12px;
+        line-height: 1.48;
+      }
+
+      .battle-stat-mini {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 7px;
+        margin-top: 12px;
+      }
+
+      .battle-stat-mini span {
+        display: grid;
+        min-height: 34px;
+        place-items: center;
+        border: 1px solid rgba(255, 244, 205, 0.24);
+        border-radius: 8px;
+        background: rgba(255, 250, 240, 0.08);
+        color: #fff8e4;
+        font-size: 11px;
+        font-weight: 900;
+      }
+
+      .wild-preview {
+        display: grid;
+        grid-template-columns: 58px 1fr auto;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .wild-preview img {
+        width: 58px;
+        image-rendering: pixelated;
+      }
+
+      .wild-preview strong {
+        display: block;
+        color: #fff9e8;
+        font-size: 13px;
+      }
+
+      .wild-preview span {
+        display: block;
+        margin-top: 3px;
+        color: rgba(255, 249, 232, 0.7);
+        font-size: 11px;
+        font-weight: 800;
+      }
+
+      .battle-state.during {
+        grid-template-rows: auto 1fr auto;
       }
 
       .battle-hud {
@@ -688,6 +931,41 @@
         border-color: #f1cf75;
         background: rgba(241, 207, 117, 0.22);
         color: #fff4cd;
+      }
+
+      .timeline-line {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        color: rgba(255, 249, 232, 0.78);
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .timeline-line strong {
+        color: #fff9e8;
+        font-size: 12px;
+      }
+
+      .result-score {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+        margin: 12px 0;
+      }
+
+      .result-score div {
+        display: grid;
+        min-height: 58px;
+        place-items: center;
+        border: 1px solid rgba(255, 244, 205, 0.24);
+        border-radius: 8px;
+        background: rgba(255, 250, 240, 0.08);
+        color: #fff8e4;
+        font-size: 12px;
+        font-weight: 900;
+        text-align: center;
       }
 
       .dex-feature {
@@ -938,11 +1216,11 @@
         <div class="rules">
           <div class="rule">
             <strong>기능 추가 없음</strong>
-            <span>먹이, 물, 낮잠, 집중, 흔들기, 배틀, 도감처럼 현재 코드에 있는 흐름만 화면에 둡니다.</span>
+            <span>현재 코드 흐름을 기준으로 두되, 잠시 숨길 케어 액션은 시안에서도 노출하지 않습니다.</span>
           </div>
           <div class="rule">
             <strong>UI보다 펫 우선</strong>
-            <span>큰 스테이지와 여백을 먼저 두고, 수치와 버튼은 하단에 낮게 깔았습니다.</span>
+            <span>큰 스테이지와 여백을 먼저 두고, 칭호·업적·퀘스트는 낮은 밀도로 보이게 했습니다.</span>
           </div>
         </div>
       </section>
@@ -986,17 +1264,21 @@
 
               <div class="home-actions">
                 <button class="primary-action">밥 주기</button>
-                <button class="light-action">이름 변경</button>
+                <button class="light-action water-action" type="button">물 주기</button>
+              </div>
+
+              <div class="water-notice" id="waterNotice">
+                물 주기 완료. 여우비도 한 모금 마셨어요. 주인도 지금 물 한 잔 마셔요.
               </div>
 
               <div class="simple-card routine">
                 <div class="panel-heading">
-                  <strong>오늘의 목표</strong>
-                  <span>2 / 4</span>
+                  <strong>칭호와 퀘스트</strong>
+                  <span>진행 중</span>
                 </div>
+                <div class="check-line done">칭호: 작은 물길잡이</div>
                 <div class="check-line done">물 마시기 5 / 8</div>
-                <div class="check-line done">걸음 4,200 / 6,000</div>
-                <div class="check-line">집중 0 / 2</div>
+                <div class="check-line">걸음 4,200 / 6,000</div>
               </div>
             </section>
 
@@ -1013,9 +1295,13 @@
                 <img src="../archive/previous-ui-mock/pet-gumiho.png" alt="케어 중인 구미호" />
                 <div class="focus-copy">
                   <h3>지금은 물이 가장 필요해요</h3>
-                  <p>한 잔이면 기력과 기분이 같이 올라요.</p>
-                  <button class="primary-action">물 주기</button>
+                  <p>펫에게 물을 주면서 사용자도 같이 물 마시도록 짧게 안내합니다.</p>
+                  <button class="primary-action water-action" type="button">물 주기</button>
                 </div>
+              </div>
+
+              <div class="water-notice">
+                물 주기 완료. 여우비도 한 모금 마셨어요. 주인도 지금 물 한 잔 마셔요.
               </div>
 
               <div class="care-list">
@@ -1027,84 +1313,176 @@
                   </div>
                   <button class="small-action">실행</button>
                 </div>
-                <div class="care-row">
-                  <div class="care-icon gold">밥</div>
-                  <div>
-                    <strong>간편 급식</strong>
-                    <p>포만감이 낮을 때 사용</p>
-                  </div>
-                  <button class="small-action">급식</button>
+              </div>
+
+              <div class="simple-card title-card">
+                <div>
+                  <strong>현재 칭호: 작은 물길잡이</strong>
+                  <p>오늘 물 목표를 꾸준히 채우는 사용자에게 붙는 조용한 칭호입니다.</p>
                 </div>
-                <div class="care-row">
-                  <div class="care-icon lavender">잠</div>
-                  <div>
-                    <strong>낮잠 모드</strong>
-                    <p>기력을 천천히 회복</p>
-                  </div>
-                  <button class="small-action">시작</button>
+                <div class="title-medal">칭호</div>
+              </div>
+
+              <div class="section-title">
+                <strong>업적</strong>
+                <span>최근 달성</span>
+              </div>
+              <div class="achievement-grid">
+                <div class="achievement-card">
+                  <small>생활</small>
+                  <strong>3일 연속 접속</strong>
                 </div>
-                <div class="care-row">
-                  <div class="care-icon">집</div>
-                  <div>
-                    <strong>집중 모드</strong>
-                    <p>폰을 내려놓고 함께 성장</p>
-                  </div>
-                  <button class="small-action">시작</button>
+                <div class="achievement-card">
+                  <small>케어</small>
+                  <strong>물 30잔 기록</strong>
                 </div>
-                <div class="care-row">
-                  <div class="care-icon">흔</div>
-                  <div>
-                    <strong>흔들기 보너스</strong>
-                    <p>짧은 활동으로 걸음 보너스</p>
+              </div>
+
+              <div class="section-title">
+                <strong>퀘스트</strong>
+                <span>오늘</span>
+              </div>
+              <div class="quest-list">
+                <div class="quest-row">
+                  <div class="quest-head">
+                    <strong>물 마시기</strong>
+                    <span>5 / 8</span>
                   </div>
-                  <button class="small-action">시작</button>
+                  <div class="meter blue"><span style="width: 62%"></span></div>
+                </div>
+                <div class="quest-row">
+                  <div class="quest-head">
+                    <strong>걸음 채우기</strong>
+                    <span>4,200 / 6,000</span>
+                  </div>
+                  <div class="meter green"><span style="width: 70%"></span></div>
                 </div>
               </div>
             </section>
 
             <section class="screen battle-screen" data-screen="battle">
               <div class="battle-full">
-                <div class="battle-hud">
-                  <div class="hp-card">
-                    <div class="label"><span>야생의 해태</span><span>82 / 100</span></div>
-                    <div class="hp-track"><span style="width: 82%"></span></div>
+                <div class="battle-tabs" aria-label="배틀 상태 미리보기">
+                  <button class="battle-tab active" type="button" data-battle-state="before">경기 전</button>
+                  <button class="battle-tab" type="button" data-battle-state="during">경기 중</button>
+                  <button class="battle-tab" type="button" data-battle-state="after">경기 후</button>
+                </div>
+
+                <div class="battle-state before active" data-battle-panel="before">
+                  <div class="battle-lobby-card">
+                    <img src="../archive/previous-ui-mock/pet-gumiho.png" alt="배틀 전 내 구미호" />
+                    <div>
+                      <h3>여우비 출전 준비</h3>
+                      <p>컨디션과 배틀 스타일만 조용히 확인하고 바로 시작하는 화면입니다.</p>
+                      <div class="battle-stat-mini">
+                        <span>HP 100</span>
+                        <span>ATK 42</span>
+                        <span>DEF 36</span>
+                      </div>
+                    </div>
                   </div>
-                  <div class="hp-card">
-                    <div class="label"><span>여우비</span><span>74 / 100</span></div>
-                    <div class="hp-track"><span style="width: 74%"></span></div>
+
+                  <div class="battle-detail-card">
+                    <div class="panel-heading">
+                      <strong>배틀 스타일</strong>
+                      <span>현재 코드 기준</span>
+                    </div>
+                    <div class="style-row" aria-label="배틀 스타일">
+                      <div class="style-chip active">균형형</div>
+                      <div class="style-chip">공격형</div>
+                      <div class="style-chip">방어형</div>
+                    </div>
+                  </div>
+
+                  <div class="battle-detail-card">
+                    <div class="panel-heading">
+                      <strong>대전 방식</strong>
+                      <span>오늘 AI 2 / 3</span>
+                    </div>
+                    <div class="mode-row" aria-label="배틀 모드">
+                      <div class="mode-chip primary">AI 대전</div>
+                      <div class="mode-chip">온라인 대전</div>
+                      <div class="mode-chip">친구 방</div>
+                      <div class="mode-chip">코드 참가</div>
+                    </div>
+                  </div>
+
+                  <div class="battle-detail-card wild-preview">
+                    <img src="../archive/previous-ui-mock/pet-haetae.png" alt="야생 해태" />
+                    <div>
+                      <strong>야생 조우 대기 중</strong>
+                      <span>걸음 활동에서 만난 상대가 있으면 이 자리에만 노출</span>
+                    </div>
+                    <div class="small-pill">Lv.7</div>
                   </div>
                 </div>
 
-                <div class="battle-arena">
-                  <div class="arena-shadow enemy"></div>
-                  <img
-                    class="fighter enemy"
-                    src="../archive/previous-ui-mock/pet-haetae.png"
-                    alt="상대 해태"
-                  />
-                  <div class="turn-band">
-                    <strong>전투 진행 중</strong>
-                    <span>여우비의 활동 점수가 공격에 반영됐어요.</span>
+                <div class="battle-state during" data-battle-panel="during">
+                  <div class="battle-hud">
+                    <div class="hp-card">
+                      <div class="label"><span>야생의 해태</span><span>82 / 100</span></div>
+                      <div class="hp-track"><span style="width: 82%"></span></div>
+                    </div>
+                    <div class="hp-card">
+                      <div class="label"><span>여우비</span><span>74 / 100</span></div>
+                      <div class="hp-track"><span style="width: 74%"></span></div>
+                    </div>
                   </div>
-                  <div class="arena-shadow mine"></div>
-                  <img
-                    class="fighter mine"
-                    src="../archive/previous-ui-mock/pet-gumiho.png"
-                    alt="내 구미호"
-                  />
+
+                  <div class="battle-arena">
+                    <div class="arena-shadow enemy"></div>
+                    <img
+                      class="fighter enemy"
+                      src="../archive/previous-ui-mock/pet-haetae.png"
+                      alt="상대 해태"
+                    />
+                    <div class="turn-band">
+                      <strong>2턴 진행 중</strong>
+                      <span>공격 선택 없이 자동으로 턴 로그가 쌓입니다.</span>
+                    </div>
+                    <div class="arena-shadow mine"></div>
+                    <img
+                      class="fighter mine"
+                      src="../archive/previous-ui-mock/pet-gumiho.png"
+                      alt="내 구미호"
+                    />
+                  </div>
+
+                  <div class="battle-timeline">
+                    <div class="timeline-line"><strong>1턴</strong><span>여우비가 먼저 움직였어요</span></div>
+                    <div class="timeline-line"><strong>2턴</strong><span>상대 반격, HP 26 감소</span></div>
+                    <div class="timeline-line"><strong>다음</strong><span>결과까지 자동 진행</span></div>
+                  </div>
                 </div>
 
-                <div class="battle-bottom">
-                  <div class="style-row" aria-label="배틀 스타일">
-                    <div class="style-chip active">균형형</div>
-                    <div class="style-chip">공격형</div>
-                    <div class="style-chip">방어형</div>
+                <div class="battle-state after" data-battle-panel="after">
+                  <div class="battle-result-card">
+                    <h3>승리</h3>
+                    <p>오늘의 활동과 컨디션이 전투력에 반영되어 경험치를 얻었습니다.</p>
+                    <div class="result-score">
+                      <div>EXP<br />+28</div>
+                      <div>남은 HP<br />74</div>
+                      <div>연승<br />2</div>
+                    </div>
                   </div>
-                  <div class="mode-row" aria-label="배틀 모드">
-                    <div class="mode-chip primary">AI 대전</div>
-                    <div class="mode-chip">온라인 대전</div>
-                    <div class="mode-chip">친구 방</div>
-                    <div class="mode-chip">코드 참가</div>
+
+                  <div class="battle-detail-card">
+                    <div class="panel-heading">
+                      <strong>전투 해설</strong>
+                      <span>요약</span>
+                    </div>
+                    <div class="quest-list">
+                      <div class="timeline-line"><strong>컨디션</strong><span>기력 54라 방어가 조금 흔들렸어요</span></div>
+                      <div class="timeline-line"><strong>활동</strong><span>걸음 4,200보가 공격 보정에 기여</span></div>
+                      <div class="timeline-line"><strong>보상</strong><span>경험치와 도감 기록 갱신</span></div>
+                    </div>
+                  </div>
+
+                  <div class="battle-detail-card">
+                    <div class="mode-row">
+                      <div class="mode-chip primary">다시 대전</div>
+                      <div class="mode-chip">홈으로</div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1189,16 +1567,16 @@
             <h2>이번 버전에서 뺀 것</h2>
             <ul>
               <li>현재 코드에 없는 놀기, 휴식, 공격 선택 버튼</li>
-              <li>과한 안내 문구와 여러 겹의 정보 카드</li>
+              <li>잠시 숨기기로 한 낮잠, 간편 급식, 흔들기 보너스, 집중 모드</li>
               <li>도감 첫 화면을 복잡하게 만드는 계정/초기화 노출</li>
             </ul>
           </div>
           <div class="note-card">
             <h2>남긴 것</h2>
             <ul>
-              <li>홈: 펫, 상태 3개, 밥 주기, 오늘 목표</li>
-              <li>케어: 물, 급식, 낮잠, 집중, 흔들기</li>
-              <li>배틀: 현재 방식의 자동 진행과 배틀 모드, 스타일</li>
+              <li>홈: 펫, 상태 3개, 밥 주기, 물 주기, 칭호와 퀘스트</li>
+              <li>케어: 물 주기 중심, 칭호, 최근 업적, 오늘 퀘스트</li>
+              <li>배틀: 경기 전, 경기 중, 경기 후 상태별 화면</li>
               <li>도감: 대표 펫, 수집 앨범, 진화 단계</li>
             </ul>
           </div>
@@ -1206,7 +1584,7 @@
             <h2>적용 방향</h2>
             <p>
               실제 앱에 적용한다면 기존 로직과 provider는 그대로 두고, 위젯 배치와 색상 토큰,
-              카드 밀도, 배틀 화면 레이아웃만 조정하는 쪽이 가장 안전합니다.
+              카드 밀도, 배틀 상태별 렌더링만 조정하는 쪽이 가장 안전합니다.
             </p>
           </div>
         </aside>
@@ -1216,6 +1594,10 @@
     <script>
       const buttons = document.querySelectorAll(".nav-button");
       const screens = document.querySelectorAll(".screen");
+      const waterButtons = document.querySelectorAll(".water-action");
+      const waterNotice = document.getElementById("waterNotice");
+      const battleTabs = document.querySelectorAll(".battle-tab");
+      const battlePanels = document.querySelectorAll("[data-battle-panel]");
 
       buttons.forEach((button) => {
         button.addEventListener("click", () => {
@@ -1223,6 +1605,23 @@
           buttons.forEach((item) => item.classList.toggle("active", item === button));
           screens.forEach((screen) => {
             screen.classList.toggle("active", screen.dataset.screen === target);
+          });
+        });
+      });
+
+      waterButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+          const localNotice = button.closest(".screen")?.querySelector(".water-notice");
+          (localNotice || waterNotice)?.classList.add("show");
+        });
+      });
+
+      battleTabs.forEach((tab) => {
+        tab.addEventListener("click", () => {
+          const target = tab.dataset.battleState;
+          battleTabs.forEach((item) => item.classList.toggle("active", item === tab));
+          battlePanels.forEach((panel) => {
+            panel.classList.toggle("active", panel.dataset.battlePanel === target);
           });
         });
       });
