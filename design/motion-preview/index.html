@@ -88,6 +88,56 @@
       white-space: nowrap;
     }
 
+    .character-switch {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      margin-bottom: 14px;
+      padding: 8px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.82);
+    }
+
+    .character-button {
+      min-height: 62px;
+      padding: 9px 12px;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--soft-ink);
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .character-button strong,
+    .character-button span {
+      display: block;
+    }
+
+    .character-button strong {
+      margin-bottom: 3px;
+      font-size: 14px;
+      font-weight: 950;
+    }
+
+    .character-button span {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    .character-button[aria-pressed="true"] {
+      border-color: var(--green-dark);
+      background: var(--green-dark);
+      color: #ffffff;
+      box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.18);
+    }
+
+    .character-button[aria-pressed="true"] span {
+      color: #d7f5df;
+    }
+
     .preview-layout {
       display: grid;
       grid-template-columns: minmax(0, 1.18fr) minmax(300px, 0.82fr);
@@ -135,6 +185,25 @@
       background: rgba(42, 64, 47, 0.16);
       transform: translateX(-50%);
       filter: blur(3px);
+    }
+
+    .stage.dark {
+      background: #07110f;
+    }
+
+    .stage.dark::before {
+      background: #0c251d;
+      border-top-color: #235541;
+    }
+
+    .stage.dark::after {
+      background: rgba(84, 201, 124, 0.18);
+    }
+
+    .stage.dark .motion-label {
+      border-color: #2b5d4b;
+      background: rgba(7, 20, 16, 0.92);
+      color: #c9f5d3;
     }
 
     .motion-label {
@@ -213,7 +282,7 @@
 
     .mode-grid {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 8px;
       margin-top: 13px;
     }
@@ -403,6 +472,14 @@
         margin-top: 10px;
       }
 
+      .character-switch {
+        grid-template-columns: 1fr;
+      }
+
+      .character-button {
+        min-height: 52px;
+      }
+
       .stage {
         min-height: 390px;
         padding-inline: 10px;
@@ -420,6 +497,10 @@
       .metric {
         min-height: 58px;
       }
+
+      .mode-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
     }
   </style>
 </head>
@@ -427,15 +508,27 @@
   <main class="page">
     <header class="topbar">
       <div>
-        <p class="eyebrow">8프레임 스프라이트 시트</p>
-        <h1>거북이 동작 미리보기</h1>
+        <p class="eyebrow">캐릭터 스프라이트 시트</p>
+        <h1 id="pageTitle">거북이 동작 미리보기</h1>
       </div>
-      <span class="source-badge">원본 이미지 그대로 재생</span>
+      <span class="source-badge" id="sourceBadge">기본 거북이</span>
     </header>
 
-    <section class="preview-layout" aria-label="거북이 애니메이션 미리보기">
+    <nav class="character-switch" aria-label="캐릭터 선택">
+      <button class="character-button" type="button" data-character="turtle" aria-pressed="true">
+        <strong>거북이</strong><span>4개 동작</span>
+      </button>
+      <button class="character-button" type="button" data-character="hyunmooTwo" aria-pressed="false">
+        <strong>현무 2두</strong><span>9개 동작</span>
+      </button>
+      <button class="character-button" type="button" data-character="hyunmooThree" aria-pressed="false">
+        <strong>현무 3두</strong><span>10개 동작 · 포효 포함</span>
+      </button>
+    </nav>
+
+    <section class="preview-layout" id="previewLayout" aria-label="거북이 애니메이션 미리보기">
       <article class="stage-card">
-        <div class="stage">
+        <div class="stage" id="stage">
           <div class="motion-label" id="motionLabel">걷기 재생 중</div>
           <canvas class="sprite-canvas" id="spriteCanvas" width="320" height="320" aria-label="거북이 걷기 애니메이션"></canvas>
         </div>
@@ -448,12 +541,7 @@
 
       <aside class="control-card" aria-label="재생 설정">
         <h2>동작 선택</h2>
-        <div class="mode-grid" role="group" aria-label="거북이 동작">
-          <button class="mode-button" type="button" data-mode="walk" aria-pressed="true">걷기</button>
-          <button class="mode-button" type="button" data-mode="eat" aria-pressed="false">먹기</button>
-          <button class="mode-button" type="button" data-mode="sleep" aria-pressed="false">자기</button>
-          <button class="mode-button" type="button" data-mode="happy" aria-pressed="false">기쁨</button>
-        </div>
+        <div class="mode-grid" id="modeGrid" role="group" aria-label="거북이 동작"></div>
 
         <div class="settings">
           <div class="setting-row">
@@ -485,19 +573,25 @@
 
   <script src="motion-player.js"></script>
   <script>
-    const { MOTIONS, frameSegment, nextFrame } = window.TurtleMotion;
-    const FRAME_COUNT = 8;
-    const MAX_FRAME_WIDTH = 195;
-    const notes = {
-      walk: "짧은 다리의 교차와 몸통 높낮이를 확인할 수 있습니다.",
-      eat: "잎을 발견하고 고개를 숙여 먹은 뒤 다시 일어납니다.",
-      sleep: "눈을 감고 엎드린 자세에서 숨결과 잠꼬대가 반복됩니다.",
-      happy: "표정이 밝아지고 가볍게 뛰어오르는 기쁨 동작입니다.",
-    };
+    const {
+      CHARACTERS,
+      availableMotions,
+      frameAssetFor,
+      frameCountFor,
+      motionFor,
+      nextFrame,
+      sourceRectFor,
+    } = window.TurtleMotion;
 
-    const sourceImage = new Image();
+    const sourceImages = {};
+    const frameImages = {};
+    const characterButtons = Array.from(document.querySelectorAll(".character-button"));
+    const pageTitle = document.getElementById("pageTitle");
+    const sourceBadge = document.getElementById("sourceBadge");
+    const previewLayout = document.getElementById("previewLayout");
+    const stage = document.getElementById("stage");
     const spriteCanvas = document.getElementById("spriteCanvas");
-    const modeButtons = Array.from(document.querySelectorAll(".mode-button"));
+    const modeGrid = document.getElementById("modeGrid");
     const framesRoot = document.getElementById("frames");
     const motionLabel = document.getElementById("motionLabel");
     const motionMetric = document.getElementById("motionMetric");
@@ -510,41 +604,61 @@
     const playButton = document.getElementById("playButton");
     const restartButton = document.getElementById("restartButton");
 
-    let mode = "walk";
+    let characterKey = "turtle";
+    let modeKey = "walk";
     let frame = 0;
-    let cycleMs = MOTIONS.walk.cycleMs;
+    let cycleMs = motionFor(characterKey, modeKey).cycleMs;
     let isPlaying = true;
     let lastFrameAt = 0;
-    let imageReady = false;
 
-    function drawFrameToCanvas(canvas, currentMode, currentFrame) {
-      if (!imageReady) return;
+    function currentCharacter() {
+      return CHARACTERS[characterKey];
+    }
 
+    function currentMotion() {
+      return motionFor(characterKey, modeKey);
+    }
+
+    function currentFrameCount() {
+      return frameCountFor(characterKey, modeKey);
+    }
+
+    function drawFrameToCanvas(canvas, selectedCharacter, selectedMotion, selectedFrame) {
+      const character = CHARACTERS[selectedCharacter];
       const context = canvas.getContext("2d");
-      const motion = MOTIONS[currentMode];
-      const segment = frameSegment(currentFrame);
-      const sourceWidth = segment.width;
-      const sourceHeight = motion.cropHeight;
+      const frameAsset = frameAssetFor(selectedCharacter, selectedMotion, selectedFrame);
+      context.clearRect(0, 0, canvas.width, canvas.height);
+      canvas.style.backgroundColor = canvas.classList.contains("frame-canvas")
+        ? character.canvasColor
+        : "transparent";
+      if (!frameAsset) {
+        context.fillStyle = character.canvasColor;
+        context.fillRect(0, 0, canvas.width, canvas.height);
+      }
+
+      const image = frameAsset ? frameImages[frameAsset] : sourceImages[selectedCharacter];
+      if (!image || !image.complete || image.naturalWidth === 0) return;
+
+      const sourceRect = frameAsset
+        ? { x: 0, y: 0, width: image.naturalWidth, height: image.naturalHeight }
+        : sourceRectFor(selectedCharacter, selectedMotion, selectedFrame);
       const padding = canvas.width * 0.06;
       const scale = Math.min(
-        (canvas.width - padding * 2) / MAX_FRAME_WIDTH,
-        (canvas.height - padding * 2) / sourceHeight,
+        (canvas.width - padding * 2) / sourceRect.width,
+        (canvas.height - padding * 2) / sourceRect.height,
       );
-      const drawWidth = sourceWidth * scale;
-      const drawHeight = sourceHeight * scale;
+      const drawWidth = sourceRect.width * scale;
+      const drawHeight = sourceRect.height * scale;
       const drawX = (canvas.width - drawWidth) / 2;
       const drawY = (canvas.height - drawHeight) / 2;
 
-      context.clearRect(0, 0, canvas.width, canvas.height);
-      context.fillStyle = "#ffffff";
-      context.fillRect(0, 0, canvas.width, canvas.height);
       context.imageSmoothingEnabled = false;
       context.drawImage(
-        sourceImage,
-        segment.x,
-        motion.cropY,
-        sourceWidth,
-        sourceHeight,
+        image,
+        sourceRect.x,
+        sourceRect.y,
+        sourceRect.width,
+        sourceRect.height,
         drawX,
         drawY,
         drawWidth,
@@ -554,19 +668,21 @@
 
     function renderFrameStrip() {
       framesRoot.innerHTML = "";
+      const frameCount = currentFrameCount();
+      const motion = currentMotion();
 
-      for (let index = 0; index < FRAME_COUNT; index += 1) {
+      for (let index = 0; index < frameCount; index += 1) {
         const button = document.createElement("button");
         button.type = "button";
         button.className = "frame-button";
         button.setAttribute("aria-current", String(index === frame));
-        button.setAttribute("aria-label", `${MOTIONS[mode].label} ${index + 1}번 프레임`);
+        button.setAttribute("aria-label", `${motion.label} ${index + 1}번 프레임`);
 
         const canvas = document.createElement("canvas");
         canvas.className = "frame-canvas";
         canvas.width = 128;
         canvas.height = 128;
-        drawFrameToCanvas(canvas, mode, index);
+        drawFrameToCanvas(canvas, characterKey, modeKey, index);
 
         const label = document.createElement("span");
         label.textContent = `F${index + 1}`;
@@ -583,43 +699,80 @@
 
     function updateTransport() {
       playButton.textContent = isPlaying ? "일시정지" : "재생";
-      motionLabel.textContent = `${MOTIONS[mode].label} ${isPlaying ? "재생 중" : "멈춤"}`;
+      motionLabel.textContent = `${currentMotion().label} ${isPlaying ? "재생 중" : "멈춤"}`;
     }
 
     function render() {
-      drawFrameToCanvas(spriteCanvas, mode, frame);
-      motionMetric.textContent = MOTIONS[mode].label;
-      frameMetric.textContent = `${frame + 1} / ${FRAME_COUNT}`;
+      const character = currentCharacter();
+      const motion = currentMotion();
+      const frameCount = currentFrameCount();
+      drawFrameToCanvas(spriteCanvas, characterKey, modeKey, frame);
+      motionMetric.textContent = motion.label;
+      frameMetric.textContent = `${frame + 1} / ${frameCount}`;
       cycleMetric.textContent = `${cycleMs}ms`;
-      spriteCanvas.setAttribute("aria-label", `거북이 ${MOTIONS[mode].label} 애니메이션`);
+      spriteCanvas.setAttribute("aria-label", `${character.label} ${motion.label} 애니메이션`);
       document.querySelectorAll(".frame-button").forEach((button, index) => {
         button.setAttribute("aria-current", String(index === frame));
       });
       updateTransport();
     }
 
+    function renderMotionButtons() {
+      modeGrid.innerHTML = "";
+      availableMotions(characterKey).forEach((key) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "mode-button";
+        button.dataset.mode = key;
+        button.textContent = motionFor(characterKey, key).label;
+        button.setAttribute("aria-pressed", String(key === modeKey));
+        button.addEventListener("click", () => setMode(key));
+        modeGrid.appendChild(button);
+      });
+    }
+
     function setMode(nextMode) {
-      mode = nextMode;
+      modeKey = nextMode;
       frame = 0;
-      cycleMs = MOTIONS[mode].cycleMs;
+      const motion = currentMotion();
+      cycleMs = motion.cycleMs;
       isPlaying = true;
       lastFrameAt = performance.now();
       speed.value = String(cycleMs);
       speedValue.textContent = `${cycleMs}ms`;
-      framesTitle.textContent = `${MOTIONS[mode].label} 프레임`;
-      motionNote.textContent = notes[mode];
-      modeButtons.forEach((button) => {
-        button.setAttribute("aria-pressed", String(button.dataset.mode === mode));
+      framesTitle.textContent = `${motion.label} 프레임`;
+      motionNote.textContent = motion.note;
+      document.querySelectorAll(".mode-button").forEach((button) => {
+        button.setAttribute("aria-pressed", String(button.dataset.mode === modeKey));
       });
       renderFrameStrip();
       render();
     }
 
+    function setCharacter(nextCharacter) {
+      characterKey = nextCharacter;
+      const character = currentCharacter();
+      modeKey = availableMotions(characterKey)[0];
+      pageTitle.textContent = `${character.label} 동작 미리보기`;
+      sourceBadge.textContent = character.subtitle;
+      previewLayout.setAttribute("aria-label", `${character.label} 애니메이션 미리보기`);
+      modeGrid.setAttribute("aria-label", `${character.label} 동작`);
+      stage.classList.toggle("dark", character.theme === "dark");
+      characterButtons.forEach((button) => {
+        button.setAttribute("aria-pressed", String(button.dataset.character === characterKey));
+      });
+      renderMotionButtons();
+      setMode(modeKey);
+    }
+
     function animationLoop(now) {
-      if (imageReady && isPlaying) {
-        const frameMs = cycleMs / FRAME_COUNT;
+      const frameAsset = frameAssetFor(characterKey, modeKey, frame);
+      const image = frameAsset ? frameImages[frameAsset] : sourceImages[characterKey];
+      if (image && image.complete && image.naturalWidth > 0 && isPlaying) {
+        const frameCount = currentFrameCount();
+        const frameMs = cycleMs / frameCount;
         if (now - lastFrameAt >= frameMs) {
-          frame = nextFrame(frame, FRAME_COUNT);
+          frame = nextFrame(frame, frameCount);
           lastFrameAt = now;
           render();
         }
@@ -627,8 +780,8 @@
       requestAnimationFrame(animationLoop);
     }
 
-    modeButtons.forEach((button) => {
-      button.addEventListener("click", () => setMode(button.dataset.mode));
+    characterButtons.forEach((button) => {
+      button.addEventListener("click", () => setCharacter(button.dataset.character));
     });
 
     speed.addEventListener("input", () => {
@@ -650,17 +803,47 @@
       render();
     });
 
-    sourceImage.addEventListener("load", () => {
-      imageReady = true;
-      renderFrameStrip();
-      render();
+    Object.entries(CHARACTERS).forEach(([key, character]) => {
+      const motionKeys = availableMotions(key);
+      const needsSourceSheet = motionKeys.some((motionKey) => (
+        frameAssetFor(key, motionKey, 0) === null
+      ));
+      if (needsSourceSheet) {
+        const image = new Image();
+        image.addEventListener("load", () => {
+          if (key === characterKey) {
+            renderFrameStrip();
+            render();
+          }
+        });
+        image.addEventListener("error", () => {
+          if (key === characterKey) {
+            motionLabel.textContent = "스프라이트 이미지를 불러오지 못했습니다";
+          }
+        });
+        image.src = character.sheet;
+        sourceImages[key] = image;
+      }
+
+      motionKeys.forEach((motionKey) => {
+        const frameCount = frameCountFor(key, motionKey);
+        for (let index = 0; index < frameCount; index += 1) {
+          const path = frameAssetFor(key, motionKey, index);
+          if (!path || frameImages[path]) continue;
+          const frameImage = new Image();
+          frameImage.addEventListener("load", () => {
+            if (key === characterKey && motionKey === modeKey) {
+              renderFrameStrip();
+              render();
+            }
+          });
+          frameImage.src = path;
+          frameImages[path] = frameImage;
+        }
+      });
     });
 
-    sourceImage.addEventListener("error", () => {
-      motionLabel.textContent = "스프라이트 이미지를 불러오지 못했습니다";
-    });
-
-    sourceImage.src = "turtle-motion-sheet.png";
+    setCharacter("turtle");
     requestAnimationFrame(animationLoop);
   </script>
 </body>
