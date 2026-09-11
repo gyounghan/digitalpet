@@ -7,80 +7,90 @@ from scipy import ndimage
 
 ROOT = Path(__file__).resolve().parent
 
-EIGHT_FRAME_CENTERS = (186, 334, 482, 630, 778, 926, 1074, 1222)
-SIX_FRAME_CENTERS = (210, 407, 604, 801, 998, 1195)
-
 
 def row(sheet, character, motion, y0, y1, centers):
     return {
         "sheet": sheet,
         "character": character,
         "motion": motion,
-        "region": (110, y0, 1290, y1),
+        "region": (145, y0, 1515, y1),
         "centers": centers,
     }
 
 
 EXTRACTIONS = (
-    row("hyunmoo-two-motion-sheet.png", "hyunmoo-two", "idle", 208, 293, EIGHT_FRAME_CENTERS),
-    row("hyunmoo-two-motion-sheet.png", "hyunmoo-two", "walk", 322, 402, EIGHT_FRAME_CENTERS),
-    row("hyunmoo-two-motion-sheet.png", "hyunmoo-two", "run", 433, 521, EIGHT_FRAME_CENTERS),
-    row("hyunmoo-two-motion-sheet.png", "hyunmoo-two", "eat", 555, 645, SIX_FRAME_CENTERS),
-    row("hyunmoo-two-motion-sheet.png", "hyunmoo-two", "sleep", 677, 760, SIX_FRAME_CENTERS),
-    row("hyunmoo-two-motion-sheet.png", "hyunmoo-two", "happy", 789, 883, SIX_FRAME_CENTERS),
-    row("hyunmoo-two-motion-sheet.png", "hyunmoo-two", "angry", 912, 1006, SIX_FRAME_CENTERS),
-    {
-        "sheet": "hyunmoo-two-motion-sheet.png",
-        "character": "hyunmoo-two",
-        "motion": "hurt",
-        "region": (110, 1038, 645, 1148),
-        "centers": (174, 305, 436, 568),
-    },
-    {
-        "sheet": "hyunmoo-two-motion-sheet.png",
-        "character": "hyunmoo-two",
-        "motion": "recover",
-        "region": (758, 1038, 1280, 1148),
-        "centers": (820, 950, 1080, 1210),
-    },
-    row("hyunmoo-three-motion-sheet.png", "hyunmoo-three", "idle", 208, 300, EIGHT_FRAME_CENTERS),
-    row("hyunmoo-three-motion-sheet.png", "hyunmoo-three", "walk", 322, 416, EIGHT_FRAME_CENTERS),
-    row("hyunmoo-three-motion-sheet.png", "hyunmoo-three", "run", 440, 535, EIGHT_FRAME_CENTERS),
-    row("hyunmoo-three-motion-sheet.png", "hyunmoo-three", "eat", 559, 651, SIX_FRAME_CENTERS),
-    row("hyunmoo-three-motion-sheet.png", "hyunmoo-three", "sleep", 680, 762, SIX_FRAME_CENTERS),
-    row("hyunmoo-three-motion-sheet.png", "hyunmoo-three", "happy", 783, 881, SIX_FRAME_CENTERS),
-    row("hyunmoo-three-motion-sheet.png", "hyunmoo-three", "angry", 906, 1007, SIX_FRAME_CENTERS),
-    {
-        "sheet": "hyunmoo-three-motion-sheet.png",
-        "character": "hyunmoo-three",
-        "motion": "hurt",
-        "region": (90, 1038, 410, 1149),
-        "centers": (133, 214, 298, 371),
-    },
-    {
-        "sheet": "hyunmoo-three-motion-sheet.png",
-        "character": "hyunmoo-three",
-        "motion": "recover",
-        "region": (450, 1038, 732, 1149),
-        "centers": (510, 594, 682),
-        "label_overlap": (474, 494, 1097),
-        # The source labels four frames but contains three distinct drawings.
-        "sequence": (0, 1, 1, 2),
-    },
-    {
-        "sheet": "hyunmoo-three-motion-sheet.png",
-        "character": "hyunmoo-three",
-        "motion": "roar",
-        "region": (834, 1038, 1290, 1149),
-        "centers": (872, 938, 1008, 1084, 1176, 1254),
-    },
+    row(
+        "hyunmoo-growth-motion-sheet.png",
+        "hyunmoo-growth",
+        "walk",
+        277,
+        405,
+        (250, 443, 636, 830, 1023, 1216, 1410),
+    ),
+    row(
+        "hyunmoo-growth-motion-sheet.png",
+        "hyunmoo-growth",
+        "eat",
+        452,
+        574,
+        (246, 466, 695, 910, 1125, 1340),
+    ),
+    row(
+        "hyunmoo-growth-motion-sheet.png",
+        "hyunmoo-growth",
+        "sleep",
+        620,
+        743,
+        (262, 483, 704, 936, 1160, 1390),
+    ),
+    row(
+        "hyunmoo-growth-motion-sheet.png",
+        "hyunmoo-growth",
+        "happy",
+        778,
+        956,
+        (262, 476, 707, 900, 1125, 1375),
+    ),
+    row(
+        "hyunmoo-mature-motion-sheet.png",
+        "hyunmoo-mature",
+        "walk",
+        302,
+        439,
+        (223, 395, 567, 740, 912, 1084, 1261, 1430),
+    ),
+    row(
+        "hyunmoo-mature-motion-sheet.png",
+        "hyunmoo-mature",
+        "eat",
+        475,
+        616,
+        (238, 456, 656, 873, 1097, 1330),
+    ),
+    row(
+        "hyunmoo-mature-motion-sheet.png",
+        "hyunmoo-mature",
+        "sleep",
+        657,
+        790,
+        (244, 470, 684, 931, 1155, 1393),
+    ),
+    row(
+        "hyunmoo-mature-motion-sheet.png",
+        "hyunmoo-mature",
+        "happy",
+        813,
+        988,
+        (252, 470, 698, 916, 1150, 1387),
+    ),
 )
 
 
 def foreground_mask(image):
     pixels = np.asarray(image.convert("RGB"))
-    brightest = pixels.max(axis=2)
-    return brightest > 85
+    darkest = pixels.min(axis=2)
+    saturation = pixels.max(axis=2) - darkest
+    return (darkest < 245) | (saturation > 10)
 
 
 def component_masks(mask, min_area=3):
@@ -88,49 +98,36 @@ def component_masks(mask, min_area=3):
     components = []
     for label in range(1, count + 1):
         component = labels == label
-        area = int(component.sum())
-        if area < min_area:
+        if int(component.sum()) < min_area:
             continue
-        ys, xs = np.where(component)
+        _, xs = np.where(component)
         components.append((float(xs.mean()), component))
     return components
 
 
-def extracted_pose(
-    source,
-    region,
-    centers,
-    pose_index,
-    label_overlap=None,
-):
+def extracted_pose(source, region, centers, pose_index):
     x0, y0, x1, y1 = region
     crop = source.crop(region).convert("RGBA")
     masks = [np.zeros((y1 - y0, x1 - x0), dtype=bool) for _ in centers]
 
-    foreground = foreground_mask(crop)
-    if label_overlap is not None:
-        keep_x, label_right, keep_y = label_overlap
-        ys, xs = np.indices(foreground.shape)
-        global_xs = x0 + xs
-        global_ys = y0 + ys
-        label_pixels = (global_xs < label_right) & (
-            (global_xs < keep_x) | (global_ys < keep_y)
-        )
-        foreground[label_pixels] = False
-
-    for local_center, component in component_masks(foreground):
+    for local_center, component in component_masks(foreground_mask(crop)):
         global_center = x0 + local_center
-        nearest = min(range(len(centers)), key=lambda index: abs(centers[index] - global_center))
+        nearest = min(
+            range(len(centers)),
+            key=lambda index: abs(centers[index] - global_center),
+        )
         masks[nearest] |= component
 
-    mask_image = Image.fromarray((masks[pose_index] * 255).astype(np.uint8), mode="L")
-    mask_image = mask_image.filter(ImageFilter.MaxFilter(5))
+    mask_image = Image.fromarray(
+        (masks[pose_index] * 255).astype(np.uint8),
+        mode="L",
+    ).filter(ImageFilter.MaxFilter(3))
     bbox = mask_image.getbbox()
     if bbox is None:
         raise RuntimeError(f"No foreground found for pose {pose_index}")
 
     left, top, right, bottom = bbox
-    padding = 4
+    padding = 3
     bbox = (
         max(0, left - padding),
         max(0, top - padding),
@@ -166,23 +163,16 @@ def extract(config):
     source = Image.open(ROOT / config["sheet"])
     centers = config["centers"]
     extracted = [
-        extracted_pose(
-            source,
-            config["region"],
-            centers,
-            index,
-            config.get("label_overlap"),
-        )
+        extracted_pose(source, config["region"], centers, index)
         for index in range(len(centers))
     ]
     poses = normalize_poses(extracted, config["region"][3] - config["region"][1])
-    sequence = config.get("sequence", tuple(range(len(poses))))
     output_dir = ROOT / "frames" / config["character"]
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    for frame_index, pose_index in enumerate(sequence, start=1):
+    for frame_index, pose in enumerate(poses, start=1):
         path = output_dir / f"{config['motion']}-{frame_index:02d}.png"
-        poses[pose_index].save(path, optimize=True)
+        pose.save(path, optimize=True)
 
 
 if __name__ == "__main__":

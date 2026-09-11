@@ -12,15 +12,15 @@ const {
 } = require('./motion-player.js');
 
 assert.equal(
-  frameAssetFor('hyunmooThree', 'roar', 5),
-  'frames/hyunmoo-three/roar-06.png',
-  '서로 겹치는 포효 프레임은 개별 추출 이미지를 사용해야 한다.',
+  frameAssetFor('hyunmooGrowth', 'walk', 6),
+  'frames/hyunmoo-growth/walk-07.png',
+  '현무 성장기 걷기는 새 시트에서 추출한 일곱 번째 프레임을 사용해야 한다.',
 );
 
 assert.equal(
-  frameAssetFor('hyunmooTwo', 'walk', 0),
-  'frames/hyunmoo-two/walk-01.png',
-  '현무 일반 동작도 투명한 개별 프레임을 사용해야 한다.',
+  frameAssetFor('hyunmooMature', 'happy', 5),
+  'frames/hyunmoo-mature/happy-06.png',
+  '현무 성숙기 기쁨은 새 시트에서 추출한 여섯 번째 프레임을 사용해야 한다.',
 );
 
 assert.equal(
@@ -31,44 +31,32 @@ assert.equal(
 
 assert.deepEqual(
   Object.keys(CHARACTERS),
-  ['turtle', 'hyunmooTwo', 'hyunmooThree'],
-  '미리보기에서 세 캐릭터를 선택할 수 있어야 한다.',
+  ['turtle', 'hyunmooGrowth', 'hyunmooMature'],
+  '미리보기에서 현무의 세 성장 단계를 선택할 수 있어야 한다.',
 );
 
 assert.deepEqual(
-  availableMotions('hyunmooTwo'),
-  ['idle', 'walk', 'run', 'eat', 'sleep', 'happy', 'angry', 'hurt', 'recover'],
-  '현무 2두는 시트에 포함된 아홉 동작을 모두 제공해야 한다.',
+  availableMotions('hyunmooGrowth'),
+  ['walk', 'eat', 'sleep', 'happy'],
+  '현무 성장기는 새 시트에 포함된 네 동작만 제공해야 한다.',
 );
 
 assert.deepEqual(
-  availableMotions('hyunmooThree'),
-  ['idle', 'walk', 'run', 'eat', 'sleep', 'happy', 'angry', 'hurt', 'recover', 'roar'],
-  '현무 3두는 포효를 포함한 열 동작을 모두 제공해야 한다.',
+  availableMotions('hyunmooMature'),
+  ['walk', 'eat', 'sleep', 'happy'],
+  '현무 성숙기는 새 시트에 포함된 네 동작만 제공해야 한다.',
 );
 
 assert.equal(
-  frameCountFor('hyunmooTwo', 'walk'),
+  frameCountFor('hyunmooGrowth', 'walk'),
+  7,
+  '현무 성장기 걷기는 원본에 존재하는 일곱 프레임을 순환해야 한다.',
+);
+
+assert.equal(
+  frameCountFor('hyunmooMature', 'walk'),
   8,
-  '현무 걷기는 여덟 프레임을 순환해야 한다.',
-);
-
-assert.equal(
-  frameCountFor('hyunmooThree', 'hurt'),
-  4,
-  '현무 3두 피격은 네 프레임만 순환해야 한다.',
-);
-
-assert.deepEqual(
-  sourceRectFor('hyunmooTwo', 'walk', 7),
-  { x: 1148, y: 322, width: 148, height: 80 },
-  '현무 2두 걷기의 마지막 프레임은 구분선을 제외한 여덟 번째 칸에서 잘라야 한다.',
-);
-
-assert.deepEqual(
-  sourceRectFor('hyunmooThree', 'roar', 5),
-  { x: 1216, y: 1037, width: 76, height: 116 },
-  '현무 3두 포효의 마지막 프레임은 전용 여섯 번째 칸에서 잘라야 한다.',
+  '현무 성숙기 걷기는 원본의 여덟 프레임을 순환해야 한다.',
 );
 
 assert.deepEqual(

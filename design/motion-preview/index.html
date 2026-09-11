@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>거북이 동작 미리보기</title>
+  <title>현무 유아기 동작 미리보기</title>
   <style>
     :root {
       color-scheme: light;
@@ -508,29 +508,29 @@
   <main class="page">
     <header class="topbar">
       <div>
-        <p class="eyebrow">캐릭터 스프라이트 시트</p>
-        <h1 id="pageTitle">거북이 동작 미리보기</h1>
+        <p class="eyebrow">현무 성장 단계 스프라이트 시트</p>
+        <h1 id="pageTitle">현무 유아기 동작 미리보기</h1>
       </div>
-      <span class="source-badge" id="sourceBadge">기본 거북이</span>
+      <span class="source-badge" id="sourceBadge">한 개의 생명이 깨어나는 첫 단계</span>
     </header>
 
     <nav class="character-switch" aria-label="캐릭터 선택">
       <button class="character-button" type="button" data-character="turtle" aria-pressed="true">
-        <strong>거북이</strong><span>4개 동작</span>
+        <strong>현무 유아기</strong><span>4개 동작</span>
       </button>
-      <button class="character-button" type="button" data-character="hyunmooTwo" aria-pressed="false">
-        <strong>현무 2두</strong><span>9개 동작</span>
+      <button class="character-button" type="button" data-character="hyunmooGrowth" aria-pressed="false">
+        <strong>현무 성장기</strong><span>4개 동작 · 2두</span>
       </button>
-      <button class="character-button" type="button" data-character="hyunmooThree" aria-pressed="false">
-        <strong>현무 3두</strong><span>10개 동작 · 포효 포함</span>
+      <button class="character-button" type="button" data-character="hyunmooMature" aria-pressed="false">
+        <strong>현무 성숙기</strong><span>4개 동작 · 3두</span>
       </button>
     </nav>
 
-    <section class="preview-layout" id="previewLayout" aria-label="거북이 애니메이션 미리보기">
+    <section class="preview-layout" id="previewLayout" aria-label="현무 유아기 애니메이션 미리보기">
       <article class="stage-card">
         <div class="stage" id="stage">
           <div class="motion-label" id="motionLabel">걷기 재생 중</div>
-          <canvas class="sprite-canvas" id="spriteCanvas" width="320" height="320" aria-label="거북이 걷기 애니메이션"></canvas>
+          <canvas class="sprite-canvas" id="spriteCanvas" width="320" height="320" aria-label="현무 유아기 걷기 애니메이션"></canvas>
         </div>
         <div class="stage-footer">
           <div class="metric"><span>동작</span><strong id="motionMetric">걷기</strong></div>
@@ -541,7 +541,7 @@
 
       <aside class="control-card" aria-label="재생 설정">
         <h2>동작 선택</h2>
-        <div class="mode-grid" id="modeGrid" role="group" aria-label="거북이 동작"></div>
+        <div class="mode-grid" id="modeGrid" role="group" aria-label="현무 유아기 동작"></div>
 
         <div class="settings">
           <div class="setting-row">
@@ -754,6 +754,7 @@
       const character = currentCharacter();
       modeKey = availableMotions(characterKey)[0];
       pageTitle.textContent = `${character.label} 동작 미리보기`;
+      document.title = `${character.label} 동작 미리보기`;
       sourceBadge.textContent = character.subtitle;
       previewLayout.setAttribute("aria-label", `${character.label} 애니메이션 미리보기`);
       modeGrid.setAttribute("aria-label", `${character.label} 동작`);

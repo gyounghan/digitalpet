@@ -10,19 +10,9 @@
   const TURTLE_BOUNDARIES = Object.freeze([
     0, 188, 369, 542, 721, 901, 1074, 1253, 1448,
   ]);
-  const EIGHT_FRAME_BOUNDARIES = Object.freeze([
-    112, 260, 408, 556, 704, 852, 1000, 1148, 1296,
-  ]);
-  const SIX_FRAME_BOUNDARIES = Object.freeze([
-    112, 309, 506, 703, 900, 1097, 1294,
-  ]);
-  const TWO_HURT_BOUNDARIES = Object.freeze([112, 246, 380, 514, 648]);
-  const TWO_RECOVER_BOUNDARIES = Object.freeze([760, 894, 1028, 1162, 1296]);
-  const THREE_HURT_BOUNDARIES = Object.freeze([96, 174, 252, 330, 408]);
-  const THREE_RECOVER_BOUNDARIES = Object.freeze([510, 568, 626, 684, 742]);
-  const THREE_ROAR_BOUNDARIES = Object.freeze([
-    836, 912, 988, 1064, 1140, 1216, 1292,
-  ]);
+  const SIX_FRAMES = Object.freeze([0, 1, 2, 3, 4, 5, 6]);
+  const SEVEN_FRAMES = Object.freeze([0, 1, 2, 3, 4, 5, 6, 7]);
+  const EIGHT_FRAMES = Object.freeze([0, 1, 2, 3, 4, 5, 6, 7, 8]);
 
   function motion(label, cycleMs, cropY, cropHeight, boundaries, note, frameDirectory = null) {
     return Object.freeze({
@@ -38,8 +28,8 @@
 
   const CHARACTERS = Object.freeze({
     turtle: Object.freeze({
-      label: '거북이',
-      subtitle: '기본 거북이',
+      label: '현무 유아기',
+      subtitle: '한 개의 생명이 깨어나는 첫 단계',
       sheet: 'turtle-motion-sheet.png',
       theme: 'light',
       canvasColor: '#ffffff',
@@ -50,41 +40,30 @@
         happy: motion('기쁨', 1120, 760, 250, TURTLE_BOUNDARIES, '표정이 밝아지고 가볍게 뛰어오르는 기쁨 동작입니다.'),
       }),
     }),
-    hyunmooTwo: Object.freeze({
-      label: '현무 2두',
+    hyunmooGrowth: Object.freeze({
+      label: '현무 성장기',
       subtitle: '두 개의 머리가 지키는, 평온한 힘',
-      sheet: 'hyunmoo-two-motion-sheet.png',
-      theme: 'dark',
-      canvasColor: '#07110f',
+      sheet: 'hyunmoo-growth-motion-sheet.png',
+      theme: 'light',
+      canvasColor: '#ffffff',
       motions: Object.freeze({
-        idle: motion('대기', 1440, 208, 85, EIGHT_FRAME_BOUNDARIES, '두 머리의 작은 시선 변화와 편안한 호흡을 확인합니다.', 'frames/hyunmoo-two/idle'),
-        walk: motion('걷기', 960, 322, 80, EIGHT_FRAME_BOUNDARIES, '거북의 발걸음과 등 위 뱀 머리의 흔들림이 함께 이어집니다.', 'frames/hyunmoo-two/walk'),
-        run: motion('달리기', 720, 433, 88, EIGHT_FRAME_BOUNDARIES, '몸을 낮추고 빠르게 차고 나가는 여덟 프레임 동작입니다.', 'frames/hyunmoo-two/run'),
-        eat: motion('먹기', 1440, 555, 90, SIX_FRAME_BOUNDARIES, '고개를 숙여 먹이를 먹고 다시 자세를 회복합니다.', 'frames/hyunmoo-two/eat'),
-        sleep: motion('자기', 1800, 677, 83, SIX_FRAME_BOUNDARIES, '몸을 바닥에 붙이고 잠드는 느린 호흡 동작입니다.', 'frames/hyunmoo-two/sleep'),
-        happy: motion('기쁨', 1200, 789, 94, SIX_FRAME_BOUNDARIES, '별과 음표, 하트가 이어지는 기쁨 표현입니다.', 'frames/hyunmoo-two/happy'),
-        angry: motion('화남', 1120, 912, 94, SIX_FRAME_BOUNDARIES, '몸을 낮추고 입김을 뿜는 화난 표현입니다.', 'frames/hyunmoo-two/angry'),
-        hurt: motion('피격', 800, 1040, 115, TWO_HURT_BOUNDARIES, '충격을 받고 움츠러드는 네 프레임 동작입니다.', 'frames/hyunmoo-two/hurt'),
-        recover: motion('회복', 960, 1040, 115, TWO_RECOVER_BOUNDARIES, '기절 상태에서 다시 일어나는 네 프레임 동작입니다.', 'frames/hyunmoo-two/recover'),
+        walk: motion('걷기', 980, 0, 1, SEVEN_FRAMES, '성장한 다리와 등 위 뱀 머리가 함께 흔들리는 일곱 프레임 동작입니다.', 'frames/hyunmoo-growth/walk'),
+        eat: motion('먹기', 1320, 0, 1, SIX_FRAMES, '채소를 발견하고 고개를 숙여 먹는 여섯 프레임 동작입니다.', 'frames/hyunmoo-growth/eat'),
+        sleep: motion('자기', 1680, 0, 1, SIX_FRAMES, '두 머리가 편안히 엎드려 잠드는 동작입니다.', 'frames/hyunmoo-growth/sleep'),
+        happy: motion('기쁨', 1120, 0, 1, SIX_FRAMES, '활짝 웃고 가볍게 뛰어오르는 기쁨 표현입니다.', 'frames/hyunmoo-growth/happy'),
       }),
     }),
-    hyunmooThree: Object.freeze({
-      label: '현무 3두',
-      subtitle: '세 개의 생명이 지키는, 변치 않는 힘',
-      sheet: 'hyunmoo-three-motion-sheet.png',
-      theme: 'dark',
-      canvasColor: '#07110f',
+    hyunmooMature: Object.freeze({
+      label: '현무 성숙기',
+      subtitle: '흔들리지 않는 완성된 수호자',
+      sheet: 'hyunmoo-mature-motion-sheet.png',
+      theme: 'light',
+      canvasColor: '#ffffff',
       motions: Object.freeze({
-        idle: motion('대기', 1440, 208, 92, EIGHT_FRAME_BOUNDARIES, '세 머리가 각자 반응하는 대기 동작입니다.', 'frames/hyunmoo-three/idle'),
-        walk: motion('걷기', 960, 322, 94, EIGHT_FRAME_BOUNDARIES, '발걸음에 맞춰 두 뱀 머리가 서로 다른 박자로 움직입니다.', 'frames/hyunmoo-three/walk'),
-        run: motion('달리기', 720, 440, 95, EIGHT_FRAME_BOUNDARIES, '몸을 낮춰 달리며 세 머리의 실루엣을 유지합니다.', 'frames/hyunmoo-three/run'),
-        eat: motion('먹기', 1440, 559, 92, SIX_FRAME_BOUNDARIES, '앞의 거북 머리가 먹이를 먹는 동안 뱀 머리가 주변을 살핍니다.', 'frames/hyunmoo-three/eat'),
-        sleep: motion('자기', 1800, 680, 82, SIX_FRAME_BOUNDARIES, '몸을 길게 낮추고 세 머리가 차례로 잠듭니다.', 'frames/hyunmoo-three/sleep'),
-        happy: motion('기쁨', 1200, 783, 98, SIX_FRAME_BOUNDARIES, '별과 음악, 하트로 이어지는 여섯 프레임 표현입니다.', 'frames/hyunmoo-three/happy'),
-        angry: motion('화남', 1120, 906, 101, SIX_FRAME_BOUNDARIES, '세 머리가 함께 위협 자세를 취하는 화난 동작입니다.', 'frames/hyunmoo-three/angry'),
-        hurt: motion('피격', 800, 1037, 116, THREE_HURT_BOUNDARIES, '충격과 어지러움이 이어지는 네 프레임 동작입니다.', 'frames/hyunmoo-three/hurt'),
-        recover: motion('회복', 960, 1037, 116, THREE_RECOVER_BOUNDARIES, '웅크린 자세에서 천천히 다시 일어납니다.', 'frames/hyunmoo-three/recover'),
-        roar: motion('포효', 1080, 1037, 116, THREE_ROAR_BOUNDARIES, '세 머리가 순서대로 고개를 들며 힘을 방출합니다.', 'frames/hyunmoo-three/roar'),
+        walk: motion('걷기', 1040, 0, 1, EIGHT_FRAMES, '완성된 세 머리의 균형을 유지하며 걷는 여덟 프레임 동작입니다.', 'frames/hyunmoo-mature/walk'),
+        eat: motion('먹기', 1320, 0, 1, SIX_FRAMES, '세 머리가 주변을 살피며 먹이를 먹는 동작입니다.', 'frames/hyunmoo-mature/eat'),
+        sleep: motion('자기', 1680, 0, 1, SIX_FRAMES, '세 머리가 차례로 긴장을 풀고 잠드는 동작입니다.', 'frames/hyunmoo-mature/sleep'),
+        happy: motion('기쁨', 1160, 0, 1, SIX_FRAMES, '큰 몸으로 힘차게 뛰어오르는 기쁨 표현입니다.', 'frames/hyunmoo-mature/happy'),
       }),
     }),
   });
