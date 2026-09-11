@@ -9,6 +9,7 @@ const OUT_PATH = path.join(OUT_DIR, 'asset-animation-viewer.html');
 
 const STAGE_ORDER = ['유아기', '성장기', '성숙기'];
 const ACTION_ORDER = ['걷기', '먹기', '자기', '기쁨', '화남', '포효'];
+const DEFAULT_GENERATED_FRAME_COUNT = 8;
 
 function compareKorean(a, b) {
   return a.localeCompare(b, 'ko-KR');
@@ -201,6 +202,49 @@ function buildManifest({ animationFiles, characterFiles }) {
     issues,
     characters,
   };
+}
+
+function buildActionFileNames({ character, stage, action, frameCount = DEFAULT_GENERATED_FRAME_COUNT }) {
+  return Array.from({ length: frameCount }, (_, index) => {
+    const frame = String(index + 1).padStart(5, '0');
+    return `${character.normalize('NFC')}_${stage.normalize('NFC')}_${action.normalize('NFC')}_${frame}.png`;
+  });
+}
+
+function findMissingActionClips(
+  manifest,
+  actions,
+  frameCount = DEFAULT_GENERATED_FRAME_COUNT
+) {
+  const orderedActions = [...actions].map((action) => action.normalize('NFC')).sort(compareAction);
+  const missing = [];
+
+  for (const character of manifest.characters) {
+    for (const stage of character.stages) {
+      if (!stage.original) continue;
+
+      const existingActions = new Set(stage.actions.map((action) => action.action));
+      for (const action of orderedActions) {
+        if (existingActions.has(action)) continue;
+
+        missing.push({
+          character: character.name,
+          stage: stage.stage,
+          action,
+          frameCount,
+          sourceFileName: stage.original.fileName,
+          fileNames: buildActionFileNames({
+            character: character.name,
+            stage: stage.stage,
+            action,
+            frameCount,
+          }),
+        });
+      }
+    }
+  }
+
+  return missing;
 }
 
 function escapeScriptData(value) {
@@ -1028,10 +1072,13 @@ if (require.main === module) {
 module.exports = {
   ANIMATION_DIR,
   CHARACTER_DIR,
+  DEFAULT_GENERATED_FRAME_COUNT,
   OUT_PATH,
+  buildActionFileNames,
   buildManifest,
   buildManifestFromDisk,
   buildRenamePlan,
+  findMissingActionClips,
   generateViewerHtml,
   normalizeAnimationName,
   normalizeCharacterName,

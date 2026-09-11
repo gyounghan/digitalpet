@@ -3,6 +3,8 @@ const test = require('node:test');
 
 const {
   buildManifest,
+  buildActionFileNames,
+  findMissingActionClips,
   generateViewerHtml,
   normalizeAnimationName,
   normalizeCharacterName,
@@ -61,6 +63,97 @@ test('builds a manifest grouped by character, stage, and action', () => {
     gumihoBaby.actions[0].frames[0].path,
     '../tool/animaition/구미호_유아기_걷기_00001.png'
   );
+});
+
+test('builds generated action frame names with five-digit frame numbers', () => {
+  assert.deepEqual(
+    buildActionFileNames({
+      character: '청룡',
+      stage: '성장기',
+      action: '먹기',
+      frameCount: 8,
+    }),
+    [
+      '청룡_성장기_먹기_00001.png',
+      '청룡_성장기_먹기_00002.png',
+      '청룡_성장기_먹기_00003.png',
+      '청룡_성장기_먹기_00004.png',
+      '청룡_성장기_먹기_00005.png',
+      '청룡_성장기_먹기_00006.png',
+      '청룡_성장기_먹기_00007.png',
+      '청룡_성장기_먹기_00008.png',
+    ]
+  );
+});
+
+test('finds missing generated action clips from original character stages', () => {
+  const manifest = buildManifest({
+    animationFiles: [
+      '구미호_유아기_자기_00001.png',
+      '구미호_유아기_자기_00002.png',
+      '구미호_유아기_먹기_00001.png',
+    ],
+    characterFiles: [
+      '구미호_유아기.png',
+      '구미호_성장기.png',
+      '청룡_유아기.png',
+    ],
+  });
+
+  assert.deepEqual(findMissingActionClips(manifest, ['자기', '먹기'], 8), [
+    {
+      character: '구미호',
+      stage: '성장기',
+      action: '먹기',
+      frameCount: 8,
+      sourceFileName: '구미호_성장기.png',
+      fileNames: buildActionFileNames({
+        character: '구미호',
+        stage: '성장기',
+        action: '먹기',
+        frameCount: 8,
+      }),
+    },
+    {
+      character: '구미호',
+      stage: '성장기',
+      action: '자기',
+      frameCount: 8,
+      sourceFileName: '구미호_성장기.png',
+      fileNames: buildActionFileNames({
+        character: '구미호',
+        stage: '성장기',
+        action: '자기',
+        frameCount: 8,
+      }),
+    },
+    {
+      character: '청룡',
+      stage: '유아기',
+      action: '먹기',
+      frameCount: 8,
+      sourceFileName: '청룡_유아기.png',
+      fileNames: buildActionFileNames({
+        character: '청룡',
+        stage: '유아기',
+        action: '먹기',
+        frameCount: 8,
+      }),
+    },
+    {
+      character: '청룡',
+      stage: '유아기',
+      action: '자기',
+      frameCount: 8,
+      sourceFileName: '청룡_유아기.png',
+      fileNames: buildActionFileNames({
+        character: '청룡',
+        stage: '유아기',
+        action: '자기',
+        frameCount: 8,
+      }),
+    },
+  ]);
 });
 
 test('generates a standalone HTML viewer with inlined manifest data', () => {
