@@ -228,15 +228,15 @@ void main() {
     });
 
     test('각성 창: Lv5에 사신수여도 성숙기 전 임계 도달 시 히든으로 승격', () async {
-      // Lv8 유아기(stage2) 사신수 tiger 상태에서 배틀 12승 도달 → 도깨비 승격
+      // Lv8 유아기(stage2) 사신수 tiger 상태에서 물 7회 도달 → 두꺼비 승격
       repository.setPet(_createPet(
         level: 8,
         evolutionStage: 2,
         evolutionType: EvolutionType.tiger,
-        battleVictoryCount: 12,
+        waterAchievedCount: 7,
       ));
       final r = await useCase('test-pet');
-      expect(r.evolutionType, EvolutionType.dokkaebi,
+      expect(r.evolutionType, EvolutionType.toad,
           reason: 'Lv5 이후에도 성숙기 전이면 히든 각성 가능해야');
     });
 
@@ -245,13 +245,10 @@ void main() {
         level: 12,
         evolutionStage: 3,
         evolutionType: EvolutionType.turtle,
-        feedAchievedCount: 6,
-        sleepAchievedCount: 6,
-        exerciseAchievedCount: 6,
-        consecutiveLoginDays: 6,
+        waterAchievedCount: 7,
       ));
       final r = await useCase('test-pet');
-      expect(r.evolutionType, EvolutionType.hwangryong);
+      expect(r.evolutionType, EvolutionType.toad);
     });
 
     test('이미 히든 종이면 다른 히든으로 바뀌지 않는다', () async {
@@ -295,13 +292,19 @@ void main() {
       expect(r.evolutionType, EvolutionType.haetae);
     });
 
-    test('배틀 12승 이상 → 도깨비 각성', () async {
-      repository.setPet(_createPet(level: 5, battleVictoryCount: 12));
+    test('물마시기 7회 이상 → 두꺼비 각성', () async {
+      repository.setPet(_createPet(level: 5, waterAchievedCount: 7));
       final r = await useCase('test-pet');
-      expect(r.evolutionType, EvolutionType.dokkaebi);
+      expect(r.evolutionType, EvolutionType.toad);
     });
 
-    test('네 지표 모두 6 이상 → 황룡 각성', () async {
+    test('배틀 승수는 더 이상 각성하지 않는다 (도깨비 은퇴) → 사신수', () async {
+      repository.setPet(_createPet(level: 5, battleVictoryCount: 20));
+      final r = await useCase('test-pet');
+      expect(r.evolutionType!.isHiddenSpecies, isFalse);
+    });
+
+    test('네 지표 균형도 더 이상 각성하지 않는다 (황룡 은퇴) → 사신수', () async {
       repository.setPet(_createPet(
         level: 5,
         feedAchievedCount: 6,
@@ -310,19 +313,7 @@ void main() {
         consecutiveLoginDays: 6,
       ));
       final r = await useCase('test-pet');
-      expect(r.evolutionType, EvolutionType.hwangryong);
-    });
-
-    test('황룡은 다른 히든 조건보다 우선한다 (4축 동시가 최고 난도)', () async {
-      repository.setPet(_createPet(
-        level: 5,
-        feedAchievedCount: 20, // 구미호 지배 조건도 충족하지만
-        sleepAchievedCount: 9,
-        exerciseAchievedCount: 6,
-        consecutiveLoginDays: 7, // 네 축 모두 6 이상 → 황룡 우선
-      ));
-      final r = await useCase('test-pet');
-      expect(r.evolutionType, EvolutionType.hwangryong);
+      expect(r.evolutionType!.isHiddenSpecies, isFalse);
     });
 
     test('도깨비 성장 라인 — 배틀 승수로 superior/mythical', () async {
@@ -347,17 +338,17 @@ void main() {
       expect(s4.evolutionGrade, 'mythical');
     });
 
-    test('수달 각성 + 성장 라인 — 물마시기로 superior/mythical', () async {
-      // Lv5 물 7회 → 수달 각성
+    test('두꺼비 각성 + 성장 라인 — 물마시기로 superior/mythical', () async {
+      // Lv5 물 7회 → 두꺼비 각성
       repository.setPet(_createPet(level: 5, waterAchievedCount: 7));
       final s2 = await useCase('test-pet');
-      expect(s2.evolutionType, EvolutionType.otter);
+      expect(s2.evolutionType, EvolutionType.toad);
 
       // Lv10 물 8회 → superior
       repository.setPet(_createPet(
         level: 10,
         evolutionStage: 2,
-        evolutionType: EvolutionType.otter,
+        evolutionType: EvolutionType.toad,
         waterAchievedCount: 8,
       ));
       final s3 = await useCase('test-pet');
@@ -368,7 +359,7 @@ void main() {
         level: 15,
         evolutionStage: 3,
         evolutionGrade: 'superior',
-        evolutionType: EvolutionType.otter,
+        evolutionType: EvolutionType.toad,
         waterAchievedCount: 20,
       ));
       final s4 = await useCase('test-pet');
@@ -376,23 +367,12 @@ void main() {
       expect(s4.evolutionGrade, 'mythical');
     });
 
-    test('두루미 각성 + 성장 라인 — 물+집중 균형으로 superior', () async {
-      // Lv5 물·집중 각 5 → 두루미 각성
+    test('물+집중 균형은 더 이상 두루미로 각성하지 않는다 (두루미 은퇴)', () async {
+      // 물 5(임계 7 미만)·집중 5 → 이제 히든 각성 없음 → 사신수
       repository.setPet(_createPet(
           level: 5, waterAchievedCount: 5, focusAchievedCount: 5));
       final s2 = await useCase('test-pet');
-      expect(s2.evolutionType, EvolutionType.crane);
-
-      // Lv10 물·집중 각 8 → superior
-      repository.setPet(_createPet(
-        level: 10,
-        evolutionStage: 2,
-        evolutionType: EvolutionType.crane,
-        waterAchievedCount: 8,
-        focusAchievedCount: 8,
-      ));
-      final s3 = await useCase('test-pet');
-      expect(s3.evolutionGrade, 'superior');
+      expect(s2.evolutionType!.isHiddenSpecies, isFalse);
     });
 
     test('동시 충족 시 우선순위 — 삼족오 > 해태', () async {

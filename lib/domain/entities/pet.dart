@@ -557,6 +557,8 @@ class Pet {
         return const [3, 1, 5]; // 부엉이 — 정확한 딜러
       case EvolutionType.crane:
         return const [2, 2, 6]; // 두루미 — 우아한 균형
+      case EvolutionType.toad:
+        return const [1, 2, 8]; // 두꺼비 — 끈질긴 탱커(방어·체력)
       case null:
         return const [0, 0, 0];
     }

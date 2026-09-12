@@ -547,6 +547,8 @@ class _MeScreenState extends ConsumerState<MeScreen> {
         return '몸 쓰는 걸 좋아하는 든든한 백호.';
       case EvolutionType.turtle:
         return '차분하고 묵직한 방어형 현무.';
+      case EvolutionType.toad:
+        return '물가에서 복을 부르는 듬직한 두꺼비.';
     }
   }
 
@@ -580,6 +582,8 @@ class _MeScreenState extends ConsumerState<MeScreen> {
         return ['집중', '지혜'];
       case EvolutionType.crane:
         return ['정갈', '균형'];
+      case EvolutionType.toad:
+        return ['물', '복'];
       case null:
         return ['미결정'];
     }
@@ -1375,13 +1379,15 @@ class _MeScreenState extends ConsumerState<MeScreen> {
       case EvolutionType.moonrabbit:
         return '달토끼 → 해태에 강함';
       case EvolutionType.haetae:
-        return '해태 → 도깨비에 강함';
+        return '해태 → 곰에 강함';
+      case EvolutionType.bear:
+        return '곰 → 두꺼비에 강함';
+      case EvolutionType.toad:
+        return '두꺼비 → 삼족오에 강함';
       case EvolutionType.dokkaebi:
         return '도깨비 → 황룡에 강함';
       case EvolutionType.hwangryong:
         return '황룡 → 삼족오에 강함';
-      case EvolutionType.bear:
-        return '곰 → 수달에 강함';
       case EvolutionType.otter:
         return '수달 → 부엉이에 강함';
       case EvolutionType.owl:

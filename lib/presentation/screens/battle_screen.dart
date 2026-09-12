@@ -8,6 +8,8 @@ import '../widgets/app_design.dart';
 import '../widgets/mock_ui_widgets.dart';
 import '../widgets/pet_motion_thumb.dart';
 import '../widgets/pixel_motion_animation.dart';
+import '../widgets/frame_pet_animation.dart';
+import '../../core/anim/anim_manifest.dart';
 import '../widgets/pixel_pet_image.dart';
 import '../../core/pixel/pet_pixel_data.dart';
 import '../../core/pixel/skill_effect_data.dart';
@@ -1422,6 +1424,19 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
     required double size,
     bool flip = false,
   }) {
+    // 1순위: AI/자체 프레임(assets/anim)이 있으면 프레임 애니메이션으로.
+    final animKey = animKeyFor(type, stage, motion ?? PixelMotion.walk);
+    if (animKey != null) {
+      final anim = FramePetAnimation(
+        animKey: animKey,
+        frameCount: animFrameCounts[animKey]!,
+        width: size,
+        height: size,
+      );
+      if (!flip) return anim;
+      return Transform.flip(flipX: true, child: anim);
+    }
+
     final key = motionSpriteKeyForStage(type, stage, grade);
     if (key == null) {
       return Icon(Icons.pets, size: size * 0.5, color: DesignTokens.ink3);

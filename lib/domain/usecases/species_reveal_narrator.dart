@@ -120,6 +120,8 @@ class SpeciesRevealNarrator {
         return '밤에 더 또렷해지는 집중의 지혜자예요';
       case EvolutionType.crane:
         return '몸과 마음을 정갈히 가꾸는 균형의 선비예요';
+      case EvolutionType.toad:
+        return '물가에서 복을 부르는 듬직한 친구예요';
     }
   }
 
@@ -154,6 +156,8 @@ class SpeciesRevealNarrator {
         return '부엉이';
       case EvolutionType.crane:
         return '두루미';
+      case EvolutionType.toad:
+        return '두꺼비';
     }
   }
 

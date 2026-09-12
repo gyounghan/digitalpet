@@ -40,14 +40,38 @@ enum EvolutionType {
   bear,
 
   /// 수달 계열 - 물마시기 극단 (물의 장난꾸러기 정령·건강)
+  /// (은퇴 종 — 저장 호환용으로 유지, 신규 각성/스폰 안 됨. [obtainableSpecies] 참조)
   otter,
 
   /// 부엉이 계열 (수리부엉이) - 집중모드 극단 (지혜·야행 정진)
+  /// (은퇴 종 — 저장 호환용으로 유지)
   owl,
 
   /// 두루미 계열 (학) - 물+집중 균형 (십장생·정갈한 자기관리)
+  /// (은퇴 종 — 저장 호환용으로 유지)
   crane,
+
+  /// 두꺼비 계열 - 물마시기 몰빵 (물가 생물·건강 관리)
+  toad,
 }
+
+/// 현재 획득/스폰 가능한 정식 로스터 (10종).
+///
+/// 사신수 4 + 설화·동물 영물 6(samjoko·gumiho·moonrabbit·haetae·bear·toad).
+/// dokkaebi·hwangryong·otter·owl·crane은 은퇴 종 — enum에는 저장 호환용으로
+/// 남기되 각성·야생 스폰·배틀 상대 풀에서는 이 목록만 사용한다.
+const List<EvolutionType> obtainableSpecies = [
+  EvolutionType.bird,
+  EvolutionType.snake,
+  EvolutionType.tiger,
+  EvolutionType.turtle,
+  EvolutionType.samjoko,
+  EvolutionType.gumiho,
+  EvolutionType.moonrabbit,
+  EvolutionType.haetae,
+  EvolutionType.bear,
+  EvolutionType.toad,
+];
 
 /// 종 분류 편의 확장
 extension EvolutionTypeX on EvolutionType {
@@ -62,5 +86,6 @@ extension EvolutionTypeX on EvolutionType {
       this == EvolutionType.bear ||
       this == EvolutionType.otter ||
       this == EvolutionType.owl ||
-      this == EvolutionType.crane;
+      this == EvolutionType.crane ||
+      this == EvolutionType.toad;
 }

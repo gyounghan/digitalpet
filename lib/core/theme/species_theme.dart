@@ -233,6 +233,19 @@ class SpeciesTheme {
     spriteAccent: Color(0xFFD6432E),
   );
 
+  /// 두꺼비 (toad) - 이끼 녹색 몸 + 배 크림 (물가·건강)
+  static const SpeciesTheme toad = SpeciesTheme(
+    primary: Color(0xFF6BA04A),
+    primaryDeep: Color(0xFF4A7233),
+    primarySoft: Color(0xFFE0EFD0),
+    surfaceDeep: Color(0xFFDDEBCE),
+    accent: Color(0xFFE7D9A0),
+    glow: Color(0xFFAFD489),
+    gradStart: Color(0xFFF6FBEF),
+    gradEnd: Color(0xFFDCEBCC),
+    spriteAccent: Color(0xFFE7D9A0),
+  );
+
   /// 도트 스프라이트 아웃라인/눈 색 (전 종 공통)
   ///
   /// 근흑색 — 백호(청회색 몸)·흑 계열 변이처럼 어두운 몸통에서도 눈이
@@ -338,6 +351,12 @@ class SpeciesTheme {
         (Color(0xFFD9CDB8), Color(0xFFD6432E)), // 재두루미
         (Color(0xFF8A929C), Color(0xFFB03A2A)), // 청회 두루미
       ],
+      EvolutionType.toad => const [
+        (Color(0xFF6BA04A), Color(0xFFE7D9A0)), // 이끼 녹색 두꺼비
+        (Color(0xFF7E9A54), Color(0xFFE4DBB4)), // 황록 두꺼비
+        (Color(0xFF5E8A6E), Color(0xFFCDE0D2)), // 청록 두꺼비
+        (Color(0xFF4A6B3A), Color(0xFF8A9A6E)), // 짙은초록 두꺼비
+      ],
       null => const [(Color(0xFF4A5A78), Color(0xFFDDE3EC))],
     };
     return palettes[v % palettes.length];
@@ -360,6 +379,7 @@ class SpeciesTheme {
       EvolutionType.otter => otter,
       EvolutionType.owl => owl,
       EvolutionType.crane => crane,
+      EvolutionType.toad => toad,
       null => defaultTheme,
     };
   }
@@ -381,6 +401,7 @@ class SpeciesTheme {
       EvolutionType.otter => '수달',
       EvolutionType.owl => '부엉이',
       EvolutionType.crane => '두루미',
+      EvolutionType.toad => '두꺼비',
       null => '털뭉치',
     };
   }

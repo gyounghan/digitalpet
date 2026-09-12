@@ -207,15 +207,19 @@ class EvolvePetUseCase {
             pet.feedAchievedCount >= _supFree &&
             pet.consecutiveLoginDays >= _supRegular;
         break;
-      // 동물 영물 — 각성시킨 그 축만 (곰은 idle, 두루미는 물+집중 균형)
+      // 동물 영물 — 각성시킨 그 축만 (곰은 idle, 두꺼비는 물)
+      case EvolutionType.toad:
+        superior = pet.waterAchievedCount >= _supWater;
+        break;
+      case EvolutionType.bear:
+        superior = pet.totalIdleHours >= _supIdle;
+        break;
+      // 은퇴 종 — 저장 호환용. 신규 각성은 없지만 기존 개체 성장은 유지
       case EvolutionType.otter:
         superior = pet.waterAchievedCount >= _supWater;
         break;
       case EvolutionType.owl:
         superior = pet.focusAchievedCount >= _supFocus;
-        break;
-      case EvolutionType.bear:
-        superior = pet.totalIdleHours >= _supIdle;
         break;
       case EvolutionType.crane:
         superior = pet.waterAchievedCount >= _supCraneBalance &&
@@ -297,12 +301,15 @@ class EvolvePetUseCase {
             pet.feedAchievedCount >= _mythFree &&
             pet.consecutiveLoginDays >= _mythRegular;
       // 동물 영물 — superior와 동일 축, 더 높은 임계
+      case EvolutionType.toad:
+        return pet.waterAchievedCount >= _mythWater;
+      case EvolutionType.bear:
+        return pet.totalIdleHours >= _mythIdle;
+      // 은퇴 종 — 저장 호환용
       case EvolutionType.otter:
         return pet.waterAchievedCount >= _mythWater;
       case EvolutionType.owl:
         return pet.focusAchievedCount >= _mythFocus;
-      case EvolutionType.bear:
-        return pet.totalIdleHours >= _mythIdle;
       case EvolutionType.crane:
         return pet.waterAchievedCount >= _mythCraneBalance &&
             pet.focusAchievedCount >= _mythCraneBalance;

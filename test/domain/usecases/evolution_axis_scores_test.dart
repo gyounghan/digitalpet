@@ -163,26 +163,25 @@ void main() {
     });
   });
 
-  group('hiddenTypeFor 동물 영물(2차 추가) 각성', () {
-    test('물마시기 7회 몰빵 → 수달', () {
+  group('hiddenTypeFor 영물 각성 (정식 로스터 10종)', () {
+    test('물마시기 7회 몰빵 → 두꺼비', () {
       expect(
         EvolutionAxisScores.hiddenTypeFor(_pet(waterAchievedCount: 7)),
-        EvolutionType.otter,
+        EvolutionType.toad,
       );
     });
 
-    test('집중 7회 몰빵 → 부엉이', () {
+    test('물 임계(7) 미달이면 물로는 각성하지 않음', () {
       expect(
-        EvolutionAxisScores.hiddenTypeFor(_pet(focusAchievedCount: 7)),
-        EvolutionType.owl,
+        EvolutionAxisScores.hiddenTypeFor(_pet(waterAchievedCount: 6)),
+        isNull,
       );
     });
 
-    test('물·집중 각 5회 균형 → 두루미 (단일 몰빵보다 우선)', () {
+    test('집중 몰빵은 더 이상 각성하지 않는다 (부엉이 은퇴)', () {
       expect(
-        EvolutionAxisScores.hiddenTypeFor(
-            _pet(waterAchievedCount: 8, focusAchievedCount: 6)),
-        EvolutionType.crane,
+        EvolutionAxisScores.hiddenTypeFor(_pet(focusAchievedCount: 9)),
+        isNull,
       );
     });
 
@@ -201,10 +200,18 @@ void main() {
       );
     });
 
-    test('물·집중·idle 모두 미달이면 각성 없음(null → 사신수)', () {
+    test('걸음 몰빵이 물 몰빵보다 우선 — 삼족오', () {
       expect(
         EvolutionAxisScores.hiddenTypeFor(
-            _pet(waterAchievedCount: 4, focusAchievedCount: 4, totalIdleHours: 50)),
+            _pet(exerciseAchievedCount: 9, waterAchievedCount: 7)),
+        EvolutionType.samjoko,
+      );
+    });
+
+    test('물·idle 모두 미달이면 각성 없음(null → 사신수)', () {
+      expect(
+        EvolutionAxisScores.hiddenTypeFor(
+            _pet(waterAchievedCount: 4, totalIdleHours: 50)),
         isNull,
       );
     });

@@ -37,8 +37,8 @@ class WildEncounterSpawner {
     EvolutionType.gumiho,
     EvolutionType.moonrabbit,
     EvolutionType.haetae,
-    EvolutionType.dokkaebi,
-    EvolutionType.hwangryong,
+    EvolutionType.bear,
+    EvolutionType.toad,
   ];
 
   /// 오늘 굴림 후보인지 (걸음 임계 + 살아있는 펫)

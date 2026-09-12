@@ -58,6 +58,8 @@ class AppStrings {
     'haetae': {'normal': '돌강아지', 'superior': '해치'},
     'dokkaebi': {'normal': '꼬마도깨비', 'superior': '청도깨비'},
     'hwangryong': {'normal': '금구렁이', 'superior': '금비늘용'},
+    'bear': {'normal': '곰', 'superior': '반달곰'},
+    'toad': {'normal': '두꺼비', 'superior': '금두꺼비'},
   };
   // 성숙기: 잘 키우면 사신수(mythical), 아니면 그냥 동물(normal)
   static const Map<String, Map<String, String>> stage4Names = {
@@ -71,6 +73,8 @@ class AppStrings {
     'haetae': {'normal': '삽살개', 'mythical': '해태 \u{2696}\u{FE0F}'},
     'dokkaebi': {'normal': '어른도깨비', 'mythical': '도깨비대장 \u{1F525}'},
     'hwangryong': {'normal': '큰구렁이', 'mythical': '황룡 \u{1F451}'},
+    'bear': {'normal': '큰곰', 'mythical': '웅녀 \u{1F43B}'},
+    'toad': {'normal': '왕두꺼비', 'mythical': '삼족섬 \u{1F438}'},
   };
 
   // 대결

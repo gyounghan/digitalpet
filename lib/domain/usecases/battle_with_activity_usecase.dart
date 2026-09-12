@@ -9,11 +9,11 @@ import '../repositories/activity_repository.dart';
 import '../repositories/battle_history_repository.dart';
 import 'apply_battle_reward.dart';
 
-/// 상성 테이블
-/// 사신수: bird→snake→turtle→tiger→bird
-/// 설화 영물(6종 순환): samjoko→gumiho→moonrabbit→haetae→dokkaebi→hwangryong→samjoko
-/// 동물 영물(4종 순환): bear→otter→owl→crane→bear
-/// (세 순환은 서로 중립 — 그룹 간 상성 없음)
+/// 상성 테이블 (정식 로스터 10종)
+/// 사신수(4종 순환): bird→snake→turtle→tiger→bird
+/// 영물(6종 순환): samjoko→gumiho→moonrabbit→haetae→bear→toad→samjoko
+/// (두 순환은 서로 중립 — 그룹 간 상성 없음)
+/// dokkaebi·hwangryong·otter·owl·crane은 은퇴 종 — 상성표에서 제외.
 const Map<EvolutionType, EvolutionType> _affinityAdvantage = {
   EvolutionType.bird: EvolutionType.snake,
   EvolutionType.snake: EvolutionType.turtle,
@@ -22,13 +22,9 @@ const Map<EvolutionType, EvolutionType> _affinityAdvantage = {
   EvolutionType.samjoko: EvolutionType.gumiho,
   EvolutionType.gumiho: EvolutionType.moonrabbit,
   EvolutionType.moonrabbit: EvolutionType.haetae,
-  EvolutionType.haetae: EvolutionType.dokkaebi,
-  EvolutionType.dokkaebi: EvolutionType.hwangryong,
-  EvolutionType.hwangryong: EvolutionType.samjoko,
-  EvolutionType.bear: EvolutionType.otter,
-  EvolutionType.otter: EvolutionType.owl,
-  EvolutionType.owl: EvolutionType.crane,
-  EvolutionType.crane: EvolutionType.bear,
+  EvolutionType.haetae: EvolutionType.bear,
+  EvolutionType.bear: EvolutionType.toad,
+  EvolutionType.toad: EvolutionType.samjoko,
 };
 
 /// 종별 스킬 정의
@@ -168,6 +164,15 @@ const Map<EvolutionType, List<BattleSkill>> _skillSets = {
         defenseDebuff: 3,
         debuffDuration: 2),
   ],
+  EvolutionType.toad: [
+    BattleSkill(name: '들이받기'),
+    // 버티기 — 두꺼비(탱커): 다음 1회 피격 50% 경감 (곰·현무 방어 계열)
+    BattleSkill(
+        name: '버티기',
+        type: SkillType.special,
+        damageReduction: 0.5,
+        reductionDuration: 1),
+  ],
 };
 
 const List<BattleSkill> _defaultSkills = [
@@ -268,8 +273,8 @@ class BattleWithActivityUseCase {
         ? wild.species
         : (playerType == null
             ? null
-            : EvolutionType
-                .values[random.nextInt(EvolutionType.values.length)]);
+            // 정식 로스터 10종에서만 상대 추첨 (은퇴 종은 등장하지 않음)
+            : obtainableSpecies[random.nextInt(obtainableSpecies.length)]);
     final baseStats = BattleStats(
       attack: pet.battleAtk,
       defense: pet.battleDef,
@@ -513,6 +518,7 @@ class BattleWithActivityUseCase {
       case EvolutionType.otter: attackBonus = 2; defenseBonus = 1; hpBonus = 6; break;
       case EvolutionType.owl: attackBonus = 3; defenseBonus = 1; hpBonus = 5; break;
       case EvolutionType.crane: attackBonus = 2; defenseBonus = 2; hpBonus = 6; break;
+      case EvolutionType.toad: attackBonus = 1; defenseBonus = 2; hpBonus = 8; break;
       case null: break; // 털뭉치 — 종 보너스 없음
     }
 
