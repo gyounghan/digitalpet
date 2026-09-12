@@ -160,7 +160,13 @@
       .screen {
         display: none;
         flex: 1;
+        overflow-y: auto;
         padding: 18px 16px 88px;
+        scrollbar-width: none;
+      }
+
+      .screen::-webkit-scrollbar {
+        display: none;
       }
 
       .screen.active {
@@ -1386,6 +1392,10 @@
         display: none;
       }
 
+      [hidden] {
+        display: none !important;
+      }
+
       .compact-section {
         display: grid;
         gap: 8px;
@@ -2112,14 +2122,40 @@
       const waterNotice = document.getElementById("waterNotice");
       const battleTabs = document.querySelectorAll(".battle-tab");
       const battlePanels = document.querySelectorAll("[data-battle-panel]");
+      const openScreenButtons = document.querySelectorAll("[data-open-screen]");
+      const disclosureButtons = document.querySelectorAll("[data-disclosure]");
+
+      const activateScreen = (target) => {
+        buttons.forEach((item) => item.classList.toggle("active", item.dataset.target === target));
+        screens.forEach((screen) => {
+          screen.classList.toggle("active", screen.dataset.screen === target);
+        });
+      };
 
       buttons.forEach((button) => {
         button.addEventListener("click", () => {
-          const target = button.dataset.target;
-          buttons.forEach((item) => item.classList.toggle("active", item === button));
-          screens.forEach((screen) => {
-            screen.classList.toggle("active", screen.dataset.screen === target);
-          });
+          activateScreen(button.dataset.target);
+        });
+      });
+
+      openScreenButtons.forEach((button) => {
+        button.addEventListener("click", () => activateScreen(button.dataset.openScreen));
+      });
+
+      disclosureButtons.forEach((button) => {
+        const panel = document.getElementById(button.dataset.disclosure);
+        const label = button.matches("[data-disclosure-label]")
+          ? button
+          : button.querySelector("[data-disclosure-label]");
+
+        if (label) label.dataset.closedLabel = label.textContent.trim();
+
+        button.addEventListener("click", () => {
+          if (!panel) return;
+          const willOpen = panel.hidden;
+          panel.hidden = !willOpen;
+          button.setAttribute("aria-expanded", String(willOpen));
+          if (label) label.textContent = willOpen ? "접기" : label.dataset.closedLabel;
         });
       });
 

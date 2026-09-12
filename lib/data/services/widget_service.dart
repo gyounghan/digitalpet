@@ -7,7 +7,17 @@ import '../../core/utils/pet_image_helper.dart';
 import '../../core/constants/app_strings.dart';
 import '../../presentation/widgets/pixel_pet_image.dart' show pixelKeyFromAssetPath;
 import '../../presentation/widgets/pixel_motion_animation.dart'
-    show motionSpriteKeyForStage, hiddenPaletteForSpriteKey, dotColorsForKey;
+    show motionSpriteKeyForStage, hiddenPaletteForSpriteKey, dotColorsForKey,
+        motionForMood, PixelMotion;
+import '../../core/anim/anim_manifest.dart' show animFrameCounts;
+
+/// (종·단계·모션)에 프레임 애니메이션 에셋이 있으면 키 반환, 없으면 null.
+String? _frameAnimKey(Pet pet, PixelMotion motion) {
+  final type = pet.evolutionType;
+  if (type == null) return null;
+  final key = '${type.name}_${pet.evolutionStage}_${motion.name}';
+  return animFrameCounts.containsKey(key) ? key : null;
+}
 
 String _colorHex(Color c) =>
     c.toARGB32().toRadixString(16).padLeft(8, '0').toUpperCase();
@@ -47,6 +57,8 @@ class WidgetService {
   static const String _keyDotAccent = 'dotAccent';
   static const String _keyDotAccent2 = 'dotAccent2';
   static const String _keyDotAccent3 = 'dotAccent3';
+  // AI/자체 프레임 애니메이션 키 (예: 'gumiho_2_walk'). 비면 도트 렌더.
+  static const String _keyAnimKey = 'animKey';
 
   /// 펫 데이터를 위젯에 업데이트
   /// 
@@ -101,6 +113,13 @@ class WidgetService {
         accent3 = acc;
       }
       await HomeWidget.saveWidgetData<String>(_keyMotionKey, motionKey ?? '');
+      // AI/자체 프레임 애니메이션 키 — 있으면 위젯이 도트 대신 이 PNG를 그린다.
+      // (mood 모션에 프레임 없으면 walk, 그것도 없으면 빈값 → 위젯은 도트 폴백)
+      final widgetMotion = motionForMood(pet.mood);
+      final animKey = _frameAnimKey(pet, widgetMotion) ??
+          _frameAnimKey(pet, PixelMotion.walk) ??
+          '';
+      await HomeWidget.saveWidgetData<String>(_keyAnimKey, animKey);
       await HomeWidget.saveWidgetData<String>(_keyDotDark, _colorHex(dark));
       await HomeWidget.saveWidgetData<String>(_keyDotBody, _colorHex(body));
       await HomeWidget.saveWidgetData<String>(_keyDotAccent, _colorHex(accent));

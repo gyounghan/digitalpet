@@ -4,6 +4,8 @@ import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.widget.RemoteViews
 import android.util.Log
 import android.os.Handler
@@ -380,6 +382,15 @@ class PetWidgetProvider : AppWidgetProvider() {
     /// 키/좌표가 없으면 false를 반환해 기존 drawable 리소스로 폴백한다.
     /// (앱과 100% 동일한 도트 데이터·렌더 규칙 — 좌표는 스크립트가 자동 동기화)
     private fun tryApplyDotImage(context: Context, views: RemoteViews, mood: String): Boolean {
+        // 0) AI/자체 프레임 애니메이션 — 앱(WidgetService)이 넘긴 animKey가 있으면
+        //    flutter_assets의 대표 PNG를 도트 대신 표시한다(위젯은 정지 프레임 1장).
+        //    프레임 없는 종/단계는 animKey가 비어 아래 도트 렌더로 폴백.
+        val animKey = getWidgetString(context, "animKey", null)?.takeIf { it.isNotBlank() }
+        if (animKey != null) {
+            val bmp = loadFrameBitmap(context, animKey)
+            if (bmp != null) return applyStaticDotBitmap(views, bmp)
+        }
+
         val evolutionType = getWidgetString(context, "evolutionType", null)
         val stage = getWidgetString(context, "evolutionStage", "1")?.toIntOrNull() ?: 1
         val grade = getWidgetString(context, "evolutionGrade", "") ?: ""
@@ -430,6 +441,18 @@ class PetWidgetProvider : AppWidgetProvider() {
             )
         }.getOrNull() ?: return false
         return applyStaticDotBitmap(views, bitmap)
+    }
+
+    /// flutter_assets의 프레임 대표 PNG(_0)를 Bitmap으로 로드. 실패 시 null.
+    /// (앱과 동일한 assets/anim/{키}_0.png — Flutter 번들 경로로 접근)
+    private fun loadFrameBitmap(context: Context, animKey: String): Bitmap? {
+        val path = "flutter_assets/assets/anim/${animKey}_0.png"
+        return runCatching {
+            context.assets.open(path).use { BitmapFactory.decodeStream(it) }
+        }.getOrElse {
+            Log.w("PetWidgetProvider", "프레임 에셋 로드 실패: $path", it)
+            null
+        }
     }
 
     /// 정지 도트 비트맵을 표시 상태로 적용
