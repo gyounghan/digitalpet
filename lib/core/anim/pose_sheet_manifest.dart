@@ -28,6 +28,7 @@ const Set<String> poseSheetKeys = {
   'tiger_4',
   'toad_2',
   'toad_3',
+  'toad_4',
   'turtle_2',
   'turtle_3',
   'turtle_4',

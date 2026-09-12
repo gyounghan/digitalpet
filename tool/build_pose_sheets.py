@@ -13,6 +13,7 @@
 """
 import os
 import shutil
+import unicodedata
 
 SRC_DIR = os.path.join("tool", "character")
 OUT_DIR = os.path.join("assets", "pets")
@@ -33,7 +34,9 @@ def main():
     for fn in sorted(os.listdir(SRC_DIR)):
         if not fn.endswith(".png"):
             continue
-        stem = fn[:-4]
+        # macOS는 파일명을 NFD로 저장하기도 한다 — SPECIES/STAGE 키(NFC)와
+        # 맞추려면 정규화가 필요(읽기는 원본 fn, 매칭은 정규화본).
+        stem = unicodedata.normalize("NFC", fn[:-4])
         parts = stem.split("_")
         if len(parts) != 2:  # 현무_성숙기_0001 같은 프레임 시트는 제외
             continue
