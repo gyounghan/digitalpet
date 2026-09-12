@@ -1961,20 +1961,6 @@
               <div class="water-notice" id="waterNotice">
                 물 주기 완료. 여우비도 한 모금 마셨어요. 주인도 지금 물 한 잔 마셔요.
               </div>
-
-              <div class="simple-card routine home-journal">
-                <div class="panel-heading">
-                  <strong>오늘의 한 가지</strong>
-                  <button class="text-action" type="button" data-open-screen="care">전체 보기</button>
-                </div>
-                <div class="single-goal">
-                  <div class="single-goal-copy">
-                    <strong>개근왕까지 3일</strong>
-                    <span>11 / 14일</span>
-                  </div>
-                  <div class="meter gold"><span style="width: 78%"></span></div>
-                </div>
-              </div>
             </section>
 
             <section class="screen" data-screen="care">
@@ -2018,6 +2004,40 @@
                 </div>
               </div>
 
+              <div class="badge-section" aria-label="업적 배지">
+                <div class="section-title">
+                  <strong>업적 배지</strong>
+                  <span>2개 획득</span>
+                </div>
+                <div class="badge-shelf">
+                  <button
+                    class="achievement-badge selected"
+                    type="button"
+                    aria-label="7일 연속 접속 배지"
+                    data-badge-title="7일 연속 접속"
+                    data-badge-description="일주일 동안 매일 여우비를 만나 획득했어요."
+                  ><span class="badge-symbol star"></span></button>
+                  <button
+                    class="achievement-badge"
+                    type="button"
+                    aria-label="백전노장 배지"
+                    data-badge-title="백전노장"
+                    data-badge-description="배틀 10회 중 6회를 완료했어요."
+                  ><span class="badge-symbol shield"></span></button>
+                  <button
+                    class="achievement-badge locked"
+                    type="button"
+                    aria-label="산책 기록 배지, 아직 잠김"
+                    data-badge-title="산책 기록"
+                    data-badge-description="누적 50,000보를 달성하면 열려요."
+                  ><span class="badge-symbol footprint"></span></button>
+                </div>
+                <div class="badge-caption" aria-live="polite">
+                  <strong id="badgeCaptionTitle">7일 연속 접속</strong>
+                  <span id="badgeCaptionDescription">일주일 동안 매일 여우비를 만나 획득했어요.</span>
+                </div>
+              </div>
+
               <button
                 class="disclosure-button"
                 type="button"
@@ -2026,23 +2046,13 @@
                 data-disclosure="careDetails"
               >
                 <span>
-                  나머지 기록
-                  <small>업적 2개 · 퀘스트 2개</small>
+                  진행 중인 퀘스트
+                  <small>나머지 2개</small>
                 </span>
                 <b data-disclosure-label>더보기</b>
               </button>
 
               <div class="disclosure-panel" id="careDetails" hidden>
-                <div class="compact-section">
-                  <div class="compact-section-title">
-                    <strong>업적 배지</strong>
-                    <span>수집 중</span>
-                  </div>
-                  <div class="compact-list">
-                    <div class="compact-item"><strong>7일 연속 접속</strong><span>획득</span></div>
-                    <div class="compact-item"><strong>백전노장</strong><span>6 / 10</span></div>
-                  </div>
-                </div>
                 <div class="compact-section">
                   <div class="compact-section-title">
                     <strong>진행 중인 퀘스트</strong>
@@ -2069,7 +2079,7 @@
                     <img src="../archive/previous-ui-mock/pet-gumiho.png" alt="배틀 전 내 구미호" />
                     <div>
                       <h3>여우비 출전 준비</h3>
-                      <p>컨디션, 스타일, 대전 방식만 확인하고 바로 경기장으로 들어갑니다.</p>
+                      <p>컨디션과 대전 방식만 확인하고 바로 경기장으로 들어갑니다.</p>
                       <div class="battle-stat-mini">
                         <span>HP 100</span>
                         <span>ATK 42</span>
@@ -2078,52 +2088,16 @@
                     </div>
                   </div>
 
-                  <div class="battle-quick">
-                    <div>
-                      <small>현재 설정</small>
-                      <strong>균형형 · AI 대전 · 자동 전투</strong>
+                  <div class="battle-detail-card">
+                    <div class="compact-section-title">
+                      <strong>대전 선택</strong>
+                      <span>AI 2 / 3</span>
                     </div>
-                    <button
-                      class="text-action"
-                      type="button"
-                      aria-expanded="false"
-                      aria-controls="battleSetup"
-                      data-disclosure="battleSetup"
-                      data-disclosure-label
-                    >설정 보기</button>
-                  </div>
-
-                  <div class="disclosure-panel battle-details" id="battleSetup" hidden>
-                    <div class="compact-section">
-                      <div class="compact-section-title">
-                        <strong>배틀 스타일</strong>
-                        <span>자동 전투</span>
-                      </div>
-                      <div class="style-row" aria-label="배틀 스타일">
-                        <div class="style-chip active">균형형</div>
-                        <div class="style-chip">공격형</div>
-                        <div class="style-chip">방어형</div>
-                      </div>
-                    </div>
-                    <div class="compact-section">
-                      <div class="compact-section-title">
-                        <strong>대전 방식</strong>
-                        <span>AI 2 / 3</span>
-                      </div>
-                      <div class="mode-row" aria-label="배틀 모드">
-                        <div class="mode-chip primary">AI 대전</div>
-                        <div class="mode-chip">온라인 대전</div>
-                        <div class="mode-chip">친구 방</div>
-                        <div class="mode-chip">코드 참가</div>
-                      </div>
-                    </div>
-                    <div class="compact-section wild-preview">
-                      <img src="../archive/previous-ui-mock/pet-haetae.png" alt="야생 해태" />
-                      <div>
-                        <strong>야생 조우 대기 중</strong>
-                        <span>걸음 활동에서 만난 상대가 있으면 등장</span>
-                      </div>
-                      <div class="small-pill">Lv.7</div>
+                    <div class="mode-row" aria-label="배틀 모드">
+                      <div class="mode-chip primary">AI 대전</div>
+                      <div class="mode-chip">온라인 대전</div>
+                      <div class="mode-chip">친구 방</div>
+                      <div class="mode-chip">코드 참가</div>
                     </div>
                   </div>
                 </div>
@@ -2228,12 +2202,24 @@
                 <div>
                   <h3>구미호</h3>
                   <p>민첩하고 호기심 많은 신화 펫. 성장할수록 꼬리와 불빛이 풍성해집니다.</p>
-                  <div class="tag-row">
-                    <span class="tag">유아기</span>
-                    <span class="tag">민첩</span>
-                    <span class="tag">불꽃</span>
+                  <div class="stage-selector" aria-label="구미호 성장 단계">
+                    <button
+                      class="stage-button"
+                      type="button"
+                      data-stage-detail="babyStageDetail"
+                      aria-expanded="false"
+                    >유아기</button>
+                    <button class="stage-button" type="button" disabled>성장기</button>
+                    <button class="stage-button" type="button" disabled>성숙기</button>
                   </div>
                 </div>
+              </div>
+
+              <div class="stage-detail" id="babyStageDetail" hidden>
+                <div class="stage-detail-item"><small>성격</small><strong>호기심 많은 장난꾸러기</strong></div>
+                <div class="stage-detail-item"><small>속성</small><strong>민첩 · 불꽃</strong></div>
+                <div class="stage-detail-item"><small>처음 만난 날</small><strong>2026.09.02</strong></div>
+                <div class="stage-detail-item"><small>다음 성장</small><strong>Lv.10 · 활동 기록</strong></div>
               </div>
 
               <div class="section-title">
@@ -2241,10 +2227,10 @@
                 <span>대표 3종</span>
               </div>
               <div class="dex-grid">
-                <div class="dex-card">
+                <button class="dex-card discovered selected" type="button" data-dex-pet="gumiho">
                   <img src="../archive/previous-ui-mock/pet-gumiho.png" alt="구미호" />
                   <b>구미호</b>
-                </div>
+                </button>
                 <div class="dex-card locked">
                   <img src="../archive/previous-ui-mock/pet-dokkaebi.png" alt="도깨비" />
                   <b>미발견</b>
@@ -2262,7 +2248,7 @@
                 aria-controls="dexDetails"
                 data-disclosure="dexDetails"
               >
-                <span>도감 더보기<small>추가 펫 3종 · 진화 단계</small></span>
+                <span>도감 더보기<small>추가 펫 3종</small></span>
                 <b data-disclosure-label>더보기</b>
               </button>
 
@@ -2287,20 +2273,28 @@
                     </div>
                   </div>
                 </div>
-                <div class="compact-section">
-                  <div class="compact-section-title">
-                    <strong>진화 트리</strong>
-                    <span>Lv.10 필요</span>
-                  </div>
-                  <div class="tree-card">
-                    <div class="tree-step active">털뭉치</div>
-                    <div class="tree-step active">유아기</div>
-                    <div class="tree-step">성장기</div>
-                    <div class="tree-step">성숙기</div>
-                  </div>
-                </div>
               </div>
             </section>
+
+            <div
+              class="wild-encounter"
+              id="wildEncounter"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="encounterTitle"
+              hidden
+            >
+              <div class="encounter-card">
+                <span class="encounter-kicker">야생 조우</span>
+                <img src="../archive/previous-ui-mock/pet-haetae.png" alt="갑자기 나타난 야생 해태" />
+                <h3 id="encounterTitle">야생의 해태가 나타났어요</h3>
+                <p>산책 중 마주쳤어요. 지금 맞설까요, 조용히 지나갈까요?</p>
+                <div class="encounter-actions">
+                  <button class="light-action" type="button" data-encounter-action="pass">지나가기</button>
+                  <button class="primary-action" type="button" data-encounter-action="fight">맞서기</button>
+                </div>
+              </div>
+            </div>
 
             <nav class="bottom-nav" aria-label="미리보기 탭">
               <button class="nav-button active" type="button" data-target="home">홈</button>
@@ -2348,8 +2342,14 @@
       const waterNotice = document.getElementById("waterNotice");
       const battleTabs = document.querySelectorAll(".battle-tab");
       const battlePanels = document.querySelectorAll("[data-battle-panel]");
-      const openScreenButtons = document.querySelectorAll("[data-open-screen]");
       const disclosureButtons = document.querySelectorAll("[data-disclosure]");
+      const badgeButtons = document.querySelectorAll("[data-badge-title]");
+      const badgeCaptionTitle = document.getElementById("badgeCaptionTitle");
+      const badgeCaptionDescription = document.getElementById("badgeCaptionDescription");
+      const stageButtons = document.querySelectorAll("[data-stage-detail]");
+      const dexPetButtons = document.querySelectorAll("[data-dex-pet]");
+      const wildEncounter = document.getElementById("wildEncounter");
+      const encounterButtons = document.querySelectorAll("[data-encounter-action]");
 
       const activateScreen = (target) => {
         buttons.forEach((item) => item.classList.toggle("active", item.dataset.target === target));
@@ -2358,14 +2358,19 @@
         });
       };
 
+      const activateBattleState = (target) => {
+        battleTabs.forEach((tab) => {
+          tab.classList.toggle("active", tab.dataset.battleState === target);
+        });
+        battlePanels.forEach((panel) => {
+          panel.classList.toggle("active", panel.dataset.battlePanel === target);
+        });
+      };
+
       buttons.forEach((button) => {
         button.addEventListener("click", () => {
           activateScreen(button.dataset.target);
         });
-      });
-
-      openScreenButtons.forEach((button) => {
-        button.addEventListener("click", () => activateScreen(button.dataset.openScreen));
       });
 
       disclosureButtons.forEach((button) => {
@@ -2393,14 +2398,48 @@
       });
 
       battleTabs.forEach((tab) => {
-        tab.addEventListener("click", () => {
-          const target = tab.dataset.battleState;
-          battleTabs.forEach((item) => item.classList.toggle("active", item === tab));
-          battlePanels.forEach((panel) => {
-            panel.classList.toggle("active", panel.dataset.battlePanel === target);
-          });
+        tab.addEventListener("click", () => activateBattleState(tab.dataset.battleState));
+      });
+
+      badgeButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+          badgeButtons.forEach((item) => item.classList.toggle("selected", item === button));
+          badgeCaptionTitle.textContent = button.dataset.badgeTitle;
+          badgeCaptionDescription.textContent = button.dataset.badgeDescription;
         });
       });
+
+      stageButtons.forEach((button) => {
+        const panel = document.getElementById(button.dataset.stageDetail);
+        button.addEventListener("click", () => {
+          if (!panel) return;
+          const willOpen = panel.hidden;
+          panel.hidden = !willOpen;
+          button.classList.toggle("active", willOpen);
+          button.setAttribute("aria-expanded", String(willOpen));
+        });
+      });
+
+      dexPetButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+          dexPetButtons.forEach((item) => item.classList.toggle("selected", item === button));
+        });
+      });
+
+      encounterButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+          wildEncounter.hidden = true;
+          if (button.dataset.encounterAction === "fight") {
+            activateScreen("battle");
+            activateBattleState("before");
+          }
+        });
+      });
+
+      window.setTimeout(() => {
+        wildEncounter.hidden = false;
+        wildEncounter.querySelector("[data-encounter-action='fight']")?.focus();
+      }, 1000);
     </script>
   </body>
 </html>
