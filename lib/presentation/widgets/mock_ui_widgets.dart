@@ -346,6 +346,193 @@ class MockCareRow extends StatelessWidget {
   }
 }
 
+/// 핵심 정보 아래에 놓는 접이식 더보기 버튼.
+class MockDisclosureButton extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final bool expanded;
+  final VoidCallback onTap;
+  final bool dark;
+
+  const MockDisclosureButton({
+    super.key,
+    required this.title,
+    required this.subtitle,
+    required this.expanded,
+    required this.onTap,
+    this.dark = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final foreground = dark ? MockUI.battleText : MockUI.ink;
+    final muted = dark
+        ? MockUI.battleText.withValues(alpha: 0.62)
+        : MockUI.muted;
+    final border = dark ? MockUI.battleLine : MockUI.line;
+    final background = dark ? MockUI.battleGlass : MockUI.cardBg;
+
+    return Material(
+      color: background,
+      borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: onTap,
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 56),
+          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: border),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w900,
+                        color: foreground,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w700,
+                        color: muted,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                expanded
+                    ? Icons.keyboard_arrow_up_rounded
+                    : Icons.keyboard_arrow_down_rounded,
+                color: muted,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 텍스트 카드 대신 사용하는 메달형 업적 배지.
+class MockAchievementBadge extends StatelessWidget {
+  final String semanticLabel;
+  final IconData icon;
+  final Color color;
+  final bool selected;
+  final bool locked;
+  final VoidCallback onTap;
+
+  const MockAchievementBadge({
+    super.key,
+    required this.semanticLabel,
+    required this.icon,
+    required this.color,
+    required this.selected,
+    required this.locked,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final badgeColor = locked ? MockUI.muted : color;
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: semanticLabel,
+      child: Opacity(
+        opacity: locked ? 0.42 : 1,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            customBorder: const CircleBorder(),
+            onTap: onTap,
+            child: SizedBox(
+              width: 64,
+              height: 72,
+              child: Stack(
+                alignment: Alignment.topCenter,
+                children: [
+                  Positioned(
+                    bottom: 2,
+                    child: ClipPath(
+                      clipper: _BadgeRibbonClipper(),
+                      child: Container(
+                        width: 28,
+                        height: 26,
+                        color: locked ? MockUI.muted : MockUI.coral,
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    top: 4,
+                    child: Container(
+                      width: 52,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            Colors.white,
+                            badgeColor.withValues(alpha: 0.72),
+                          ],
+                        ),
+                        border: Border.all(color: badgeColor, width: 3),
+                        boxShadow: [
+                          BoxShadow(
+                            color: badgeColor.withValues(alpha: 0.24),
+                            blurRadius: 0,
+                            offset: const Offset(0, 4),
+                          ),
+                          if (selected)
+                            BoxShadow(
+                              color: MockUI.blue.withValues(alpha: 0.28),
+                              blurRadius: 0,
+                              spreadRadius: 4,
+                            ),
+                        ],
+                      ),
+                      child: Icon(icon, size: 25, color: MockUI.card),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _BadgeRibbonClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) => Path()
+    ..moveTo(0, 0)
+    ..lineTo(size.width, 0)
+    ..lineTo(size.width * 0.78, size.height)
+    ..lineTo(size.width * 0.5, size.height * 0.72)
+    ..lineTo(size.width * 0.22, size.height)
+    ..close();
+
+  @override
+  bool shouldReclip(covariant _BadgeRibbonClipper oldClipper) => false;
+}
+
 /// .mini-button — 밝은 하늘색 보조 버튼.
 class _MiniButton extends StatelessWidget {
   final String label;

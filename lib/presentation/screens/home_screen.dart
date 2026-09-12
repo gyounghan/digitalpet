@@ -10,10 +10,8 @@ import '../../core/anim/anim_manifest.dart';
 import '../../core/theme/species_theme.dart';
 import '../../core/constants/app_strings.dart';
 import '../../domain/entities/pet.dart';
-import '../../domain/constants/mission_catalog.dart';
 import '../../domain/usecases/drink_water_usecase.dart';
 import '../../domain/usecases/pet_transition_events.dart';
-import '../../domain/usecases/today_goal_progress.dart';
 import '../../core/utils/pet_image_helper.dart';
 import '../../data/services/ad_service.dart';
 import '../../data/datasources/app_prefs_datasource.dart';
@@ -24,7 +22,7 @@ import 'species_reveal_screen.dart';
 
 /// 홈 화면 — "펫이 주인공, 정보는 행동 가능한 것만"
 ///
-/// 상단 펫명(종·기분) + Lv/EXP 미터 + 펫 스테이지 + 밥주기 + 오늘의 목표 카드.
+/// 상단 펫명 + 레벨 + 펫 스테이지 + 상태 + 밥/물 행동만 보여준다.
 /// 종/기분 라벨은 헤더 한 곳에만, 스탯 상세 수치는 케어 화면에서 확인한다.
 class HomeScreen extends ConsumerStatefulWidget {
   static const String defaultPetId = 'default-pet';
@@ -323,7 +321,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final theme = SpeciesTheme.forType(pet.evolutionType);
     // previous-feel 최종안 홈 구조:
     // screen-top(인사말+이름+Lv) → pet-stage(말풍선·펫·그림자) →
-    // status-grid(포만감·기분·기력) → 밥/물 CTA → 오늘의 수첩.
+    // status-grid(포만감·기분·기력) → 밥/물 CTA.
     return DecoratedBox(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
@@ -349,8 +347,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               _buildStatusGrid(pet),
               const SizedBox(height: 10),
               _buildActionGrid(ref, pet),
-              const SizedBox(height: 10),
-              _buildRoutinePanel(pet),
             ],
           ),
         ),
@@ -718,95 +714,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  /// 오늘의 수첩 — 기존 일일 목표와 주요 미션을 게임식 체크리스트로 표현.
-  Widget _buildRoutinePanel(Pet pet) {
-    final goals = TodayGoalProgress.fromPet(pet);
-    final doneMissions = MissionCatalog.completedCount(pet);
-    final totalMissions = MissionCatalog.all.length;
-    final loginMission = MissionCatalog.all.firstWhere(
-      (m) => m.id == 'login_14',
-    );
-    final battleMission = MissionCatalog.all.firstWhere(
-      (m) => m.id == 'battle_10',
-    );
-    final items = <(String, bool)>[
-      ('식사 ${goals.feedProgress}/${goals.feedGoal}회', goals.feedDone),
-      (
-        '걸음 ${_formatSteps(goals.steps)}/${_formatSteps(goals.stepsGoal)}보',
-        goals.exerciseDone,
-      ),
-      ('칭호: ${_titleForPet(pet)}', doneMissions > 0),
-      (
-        '${loginMission.title} ${loginMission.progress(pet)}/${loginMission.target}일',
-        loginMission.isComplete(pet),
-      ),
-      (
-        '${battleMission.title} ${battleMission.progress(pet)}/${battleMission.target}승',
-        battleMission.isComplete(pet),
-      ),
-    ];
-    final doneCount = items.where((e) => e.$2).length;
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: MockUI.cardBg,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: MockUI.line),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                '오늘의 수첩',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w800,
-                  color: MockUI.ink,
-                ),
-              ),
-              Text(
-                '$doneCount / ${items.length} 체크 · 미션 $doneMissions/$totalMissions',
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w900,
-                  color: MockUI.muted,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          for (var i = 0; i < items.length; i++) ...[
-            if (i > 0) const SizedBox(height: 10),
-            _CheckLine(label: items[i].$1, done: items[i].$2),
-          ],
-        ],
-      ),
-    );
-  }
-
-  /// 걸음 수 축약 표기 (3,200 → 3.2k)
-  String _formatSteps(int steps) {
-    if (steps < 1000) return '$steps';
-    final k = steps / 1000.0;
-    return k == k.roundToDouble()
-        ? '${k.round()}k'
-        : '${k.toStringAsFixed(1)}k';
-  }
-
-  String _titleForPet(Pet pet) {
-    if (pet.battleVictoryCount >= 10) return '백전노장';
-    if (pet.consecutiveLoginDays >= 14) return '개근왕';
-    if (pet.feedAchievedCount >= 20) return '미식가';
-    if (pet.sleepAchievedCount >= 10) return '숙면 수호자';
-    if (pet.goalStreakCount >= 7 || pet.consecutiveLoginDays >= 7) {
-      return '성실한 동행자';
-    }
-    return '새싹 동행자';
-  }
-
   /// 긴 잠에 빠진 펫 — 무료 깨우기(30/30/30) 또는 광고 깨우기(완전 회복)
   Widget _buildDeadPetContent(BuildContext context, WidgetRef ref, Pet pet) {
     final notifier = ref.read(petNotifierProvider(_activePetId).notifier);
@@ -1071,43 +978,6 @@ class _MockMeter extends StatelessWidget {
           child: Container(color: color),
         ),
       ),
-    );
-  }
-}
-
-/// 시안 .check-line — 17px 사각 체크(완료 green / 미완료 checkTrack) + 라벨(13 800).
-class _CheckLine extends StatelessWidget {
-  final String label;
-  final bool done;
-  const _CheckLine({required this.label, required this.done});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Container(
-          width: 17,
-          height: 17,
-          decoration: BoxDecoration(
-            color: done ? MockUI.green : MockUI.checkTrack,
-            borderRadius: BorderRadius.circular(5),
-          ),
-          child: done
-              ? const Icon(Icons.check, size: 12, color: Colors.white)
-              : null,
-        ),
-        const SizedBox(width: 9),
-        Expanded(
-          child: Text(
-            label,
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w800,
-              color: Color(0xFF594F43),
-            ),
-          ),
-        ),
-      ],
     );
   }
 }

@@ -21,9 +21,9 @@ import '../../domain/entities/evolution_type.dart';
 import 'debug_pixel_gallery_screen.dart';
 import 'debug_cheat_screen.dart';
 
-/// 도감 화면 — 펫 프로필 + 전투 스탯 + 진화율 + 누적 통계 + 진화 트리
+/// 도감 화면 — 펫 프로필 + 성장 단계 정보 + 수집 앨범.
 ///
-/// 펫의 정체성·성장을 한눈에 보는 페이지. 진화 트리/진화 실행을 포함한다.
+/// 전투·누적·계정 정보와 진화 실행은 더보기 안에서 기존 기능을 유지한다.
 /// 동기화 권한 진단은 홈 상단 배너(SyncPermissionBanner)로 이전했다.
 class MeScreen extends ConsumerStatefulWidget {
   const MeScreen({super.key});
@@ -39,6 +39,8 @@ class _MeScreenState extends ConsumerState<MeScreen> {
   bool _isEvolving = false;
   bool _isAdLoading = false;
   bool _isKakaoLoading = false;
+  bool _showDexDetails = false;
+  int? _selectedDexStage;
 
   Future<void> _handleEvolve() async {
     if (_isEvolving) return;
@@ -182,60 +184,68 @@ class _MeScreenState extends ConsumerState<MeScreen> {
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
               children: [
                 _buildFeaturedPet(pet, theme),
-                const SizedBox(height: 10),
-                _buildGrowthPath(pet),
                 const SizedBox(height: 14),
-                const SectionTitle(title: '발현된 친구들', trailing: '최대 2마리'),
+                const SectionTitle(title: '수집 앨범', trailing: '키우는 펫'),
                 _buildCollectionGrid(theme),
                 const SizedBox(height: 12),
-                _buildBattleStats(pet, theme),
-                const SizedBox(height: 10),
-                _buildLifetimeStats(pet, theme),
-                const SizedBox(height: 14),
-                const SectionTitle(title: '진화 트리'),
-                _buildEvoTreeCard(pet, theme),
-                const SizedBox(height: 14),
-                if (pet.evolutionStage < 4)
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: (_isEvolving || !canEvolve)
-                          ? null
-                          : _handleEvolve,
-                      icon: Icon(
-                        _isEvolving ? Icons.hourglass_top : Icons.auto_awesome,
-                        size: 18,
-                      ),
-                      label: Text(
-                        _isEvolving
-                            ? AppStrings.evolutionEvolving
-                            : canEvolve
-                            ? AppStrings.evolutionEvolveNow
-                            : 'Lv.${_requiredLevelForStage(pet.evolutionStage)} 필요',
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: theme.primaryDeep,
-                        disabledBackgroundColor: theme.primaryDeep.withValues(
-                          alpha: 0.35,
+                MockDisclosureButton(
+                  title: '도감 더보기',
+                  subtitle: '전적 · 누적 기록 · 계정',
+                  expanded: _showDexDetails,
+                  onTap: () =>
+                      setState(() => _showDexDetails = !_showDexDetails),
+                ),
+                if (_showDexDetails) ...[
+                  const SizedBox(height: 12),
+                  _buildBattleStats(pet, theme),
+                  const SizedBox(height: 10),
+                  _buildLifetimeStats(pet, theme),
+                  if (pet.evolutionStage < 4) ...[
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: (_isEvolving || !canEvolve)
+                            ? null
+                            : _handleEvolve,
+                        icon: Icon(
+                          _isEvolving
+                              ? Icons.hourglass_top
+                              : Icons.auto_awesome,
+                          size: 18,
                         ),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                        label: Text(
+                          _isEvolving
+                              ? AppStrings.evolutionEvolving
+                              : canEvolve
+                              ? AppStrings.evolutionEvolveNow
+                              : 'Lv.${_requiredLevelForStage(pet.evolutionStage)} 필요',
                         ),
-                        elevation: 0,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: theme.primaryDeep,
+                          disabledBackgroundColor: theme.primaryDeep.withValues(
+                            alpha: 0.35,
+                          ),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          elevation: 0,
+                        ),
                       ),
                     ),
-                  ),
-                const SizedBox(height: 14),
-                const SectionTitle(title: '계정'),
-                _buildAccountCard(theme),
-                const SizedBox(height: 18),
-                _buildRestartButton(),
-                if (kDebugMode) ...[
-                  const SizedBox(height: 8),
-                  _buildDebugGalleryButton(),
-                  _buildDebugCheatButton(),
+                  ],
+                  const SizedBox(height: 14),
+                  const SectionTitle(title: '계정'),
+                  _buildAccountCard(theme),
+                  const SizedBox(height: 18),
+                  _buildRestartButton(),
+                  if (kDebugMode) ...[
+                    const SizedBox(height: 8),
+                    _buildDebugGalleryButton(),
+                    _buildDebugCheatButton(),
+                  ],
                 ],
               ],
             ),
@@ -251,11 +261,12 @@ class _MeScreenState extends ConsumerState<MeScreen> {
     return '$discovered / 14';
   }
 
-  /// 시안 .featured-pet — 대표 펫(이미지 + 이름 + 설명 + 태그) + info-grid.
+  /// 발견한 펫과 성장 단계별 정보를 한 카드에서 확인한다.
   Widget _buildFeaturedPet(Pet pet, SpeciesTheme theme) {
     final label = SpeciesTheme.labelFor(pet.evolutionType);
     final desc = _speciesBlurb(pet.evolutionType);
-    final tags = _speciesTags(pet.evolutionType);
+    final visibleStage = _visibleDexStage(pet);
+    final stages = pet.evolutionType == null ? const [1] : const [2, 3, 4];
     return Column(
       children: [
         Container(
@@ -314,7 +325,7 @@ class _MeScreenState extends ConsumerState<MeScreen> {
                         ),
                         PetMotionThumb(
                           type: pet.evolutionType,
-                          stage: pet.evolutionStage,
+                          stage: visibleStage,
                           grade: pet.evolutionGrade,
                           variant: colorVariantFor(pet),
                           size: 108,
@@ -346,11 +357,16 @@ class _MeScreenState extends ConsumerState<MeScreen> {
                             color: MockUI.softInk,
                           ),
                         ),
-                        const SizedBox(height: 12),
-                        Wrap(
-                          spacing: 6,
-                          runSpacing: 6,
-                          children: [for (final t in tags) _dexTag(t)],
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            for (var i = 0; i < stages.length; i++) ...[
+                              if (i > 0) const SizedBox(width: 5),
+                              Expanded(
+                                child: _stageButton(pet: pet, stage: stages[i]),
+                              ),
+                            ],
+                          ],
                         ),
                       ],
                     ),
@@ -360,129 +376,140 @@ class _MeScreenState extends ConsumerState<MeScreen> {
             ],
           ),
         ),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: MockInfoTile(label: '친밀도', value: '${pet.happiness}'),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: MockInfoTile(
-                label: '성장',
-                value: _stageLabel(pet.evolutionStage),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: MockInfoTile(label: '레벨', value: 'Lv.${pet.level}'),
-            ),
-          ],
-        ),
+        if (_selectedDexStage != null) ...[
+          const SizedBox(height: 8),
+          _buildStageDetails(pet, visibleStage),
+        ],
       ],
     );
   }
 
-  Widget _dexTag(String text) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-      decoration: BoxDecoration(
-        color: MockUI.goldSoft,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: MockUI.line),
-      ),
-      child: Text(
-        text,
-        style: const TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w900,
-          color: MockUI.softInk,
+  int _visibleDexStage(Pet pet) {
+    final minStage = pet.evolutionType == null ? 1 : 2;
+    final selected = _selectedDexStage;
+    if (selected == null ||
+        selected < minStage ||
+        selected > pet.evolutionStage) {
+      return pet.evolutionStage;
+    }
+    return selected;
+  }
+
+  Widget _stageButton({required Pet pet, required int stage}) {
+    final enabled = stage <= pet.evolutionStage;
+    final selected = _selectedDexStage == stage;
+    return Opacity(
+      opacity: enabled ? 1 : 0.42,
+      child: Material(
+        color: selected ? const Color(0xFFE6F6FF) : Colors.white70,
+        borderRadius: BorderRadius.circular(8),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(8),
+          onTap: enabled
+              ? () => setState(() => _selectedDexStage = stage)
+              : null,
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 38),
+            alignment: Alignment.center,
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: selected ? MockUI.blue : MockUI.actionBorder,
+              ),
+            ),
+            child: Text(
+              _stageLabel(stage),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 10.5,
+                fontWeight: FontWeight.w900,
+                color: selected ? MockUI.actionInk : MockUI.softInk,
+              ),
+            ),
+          ),
         ),
       ),
     );
   }
 
-  /// 시안 .growth-path — 유아→성장→성숙 단계 + '다음 단계까지 %'.
-  Widget _buildGrowthPath(Pet pet) {
-    final stage = pet.evolutionStage; // 1 털뭉치 / 2 유아 / 3 성장 / 4 성숙
-    final pct = ((pet.exp / Pet.getRequiredExpForLevel(pet.level)) * 100)
-        .clamp(0, 100)
-        .round();
-    Widget step(String label, int atStage) {
-      final current = stage == atStage;
-      final passed = stage > atStage;
-      return Container(
-        width: 46,
-        height: 46,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: current
-              ? const Color(0xFFFFF1CA)
-              : (passed ? MockUI.greenSoft : MockUI.card),
-          border: Border.all(color: const Color(0xFFE4C996)),
-        ),
-        child: Text(
-          label,
-          style: const TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w900,
-            color: Color(0xFF6B5430),
-          ),
-        ),
-      );
-    }
+  Widget _buildStageDetails(Pet pet, int stage) {
+    final tags = _speciesTags(pet.evolutionType).join(' · ');
+    final nextGrowth = stage >= 4
+        ? '최종 단계'
+        : 'Lv.${_requiredLevelForStage(stage)} 필요';
 
-    Widget line(bool done) => Expanded(
-      child: Container(
-        height: 3,
-        margin: const EdgeInsets.symmetric(horizontal: 6),
-        decoration: BoxDecoration(
-          color: done ? const Color(0xFFB6C8A3) : const Color(0xFFD8CCB4),
-          borderRadius: BorderRadius.circular(999),
-        ),
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.78),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: MockUI.actionBorder),
+      ),
+      child: Column(
+        children: [
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: _stageDetailTile(
+                    '성격',
+                    _speciesBlurb(pet.evolutionType),
+                  ),
+                ),
+                const SizedBox(width: 7),
+                Expanded(child: _stageDetailTile('속성', tags)),
+              ],
+            ),
+          ),
+          const SizedBox(height: 7),
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(child: _stageDetailTile('성장 단계', _stageLabel(stage))),
+                const SizedBox(width: 7),
+                Expanded(child: _stageDetailTile('다음 성장', nextGrowth)),
+              ],
+            ),
+          ),
+        ],
       ),
     );
+  }
+
+  Widget _stageDetailTile(String label, String value) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      constraints: const BoxConstraints(minHeight: 54),
+      padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FBEF),
+        color: const Color(0xFFF6F8FB),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: MockUI.line),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                '성장 경로',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w800,
-                  color: MockUI.ink,
-                ),
-              ),
-              Text(
-                stage >= 4 ? '최종 단계' : '다음 단계까지 $pct%',
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w900,
-                  color: MockUI.muted,
-                ),
-              ),
-            ],
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 9.5,
+              fontWeight: FontWeight.w900,
+              color: MockUI.muted,
+            ),
           ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              step('유아', 2),
-              line(stage > 2),
-              step('성장', 3),
-              line(stage > 3),
-              step('성숙', 4),
-            ],
+          const SizedBox(height: 4),
+          Text(
+            value,
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 10.5,
+              height: 1.35,
+              fontWeight: FontWeight.w800,
+              color: MockUI.ink,
+            ),
           ),
         ],
       ),
@@ -679,7 +706,12 @@ class _MeScreenState extends ConsumerState<MeScreen> {
   /// 활성 펫 전환 — 홈·케어·배틀이 이 펫으로 바뀐다.
   Future<void> _switchActivePet(String slotId) async {
     await ref.read(activePetIdProvider.notifier).setActive(slotId);
-    if (mounted) setState(() {});
+    if (mounted) {
+      setState(() {
+        _selectedDexStage = null;
+        _showDexDetails = false;
+      });
+    }
   }
 
   /// 두 번째 펫 키우기 시작 — 생성 후 활성 전환. (로컬 전용, 서버 미동기화)
@@ -687,7 +719,10 @@ class _MeScreenState extends ConsumerState<MeScreen> {
     await ref.read(createDefaultPetUseCaseProvider)(kSecondPetId);
     await ref.read(activePetIdProvider.notifier).setActive(kSecondPetId);
     if (!mounted) return;
-    setState(() {});
+    setState(() {
+      _selectedDexStage = null;
+      _showDexDetails = false;
+    });
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('새 펫이 태어났어요! 홈에서 이름을 지어주세요.'),
@@ -1463,115 +1498,6 @@ class _MeScreenState extends ConsumerState<MeScreen> {
       buf.write(s[i]);
     }
     return buf.toString();
-  }
-
-  /// 진화 트리
-  Widget _buildEvoTreeCard(Pet pet, SpeciesTheme theme) {
-    final stages = const [(1, '털뭉치'), (2, '유아기'), (3, '성장기'), (4, '성숙기')];
-    return AppCard(
-      theme: theme,
-      variant: AppCardVariant.flat,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              for (var i = 0; i < stages.length; i++) ...[
-                _evoTreeNode(
-                  pet.evolutionType,
-                  stages[i].$1,
-                  stages[i].$2,
-                  theme,
-                  grade: pet.evolutionGrade,
-                  variant: colorVariantFor(pet),
-                  passed: pet.evolutionStage >= stages[i].$1,
-                  current: pet.evolutionStage == stages[i].$1,
-                ),
-                if (i < stages.length - 1) _dashedConnector(),
-              ],
-            ],
-          ),
-          // 다음 진화 안내는 프로필 카드의 진화율 게이지(N% · Lv.n/m)가 담당
-        ],
-      ),
-    );
-  }
-
-  Widget _evoTreeNode(
-    EvolutionType? type,
-    int stage,
-    String name,
-    SpeciesTheme theme, {
-    required bool passed,
-    required bool current,
-    String grade = '',
-    int variant = 0,
-  }) {
-    return Opacity(
-      opacity: passed ? 1.0 : 0.35,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 52,
-            height: 52,
-            decoration: BoxDecoration(
-              color: current ? theme.primarySoft : MockUI.cardBg,
-              borderRadius: BorderRadius.circular(8),
-              border: current
-                  ? Border.all(color: theme.primary, width: 2)
-                  : Border.all(color: MockUI.line, width: 1),
-            ),
-            alignment: Alignment.center,
-            // 종 미결정(털뭉치) 상태의 미래 단계는 '?'로 표시
-            child: PetMotionThumb(
-              type: type,
-              stage: stage,
-              grade: grade,
-              variant: variant,
-              size: 40,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            name,
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w700,
-              color: current ? theme.primaryDeep : DesignTokens.ink3,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _dashedConnector() {
-    return Expanded(
-      child: Padding(
-        padding: const EdgeInsets.only(bottom: 18),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            const dashWidth = 4.0;
-            const dashSpace = 3.0;
-            final count = (constraints.maxWidth / (dashWidth + dashSpace))
-                .floor();
-            return Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: List.generate(
-                count,
-                (_) => Container(
-                  width: dashWidth,
-                  height: 1.5,
-                  color: DesignTokens.line2,
-                ),
-              ),
-            );
-          },
-        ),
-      ),
-    );
   }
 }
 

@@ -53,6 +53,9 @@ class _CareScreenState extends ConsumerState<CareScreen> {
   /// 미션 전체 펼침 여부 (기본: 진행 중 상위 3개만)
   bool _showAllMissions = false;
 
+  /// 배지 선반에서 현재 설명을 보여줄 업적.
+  int _selectedAchievementIndex = 0;
+
   @override
   void dispose() {
     _shakeTimer?.cancel();
@@ -101,11 +104,11 @@ class _CareScreenState extends ConsumerState<CareScreen> {
                 trailing: MockCoinPill('${pet.consecutiveLoginDays}일'),
               ),
               const SizedBox(height: 10),
-              _buildQuestHero(pet, theme),
+              _buildQuestHero(pet),
               const SizedBox(height: 10),
               _buildTitleCard(pet, theme),
-              const SizedBox(height: 8),
-              _buildAchievementGrid(pet, theme),
+              const SizedBox(height: 12),
+              _buildAchievementGrid(pet),
               const SizedBox(height: 12),
               _buildMissionsCard(pet, theme),
             ],
@@ -115,11 +118,18 @@ class _CareScreenState extends ConsumerState<CareScreen> {
     );
   }
 
-  Widget _buildQuestHero(Pet pet, SpeciesTheme theme) {
-    final next = MissionCatalog.all.where((m) => !m.isComplete(pet)).toList()
-      ..sort((a, b) => b.ratio(pet).compareTo(a.ratio(pet)));
+  Widget _buildQuestHero(Pet pet) {
+    final next = _incompleteMissions(pet);
     final nextMission = next.isNotEmpty ? next.first : MissionCatalog.all.last;
     final completed = MissionCatalog.completedCount(pet);
+    final progress = nextMission.progress(pet);
+    final remaining = (nextMission.target - progress).clamp(
+      0,
+      nextMission.target,
+    );
+    final headline = next.isEmpty
+        ? '주요 퀘스트를 모두 완료했어요'
+        : '${nextMission.title}까지 $remaining 남았어요';
 
     return Container(
       constraints: const BoxConstraints(minHeight: 178),
@@ -198,24 +208,58 @@ class _CareScreenState extends ConsumerState<CareScreen> {
                         color: MockUI.coral,
                       ),
                       const SizedBox(height: 8),
-                      const Text(
-                        '작은 기록이 펫의 이름표가 돼요',
-                        style: TextStyle(
+                      Text(
+                        headline,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
                           fontSize: 20,
                           height: 1.24,
                           fontWeight: FontWeight.w900,
                           color: MockUI.ink,
                         ),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 6),
                       Text(
-                        '완료 미션 $completed/${MissionCatalog.all.length} · 다음 목표 ${nextMission.title}',
+                        next.isEmpty
+                            ? '완료 미션 $completed/${MissionCatalog.all.length}'
+                            : nextMission.description,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           fontSize: 12,
-                          height: 1.48,
+                          height: 1.4,
                           fontWeight: FontWeight.w700,
                           color: MockUI.softInk,
                         ),
+                      ),
+                      const SizedBox(height: 9),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            '진행',
+                            style: TextStyle(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w900,
+                              color: MockUI.muted,
+                            ),
+                          ),
+                          Text(
+                            '$progress / ${nextMission.target}',
+                            style: const TextStyle(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w900,
+                              color: MockUI.softInk,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      MockMeter(
+                        value: nextMission.ratio(pet),
+                        color: MockUI.gold,
+                        height: 7,
                       ),
                     ],
                   ),
@@ -230,8 +274,12 @@ class _CareScreenState extends ConsumerState<CareScreen> {
 
   Widget _buildTitleCard(Pet pet, SpeciesTheme theme) {
     final title = _titleForPet(pet);
+    final missions = _incompleteMissions(pet);
+    final primaryMission = missions.isEmpty
+        ? MissionCatalog.all.last
+        : missions.first;
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
       decoration: BoxDecoration(
         color: MockUI.cardBg,
         borderRadius: BorderRadius.circular(8),
@@ -244,62 +292,89 @@ class _CareScreenState extends ConsumerState<CareScreen> {
           ),
         ],
       ),
+      child: Column(
+        children: [
+          _essentialRow(
+            mark: '칭호',
+            markColor: MockUI.goldSoft,
+            title: title,
+            subtitle: '현재 장착 중인 칭호',
+            trailing: '장착 중',
+          ),
+          const Divider(height: 1, color: Color(0x24FFAE63)),
+          _essentialRow(
+            mark: '목표',
+            markColor: MockUI.greenSoft,
+            title: primaryMission.title,
+            subtitle: primaryMission.description,
+            trailing: '${(primaryMission.ratio(pet) * 100).round()}%',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _essentialRow({
+    required String mark,
+    required Color markColor,
+    required String title,
+    required String subtitle,
+    required String trailing,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
       child: Row(
         children: [
+          Container(
+            width: 42,
+            height: 42,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(color: markColor, shape: BoxShape.circle),
+            child: Text(
+              mark,
+              style: const TextStyle(
+                fontSize: 10.5,
+                fontWeight: FontWeight.w900,
+                color: MockUI.softInk,
+              ),
+            ),
+          ),
+          const SizedBox(width: 11),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '장착 칭호: $title',
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    fontSize: 15,
+                    fontSize: 13.5,
                     fontWeight: FontWeight.w900,
                     color: MockUI.ink,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 2),
                 Text(
-                  _titleDescription(title),
+                  subtitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    fontSize: 12,
-                    height: 1.45,
+                    fontSize: 10.5,
                     fontWeight: FontWeight.w700,
-                    color: MockUI.softInk,
+                    color: MockUI.muted,
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 12),
-          Container(
-            width: 54,
-            height: 54,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: const LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [Color(0xFFFFF2A8), MockUI.gold],
-              ),
-              border: Border.all(color: MockUI.lineStrong),
-              boxShadow: [
-                BoxShadow(
-                  color: MockUI.gold.withValues(alpha: 0.24),
-                  blurRadius: 0,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: const Center(
-              child: Text(
-                '칭호',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w900,
-                  color: Color(0xFF73510B),
-                ),
-              ),
+          const SizedBox(width: 8),
+          Text(
+            trailing,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w900,
+              color: MockUI.actionInk,
             ),
           ),
         ],
@@ -307,94 +382,124 @@ class _CareScreenState extends ConsumerState<CareScreen> {
     );
   }
 
-  Widget _buildAchievementGrid(Pet pet, SpeciesTheme theme) {
-    return Row(
+  Widget _buildAchievementGrid(Pet pet) {
+    final badges = [
+      _AchievementBadgeData(
+        title: '7일 연속 접속',
+        description: pet.consecutiveLoginDays >= 7
+            ? '일주일 동안 매일 만나 획득했어요.'
+            : '앞으로 ${7 - pet.consecutiveLoginDays}일 더 만나면 열려요.',
+        icon: Icons.star_rounded,
+        color: MockUI.gold,
+        locked: pet.consecutiveLoginDays < 7,
+      ),
+      _AchievementBadgeData(
+        title: '백전노장',
+        description: pet.battleVictoryCount >= 10
+            ? '배틀 10승을 달성해 획득했어요.'
+            : '배틀 ${pet.battleVictoryCount}/10승을 달성했어요.',
+        icon: Icons.shield_rounded,
+        color: MockUI.violet,
+        locked: pet.battleVictoryCount < 10,
+      ),
+      _AchievementBadgeData(
+        title: '산책 기록',
+        description: pet.totalSteps >= 50000
+            ? '누적 50,000보를 걸어 획득했어요.'
+            : '누적 ${pet.totalSteps}/50,000보를 걸었어요.',
+        icon: Icons.directions_walk_rounded,
+        color: MockUI.green,
+        locked: pet.totalSteps < 50000,
+      ),
+    ];
+    final selected =
+        badges[_selectedAchievementIndex.clamp(0, badges.length - 1)];
+    final earned = badges.where((badge) => !badge.locked).length;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(
-          child: _achievementCard(
-            '연속 접속',
-            '${pet.consecutiveLoginDays}일',
-            _goalProgressLabel('개근왕', 14 - pet.consecutiveLoginDays, '일'),
-            MockUI.coral,
-          ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              '업적 배지',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w900,
+                color: MockUI.ink,
+              ),
+            ),
+            Text(
+              '$earned개 획득',
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w900,
+                color: MockUI.muted,
+              ),
+            ),
+          ],
         ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: _achievementCard(
-            '배틀 승리',
-            '${pet.battleVictoryCount}승',
-            _goalProgressLabel('백전노장', 10 - pet.battleVictoryCount, '승'),
-            MockUI.violet,
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            for (var i = 0; i < badges.length; i++) ...[
+              if (i > 0) const SizedBox(width: 12),
+              MockAchievementBadge(
+                semanticLabel: '${badges[i].title} 배지',
+                icon: badges[i].icon,
+                color: badges[i].color,
+                selected: i == _selectedAchievementIndex,
+                locked: badges[i].locked,
+                onTap: () => setState(() => _selectedAchievementIndex = i),
+              ),
+            ],
+          ],
+        ),
+        const SizedBox(height: 4),
+        Container(
+          width: double.infinity,
+          constraints: const BoxConstraints(minHeight: 50),
+          padding: const EdgeInsets.fromLTRB(11, 7, 8, 7),
+          decoration: const BoxDecoration(
+            border: Border(left: BorderSide(color: MockUI.gold, width: 3)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                selected.title,
+                style: const TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w900,
+                  color: MockUI.ink,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                selected.description,
+                style: const TextStyle(
+                  fontSize: 10.5,
+                  height: 1.35,
+                  fontWeight: FontWeight.w700,
+                  color: MockUI.muted,
+                ),
+              ),
+            ],
           ),
         ),
       ],
     );
   }
 
-  Widget _achievementCard(
-    String label,
-    String value,
-    String desc,
-    Color color,
-  ) {
-    return Container(
-      constraints: const BoxConstraints(minHeight: 92),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Colors.white, color.withValues(alpha: 0.12)],
-        ),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withValues(alpha: 0.28)),
-        boxShadow: [
-          BoxShadow(
-            color: color.withValues(alpha: 0.12),
-            blurRadius: 0,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 10.5,
-              fontWeight: FontWeight.w900,
-              color: MockUI.muted,
-            ),
-          ),
-          const SizedBox(height: 5),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w900,
-              color: MockUI.ink,
-            ),
-          ),
-          const SizedBox(height: 3),
-          Text(
-            desc,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontSize: 10.5,
-              fontWeight: FontWeight.w800,
-              color: MockUI.muted,
-            ),
-          ),
-        ],
-      ),
-    );
+  List<Mission> _incompleteMissions(Pet pet) {
+    final missions = MissionCatalog.all
+        .where((mission) => !mission.isComplete(pet))
+        .toList();
+    missions.sort((a, b) => b.ratio(pet).compareTo(a.ratio(pet)));
+    return missions;
   }
-
-  String _goalProgressLabel(String title, int remaining, String unit) =>
-      remaining <= 0 ? '$title 달성' : '$title까지 $remaining$unit';
 
   String _titleForPet(Pet pet) {
     if (pet.battleVictoryCount >= 10) return '백전노장';
@@ -405,17 +510,6 @@ class _CareScreenState extends ConsumerState<CareScreen> {
       return '성실한 동행자';
     }
     return '새싹 동행자';
-  }
-
-  String _titleDescription(String title) {
-    return switch (title) {
-      '백전노장' => '배틀 기록에서 얻은 당당한 이름표입니다.',
-      '개근왕' => '연속 접속을 꾸준히 이어온 펫에게 어울려요.',
-      '미식가' => '밥 시간을 착실히 챙긴 기록이 쌓였어요.',
-      '숙면 수호자' => '휴식 리듬을 잘 지켜온 펫에게 붙는 칭호입니다.',
-      '성실한 동행자' => '매일 조금씩 함께한 기록에서 얻은 칭호입니다.',
-      _ => '아직 자라는 중인 펫의 첫 번째 이름표입니다.',
-    };
   }
 
   /// 시안 .focus-panel — 우선 행동 1개를 크게 추천(펫 + 헤드라인 + 버튼).
@@ -608,86 +702,45 @@ class _CareScreenState extends ConsumerState<CareScreen> {
     );
   }
 
-  /// 미션 카드 — 성향 축별 도전과제 진행도. 완료 시 유아기 진화 종에 기여.
-  ///
-  /// 기본은 미완료 중 진행률 상위 3개만 보여주고, "전체 보기"로 펼친다.
+  /// 대표 목표 외 퀘스트는 기본 화면에서 접어 시선 부담을 줄인다.
   Widget _buildMissionsCard(Pet pet, SpeciesTheme theme) {
     final done = MissionCatalog.completedCount(pet);
     final total = MissionCatalog.all.length;
+    final incomplete = _incompleteMissions(pet);
+    final details = incomplete.length > 1
+        ? incomplete.skip(1).toList()
+        : MissionCatalog.all;
+    final disclosureTitle = incomplete.length > 1 ? '진행 중인 퀘스트' : '퀘스트 기록';
+    final disclosureSubtitle = incomplete.length > 1
+        ? '나머지 ${incomplete.length - 1}개'
+        : '완료 $done/$total';
 
-    final incomplete =
-        MissionCatalog.all.where((m) => !m.isComplete(pet)).toList()
-          ..sort((a, b) => b.ratio(pet).compareTo(a.ratio(pet)));
-    final visible = _showAllMissions
-        ? MissionCatalog.all
-        : incomplete.take(3).toList();
-    final hiddenCount = total - visible.length;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: MockUI.cardBg,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: MockUI.line),
-        boxShadow: [
-          BoxShadow(
-            color: MockUI.lineStrong.withValues(alpha: 0.12),
-            blurRadius: 0,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                '주요 퀘스트',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w900,
-                  color: MockUI.ink,
-                ),
-              ),
-              Text(
-                '$done/$total',
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w900,
-                  color: MockUI.muted,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          for (final m in visible) _missionRow(m, pet, theme),
-          if (total > 3)
-            Center(
-              child: TextButton(
-                onPressed: () =>
-                    setState(() => _showAllMissions = !_showAllMissions),
-                style: TextButton.styleFrom(
-                  foregroundColor: theme.primaryDeep,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 4,
-                  ),
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-                child: Text(
-                  _showAllMissions ? '접기' : '전체 보기 ($hiddenCount)',
-                  style: const TextStyle(
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        MockDisclosureButton(
+          title: disclosureTitle,
+          subtitle: disclosureSubtitle,
+          expanded: _showAllMissions,
+          onTap: () => setState(() => _showAllMissions = !_showAllMissions),
+        ),
+        if (_showAllMissions) ...[
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.fromLTRB(10, 10, 10, 2),
+            decoration: BoxDecoration(
+              color: MockUI.cardBg,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: MockUI.line),
             ),
+            child: Column(
+              children: [
+                for (final mission in details) _missionRow(mission, pet, theme),
+              ],
+            ),
+          ),
         ],
-      ),
+      ],
     );
   }
 
@@ -1371,6 +1424,22 @@ class _CareScreenState extends ConsumerState<CareScreen> {
       },
     );
   }
+}
+
+class _AchievementBadgeData {
+  final String title;
+  final String description;
+  final IconData icon;
+  final Color color;
+  final bool locked;
+
+  const _AchievementBadgeData({
+    required this.title,
+    required this.description,
+    required this.icon,
+    required this.color,
+    required this.locked,
+  });
 }
 
 class _TinyBadge extends StatelessWidget {

@@ -19,7 +19,7 @@ import '../../domain/entities/evolution_type.dart';
 import '../../domain/entities/pet.dart';
 import '../../domain/usecases/battle_result_narrator.dart';
 import '../../domain/usecases/battle_with_activity_usecase.dart'
-    show BattleTurn, BattleWithActivityUseCase;
+    show BattleTurn;
 import '../../domain/entities/wild_encounter.dart';
 import '../../data/datasources/battle_socket_datasource.dart';
 import '../../data/datasources/wild_encounter_datasource.dart';
@@ -82,17 +82,16 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
 
   BattleSocketDatasource? _socket;
 
-  /// 선택된 배틀 스타일 (기본 균형형)
-
-  /// 대기 중인 야생 조우 (있으면 로비에 조우 카드 노출)
+  /// 대기 중인 야생 조우.
   WildEncounter? _pendingWild;
   final WildEncounterDatasource _wildDatasource = WildEncounterDatasource();
+  bool _isWildDialogShowing = false;
+  bool _showBattleHistory = false;
 
   @override
   void initState() {
     super.initState();
-    // 배틀 화면 진입 시 야생 조우 스폰 시도 + 대기 조우 로드
-    // (걷다가 만난 야생 펫을 배틀 탭에서 바로 발견)
+    // 배틀 화면 진입 시 야생 조우 스폰 시도 + 대기 조우 로드.
     WidgetsBinding.instance.addPostFrameCallback(
       (_) => _refreshWildEncounter(),
     );
@@ -106,7 +105,13 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
         await WildEncounterService().maybeSpawn(pet);
       }
       final pending = await _wildDatasource.getPending();
-      if (mounted) setState(() => _pendingWild = pending);
+      if (!mounted) return;
+      setState(() => _pendingWild = pending);
+      if (pending != null && pet != null) {
+        WidgetsBinding.instance.addPostFrameCallback(
+          (_) => _showWildEncounterDialog(pet),
+        );
+      }
     } catch (_) {
       // 조우 조회 실패는 무시 (핵심 흐름 아님)
     }
@@ -485,10 +490,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
       // 해설용 전투 시점 컨디션 (보상 반영 전 스탯)
       final prePet = ref.read(petNotifierProvider(_activePetId)).valueOrNull;
       final battleUseCase = ref.read(battleWithActivityUseCaseProvider);
-      final result = await battleUseCase(
-        _activePetId,
-        wild: wild,
-      );
+      final result = await battleUseCase(_activePetId, wild: wild);
 
       if (result.limitReached) {
         setState(() {
@@ -651,6 +653,142 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
     if (mounted) setState(() => _pendingWild = null);
   }
 
+  Future<void> _showWildEncounterDialog(dynamic pet) async {
+    final wild = _pendingWild;
+    if (wild == null || _isWildDialogShowing || _inArena || isMatchmaking) {
+      return;
+    }
+    _isWildDialogShowing = true;
+    final opponentTheme = SpeciesTheme.forType(wild.species);
+    final opponentLabel = SpeciesTheme.labelFor(wild.species);
+
+    final decision = await showDialog<_WildEncounterDecision>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => Dialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24),
+        backgroundColor: Colors.transparent,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 380),
+          child: Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: MockUI.card,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: MockUI.stageBorder, width: 2),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x4726324A),
+                  blurRadius: 36,
+                  offset: Offset(0, 18),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  '야생 조우',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w900,
+                    color: MockUI.actionInk,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: 150,
+                  height: 150,
+                  child: PetMotionThumb(
+                    type: wild.species,
+                    stage: _stageForLevel(wild.level),
+                    grade: '',
+                    variant: wild.level % 4,
+                    size: 146,
+                  ),
+                ),
+                Text(
+                  '야생의 $opponentLabel가 나타났어요',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                    color: opponentTheme.primaryDeep,
+                  ),
+                ),
+                const SizedBox(height: 7),
+                const Text(
+                  '산책 중 마주쳤어요. 지금 맞설까요, 조용히 지나갈까요?',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 12,
+                    height: 1.5,
+                    fontWeight: FontWeight.w700,
+                    color: MockUI.softInk,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.of(
+                          dialogContext,
+                        ).pop(_WildEncounterDecision.pass),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: MockUI.actionInk,
+                          side: const BorderSide(color: MockUI.actionBorder),
+                          padding: const EdgeInsets.symmetric(vertical: 13),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: const Text(
+                          '지나가기',
+                          style: TextStyle(fontWeight: FontWeight.w900),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      flex: 2,
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.of(
+                          dialogContext,
+                        ).pop(_WildEncounterDecision.fight),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: MockUI.coral,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(vertical: 13),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: const Text(
+                          '맞서기',
+                          style: TextStyle(fontWeight: FontWeight.w900),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    _isWildDialogShowing = false;
+    if (!mounted || decision == null) return;
+    if (decision == _WildEncounterDecision.fight) {
+      await _startWildBattle(pet);
+    } else {
+      await _fleeWildEncounter();
+    }
+  }
+
   void _resetBattle() {
     setState(() {
       battleResult = null;
@@ -738,54 +876,82 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
   Widget _buildLobby(dynamic pet) {
     final theme = SpeciesTheme.forType(pet.evolutionType);
 
-    return DecoratedBox(
+    return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [MockUI.screenTop, MockUI.screenMid, MockUI.screenBottom],
-          stops: [0.0, 0.72, 1.0],
+          colors: [MockUI.battleTop, MockUI.battleMid, MockUI.battleBottom],
         ),
       ),
       child: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
-            child: MockScreenTop(
-              eyebrow: '경기 전',
-              title: '출전 준비',
-              trailing: MockCoinPill('Lv.${pet.level}'),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '경기 전',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          color: MockUI.battleTextMuted,
+                        ),
+                      ),
+                      SizedBox(height: 3),
+                      Text(
+                        '출전 준비',
+                        style: TextStyle(
+                          fontSize: 23,
+                          height: 1.1,
+                          fontWeight: FontWeight.w900,
+                          color: MockUI.battleText,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                MockCoinPill('Lv.${pet.level}'),
+              ],
             ),
           ),
           Expanded(
             child: ListView(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
               children: [
-                _buildMyPetCard(pet, theme),
+                _buildMyPetCard(pet),
                 const SizedBox(height: 10),
-                if (!isLoading && _pendingWild != null) ...[
-                  _buildWildEncounterCard(pet, theme),
-                  const SizedBox(height: 10),
-                ],
                 if (!isLoading) ...[
                   _buildModeButtons(pet, theme),
                 ] else if (isMatchmaking)
                   _buildMatchingCard(theme),
-                const SizedBox(height: 18),
-                // 전적 요약(N승 N패)을 섹션 타이틀 우측에 함께 표시
+                const SizedBox(height: 12),
                 FutureBuilder<_BattleStats>(
                   future: _getBattleStats(),
                   builder: (context, snapshot) {
                     final stats = snapshot.data;
-                    return SectionTitle(
+                    return MockDisclosureButton(
                       title: '최근 전적',
-                      trailing: stats == null
-                          ? null
+                      subtitle: stats == null
+                          ? '불러오는 중'
                           : '${stats.victories}승 ${stats.defeats}패',
+                      expanded: _showBattleHistory,
+                      dark: true,
+                      onTap: () => setState(
+                        () => _showBattleHistory = !_showBattleHistory,
+                      ),
                     );
                   },
                 ),
-                _buildHistorySection(theme),
+                if (_showBattleHistory) ...[
+                  const SizedBox(height: 8),
+                  _buildHistorySection(theme),
+                ],
               ],
             ),
           ),
@@ -794,129 +960,88 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
     );
   }
 
-  Widget _buildMyPetCard(dynamic pet, SpeciesTheme theme) {
-    // 도감/실제 전투와 동일한 Pet 전투 스탯 getter 사용 (기본 스탯)
+  Widget _buildMyPetCard(dynamic pet) {
     final int myAtk = pet.battleAtk;
     final int myDef = pet.battleDef;
     final myHp = pet.battleHp as int;
 
-    final dodge =
-        (BattleWithActivityUseCase.dodgeChanceForStamina(pet.stamina as int) *
-                100)
-            .round();
-    // 출전 준비 카드: 펫은 크게, 숫자는 작은 배지로만 둔다.
     return Container(
       clipBehavior: Clip.antiAlias,
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [MockUI.stageSky, MockUI.stageMid, MockUI.stageGrass],
-          stops: [0.0, 0.66, 1.0],
-        ),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: MockUI.stageBorder, width: 2),
-        boxShadow: [
-          BoxShadow(
-            color: MockUI.blue.withValues(alpha: 0.16),
-            blurRadius: 0,
-            offset: const Offset(0, 6),
-          ),
-        ],
+        color: MockUI.battleGlass,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: MockUI.battleLine),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // 이름·레벨 (좌상단)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  pet.name,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                    color: MockUI.ink,
-                  ),
-                ),
-                Text(
-                  'Lv.${pet.level} · ${SpeciesTheme.labelFor(pet.evolutionType)}',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: MockUI.muted,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // 펫 무대 (지면 밴드 + 발밑 그림자 + 큰 스프라이트)
           SizedBox(
-            height: 146,
+            width: 128,
+            height: 132,
             child: Stack(
               alignment: Alignment.bottomCenter,
               children: [
                 Positioned(
-                  top: 10,
-                  right: 18,
+                  bottom: 14,
+                  left: 12,
+                  right: 12,
                   child: Container(
-                    width: 28,
-                    height: 28,
+                    height: 13,
                     decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: MockUI.gold,
-                      boxShadow: [
-                        BoxShadow(
-                          color: MockUI.gold.withValues(alpha: 0.24),
-                          blurRadius: 0,
-                          spreadRadius: 7,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  child: Container(height: 34, color: const Color(0x1F665C47)),
-                ),
-                Positioned(
-                  bottom: 20,
-                  child: Container(
-                    width: 96,
-                    height: 14,
-                    decoration: BoxDecoration(
-                      color: const Color(0x1F665C47),
+                      color: Colors.black.withValues(alpha: 0.22),
                       borderRadius: BorderRadius.circular(100),
                     ),
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.only(bottom: 4),
                   child: PetMotionThumb(
                     type: pet.evolutionType,
                     stage: pet.evolutionStage,
                     grade: pet.evolutionGrade,
                     variant: colorVariantFor(pet),
-                    size: 128,
+                    size: 122,
                   ),
                 ),
               ],
             ),
           ),
-          // 스탯 배지 행
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 10, 12, 14),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _statBadge('HP', '$myHp', theme),
-                _statBadge('ATK', '$myAtk', theme),
-                _statBadge('DEF', '$myDef', theme),
-                _statBadge('회피', '$dodge%', theme),
+                Text(
+                  '${pet.name} 출전 준비',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    color: MockUI.battleText,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  '${SpeciesTheme.labelFor(pet.evolutionType)} · 컨디션과 대전 방식만 확인하세요.',
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    height: 1.4,
+                    fontWeight: FontWeight.w700,
+                    color: MockUI.battleTextMuted,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    _statBadge('HP', '$myHp'),
+                    _statBadge('ATK', '$myAtk'),
+                    _statBadge('DEF', '$myDef'),
+                  ],
+                ),
               ],
             ),
           ),
@@ -925,13 +1050,13 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
     );
   }
 
-  Widget _statBadge(String label, String value, SpeciesTheme theme) {
+  Widget _statBadge(String label, String value) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
       decoration: BoxDecoration(
-        color: MockUI.card,
+        color: Colors.white.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: MockUI.line),
+        border: Border.all(color: MockUI.battleLine),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -941,7 +1066,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
             style: const TextStyle(
               fontSize: 10.5,
               fontWeight: FontWeight.w800,
-              color: MockUI.muted,
+              color: MockUI.battleTextMuted,
             ),
           ),
           const SizedBox(width: 4),
@@ -950,116 +1075,8 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
             style: const TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w900,
-              color: MockUI.ink,
+              color: MockUI.battleText,
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-
-  /// 야생 조우 카드 — 걷다가 만난 야생 펫과 싸우거나 도망
-  Widget _buildWildEncounterCard(dynamic pet, SpeciesTheme theme) {
-    final wild = _pendingWild!;
-    final oppType = wild.species;
-    final oppTheme = SpeciesTheme.forType(oppType);
-    final label = SpeciesTheme.labelFor(oppType);
-
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [oppTheme.gradStart, MockUI.cardBg],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: MockUI.line),
-        boxShadow: [
-          BoxShadow(
-            color: oppTheme.primary.withValues(alpha: 0.12),
-            blurRadius: 0,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              _arenaSprite(
-                type: oppType,
-                stage: _stageForLevel(wild.level),
-                grade: '',
-                variant: wild.level % 4,
-                theme: oppTheme,
-                motion: PixelMotion.angry,
-                size: 56,
-                flip: true,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      '부스럭... 야생의 기척!',
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w800,
-                        color: MockUI.muted,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '야생의 $label Lv.${wild.level}',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                        color: oppTheme.primaryDeep,
-                      ),
-                    ),
-                    const Text(
-                      '한도와 무관 · 이기면 보너스 EXP',
-                      style: TextStyle(fontSize: 10.5, color: MockUI.muted),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                flex: 2,
-                child: _BigButton(
-                  label: '싸운다!',
-                  icon: Icons.sports_kabaddi,
-                  theme: theme,
-                  onTap: () => _startWildBattle(pet),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: _fleeWildEncounter,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: MockUI.softInk,
-                    side: const BorderSide(color: MockUI.line),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  child: const Text(
-                    '도망',
-                    style: TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                ),
-              ),
-            ],
           ),
         ],
       ),
@@ -1067,69 +1084,95 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
   }
 
   Widget _buildModeButtons(dynamic pet, SpeciesTheme theme) {
-    return Column(
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: _BigButton(
-                label: 'AI 대전',
-                icon: Icons.smart_toy,
-                theme: theme,
-                primary: true,
-                onTap: _startBattle,
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: MockUI.battleGlass,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: MockUI.battleLine),
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                '대전 선택',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w900,
+                  color: MockUI.battleText,
+                ),
               ),
-            ),
-            // 실시간 온라인 대련은 MVP에서 숨김 (FeatureFlags 참조)
-            if (FeatureFlags.enableRealtimeBattle) ...[
-              const SizedBox(width: 8),
-              Expanded(
-                child: _BigButton(
-                  label: '온라인 대전',
-                  icon: Icons.wifi,
-                  theme: theme,
-                  primary: true,
-                  onTap: () => _startOnlineBattle(pet),
+              Text(
+                'AI ${pet.remainingAiBattles}회',
+                style: const TextStyle(
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w800,
+                  color: MockUI.battleTextMuted,
                 ),
               ),
             ],
-          ],
-        ),
-        // 친구 대전은 매칭 풀이 필요 없으므로 플래그와 무관하게 노출
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: _BigButton(
-                label: '친구방 만들기',
-                icon: Icons.group_add,
-                theme: theme,
-                onTap: () => _startOnlineBattle(pet, friendRoom: true),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: _BigButton(
-                label: '코드로 참가',
-                icon: Icons.pin,
-                theme: theme,
-                onTap: () => _showJoinRoomDialog(pet),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        // 남은 횟수 (모드별 별도 한도 — 소진 시 광고로 추가 가능)
-        Text(
-          '오늘 남은 횟수 · AI ${pet.remainingAiBattles}회 / 온라인 ${pet.remainingOnlineBattles}회',
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            fontSize: 11.5,
-            fontWeight: FontWeight.w800,
-            color: MockUI.muted,
           ),
-        ),
-      ],
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: _BigButton(
+                  label: 'AI 대전',
+                  icon: Icons.smart_toy,
+                  theme: theme,
+                  primary: true,
+                  onTap: _startBattle,
+                ),
+              ),
+              if (FeatureFlags.enableRealtimeBattle) ...[
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _BigButton(
+                    label: '온라인 대전',
+                    icon: Icons.wifi,
+                    theme: theme,
+                    onTap: () => _startOnlineBattle(pet),
+                  ),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: _BigButton(
+                  label: '친구 방',
+                  icon: Icons.group_add,
+                  theme: theme,
+                  onTap: () => _startOnlineBattle(pet, friendRoom: true),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _BigButton(
+                  label: '코드 참가',
+                  icon: Icons.pin,
+                  theme: theme,
+                  onTap: () => _showJoinRoomDialog(pet),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '오늘 남은 횟수 · AI ${pet.remainingAiBattles}회 / 온라인 ${pet.remainingOnlineBattles}회',
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 10.5,
+              fontWeight: FontWeight.w800,
+              color: MockUI.battleTextMuted,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1948,6 +1991,8 @@ class _BattleStats {
   final int defeats;
   _BattleStats({required this.victories, required this.defeats});
 }
+
+enum _WildEncounterDecision { fight, pass }
 
 /// 스킬 이펙트 1회 재생 — 3프레임을 순서대로 보여주고 마지막 프레임에서 정지.
 /// slideBeginDx→slideEndDx로 가로 슬라이드하며 "날아가는" 궤적을 만든다.
