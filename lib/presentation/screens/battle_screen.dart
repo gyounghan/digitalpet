@@ -15,7 +15,6 @@ import '../../core/theme/species_theme.dart';
 import '../../core/constants/app_strings.dart';
 import '../../core/constants/feature_flags.dart';
 import '../../domain/entities/battle_history.dart';
-import '../../domain/entities/battle_style.dart';
 import '../../domain/entities/evolution_type.dart';
 import '../../domain/entities/pet.dart';
 import '../../domain/usecases/battle_result_narrator.dart';
@@ -84,7 +83,6 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
   BattleSocketDatasource? _socket;
 
   /// 선택된 배틀 스타일 (기본 균형형)
-  BattleStyle _battleStyle = BattleStyle.balanced;
 
   /// 대기 중인 야생 조우 (있으면 로비에 조우 카드 노출)
   WildEncounter? _pendingWild;
@@ -171,9 +169,9 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
       _affinityDisadvantage = false;
     });
 
-    // 실전 스탯 = 도감 스탯 × 배틀 스타일 배수 (AI 대전과 동일 공식)
-    final styledAtk = (pet.battleAtk * _battleStyle.attackMultiplier).round();
-    final styledDef = (pet.battleDef * _battleStyle.defenseMultiplier).round();
+    // 실전 스탯 = 도감 스탯 (배틀 스타일 제거 — 기본 스탯 그대로)
+    final int styledAtk = pet.battleAtk;
+    final int styledDef = pet.battleDef;
     final maxHp = pet.battleHp;
     final deviceId = await ref
         .read(deviceIdDatasourceProvider)
@@ -489,7 +487,6 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
       final battleUseCase = ref.read(battleWithActivityUseCaseProvider);
       final result = await battleUseCase(
         _activePetId,
-        style: _battleStyle,
         wild: wild,
       );
 
@@ -771,8 +768,6 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
                   const SizedBox(height: 10),
                 ],
                 if (!isLoading) ...[
-                  _buildStyleSelector(theme),
-                  const SizedBox(height: 10),
                   _buildModeButtons(pet, theme),
                 ] else if (isMatchmaking)
                   _buildMatchingCard(theme),
@@ -800,9 +795,9 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
   }
 
   Widget _buildMyPetCard(dynamic pet, SpeciesTheme theme) {
-    // 도감/실제 전투와 동일한 Pet 전투 스탯 getter 사용 (배틀 스타일 반영)
-    final myAtk = (pet.battleAtk * _battleStyle.attackMultiplier).round();
-    final myDef = (pet.battleDef * _battleStyle.defenseMultiplier).round();
+    // 도감/실제 전투와 동일한 Pet 전투 스탯 getter 사용 (기본 스탯)
+    final int myAtk = pet.battleAtk;
+    final int myDef = pet.battleDef;
     final myHp = pet.battleHp as int;
 
     final dodge =
@@ -963,103 +958,6 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
     );
   }
 
-  /// 공격형/균형형/방어형 선택 카드
-  Widget _buildStyleSelector(SpeciesTheme theme) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: MockUI.cardBg,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: MockUI.line),
-        boxShadow: [
-          BoxShadow(
-            color: MockUI.lineStrong.withValues(alpha: 0.12),
-            blurRadius: 0,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.tune, size: 14, color: MockUI.blue),
-              const SizedBox(width: 6),
-              const Text(
-                '배틀 스타일',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w800,
-                  color: MockUI.ink,
-                  letterSpacing: 0,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              for (final s in BattleStyle.values) ...[
-                Expanded(child: _styleButton(s, theme)),
-                if (s != BattleStyle.values.last) const SizedBox(width: 6),
-              ],
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _styleButton(BattleStyle style, SpeciesTheme theme) {
-    final selected = _battleStyle == style;
-    final icon = switch (style) {
-      BattleStyle.attacker => Icons.flash_on,
-      BattleStyle.balanced => Icons.balance,
-      BattleStyle.defender => Icons.shield,
-    };
-    return GestureDetector(
-      onTap: () => setState(() => _battleStyle = style),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        decoration: BoxDecoration(
-          color: selected ? MockUI.goldSoft : MockUI.actionBg,
-          borderRadius: BorderRadius.circular(8),
-          border: selected
-              ? Border.all(color: MockUI.gold, width: 1.5)
-              : Border.all(color: MockUI.actionBorder, width: 1),
-          boxShadow: selected
-              ? [
-                  BoxShadow(
-                    color: MockUI.gold.withValues(alpha: 0.18),
-                    blurRadius: 0,
-                    offset: const Offset(0, 3),
-                  ),
-                ]
-              : null,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              size: 18,
-              color: selected ? const Color(0xFF73510B) : MockUI.blue,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              style.label,
-              style: TextStyle(
-                fontSize: 11.5,
-                fontWeight: FontWeight.w800,
-                color: selected ? const Color(0xFF73510B) : MockUI.softInk,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   /// 야생 조우 카드 — 걷다가 만난 야생 펫과 싸우거나 도망
   Widget _buildWildEncounterCard(dynamic pet, SpeciesTheme theme) {
