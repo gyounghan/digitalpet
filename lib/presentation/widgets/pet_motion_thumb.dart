@@ -4,6 +4,7 @@ import '../../core/utils/pet_image_helper.dart';
 import '../../domain/entities/evolution_type.dart';
 import 'pixel_motion_animation.dart';
 import 'pixel_pet_image.dart';
+import 'frame_pet_animation.dart';
 
 /// 펫 대표 썸네일 — 도트 모션의 대표 프레임(walk 1프레임)을 그린다.
 ///
@@ -46,6 +47,27 @@ class PetMotionThumb extends StatelessWidget {
               fontWeight: FontWeight.w800,
               color: DesignTokens.ink3,
             ),
+          ),
+        ),
+      );
+    }
+
+    // 1순위: AI/자체 프레임이 있으면 대표(첫) 프레임을 고퀄 정지 이미지로
+    // (썸네일은 애니메이션 대신 정지 프레임 — 다중 렌더 비용 절약).
+    final animKey = animKeyFor(type, stage, PixelMotion.walk);
+    if (animKey != null) {
+      final pad = size * 0.05;
+      return SizedBox(
+        width: size,
+        height: size,
+        child: Padding(
+          padding: EdgeInsets.all(pad),
+          child: Image.asset(
+            'assets/anim/${animKey}_0.png',
+            width: size - pad * 2,
+            height: size - pad * 2,
+            fit: BoxFit.contain,
+            filterQuality: FilterQuality.none,
           ),
         ),
       );

@@ -5,6 +5,8 @@ import '../providers/pet_provider.dart';
 import '../providers/active_pet_provider.dart';
 import '../widgets/pet_image_animation.dart';
 import '../widgets/pixel_motion_animation.dart';
+import '../widgets/frame_pet_animation.dart';
+import '../../core/anim/anim_manifest.dart';
 import '../../core/theme/species_theme.dart';
 import '../../core/constants/app_strings.dart';
 import '../../domain/entities/pet.dart';
@@ -562,9 +564,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   ///
   /// 모든 단계가 mood 기반 도트 모션 루프 + 액션 시 일시 모션(밥먹기).
   Widget _buildPetSprite(Pet pet, SpeciesTheme theme) {
+    final motion = _transientMotion ?? motionForMood(pet.mood);
+    // 1순위: AI/자체 제작 프레임 애니메이션 (있으면 도트 대신 사용)
+    final animKey = animKeyFor(pet.evolutionType, pet.evolutionStage, motion);
+    if (animKey != null) {
+      return SizedBox(
+        width: 236,
+        height: 236,
+        child: Align(
+          alignment: Alignment.bottomCenter,
+          child: FramePetAnimation(
+            animKey: animKey,
+            frameCount: animFrameCounts[animKey]!,
+            width: 220,
+            height: 220,
+          ),
+        ),
+      );
+    }
+    // 2·3순위: 도트 모션 → 정적 이미지 폴백
     final spriteKey = _motionSpriteKey(pet);
     if (spriteKey != null) {
-      final motion = _transientMotion ?? motionForMood(pet.mood);
       // 털뭉치=베이지, 일반종=자연색(개체 변이), 사신수/그 외=테마색
       final (dotColor, accentColor) = dotColorsForKey(
         spriteKey,
