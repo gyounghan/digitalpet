@@ -59,6 +59,7 @@ class WidgetService {
   static const String _keyDotAccent3 = 'dotAccent3';
   // AI/자체 프레임 애니메이션 키 (예: 'gumiho_2_walk'). 비면 도트 렌더.
   static const String _keyAnimKey = 'animKey';
+  static const String _keyAnimFrames = 'animFrames'; // 프레임 수(위젯 플리퍼 샘플용)
 
   /// 펫 데이터를 위젯에 업데이트
   /// 
@@ -119,7 +120,10 @@ class WidgetService {
       final animKey = _frameAnimKey(pet, widgetMotion) ??
           _frameAnimKey(pet, PixelMotion.walk) ??
           '';
+      final animFrames = animKey.isEmpty ? 0 : (animFrameCounts[animKey] ?? 0);
       await HomeWidget.saveWidgetData<String>(_keyAnimKey, animKey);
+      await HomeWidget.saveWidgetData<String>(
+          _keyAnimFrames, animFrames.toString());
       await HomeWidget.saveWidgetData<String>(_keyDotDark, _colorHex(dark));
       await HomeWidget.saveWidgetData<String>(_keyDotBody, _colorHex(body));
       await HomeWidget.saveWidgetData<String>(_keyDotAccent, _colorHex(accent));

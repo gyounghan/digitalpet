@@ -387,8 +387,8 @@ class PetWidgetProvider : AppWidgetProvider() {
         //    프레임 없는 종/단계는 animKey가 비어 아래 도트 렌더로 폴백.
         val animKey = getWidgetString(context, "animKey", null)?.takeIf { it.isNotBlank() }
         if (animKey != null) {
-            val bmp = loadFrameBitmap(context, animKey)
-            if (bmp != null) return applyStaticDotBitmap(views, bmp)
+            val animCount = getWidgetString(context, "animFrames", "0")?.toIntOrNull() ?: 0
+            if (applyFrameAnimation(context, views, animKey, animCount)) return true
         }
 
         val evolutionType = getWidgetString(context, "evolutionType", null)
@@ -443,16 +443,49 @@ class PetWidgetProvider : AppWidgetProvider() {
         return applyStaticDotBitmap(views, bitmap)
     }
 
-    /// flutter_assets의 프레임 대표 PNG(_0)를 Bitmap으로 로드. 실패 시 null.
-    /// (앱과 동일한 assets/anim/{키}_0.png — Flutter 번들 경로로 접근)
-    private fun loadFrameBitmap(context: Context, animKey: String): Bitmap? {
-        val path = "flutter_assets/assets/anim/${animKey}_0.png"
+    /// flutter_assets의 프레임 PNG를 Bitmap으로 로드. 실패 시 null.
+    /// (앱과 동일한 assets/anim/{키}_{index}.png — Flutter 번들 경로로 접근)
+    private fun loadFrameBitmap(context: Context, animKey: String, index: Int): Bitmap? {
+        val path = "flutter_assets/assets/anim/${animKey}_$index.png"
         return runCatching {
             context.assets.open(path).use { BitmapFactory.decodeStream(it) }
         }.getOrElse {
             Log.w("PetWidgetProvider", "프레임 에셋 로드 실패: $path", it)
             null
         }
+    }
+
+    /// 프레임 애니메이션을 위젯에 적용. 프레임을 3슬롯 ViewFlipper에 균등
+    /// 샘플해 넣으면 런처가 자동 순환 재생한다(앱 프로세스 없이 움직임).
+    /// [count]<=0이거나 로드 실패면 대표 프레임 1장 정지로 폴백.
+    private fun applyFrameAnimation(
+        context: Context,
+        views: RemoteViews,
+        animKey: String,
+        count: Int,
+    ): Boolean {
+        if (count <= 1) {
+            val bmp = loadFrameBitmap(context, animKey, 0) ?: return false
+            return applyStaticDotBitmap(views, bmp)
+        }
+        // 3슬롯용 균등 샘플 인덱스 (프레임이 3개 미만이면 있는 것만 반복)
+        val idxs = if (count >= 3) {
+            listOf(0, count / 3, (count * 2) / 3)
+        } else {
+            List(3) { minOf(it, count - 1) }
+        }
+        val bmps = idxs.map { loadFrameBitmap(context, animKey, it) }
+        if (bmps.any { it == null }) {
+            val bmp = bmps.firstOrNull { it != null }
+                ?: loadFrameBitmap(context, animKey, 0) ?: return false
+            return applyStaticDotBitmap(views, bmp)
+        }
+        val frameIds = listOf(R.id.pet_frame_0, R.id.pet_frame_1, R.id.pet_frame_2)
+        frameIds.forEachIndexed { i, viewId -> views.setImageViewBitmap(viewId, bmps[i]) }
+        views.setViewVisibility(R.id.pet_flipper, android.view.View.VISIBLE)
+        views.setViewVisibility(R.id.pet_image, android.view.View.GONE)
+        views.setViewVisibility(R.id.pet_image_text, android.view.View.GONE)
+        return true
     }
 
     /// 정지 도트 비트맵을 표시 상태로 적용
