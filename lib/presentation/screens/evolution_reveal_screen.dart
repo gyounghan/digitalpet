@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/constants/app_strings.dart';
 import '../../core/theme/species_theme.dart';
+import '../../core/utils/pose_sheet.dart';
 import '../../domain/entities/evolution_type.dart';
 import '../../domain/entities/pet.dart';
 import '../widgets/pixel_motion_animation.dart';
@@ -98,6 +99,8 @@ class _EvolutionRevealScreenState extends State<EvolutionRevealScreen>
       theme,
       pet.colorVariant,
     );
+    // 손수 보정한 포즈시트가 있으면 그대로, 없으면 도트 모션 폴백.
+    final posePath = poseSheetAssetFor(pet.evolutionType, pet.evolutionStage);
     final stageLabel = AppStrings.stageLabels[pet.evolutionStage] ?? '';
     final formName = _formName;
 
@@ -128,15 +131,23 @@ class _EvolutionRevealScreenState extends State<EvolutionRevealScreen>
                           ),
                         ),
                         child: Center(
-                          child: PixelMotionAnimation(
-                            spriteKey: spriteKey,
-                            motion: PixelMotion.joy,
-                            width: 210,
-                            height: 210,
-                            dotColor: dotColor,
-                            accentColor: accentColor,
-                            colorVariant: pet.colorVariant,
-                          ),
+                          child: posePath != null
+                              ? Image.asset(
+                                  posePath,
+                                  width: 210,
+                                  height: 210,
+                                  fit: BoxFit.contain,
+                                  filterQuality: FilterQuality.none,
+                                )
+                              : PixelMotionAnimation(
+                                  spriteKey: spriteKey,
+                                  motion: PixelMotion.joy,
+                                  width: 210,
+                                  height: 210,
+                                  dotColor: dotColor,
+                                  accentColor: accentColor,
+                                  colorVariant: pet.colorVariant,
+                                ),
                         ),
                       ),
                     ),

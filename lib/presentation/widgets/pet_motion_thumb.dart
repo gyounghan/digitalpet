@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/species_theme.dart';
 import '../../core/utils/pet_image_helper.dart';
+import '../../core/utils/pose_sheet.dart';
 import '../../domain/entities/evolution_type.dart';
 import 'pixel_motion_animation.dart';
 import 'pixel_pet_image.dart';
@@ -52,7 +53,27 @@ class PetMotionThumb extends StatelessWidget {
       );
     }
 
-    // 1순위: AI/자체 프레임이 있으면 대표(첫) 프레임을 고퀄 정지 이미지로
+    // 1순위: 손수 보정한 정적 포즈시트(assets/pets)가 있으면 그대로 표시.
+    final posePath = poseSheetAssetFor(type, stage);
+    if (posePath != null) {
+      final pad = size * 0.05;
+      return SizedBox(
+        width: size,
+        height: size,
+        child: Padding(
+          padding: EdgeInsets.all(pad),
+          child: Image.asset(
+            posePath,
+            width: size - pad * 2,
+            height: size - pad * 2,
+            fit: BoxFit.contain,
+            filterQuality: FilterQuality.none,
+          ),
+        ),
+      );
+    }
+
+    // 2순위: AI/자체 걷기 프레임이 있으면 대표(첫) 프레임을 고퀄 정지 이미지로
     // (썸네일은 애니메이션 대신 정지 프레임 — 다중 렌더 비용 절약).
     final animKey = animKeyFor(type, stage, PixelMotion.walk);
     if (animKey != null) {
