@@ -44,7 +44,10 @@ class UpdatePetStateUseCase {
   static const int staminaIntervalMinutes = 40;
 
   /// 수치별 감소량
-  static const int hungerDecreasePerInterval = 2;
+  /// 포만감은 다마고치식 방치 긴장감의 축 — 낮 60분당 -3(밤 -1)이면
+  /// 만복(100)에서 약 2일 만에 0에 닿고, 이후 1일(deathThresholdDays)
+  /// 유예가 지나면 긴 잠에 든다. 즉 ~3일 완전 방치 = 긴 잠.
+  static const int hungerDecreasePerInterval = 3;
   static const int happinessDecreasePerInterval = 1;
   static const int staminaDecreasePerInterval = 1;
 

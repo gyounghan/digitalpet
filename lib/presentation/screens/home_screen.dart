@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/pet_provider.dart';
@@ -42,6 +43,32 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   PixelMotion? _transientMotion;
   Timer? _transientTimer;
 
+  /// 대기 모션 시나리오 — 일정 주기로 mood별 풀에서 가중 랜덤으로 갈아끼워
+  /// "걷기만 반복"을 깬다. [_idleMood]가 현재 mood와 다르면 무시하고
+  /// mood 기본 모션으로 폴백한다 (감정 변화 즉시 반영).
+  PixelMotion? _idleMotion;
+  PetMood? _idleMood;
+  Timer? _idleTimer;
+  final math.Random _idleRandom = math.Random();
+
+  @override
+  void initState() {
+    super.initState();
+    // 모션 1사이클 900ms — 15사이클(13.5초)마다 대기 모션을 다시 뽑는다.
+    _idleTimer = Timer.periodic(const Duration(milliseconds: 13500), (_) {
+      final pet = ref.read(petNotifierProvider(_activePetId)).valueOrNull;
+      if (pet == null || !mounted) return;
+      setState(() {
+        _idleMood = pet.mood;
+        _idleMotion = pickIdleMotion(
+          pet.mood,
+          DateTime.now().hour,
+          _idleRandom.nextInt(100),
+        );
+      });
+    });
+  }
+
   /// 종 결정 연출 중복 방지 — 플래그 확인/연출이 끝났으면 true
   bool _speciesRevealHandled = false;
   bool _speciesRevealChecking = false;
@@ -60,6 +87,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   void dispose() {
     _transientTimer?.cancel();
+    _idleTimer?.cancel();
     for (final timer in _goalFlashTimers.values) {
       timer.cancel();
     }
@@ -335,18 +363,31 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 460),
           child: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+            // 펫 무대가 좌우 끝까지 차도록 리스트 자체는 무여백,
+            // 무대 외 섹션만 개별로 좌우 16을 준다.
+            padding: const EdgeInsets.fromLTRB(0, 16, 0, 14),
             children: [
-              _buildScreenTop(context, ref, pet),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: _buildScreenTop(context, ref, pet),
+              ),
               const SizedBox(height: 10),
               _buildPetStage(pet, theme),
               const SizedBox(height: 10),
-              SyncPermissionBanner(theme: theme),
-              if (pet.todayEvent.isNotEmpty && pet.todayEvent != 'normal')
-                _buildEventBanner(pet, theme),
-              _buildStatusGrid(pet),
-              const SizedBox(height: 10),
-              _buildActionGrid(ref, pet),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    SyncPermissionBanner(theme: theme),
+                    if (pet.todayEvent.isNotEmpty && pet.todayEvent != 'normal')
+                      _buildEventBanner(pet, theme),
+                    _buildStatusGrid(pet),
+                    const SizedBox(height: 10),
+                    _buildActionGrid(ref, pet),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
@@ -452,54 +493,62 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Widget _buildPetStage(Pet pet, SpeciesTheme theme) {
-    // 시안 .pet-stage: 밝은 테두리 + 우상단 해(radial) +
-    // 하늘→풀밭 gradient + 좌상단 말풍선 + 하단 펫 + 바닥 그림자 타원.
+    // 펫 무대 — 좌우 여백 없는 풀블리드, 실제 시각에 따라
+    // 새벽/낮/노을/밤 하늘로 바뀐다. 바닥 그림자는 없앴다.
+    final phase = _DayPhase.now();
     return Container(
-      height: 340,
+      height: 420,
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: MockUI.stageBorder, width: 2),
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [
-            MockUI.stageSky,
-            MockUI.stageMid,
-            MockUI.stageGrass,
-            MockUI.stageGrass,
-          ],
-          stops: [0.0, 0.64, 0.65, 1.0],
+          colors: [phase.skyTop, phase.skyMid, phase.grass, phase.grass],
+          stops: const [0.0, 0.66, 0.67, 1.0],
         ),
       ),
       child: Stack(
         children: [
-          // 우상단 해 (radial 22px)
+          // 밤·새벽 별
+          if (phase.showStars)
+            for (final (dx, dy, size) in const [
+              (0.12, 0.10, 3.0),
+              (0.30, 0.22, 2.0),
+              (0.52, 0.08, 2.5),
+              (0.70, 0.18, 2.0),
+              (0.86, 0.30, 3.0),
+              (0.42, 0.32, 2.0),
+            ])
+              Align(
+                alignment: Alignment(dx * 2 - 1, dy * 2 - 1),
+                child: Container(
+                  width: size,
+                  height: size,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withValues(alpha: 0.85),
+                  ),
+                ),
+              ),
+          // 우상단 해/달 (은은한 빛무리)
           Positioned(
-            top: 18,
-            right: 24,
+            top: 22,
+            right: 26,
             child: Container(
-              width: 34,
-              height: 34,
+              width: 36,
+              height: 36,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: MockUI.sun,
+                color: phase.celestial,
                 boxShadow: [
                   BoxShadow(
-                    color: MockUI.sun.withValues(alpha: 0.24),
+                    color: phase.celestial.withValues(alpha: 0.24),
                     blurRadius: 0,
-                    spreadRadius: 8,
+                    spreadRadius: 9,
                   ),
                 ],
               ),
             ),
-          ),
-          // 바닥 그림자 타원 (::after — right28 bottom20 left44 height16)
-          const Positioned(
-            left: 44,
-            right: 28,
-            bottom: 20,
-            child: _StageShadow(),
           ),
           // 펫 — 하단 중앙, 톡 건드리면 반응
           Align(
@@ -511,10 +560,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
           // 좌상단 말풍선 (기분 대사)
           Positioned(
-            top: 44,
+            top: 40,
             left: 18,
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 185),
+              constraints: const BoxConstraints(maxWidth: 195),
               child: Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 13,
@@ -524,13 +573,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   color: MockUI.speechBg,
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: MockUI.speechBorder),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x1A382D1E),
-                      blurRadius: 18,
-                      offset: Offset(0, 10),
-                    ),
-                  ],
                 ),
                 child: Text(
                   _moodMessage(pet.mood),
@@ -560,20 +602,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   ///
   /// 모든 단계가 mood 기반 도트 모션 루프 + 액션 시 일시 모션(밥먹기).
   Widget _buildPetSprite(Pet pet, SpeciesTheme theme) {
-    final motion = _transientMotion ?? motionForMood(pet.mood);
+    // 우선순위: 일시 모션(밥/톡) > 대기 시나리오 모션 > mood 기본 모션.
+    // 시나리오 모션은 뽑았을 때의 mood와 현재 mood가 같을 때만 유효.
+    final idle = (_idleMood == pet.mood) ? _idleMotion : null;
+    final motion = _transientMotion ?? idle ?? motionForMood(pet.mood);
     // 1순위: AI/자체 제작 프레임 애니메이션 (있으면 도트 대신 사용)
     final animKey = animKeyFor(pet.evolutionType, pet.evolutionStage, motion);
     if (animKey != null) {
       return SizedBox(
-        width: 236,
-        height: 236,
+        width: 316,
+        height: 316,
         child: Align(
           alignment: Alignment.bottomCenter,
           child: FramePetAnimation(
             animKey: animKey,
             frameCount: animFrameCounts[animKey]!,
-            width: 220,
-            height: 220,
+            width: 300,
+            height: 300,
           ),
         ),
       );
@@ -589,15 +634,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         colorVariantFor(pet),
       );
       return SizedBox(
-        width: 236,
-        height: 236,
+        width: 316,
+        height: 316,
         child: Align(
           alignment: Alignment.bottomCenter,
           child: PixelMotionAnimation(
             spriteKey: spriteKey,
             motion: motion,
-            width: 220,
-            height: 220,
+            width: 300,
+            height: 300,
             dotColor: dotColor,
             accentColor: accentColor,
             colorVariant: colorVariantFor(pet),
@@ -691,9 +736,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             label: '물 주기',
             color: MockUI.blue,
             icon: Icons.local_drink_rounded,
-            enabled: pet.canDrinkWater,
+            enabled: pet.canDrinkWaterAt(DateTime.now().hour),
             onTap: () async {
               final before = pet.needsGoalReset ? 0 : pet.todayWaterCount;
+              if (_motionSpriteKey(pet) != null) {
+                _playTransientMotion(PixelMotion.eat);
+              }
               final applied = await ref
                   .read(petNotifierProvider(_activePetId).notifier)
                   .performDrinkWater();
@@ -845,15 +893,6 @@ class _ActionTile extends StatelessWidget {
                   ? color.withValues(alpha: 0.72)
                   : MockUI.actionBorder,
             ),
-            boxShadow: [
-              BoxShadow(
-                color: primary
-                    ? color.withValues(alpha: 0.28)
-                    : MockUI.blue.withValues(alpha: 0.16),
-                blurRadius: 0,
-                offset: const Offset(0, 4),
-              ),
-            ],
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -904,13 +943,6 @@ class _CoinPill extends StatelessWidget {
         color: MockUI.goldSoft,
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: MockUI.gold.withValues(alpha: 0.72)),
-        boxShadow: [
-          BoxShadow(
-            color: MockUI.gold.withValues(alpha: 0.18),
-            blurRadius: 0,
-            offset: const Offset(0, 3),
-          ),
-        ],
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -943,20 +975,65 @@ class _CoinPill extends StatelessWidget {
   }
 }
 
-/// 시안 펫 무대 바닥 그림자 타원 (::after — height 16, rgba(102,92,71,0.12)).
-class _StageShadow extends StatelessWidget {
-  const _StageShadow();
+/// 실제 시각 기반 무대 배경 팔레트 — 새벽(04–07) / 낮(07–17) /
+/// 노을(17–20) / 밤(20–04). 하늘·풀밭·해/달 색과 별 표시를 담는다.
+class _DayPhase {
+  final Color skyTop;
+  final Color skyMid;
+  final Color grass;
+  final Color celestial; // 해 또는 달
+  final bool showStars;
 
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 16,
-      decoration: BoxDecoration(
-        color: const Color(0x1F665C47),
-        borderRadius: BorderRadius.circular(999),
-      ),
+  const _DayPhase({
+    required this.skyTop,
+    required this.skyMid,
+    required this.grass,
+    required this.celestial,
+    required this.showStars,
+  });
+
+  static _DayPhase of(int hour) {
+    if (hour >= 4 && hour < 7) {
+      // 새벽 — 어스름한 남보라에서 밝아오는 하늘
+      return const _DayPhase(
+        skyTop: Color(0xFF4A5580),
+        skyMid: Color(0xFFB8A8C8),
+        grass: Color(0xFF7FA85B),
+        celestial: Color(0xFFEDE8F5), // 지는 달
+        showStars: true,
+      );
+    }
+    if (hour >= 7 && hour < 17) {
+      // 낮 — 기존 밝은 하늘
+      return const _DayPhase(
+        skyTop: MockUI.stageSky,
+        skyMid: MockUI.stageMid,
+        grass: MockUI.stageGrass,
+        celestial: MockUI.sun,
+        showStars: false,
+      );
+    }
+    if (hour >= 17 && hour < 20) {
+      // 노을 — 주황·분홍으로 물드는 하늘
+      return const _DayPhase(
+        skyTop: Color(0xFFFF9E6D),
+        skyMid: Color(0xFFFFD9A8),
+        grass: Color(0xFFA8C45E),
+        celestial: Color(0xFFFF8B3D), // 붉은 해
+        showStars: false,
+      );
+    }
+    // 밤 — 짙은 남색 하늘 + 달 + 별
+    return const _DayPhase(
+      skyTop: Color(0xFF1E2A4A),
+      skyMid: Color(0xFF3A4A73),
+      grass: Color(0xFF4E6B3E),
+      celestial: Color(0xFFF5F0DC), // 달
+      showStars: true,
     );
   }
+
+  static _DayPhase now() => of(DateTime.now().hour);
 }
 
 /// 시안 .meter — 8px 트랙(meterTrack) + 채움 바.

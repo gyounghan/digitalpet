@@ -62,6 +62,72 @@ PixelMotion motionForMood(PetMood mood) {
   }
 }
 
+/// mood·시각별 대기 모션 시나리오 — (모션, 가중치) 풀.
+///
+/// 홈 화면은 이 풀에서 주기적으로 하나를 뽑아 재생해 "걷기만 반복"을
+/// 깨고 교감 느낌을 준다. 설계 원칙:
+/// - 그 감정의 대표 모션이 절반 이상을 차지해 상태가 읽히게 한다.
+/// - 밤(22~06시)에는 어떤 기분이든 잠드는 모습이 크게 늘어난다.
+/// - 포효(attack)·회피(dodge)는 "살아있다"는 양념으로 낮은 확률만 준다.
+List<(PixelMotion, int)> idleMotionPool(PetMood mood, int hour) {
+  final isNight = hour >= 22 || hour < 6;
+  switch (mood) {
+    case PetMood.happy:
+      return isNight
+          ? [(PixelMotion.sleep, 40), (PixelMotion.joy, 35), (PixelMotion.walk, 25)]
+          : [
+              (PixelMotion.joy, 45),
+              (PixelMotion.walk, 30),
+              (PixelMotion.attack, 15), // 신나서 한 번 포효
+              (PixelMotion.dodge, 10), // 폴짝 노는 느낌
+            ];
+    case PetMood.normal:
+      return isNight
+          ? [(PixelMotion.sleep, 50), (PixelMotion.walk, 35), (PixelMotion.joy, 15)]
+          : [
+              (PixelMotion.walk, 45),
+              (PixelMotion.joy, 20),
+              (PixelMotion.attack, 15),
+              (PixelMotion.dodge, 10),
+              (PixelMotion.eat, 10), // 간식 냄새 킁킁
+            ];
+    case PetMood.hungry:
+      return [
+        (PixelMotion.hungry, 60),
+        (PixelMotion.angry, 20), // 밥 늦다고 삐침
+        (PixelMotion.walk, 20),
+      ];
+    case PetMood.sleepy:
+    case PetMood.tired:
+      return [
+        (PixelMotion.sleep, 65),
+        (PixelMotion.hurt, 20), // 축 처짐
+        (PixelMotion.walk, 15),
+      ];
+    case PetMood.sad:
+      return [
+        (PixelMotion.hurt, 50),
+        (PixelMotion.angry, 20),
+        (PixelMotion.sleep, 15),
+        (PixelMotion.walk, 15),
+      ];
+    case PetMood.dead:
+      return [(PixelMotion.sleep, 100)]; // 긴 잠
+  }
+}
+
+/// [idleMotionPool]에서 가중 랜덤으로 하나 뽑기. [roll]은 0..(가중치 합-1).
+PixelMotion pickIdleMotion(PetMood mood, int hour, int roll) {
+  final pool = idleMotionPool(mood, hour);
+  final total = pool.fold(0, (s, e) => s + e.$2);
+  var r = roll % total;
+  for (final (motion, weight) in pool) {
+    if (r < weight) return motion;
+    r -= weight;
+  }
+  return pool.first.$1;
+}
+
 /// 스프라이트 키/모션에 해당하는 프레임 조회 (없으면 null)
 List<PixelSprite>? motionFramesFor(String spriteKey, PixelMotion motion) {
   return motionFrames[spriteKey]?[motion.name];

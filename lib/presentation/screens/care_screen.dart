@@ -166,18 +166,6 @@ class _CareScreenState extends ConsumerState<CareScreen> {
               ),
             ),
           ),
-          Positioned(
-            left: 14,
-            right: 22,
-            bottom: 12,
-            child: Container(
-              height: 14,
-              decoration: BoxDecoration(
-                color: const Color(0x2134444F),
-                borderRadius: BorderRadius.circular(999),
-              ),
-            ),
-          ),
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
@@ -284,13 +272,6 @@ class _CareScreenState extends ConsumerState<CareScreen> {
         color: MockUI.cardBg,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: theme.primary.withValues(alpha: 0.24)),
-        boxShadow: [
-          BoxShadow(
-            color: MockUI.lineStrong.withValues(alpha: 0.12),
-            blurRadius: 0,
-            offset: const Offset(0, 5),
-          ),
-        ],
       ),
       child: Column(
         children: [
@@ -761,15 +742,6 @@ class _CareScreenState extends ConsumerState<CareScreen> {
               ? MockUI.green.withValues(alpha: 0.35)
               : MockUI.blue.withValues(alpha: 0.32),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: (complete ? MockUI.green : MockUI.blue).withValues(
-              alpha: 0.1,
-            ),
-            blurRadius: 0,
-            offset: const Offset(0, 4),
-          ),
-        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

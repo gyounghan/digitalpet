@@ -700,13 +700,37 @@ class Pet {
   /// 하루 수분 목표 (물마시기 잔 수) — 성인 권장 8잔
   static const int waterGoalCount = 8;
 
-  /// 오늘 남은 물마시기 횟수
+  /// 물잔 해금 시작 시각 — 기상 06시에 1잔부터 시작한다
+  static const int waterUnlockStartHour = 6;
+
+  /// 물잔 해금 간격(시간) — 2시간마다 1잔씩 열린다 (연타 방지)
+  static const int waterUnlockIntervalHours = 2;
+
+  /// 지금 시각까지 해금된 물잔 수 (06시 1잔 → 2시간마다 +1, 최대 8잔).
+  /// 06시 이전 새벽에는 1잔만 허용한다.
+  static int unlockedWaterSlots(int hour) {
+    if (hour < waterUnlockStartHour) return 1;
+    return ((hour - waterUnlockStartHour) ~/ waterUnlockIntervalHours + 1)
+        .clamp(1, waterGoalCount);
+  }
+
+  /// 오늘 남은 물마시기 횟수 (하루 총량 기준)
   int get remainingWaterDrinks =>
       (waterGoalCount - (needsGoalReset ? 0 : todayWaterCount))
           .clamp(0, waterGoalCount);
 
-  /// 물마시기 가능 여부 (오늘 목표 미달)
+  /// 물마시기 가능 여부 (하루 총량 기준 — 유스케이스 안전장치)
   bool get canDrinkWater => remainingWaterDrinks > 0;
+
+  /// [hour] 시각 기준 물마시기 가능 여부 — 총량 + 시간 슬롯 해금 둘 다
+  /// 통과해야 한다. UI 버튼 활성화에 쓴다.
+  /// (해금 슬롯제: 실제 수분 섭취 습관처럼 하루에 걸쳐 나눠 마시게 하고,
+  ///  버튼 연타로 한 번에 8잔을 소진하는 것을 막는다)
+  bool canDrinkWaterAt(int hour) {
+    if (remainingWaterDrinks <= 0) return false;
+    final drunk = needsGoalReset ? 0 : todayWaterCount;
+    return drunk < unlockedWaterSlots(hour);
+  }
 
   /// 하루 집중 세션 목표 (25분 × N) — 4회(총 100분)
   static const int focusGoalCount = 4;
