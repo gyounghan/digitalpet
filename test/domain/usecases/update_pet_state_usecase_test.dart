@@ -173,8 +173,8 @@ void main() {
         ));
 
         final result = await useCase('test');
-        // hunger: 60분 경계 2회 × 2 = -4
-        expect(result.hunger, 96);
+        // hunger: 60분 경계 2회 × 3 = -6 (다마고치식 방치 긴장감 밸런스)
+        expect(result.hunger, 94);
         // happiness: 60분 경계 2회 × 1 = -2
         expect(result.happiness, 98);
         // stamina: 40분 경계 3회 × 1 = -3
@@ -221,8 +221,8 @@ void main() {
 
         final result = await useCase('test');
         // crisisMultiplier = 2.0
-        // hunger: 2회 × 2 × 2.0 = -8 → max(10-8, 0) = 2
-        expect(result.hunger, 2);
+        // hunger: 2회 × 3 × 2.0 = -12 → max(10-12, 0) = 0
+        expect(result.hunger, 0);
         // happiness: 2회 × 1 × 2.0 = -4 → max(10-4, 0) = 6
         expect(result.happiness, 6);
         // stamina: 3회 × 1 × 2.0 = -6 → max(50-6, 0) = 44
@@ -243,8 +243,8 @@ void main() {
         ));
 
         final result = await useCase('test');
-        // hunger: 2회 × 2 × 0.5 = -2
-        expect(result.hunger, 98);
+        // hunger: 2회 × 3 × 0.5 = -3
+        expect(result.hunger, 97);
         // happiness: 2회 × 1 × 0.5 = -1
         expect(result.happiness, 99);
         // stamina: 3회 × 1 × 0.5 = 1.5 → round = -2
@@ -266,7 +266,7 @@ void main() {
         ));
 
         final result = await useCase('test');
-        expect(result.hunger, 96);
+        expect(result.hunger, 94);
         expect(result.happiness, 98);
         expect(result.stamina, 97);
       }

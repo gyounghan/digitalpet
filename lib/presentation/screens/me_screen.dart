@@ -190,13 +190,16 @@ class _MeScreenState extends ConsumerState<MeScreen> {
                 const SizedBox(height: 12),
                 MockDisclosureButton(
                   title: '도감 더보기',
-                  subtitle: '전적 · 누적 기록 · 계정',
+                  subtitle: '전체 종 도감 · 전적 · 계정',
                   expanded: _showDexDetails,
                   onTap: () =>
                       setState(() => _showDexDetails = !_showDexDetails),
                 ),
                 if (_showDexDetails) ...[
                   const SizedBox(height: 12),
+                  const SectionTitle(title: '전체 도감', trailing: '발견 · 미발견'),
+                  _buildSpeciesDex(),
+                  const SizedBox(height: 14),
                   _buildBattleStats(pet, theme),
                   const SizedBox(height: 10),
                   _buildLifetimeStats(pet, theme),
@@ -587,6 +590,51 @@ class _MeScreenState extends ConsumerState<MeScreen> {
       case null:
         return ['미결정'];
     }
+  }
+
+  /// 전체 종 도감 — 발견/미발견 펫을 카드 그리드로 보여준다.
+  /// 발견 기준: 내가 키우는(키웠던) 펫들의 종. 발견한 종은 속성 태그를 노출한다.
+  Widget _buildSpeciesDex() {
+    final repo = ref.read(petRepositoryProvider);
+    return FutureBuilder<List<Pet>>(
+      future: repo.getAllPets(),
+      builder: (context, snapshot) {
+        final pets = snapshot.data ?? const <Pet>[];
+        // 종별 발견 여부 + 발견한 종의 최고 성장 단계(썸네일용)
+        final discovered = <EvolutionType, int>{};
+        for (final p in pets) {
+          final type = p.evolutionType;
+          if (type == null) continue;
+          final stage = p.evolutionStage.clamp(2, 4);
+          final prev = discovered[type];
+          if (prev == null || stage > prev) discovered[type] = stage;
+        }
+        final types = EvolutionType.values;
+        return GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 3,
+            mainAxisSpacing: 8,
+            crossAxisSpacing: 8,
+            childAspectRatio: 0.74,
+          ),
+          itemCount: types.length,
+          itemBuilder: (context, i) {
+            final type = types[i];
+            final stage = discovered[type];
+            return stage == null
+                ? const _UndiscoveredSpeciesCard()
+                : _DiscoveredSpeciesCard(
+                    type: type,
+                    stage: stage,
+                    label: SpeciesTheme.labelFor(type),
+                    tags: _speciesTags(type),
+                  );
+          },
+        );
+      },
+    );
   }
 
   /// 수집 그리드 — 키우는 펫 슬롯(최대 [kMaxPets]). 탭하면 활성 펫 전환,
@@ -1504,6 +1552,150 @@ class _MeScreenState extends ConsumerState<MeScreen> {
       buf.write(s[i]);
     }
     return buf.toString();
+  }
+}
+
+/// 전체 도감 — 발견한 종 카드 (썸네일 + 이름 + 속성 태그)
+class _DiscoveredSpeciesCard extends StatelessWidget {
+  final EvolutionType type;
+  final int stage;
+  final String label;
+  final List<String> tags;
+
+  const _DiscoveredSpeciesCard({
+    required this.type,
+    required this.stage,
+    required this.label,
+    required this.tags,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = SpeciesTheme.forType(type);
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      padding: const EdgeInsets.fromLTRB(6, 8, 6, 8),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [MockUI.stageSky, theme.primarySoft, MockUI.cardBg],
+        ),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: theme.primaryDeep.withValues(alpha: 0.45)),
+      ),
+      child: Column(
+        children: [
+          Expanded(
+            child: Center(
+              child: PetMotionThumb(type: type, stage: stage, size: 52),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w800,
+              color: MockUI.ink,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Wrap(
+            spacing: 3,
+            runSpacing: 3,
+            alignment: WrapAlignment.center,
+            children: [
+              for (final tag in tags)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 5,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: theme.primarySoft,
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(
+                      color: theme.primaryDeep.withValues(alpha: 0.35),
+                    ),
+                  ),
+                  child: Text(
+                    tag,
+                    style: TextStyle(
+                      fontSize: 8.5,
+                      fontWeight: FontWeight.w800,
+                      color: theme.primaryDeep,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 전체 도감 — 아직 만나지 못한 종 카드 (실루엣 '?' 표시)
+class _UndiscoveredSpeciesCard extends StatelessWidget {
+  const _UndiscoveredSpeciesCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(6, 8, 6, 8),
+      decoration: BoxDecoration(
+        color: MockUI.cardBg,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: MockUI.line),
+      ),
+      child: Column(
+        children: [
+          Expanded(
+            child: Center(
+              child: Container(
+                width: 44,
+                height: 44,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Color(0xFFE9E4D8),
+                ),
+                child: const Center(
+                  child: Text(
+                    '?',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w900,
+                      color: MockUI.muted,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            '미발견',
+            style: TextStyle(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w800,
+              color: MockUI.muted,
+            ),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            '???',
+            style: TextStyle(
+              fontSize: 8.5,
+              fontWeight: FontWeight.w800,
+              color: MockUI.muted,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

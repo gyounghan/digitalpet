@@ -364,8 +364,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           constraints: const BoxConstraints(maxWidth: 460),
           child: ListView(
             // 펫 무대가 좌우 끝까지 차도록 리스트 자체는 무여백,
-            // 무대 외 섹션만 개별로 좌우 16을 준다.
-            padding: const EdgeInsets.fromLTRB(0, 16, 0, 14),
+            // 무대 외 섹션만 개별로 좌우 16을 준다. 하단 여백도 없앤다.
+            padding: const EdgeInsets.fromLTRB(0, 12, 0, 0),
             children: [
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -497,7 +497,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     // 새벽/낮/노을/밤 하늘로 바뀐다. 바닥 그림자는 없앴다.
     final phase = _DayPhase.now();
     return Container(
-      height: 420,
+      height: 480,
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -610,15 +610,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final animKey = animKeyFor(pet.evolutionType, pet.evolutionStage, motion);
     if (animKey != null) {
       return SizedBox(
-        width: 316,
-        height: 316,
+        width: 356,
+        height: 356,
         child: Align(
           alignment: Alignment.bottomCenter,
           child: FramePetAnimation(
             animKey: animKey,
             frameCount: animFrameCounts[animKey]!,
-            width: 300,
-            height: 300,
+            width: 340,
+            height: 340,
           ),
         ),
       );
@@ -634,15 +634,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         colorVariantFor(pet),
       );
       return SizedBox(
-        width: 316,
-        height: 316,
+        width: 356,
+        height: 356,
         child: Align(
           alignment: Alignment.bottomCenter,
           child: PixelMotionAnimation(
             spriteKey: spriteKey,
             motion: motion,
-            width: 300,
-            height: 300,
+            width: 340,
+            height: 340,
             dotColor: dotColor,
             accentColor: accentColor,
             colorVariant: colorVariantFor(pet),

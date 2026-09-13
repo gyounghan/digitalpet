@@ -96,6 +96,7 @@ class PetModelAdapter extends TypeAdapter<PetModel> {
       todayBattleAdBonus: fields[57] as int? ?? 0,
       todayOnlineBattleAdBonus: fields[58] as int? ?? 0,
       todayWaterCount: fields[59] as int? ?? 0,
+      lastWaterDrinkHour: fields[63] as int? ?? -1,
       todayFocusCount: fields[60] as int? ?? 0,
       waterAchievedCount: fields[61] as int? ?? 0,
       focusAchievedCount: fields[62] as int? ?? 0,
@@ -107,7 +108,7 @@ class PetModelAdapter extends TypeAdapter<PetModel> {
     // Hive에 데이터 쓰기
     // 필드 개수와 각 필드를 순서대로 저장
     writer
-      ..writeByte(63) // 필드 개수 (HiveField 0-62)
+      ..writeByte(64) // 필드 개수 (HiveField 0-63)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -233,7 +234,9 @@ class PetModelAdapter extends TypeAdapter<PetModel> {
       ..writeByte(61)
       ..write(obj.waterAchievedCount)
       ..writeByte(62)
-      ..write(obj.focusAchievedCount);
+      ..write(obj.focusAchievedCount)
+      ..writeByte(63)
+      ..write(obj.lastWaterDrinkHour);
   }
 
   @override

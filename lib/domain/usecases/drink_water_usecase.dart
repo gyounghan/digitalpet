@@ -18,29 +18,36 @@ class DrinkWaterUseCase {
   DrinkWaterUseCase(this.petRepository);
 
   /// 물 한 잔 마시기 — 적용되면 갱신된 Pet, 조건 미충족이면 원본 그대로
-  Future<Pet> call(String petId) async {
+  ///
+  /// 슬롯 해금(canDrinkWaterAt)까지 도메인에서 검증해 같은 슬롯에서
+  /// 두 잔을 연속으로 마시는 것을 원천 차단한다 (UI 우회 방지).
+  /// [now]는 테스트용 시계 주입 (기본: 현재 시각).
+  Future<Pet> call(String petId, {DateTime? now}) async {
     var pet = await petRepository.getPet(petId);
 
     if (pet.needsGoalReset) {
       pet = pet.resetDailyGoals();
     }
-    if (pet.isDead || !pet.canDrinkWater) return pet;
+    final nowTime = now ?? DateTime.now();
+    if (pet.isDead || !pet.canDrinkWaterAt(nowTime.hour)) return pet;
 
     final newCount = pet.todayWaterCount + 1;
     final reachedGoal = newCount == Pet.waterGoalCount;
 
     final updated = pet.copyWith(
       todayWaterCount: newCount,
+      lastWaterDrinkHour: nowTime.hour,
       stamina: (pet.stamina + staminaPerCup).clamp(0, 100),
       // 목표(8잔) 달성 순간에만 완료 보너스 EXP 1회 + 누적 달성(수달 각성 축)
       exp: reachedGoal ? pet.exp + completionExp : null,
       waterAchievedCount: reachedGoal ? pet.waterAchievedCount + 1 : null,
-      lastUpdated: DateTime.now().millisecondsSinceEpoch,
+      lastUpdated: nowTime.millisecondsSinceEpoch,
     );
 
     await petRepository.updatePet(updated);
     return updated;
   }
 
-  bool canUse(Pet pet) => !pet.isDead && pet.canDrinkWater;
+  bool canUse(Pet pet, {DateTime? now}) =>
+      !pet.isDead && pet.canDrinkWaterAt((now ?? DateTime.now()).hour);
 }

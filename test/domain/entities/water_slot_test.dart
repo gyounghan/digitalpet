@@ -7,7 +7,7 @@ String _today() {
       '${now.day.toString().padLeft(2, '0')}';
 }
 
-Pet _pet({int todayWaterCount = 0}) {
+Pet _pet({int todayWaterCount = 0, int lastWaterDrinkHour = -1}) {
   final now = DateTime.now().millisecondsSinceEpoch;
   return Pet(
     id: 'p',
@@ -21,6 +21,7 @@ Pet _pet({int todayWaterCount = 0}) {
     lastStatusDecayUpdated: now,
     lastGoalResetDate: _today(),
     todayWaterCount: todayWaterCount,
+    lastWaterDrinkHour: lastWaterDrinkHour,
   );
 }
 
@@ -53,6 +54,35 @@ void main() {
     test('canDrinkWater(총량)는 시간과 무관하게 8잔 미만이면 true', () {
       expect(_pet(todayWaterCount: 7).canDrinkWater, isTrue);
       expect(_pet(todayWaterCount: 8).canDrinkWater, isFalse);
+    });
+
+    test('같은 슬롯에서 연속 2잔은 불가 — 다음 슬롯이 열려야 가능', () {
+      // 정오(4잔 해금)에 1잔만 마신 상태(밀린 상태)라도,
+      // 방금(12시) 마셨다면 같은 슬롯이라 즉시 재음수 불가.
+      expect(
+        _pet(todayWaterCount: 1, lastWaterDrinkHour: 12).canDrinkWaterAt(12),
+        isFalse,
+      );
+      expect(
+        _pet(todayWaterCount: 1, lastWaterDrinkHour: 12).canDrinkWaterAt(13),
+        isFalse,
+      );
+      // 14시가 되면 새 슬롯(5번째)이 열려 다시 가능.
+      expect(
+        _pet(todayWaterCount: 1, lastWaterDrinkHour: 12).canDrinkWaterAt(14),
+        isTrue,
+      );
+    });
+
+    test('오늘 0잔이면 lastWaterDrinkHour(전날 값)는 무시된다', () {
+      expect(
+        _pet(todayWaterCount: 0, lastWaterDrinkHour: 22).canDrinkWaterAt(9),
+        isTrue,
+      );
+    });
+
+    test('기록 없음(-1)이면 기존 슬롯 규칙만 적용된다', () {
+      expect(_pet(todayWaterCount: 3).canDrinkWaterAt(12), isTrue);
     });
   });
 }

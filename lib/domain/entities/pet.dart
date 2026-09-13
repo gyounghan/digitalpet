@@ -102,6 +102,11 @@ class Pet {
   /// 오늘 물마시기 횟수 (일일 수분 목표 추적, 최대 waterGoalCount)
   final int todayWaterCount;
 
+  /// 마지막으로 물을 마신 시각(0~23시, 없으면 -1)
+  /// 같은 해금 슬롯에서 두 잔을 연속으로 마시는 것을 막는 데 쓴다.
+  /// todayWaterCount가 0이면 무시된다(전날 값이어도 무해).
+  final int lastWaterDrinkHour;
+
   /// 오늘 집중(뽀모도로) 완료 횟수 (일일 목표 추적, 최대 focusGoalCount)
   final int todayFocusCount;
 
@@ -307,6 +312,7 @@ class Pet {
     this.todayFeedCount = 0,
     this.todayFedMealSlots = 0,
     this.todayWaterCount = 0,
+    this.lastWaterDrinkHour = -1,
     this.todayFocusCount = 0,
     this.todaySleepHours = 0,
     this.todaySleepMinutes = 0,
@@ -375,6 +381,7 @@ class Pet {
     int? todayFeedCount,
     int? todayFedMealSlots,
     int? todayWaterCount,
+    int? lastWaterDrinkHour,
     int? todayFocusCount,
     int? todaySleepHours,
     int? todaySleepMinutes,
@@ -440,6 +447,7 @@ class Pet {
       todayFeedCount: todayFeedCount ?? this.todayFeedCount,
       todayFedMealSlots: todayFedMealSlots ?? this.todayFedMealSlots,
       todayWaterCount: todayWaterCount ?? this.todayWaterCount,
+      lastWaterDrinkHour: lastWaterDrinkHour ?? this.lastWaterDrinkHour,
       todayFocusCount: todayFocusCount ?? this.todayFocusCount,
       todaySleepHours: todaySleepHours ?? this.todaySleepHours,
       todaySleepMinutes: todaySleepMinutes ?? this.todaySleepMinutes,
@@ -672,6 +680,7 @@ class Pet {
     return copyWith(
       todayFedMealSlots: 0,
       todayWaterCount: 0,
+      lastWaterDrinkHour: -1,
       todayFocusCount: 0,
       todaySleepCount: 0,
       todayAlternativeFeedCount: 0,
@@ -726,10 +735,20 @@ class Pet {
   /// 통과해야 한다. UI 버튼 활성화에 쓴다.
   /// (해금 슬롯제: 실제 수분 섭취 습관처럼 하루에 걸쳐 나눠 마시게 하고,
   ///  버튼 연타로 한 번에 8잔을 소진하는 것을 막는다)
+  ///
+  /// 밀린 잔 몰아 마시기(연속 2잔)도 금지: 오늘 이미 마셨다면(lastWaterDrinkHour)
+  /// 그 시각의 해금 슬롯보다 새 슬롯이 열려야만 다음 잔이 가능하다.
   bool canDrinkWaterAt(int hour) {
     if (remainingWaterDrinks <= 0) return false;
     final drunk = needsGoalReset ? 0 : todayWaterCount;
-    return drunk < unlockedWaterSlots(hour);
+    if (drunk >= unlockedWaterSlots(hour)) return false;
+    // 오늘 마신 기록이 있으면(0잔이면 전날 값이므로 무시) 같은 슬롯 내 재음수 금지
+    if (drunk > 0 &&
+        lastWaterDrinkHour >= 0 &&
+        unlockedWaterSlots(lastWaterDrinkHour) >= unlockedWaterSlots(hour)) {
+      return false;
+    }
+    return true;
   }
 
   /// 하루 집중 세션 목표 (25분 × N) — 4회(총 100분)
@@ -835,6 +854,7 @@ class Pet {
       todayFeedCount: todayFeedCount,
       todayFedMealSlots: todayFedMealSlots,
       todayWaterCount: todayWaterCount,
+      lastWaterDrinkHour: lastWaterDrinkHour,
       todayFocusCount: todayFocusCount,
       todaySleepHours: todaySleepHours,
       todaySleepMinutes: todaySleepMinutes,
@@ -905,6 +925,7 @@ class Pet {
       todayFeedCount: todayFeedCount,
       todayFedMealSlots: todayFedMealSlots,
       todayWaterCount: todayWaterCount,
+      lastWaterDrinkHour: lastWaterDrinkHour,
       todayFocusCount: todayFocusCount,
       todaySleepHours: todaySleepHours,
       todaySleepMinutes: todaySleepMinutes,
@@ -966,6 +987,7 @@ class Pet {
       todayFeedCount: todayFeedCount,
       todayFedMealSlots: todayFedMealSlots,
       todayWaterCount: todayWaterCount,
+      lastWaterDrinkHour: lastWaterDrinkHour,
       todayFocusCount: todayFocusCount,
       todaySleepHours: todaySleepHours,
       todaySleepMinutes: todaySleepMinutes,
