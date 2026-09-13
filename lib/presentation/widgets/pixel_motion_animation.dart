@@ -23,6 +23,9 @@ List<Color>? hiddenPaletteForSpriteKey(String spriteKey, [int variant = 0]) {
 }
 
 /// 도트 모션 종류 (유아기 stage 2 / 성장기 stage 3 공통)
+///
+/// sad(시무룩)/drink(물마시기)/drowsy(졸림)는 AI 프레임 전용 신규 모션 —
+/// 도트 데이터가 없는 종은 [motionFramesFor]의 유사 모션 폴백으로 그린다.
 enum PixelMotion {
   walk,
   eat,
@@ -33,6 +36,9 @@ enum PixelMotion {
   angry,
   joy,
   hungry,
+  sad,
+  drink,
+  drowsy,
 }
 
 /// mood → 홈 화면 대기 모션 매핑
@@ -40,8 +46,8 @@ enum PixelMotion {
 /// - happy → joy (점프+반짝이)
 /// - normal → walk (뒤뚱뒤뚱)
 /// - hungry → hungry (침 흘리며 조름)
-/// - sleepy/tired → sleep (엎드려 ZZZ)
-/// - sad → hurt (시무룩), dead(긴 잠) → sleep
+/// - sleepy/tired → drowsy (선 채 꾸벅꾸벅+콧방울)
+/// - sad → sad (시무룩), dead(긴 잠) → sleep
 PixelMotion motionForMood(PetMood mood) {
   switch (mood) {
     case PetMood.happy:
@@ -51,11 +57,11 @@ PixelMotion motionForMood(PetMood mood) {
     case PetMood.hungry:
       return PixelMotion.hungry;
     case PetMood.sleepy:
-      return PixelMotion.sleep;
+      return PixelMotion.drowsy;
     case PetMood.tired:
-      return PixelMotion.sleep;
+      return PixelMotion.drowsy;
     case PetMood.sad:
-      return PixelMotion.hurt;
+      return PixelMotion.sad;
     case PetMood.dead:
       // 긴 잠 컨셉 — 잠자는 모습으로 표현
       return PixelMotion.sleep;
@@ -100,15 +106,15 @@ List<(PixelMotion, int)> idleMotionPool(PetMood mood, int hour) {
     case PetMood.sleepy:
     case PetMood.tired:
       return [
-        (PixelMotion.sleep, 65),
-        (PixelMotion.hurt, 20), // 축 처짐
+        (PixelMotion.drowsy, 45), // 선 채 꾸벅꾸벅
+        (PixelMotion.sleep, 40),
         (PixelMotion.walk, 15),
       ];
     case PetMood.sad:
       return [
-        (PixelMotion.hurt, 50),
+        (PixelMotion.sad, 50), // 시무룩
         (PixelMotion.angry, 20),
-        (PixelMotion.sleep, 15),
+        (PixelMotion.drowsy, 15),
         (PixelMotion.walk, 15),
       ];
     case PetMood.dead:
@@ -128,9 +134,19 @@ PixelMotion pickIdleMotion(PetMood mood, int hour, int roll) {
   return pool.first.$1;
 }
 
-/// 스프라이트 키/모션에 해당하는 프레임 조회 (없으면 null)
+/// AI 전용 신규 모션 → 도트 데이터가 없을 때 대신 그릴 유사 도트 모션
+const Map<String, String> _dotMotionFallback = {
+  'sad': 'hurt', // 시무룩 → 축 처짐
+  'drink': 'eat', // 물마시기 → 먹기
+  'drowsy': 'sleep', // 졸림 → 자기
+};
+
+/// 스프라이트 키/모션에 해당하는 프레임 조회 (없으면 유사 모션 폴백 → null)
 List<PixelSprite>? motionFramesFor(String spriteKey, PixelMotion motion) {
-  return motionFrames[spriteKey]?[motion.name];
+  final frames = motionFrames[spriteKey]?[motion.name];
+  if (frames != null) return frames;
+  final fallback = _dotMotionFallback[motion.name];
+  return fallback == null ? null : motionFrames[spriteKey]?[fallback];
 }
 
 /// 진화 단계 → 도트 모션 스프라이트 키 (홈/썸네일/위젯 공통 규칙)

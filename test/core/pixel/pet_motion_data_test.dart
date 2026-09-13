@@ -186,9 +186,10 @@ void main() {
       expect(motionForMood(PetMood.happy), PixelMotion.joy);
       expect(motionForMood(PetMood.normal), PixelMotion.walk);
       expect(motionForMood(PetMood.hungry), PixelMotion.hungry);
-      expect(motionForMood(PetMood.sleepy), PixelMotion.sleep);
-      expect(motionForMood(PetMood.tired), PixelMotion.sleep);
-      expect(motionForMood(PetMood.sad), PixelMotion.hurt);
+      // 신규 AI 모션 연동: 졸림(drowsy)·시무룩(sad)
+      expect(motionForMood(PetMood.sleepy), PixelMotion.drowsy);
+      expect(motionForMood(PetMood.tired), PixelMotion.drowsy);
+      expect(motionForMood(PetMood.sad), PixelMotion.sad);
       // dead는 긴 잠 컨셉 — 잠자는 모션
       expect(motionForMood(PetMood.dead), PixelMotion.sleep);
     });
@@ -198,6 +199,16 @@ void main() {
     test('유효한 스프라이트 키/모션 조회', () {
       expect(motionFramesFor('dragon1', PixelMotion.walk), isNotNull);
       expect(motionFramesFor('없는키', PixelMotion.walk), isNull);
+    });
+
+    test('신규 AI 모션은 도트 데이터가 없으면 유사 도트 모션으로 폴백', () {
+      // sad→hurt, drink→eat, drowsy→sleep
+      expect(motionFramesFor('dragon1', PixelMotion.sad),
+          same(motionFramesFor('dragon1', PixelMotion.hurt)));
+      expect(motionFramesFor('dragon1', PixelMotion.drink),
+          same(motionFramesFor('dragon1', PixelMotion.eat)));
+      expect(motionFramesFor('dragon1', PixelMotion.drowsy),
+          same(motionFramesFor('dragon1', PixelMotion.sleep)));
     });
 
     test('에셋 경로에서 모션 스프라이트 키 추출', () {

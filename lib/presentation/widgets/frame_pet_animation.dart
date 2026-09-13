@@ -6,11 +6,13 @@ import 'pixel_motion_animation.dart' show PixelMotion;
 
 /// (종·단계·모션)에 프레임 애니메이션 에셋이 있으면 그 키를 반환, 없으면 null.
 /// 키 = '{EvolutionType.name}_{stage}_{motion.name}' (예: 'gumiho_2_walk').
+/// 스테이지 1(털뭉치)은 종과 무관하게 'fluff_1_{motion}' 공통 키를 쓴다.
 /// 우선순위(자체>AI)는 빌드 시 [animFrameCounts]에 이미 반영돼 있고,
 /// 여기서 null이면 런타임이 도트 스프라이트로 폴백한다(3순위).
 String? animKeyFor(EvolutionType? type, int stage, PixelMotion motion) {
-  if (type == null) return null;
-  final key = '${type.name}_${stage}_${motion.name}';
+  final species = stage <= 1 ? 'fluff' : type?.name;
+  if (species == null) return null;
+  final key = '${species}_${stage <= 1 ? 1 : stage}_${motion.name}';
   return animFrameCounts.containsKey(key) ? key : null;
 }
 

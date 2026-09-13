@@ -32,6 +32,7 @@ MOTION = {
     "걷기": "walk", "먹기": "eat", "자기": "sleep", "화남": "angry",
     "기쁨": "joy", "배고픔": "hungry", "피격": "hurt", "회피": "dodge",
     "포효": "attack",
+    "시무룩": "sad", "물마시기": "drink", "졸림": "drowsy",
 }
 
 
@@ -47,9 +48,15 @@ def collect(root):
         if len(parts) < 4:
             continue
         sp, st, mo, fr = parts[0], parts[1], parts[2], parts[3]
-        if sp not in SPECIES or st not in STAGE or mo not in MOTION:
+        if mo not in MOTION:
             continue
-        key = (SPECIES[sp], STAGE[st], MOTION[mo])
+        if sp == "털뭉치":
+            # 스테이지 1 공통 털뭉치 — 종(EvolutionType) 없이 'fluff_1_*' 키
+            key = ("fluff", 1, MOTION[mo])
+        elif sp in SPECIES and st in STAGE:
+            key = (SPECIES[sp], STAGE[st], MOTION[mo])
+        else:
+            continue
         out.setdefault(key, []).append((int(re.sub(r"\D", "", fr) or 0),
                                         os.path.join(root, fn)))
     for k in out:

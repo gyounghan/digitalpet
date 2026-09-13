@@ -12,10 +12,12 @@ import '../../presentation/widgets/pixel_motion_animation.dart'
 import '../../core/anim/anim_manifest.dart' show animFrameCounts;
 
 /// (종·단계·모션)에 프레임 애니메이션 에셋이 있으면 키 반환, 없으면 null.
+/// 스테이지 1(털뭉치)은 종과 무관하게 'fluff_1_{motion}' 공통 키를 쓴다.
 String? _frameAnimKey(Pet pet, PixelMotion motion) {
-  final type = pet.evolutionType;
-  if (type == null) return null;
-  final key = '${type.name}_${pet.evolutionStage}_${motion.name}';
+  final stage = pet.evolutionStage;
+  final species = stage <= 1 ? 'fluff' : pet.evolutionType?.name;
+  if (species == null) return null;
+  final key = '${species}_${stage <= 1 ? 1 : stage}_${motion.name}';
   return animFrameCounts.containsKey(key) ? key : null;
 }
 

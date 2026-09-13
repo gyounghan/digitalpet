@@ -752,7 +752,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             onTap: () async {
               final before = pet.needsGoalReset ? 0 : pet.todayWaterCount;
               if (_motionSpriteKey(pet) != null) {
-                _playTransientMotion(PixelMotion.eat);
+                _playTransientMotion(PixelMotion.drink);
               }
               final applied = await ref
                   .read(petNotifierProvider(_activePetId).notifier)

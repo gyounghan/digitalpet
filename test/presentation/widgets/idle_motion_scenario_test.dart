@@ -23,8 +23,9 @@ void main() {
       }
 
       expect(top(PetMood.hungry, 10).$1, PixelMotion.hungry);
-      expect(top(PetMood.sad, 10).$1, PixelMotion.hurt);
-      expect(top(PetMood.sleepy, 10).$1, PixelMotion.sleep);
+      expect(top(PetMood.sad, 10).$1, PixelMotion.sad, reason: '신규 시무룩 모션');
+      expect(top(PetMood.sleepy, 10).$1, PixelMotion.drowsy,
+          reason: '신규 졸림 모션');
       expect(top(PetMood.happy, 10).$1, PixelMotion.joy);
       expect(top(PetMood.normal, 10).$1, PixelMotion.walk);
     });

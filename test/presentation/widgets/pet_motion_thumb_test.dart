@@ -21,12 +21,13 @@ void main() {
       expect(find.byType(PixelSpriteView), findsNothing);
     });
 
-    testWidgets('stage 1 (털뭉치)은 종 미결정이어도 도트 프레임 렌더', (tester) async {
+    testWidgets('stage 1 (털뭉치)은 종 미결정이어도 fluff 프레임 이미지 렌더', (tester) async {
+      // 털뭉치 AI 프레임 연동(fluff_1_*) — 도트 대신 프레임 애니메이션 우선
       await pump(
         tester,
         const PetMotionThumb(type: null, stage: 1, size: 40),
       );
-      expect(find.byType(PixelSpriteView), findsOneWidget);
+      expect(find.byType(Image), findsOneWidget);
       expect(find.text('?'), findsNothing);
     });
 
