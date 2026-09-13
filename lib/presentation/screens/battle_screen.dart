@@ -1491,6 +1491,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
     final outgoingEnd = dir * size * 1.9;
 
     List<PixelSprite>? frames;
+    List<PixelSprite>? impactFrames;
     SpeciesTheme effectTheme;
     double beginDx = 0;
     double endDx = 0;
@@ -1498,18 +1499,21 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
       final actingSkill = actorIsMe
           ? turn.playerSkillName
           : turn.opponentSkillName;
-      frames = skillEffectForSkillName(actingSkill);
       if (isSelfSkillEffect(actingSkill)) {
         // 방어자세 — 시전자 자신 패널에 제자리 방패
         if (!panelIsActor) return [];
+        frames = skillEffectForSkillName(actingSkill);
         effectTheme = ownTheme;
       } else if (panelIsActor) {
-        // 공격자 패널 — 캐릭터 가장자리에서 바라보는 방향으로 멀리 날아나감
+        // 공격자 패널 — 투사체가 캐릭터 가장자리에서 멀리 날아나감
+        frames = skillProjectileForSkillName(actingSkill);
         effectTheme = ownTheme;
         beginDx = outgoingBegin;
         endDx = outgoingEnd;
       } else {
-        // 피격자 패널 — 바깥 멀리서 날아와 캐릭터 가장자리에서 멈춤
+        // 피격자 패널 — 투사체가 날아와 캐릭터 가장자리에 "착탄"해 터진다
+        frames = skillProjectileForSkillName(actingSkill);
+        impactFrames = skillImpactForSkillName(actingSkill);
         effectTheme = attackerTheme;
         beginDx = incomingBegin;
         endDx = incomingEnd;
@@ -1520,7 +1524,8 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
         frames = skillEffectForSkillName(ownSkill);
         effectTheme = ownTheme;
       } else if (!isSelfSkillEffect(incoming)) {
-        frames = skillEffectForSkillName(incoming);
+        frames = skillProjectileForSkillName(incoming);
+        impactFrames = skillImpactForSkillName(incoming);
         effectTheme = attackerTheme;
         beginDx = incomingBegin;
         endDx = incomingEnd;
@@ -1534,6 +1539,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
         // 턴·박자마다 새 키 → 이펙트 재생을 처음부터 다시 시작
         key: ValueKey('fx-$minePanel-$currentTurnIndex-$_actionPhase'),
         frames: frames,
+        impactFrames: impactFrames,
         size: size,
         dotColor: effectTheme.primaryDeep,
         slideBeginDx: beginDx,
@@ -2009,11 +2015,17 @@ class _BattleStats {
 
 enum _WildEncounterDecision { fight, pass }
 
-/// 스킬 이펙트 1회 재생 — 3프레임을 순서대로 보여주고 마지막 프레임에서 정지.
+/// 스킬 이펙트 1회 재생.
 /// slideBeginDx→slideEndDx로 가로 슬라이드하며 "날아가는" 궤적을 만든다.
+///
+/// [impactFrames]가 있으면 2단 연출(모든 공격 스킬 공통 규칙):
+///  1) 0~60%: 투사체([frames])가 회전/맥동하며 날아온다
+///  2) 60~100%: 도착 지점에서 착탄 이펙트([impactFrames])가 터지고 페이드아웃
+/// 없으면 기존처럼 프레임 순차 재생 후 끝에서 페이드(나가는 투사체·자기 버프).
 /// 턴/박자가 바뀌면 호출부가 새 key로 다시 만들어 처음부터 재생된다.
 class _SkillEffectBurst extends StatefulWidget {
   final List<PixelSprite> frames;
+  final List<PixelSprite>? impactFrames;
   final double size;
   final Color dotColor;
 
@@ -2024,6 +2036,7 @@ class _SkillEffectBurst extends StatefulWidget {
   const _SkillEffectBurst({
     super.key,
     required this.frames,
+    this.impactFrames,
     required this.size,
     required this.dotColor,
     this.slideBeginDx = 0,
@@ -2053,30 +2066,66 @@ class _SkillEffectBurstState extends State<_SkillEffectBurst>
     super.dispose();
   }
 
+  /// 투사체 비행이 끝나고 착탄이 시작되는 진행도
+  static const double _impactStart = 0.6;
+
   @override
   Widget build(BuildContext context) {
     // 슬라이드하는 투사체는 도착 지점(몸에 닿는/화면 밖) 부근에서 사라진다.
     // 제자리 이펙트(방어자세)는 박자 끝까지 유지.
     final slides = widget.slideBeginDx != widget.slideEndDx;
+    final impact = widget.impactFrames;
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, _) {
-        final t = Curves.easeOut.transform(_controller.value);
-        final idx = (_controller.value * widget.frames.length).floor().clamp(
-          0,
-          widget.frames.length - 1,
-        );
-        final dx =
-            widget.slideBeginDx + (widget.slideEndDx - widget.slideBeginDx) * t;
-        final opacity = slides && _controller.value > 0.7
-            ? (1 - (_controller.value - 0.7) / 0.3).clamp(0.0, 1.0)
-            : 1.0;
+        final v = _controller.value;
+        PixelSprite sprite;
+        double dx;
+        double opacity;
+        if (impact != null && slides) {
+          // 2단 연출: 비행(0~60%) → 착탄 폭발(60~100%)
+          if (v < _impactStart) {
+            final flight = v / _impactStart;
+            final t = Curves.easeIn.transform(flight);
+            dx =
+                widget.slideBeginDx +
+                (widget.slideEndDx - widget.slideBeginDx) * t;
+            // 비행 중에는 투사체 프레임을 두 바퀴 돌려 회전/맥동을 만든다
+            final cycle = (flight * widget.frames.length * 2).floor();
+            sprite = widget.frames[cycle % widget.frames.length];
+            opacity = 1.0;
+          } else {
+            final burst = (v - _impactStart) / (1 - _impactStart);
+            dx = widget.slideEndDx;
+            final idx = (burst * impact.length).floor().clamp(
+              0,
+              impact.length - 1,
+            );
+            sprite = impact[idx];
+            opacity = burst > 0.75
+                ? (1 - (burst - 0.75) / 0.25).clamp(0.0, 1.0)
+                : 1.0;
+          }
+        } else {
+          final t = Curves.easeOut.transform(v);
+          final idx = (v * widget.frames.length).floor().clamp(
+            0,
+            widget.frames.length - 1,
+          );
+          sprite = widget.frames[idx];
+          dx =
+              widget.slideBeginDx +
+              (widget.slideEndDx - widget.slideBeginDx) * t;
+          opacity = slides && v > 0.7
+              ? (1 - (v - 0.7) / 0.3).clamp(0.0, 1.0)
+              : 1.0;
+        }
         return Opacity(
           opacity: opacity,
           child: Transform.translate(
             offset: Offset(dx, 0),
             child: PixelSpriteView(
-              sprite: widget.frames[idx],
+              sprite: sprite,
               width: widget.size,
               height: widget.size,
               dotColor: widget.dotColor,

@@ -113,4 +113,38 @@ void main() {
           reason: '기존 8개에서 대폭 축소');
     });
   });
+
+  group('투사체·착탄 2단 연출', () {
+    test('매핑된 모든 스킬이 투사체·착탄 프레임을 가진다', () {
+      for (final name in skillNameToEffect.keys) {
+        expect(skillProjectileForSkillName(name), isNotNull,
+            reason: '$name 투사체');
+        expect(skillImpactForSkillName(name), isNotNull, reason: '$name 착탄');
+      }
+    });
+
+    test('투사체·착탄 프레임은 전부 20×20이고 2장 이상이다', () {
+      for (final map in [skillProjectileSprites, skillImpactSprites]) {
+        for (final entry in map.entries) {
+          expect(entry.value.length, greaterThanOrEqualTo(2),
+              reason: '${entry.key} 프레임 수');
+          for (final frame in entry.value) {
+            expect(frame.size, skillEffectGridSize,
+                reason: '${entry.key} 그리드 크기');
+          }
+        }
+      }
+    });
+
+    test('스킬 구체화 — 떡방아/방망이질/들이받기는 전용 투사체 키를 쓴다', () {
+      expect(skillNameToEffect['떡방아'], 'mochi');
+      expect(skillNameToEffect['방망이질'], 'club');
+      expect(skillNameToEffect['들이받기'], 'horn');
+    });
+
+    test('미등록 스킬은 투사체·착탄 모두 null', () {
+      expect(skillProjectileForSkillName('없는스킬'), isNull);
+      expect(skillImpactForSkillName('없는스킬'), isNull);
+    });
+  });
 }

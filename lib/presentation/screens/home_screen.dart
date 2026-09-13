@@ -362,33 +362,43 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 460),
-          child: ListView(
-            // 펫 무대가 좌우 끝까지 차도록 리스트 자체는 무여백,
-            // 무대 외 섹션만 개별로 좌우 16을 준다. 하단 여백도 없앤다.
-            padding: const EdgeInsets.fromLTRB(0, 12, 0, 0),
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: _buildScreenTop(context, ref, pet),
-              ),
-              const SizedBox(height: 10),
-              _buildPetStage(pet, theme),
-              const SizedBox(height: 10),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    SyncPermissionBanner(theme: theme),
-                    if (pet.todayEvent.isNotEmpty && pet.todayEvent != 'normal')
-                      _buildEventBanner(pet, theme),
-                    _buildStatusGrid(pet),
-                    const SizedBox(height: 10),
-                    _buildActionGrid(ref, pet),
-                  ],
+          // 무대가 "남는 세로 공간을 전부" 차지하도록 뷰포트 높이에 맞춰
+          // 늘어나는 컬럼 구조. 화면이 작아 내용이 넘치면 그때만 스크롤된다
+          // (밥/물 버튼 아래 빈 여백 제거).
+          child: LayoutBuilder(
+            builder: (context, viewport) => SingleChildScrollView(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: viewport.maxHeight),
+                child: IntrinsicHeight(
+                  child: Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                        child: _buildScreenTop(context, ref, pet),
+                      ),
+                      const SizedBox(height: 10),
+                      Expanded(child: _buildPetStage(pet, theme)),
+                      const SizedBox(height: 10),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            SyncPermissionBanner(theme: theme),
+                            if (pet.todayEvent.isNotEmpty &&
+                                pet.todayEvent != 'normal')
+                              _buildEventBanner(pet, theme),
+                            _buildStatusGrid(pet),
+                            const SizedBox(height: 10),
+                            _buildActionGrid(ref, pet),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ],
+            ),
           ),
         ),
       ),
@@ -497,7 +507,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     // 새벽/낮/노을/밤 하늘로 바뀐다. 바닥 그림자는 없앴다.
     final phase = _DayPhase.now();
     return Container(
-      height: 480,
+      // 남는 공간을 전부 채우되(부모 Expanded), 최소 높이는 보장한다
+      constraints: const BoxConstraints(minHeight: 460),
+      width: double.infinity,
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         gradient: LinearGradient(
