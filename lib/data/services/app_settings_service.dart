@@ -28,4 +28,17 @@ class AppSettingsService {
     await _ensureBox();
     await _box!.put(_kHasSeenDiagnosticsOnboarding, true);
   }
+
+  static const _kHapticsEnabled = 'haptics_enabled';
+
+  /// 햅틱(진동) 피드백 사용 여부 (기본 켜짐)
+  Future<bool> getHapticsEnabled() async {
+    await _ensureBox();
+    return _box!.get(_kHapticsEnabled, defaultValue: true) as bool;
+  }
+
+  Future<void> setHapticsEnabled(bool enabled) async {
+    await _ensureBox();
+    await _box!.put(_kHapticsEnabled, enabled);
+  }
 }

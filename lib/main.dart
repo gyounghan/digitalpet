@@ -15,6 +15,8 @@ import 'data/datasources/health_datasource.dart';
 import 'data/services/notification_service.dart';
 import 'data/services/widget_service.dart';
 import 'data/services/background_service.dart';
+import 'data/services/app_settings_service.dart';
+import 'data/services/feedback_service.dart';
 import 'data/datasources/auth_session.dart';
 import 'data/datasources/device_id_datasource.dart';
 import 'data/datasources/step_sensor_datasource.dart';
@@ -65,6 +67,9 @@ Future<void> _initHive() async {
     DeviceIdDatasource().init(),
     StepSensorDatasource().init(),
   ]);
+
+  // 저장된 햅틱 설정을 피드백 서비스에 주입 (기본 켜짐)
+  FeedbackService.enabled = await AppSettingsService().getHapticsEnabled();
 }
 
 /// 알림 채널만 등록. 권한 요청은 [runDeferredStartupTasks]에서.

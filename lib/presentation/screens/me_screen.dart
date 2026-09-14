@@ -22,6 +22,7 @@ import 'debug_pixel_gallery_screen.dart';
 import 'debug_cheat_screen.dart';
 import 'shop_screen.dart';
 import 'play_minigame_screen.dart';
+import 'settings_screen.dart';
 
 /// 도감 화면 — 펫 프로필 + 성장 단계 정보 + 수집 앨범.
 ///
@@ -234,6 +235,19 @@ class _MeScreenState extends ConsumerState<MeScreen> {
                         ),
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const SettingsScreen(),
+                        ),
+                      ),
+                      icon: const Icon(Icons.settings, size: 18),
+                      label: const Text('설정'),
+                    ),
                   ),
                   if (pet.evolutionStage < 4) ...[
                     const SizedBox(height: 12),
