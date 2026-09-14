@@ -15,6 +15,7 @@ import '../../domain/usecases/drink_water_usecase.dart';
 import '../../domain/usecases/pet_transition_events.dart';
 import '../../core/utils/pet_image_helper.dart';
 import '../../data/services/ad_service.dart';
+import '../../data/services/feedback_service.dart';
 import '../../data/datasources/app_prefs_datasource.dart';
 import '../widgets/long_sleep_widget.dart';
 import '../widgets/sync_permission_banner.dart';
@@ -566,7 +567,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           Align(
             alignment: Alignment.bottomCenter,
             child: GestureDetector(
-              onTap: () => _playTransientMotion(_pokeReaction(pet.mood)),
+              onTap: () {
+              FeedbackService.light();
+              _playTransientMotion(_pokeReaction(pet.mood));
+            },
               child: _buildPetSprite(pet, theme),
             ),
           ),
@@ -756,6 +760,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             primary: true,
             enabled: canFeed,
             onTap: () {
+              FeedbackService.medium();
               ref.read(petNotifierProvider(_activePetId).notifier).feed();
               if (hasMotion) _playTransientMotion(PixelMotion.eat);
             },
@@ -769,6 +774,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             icon: Icons.local_drink_rounded,
             enabled: pet.canDrinkWaterAt(DateTime.now().hour),
             onTap: () async {
+              FeedbackService.medium();
               final before = pet.needsGoalReset ? 0 : pet.todayWaterCount;
               if (_motionSpriteKey(pet) != null) {
                 _playTransientMotion(PixelMotion.drink);

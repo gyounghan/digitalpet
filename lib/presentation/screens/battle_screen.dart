@@ -26,6 +26,7 @@ import '../../domain/entities/wild_encounter.dart';
 import '../../data/datasources/battle_socket_datasource.dart';
 import '../../data/datasources/wild_encounter_datasource.dart';
 import '../../data/services/ad_service.dart';
+import '../../data/services/feedback_service.dart';
 import '../../data/services/wild_encounter_service.dart';
 
 /// 배틀 화면
@@ -481,6 +482,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
   }
 
   Future<void> _simulateTurns({WildEncounter? wild}) async {
+    FeedbackService.medium();
     setState(() {
       turns = [];
       currentTurnIndex = -1;
@@ -551,6 +553,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
 
       await ref.read(petNotifierProvider(_activePetId).notifier).refresh();
 
+      result.isVictory ? FeedbackService.success() : FeedbackService.error();
       setState(() {
         battleResult = result.isVictory;
         expGained = result.expGained;

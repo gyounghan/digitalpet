@@ -5,6 +5,7 @@ import '../providers/active_pet_provider.dart';
 import '../widgets/app_design.dart';
 import '../widgets/mock_ui_widgets.dart';
 import '../../core/theme/species_theme.dart';
+import '../../data/services/feedback_service.dart';
 import '../../domain/entities/pet.dart';
 import '../../domain/entities/shop_item.dart';
 
@@ -34,6 +35,7 @@ class ShopScreen extends ConsumerWidget {
     final messenger = ScaffoldMessenger.of(context);
     final result =
         await ref.read(petNotifierProvider(petId).notifier).purchase(item);
+    result.success ? FeedbackService.success() : FeedbackService.error();
     messenger.showSnackBar(
       SnackBar(
         behavior: SnackBarBehavior.floating,
