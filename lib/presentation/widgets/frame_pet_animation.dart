@@ -20,6 +20,36 @@ String? animKeyFor(EvolutionType? type, int stage, PixelMotion motion) {
 bool hasFrameAnimation(EvolutionType? type, int stage, PixelMotion motion) =>
     animKeyFor(type, stage, motion) != null;
 
+/// 정확한 모션 프레임이 없을 때 대신 쓸 유사 모션 순서.
+/// 도트 폴백이 없는 프레임 전용 종(예: 두꺼비)이 특정 모션(유아기 sleep·attack 등)을
+/// 빠뜨렸을 때 빈 렌더 대신 가장 가까운 프레임으로 대체하기 위한 표.
+const Map<PixelMotion, List<PixelMotion>> _frameMotionFallback = {
+  PixelMotion.sleep: [PixelMotion.drowsy, PixelMotion.walk],
+  PixelMotion.attack: [PixelMotion.joy, PixelMotion.walk],
+  PixelMotion.drowsy: [PixelMotion.sleep, PixelMotion.walk],
+  PixelMotion.drink: [PixelMotion.eat, PixelMotion.walk],
+  PixelMotion.sad: [PixelMotion.hurt, PixelMotion.walk],
+  PixelMotion.angry: [PixelMotion.hurt, PixelMotion.walk],
+  PixelMotion.dodge: [PixelMotion.walk],
+  PixelMotion.hurt: [PixelMotion.walk],
+  PixelMotion.hungry: [PixelMotion.walk],
+  PixelMotion.eat: [PixelMotion.walk],
+  PixelMotion.joy: [PixelMotion.walk],
+};
+
+/// 정확한 모션 프레임이 있으면 그 키를, 없으면 유사 모션 프레임 키를 반환한다.
+/// 도트 폴백이 없는 프레임 전용 종이 빈 렌더로 사라지는 것을 막는 안전망 —
+/// 호출부는 정확 프레임·도트가 모두 없을 때만 이 함수로 최종 대체한다.
+String? animKeyForOrFallback(EvolutionType? type, int stage, PixelMotion motion) {
+  final exact = animKeyFor(type, stage, motion);
+  if (exact != null) return exact;
+  for (final alt in _frameMotionFallback[motion] ?? const <PixelMotion>[]) {
+    final key = animKeyFor(type, stage, alt);
+    if (key != null) return key;
+  }
+  return null;
+}
+
 /// 투명 PNG 프레임 시퀀스를 루프 재생하는 펫 애니메이션.
 ///
 /// `assets/anim/{animKey}_{i}.png` (0..frameCount-1)을 [fps]로 순환한다.

@@ -635,9 +635,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ),
       );
     }
-    // 2·3순위: 도트 모션 → 정적 이미지 폴백
+    // 2순위: 도트 모션 (해당 모션의 도트 프레임이 실제로 있을 때만)
     final spriteKey = _motionSpriteKey(pet);
-    if (spriteKey != null) {
+    if (spriteKey != null && motionFramesFor(spriteKey, motion) != null) {
       // 털뭉치=베이지, 일반종=자연색(개체 변이), 사신수/그 외=테마색
       final (dotColor, accentColor) = dotColorsForKey(
         spriteKey,
@@ -658,6 +658,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             dotColor: dotColor,
             accentColor: accentColor,
             colorVariant: colorVariantFor(pet),
+          ),
+        ),
+      );
+    }
+    // 3순위: 도트 폴백이 없는 프레임 전용 종(두꺼비 등)이 이 모션 프레임을
+    // 빠뜨린 경우 — 빈 렌더 대신 유사 모션 프레임으로 대체.
+    final subKey =
+        animKeyForOrFallback(pet.evolutionType, pet.evolutionStage, motion);
+    if (subKey != null) {
+      return SizedBox(
+        width: 356,
+        height: 356,
+        child: Align(
+          alignment: Alignment.bottomCenter,
+          child: FramePetAnimation(
+            animKey: subKey,
+            frameCount: animFrameCounts[subKey]!,
+            width: 340,
+            height: 340,
           ),
         ),
       );
