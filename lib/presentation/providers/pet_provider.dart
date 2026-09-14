@@ -6,6 +6,8 @@ import '../../domain/repositories/pet_repository.dart';
 import '../../domain/repositories/notification_repository.dart';
 import '../../domain/usecases/update_pet_state_usecase.dart';
 import '../../domain/usecases/feed_pet_usecase.dart';
+import '../../domain/entities/shop_item.dart';
+import '../../domain/usecases/purchase_shop_item_usecase.dart';
 import '../../domain/usecases/sleep_pet_usecase.dart';
 import '../../domain/usecases/create_default_pet_usecase.dart';
 import '../../domain/usecases/evolve_pet_usecase.dart';
@@ -763,6 +765,22 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
     } catch (e, stackTrace) {
       state = AsyncValue.error(e, stackTrace);
     }
+  }
+
+  /// 상점 아이템 구매 — 코인 차감 + 효과 적용 (위젯 동기화 포함).
+  /// 구매 결과(성공/실패 사유)를 반환해 UI가 스낵바로 안내한다.
+  Future<PurchaseResult> purchase(ShopItem item) async {
+    final current = state.valueOrNull;
+    if (current == null) {
+      return const PurchaseResult(
+          success: false, failureReason: '펫을 불러오는 중이에요');
+    }
+    final result = const PurchaseShopItemUseCase().call(current, item);
+    if (result.success && result.pet != null) {
+      final evolvedPet = await _updateAndEvolve(result.pet!);
+      state = AsyncValue.data(evolvedPet);
+    }
+    return result;
   }
   
   /// 재우기

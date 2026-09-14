@@ -20,6 +20,7 @@ import '../../domain/entities/pet.dart';
 import '../../domain/entities/evolution_type.dart';
 import 'debug_pixel_gallery_screen.dart';
 import 'debug_cheat_screen.dart';
+import 'shop_screen.dart';
 
 /// 도감 화면 — 펫 프로필 + 성장 단계 정보 + 수집 앨범.
 ///
@@ -203,6 +204,19 @@ class _MeScreenState extends ConsumerState<MeScreen> {
                   _buildBattleStats(pet, theme),
                   const SizedBox(height: 10),
                   _buildLifetimeStats(pet, theme),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const ShopScreen(),
+                        ),
+                      ),
+                      icon: const Icon(Icons.storefront, size: 18),
+                      label: const Text('상점 가기'),
+                    ),
+                  ),
                   if (pet.evolutionStage < 4) ...[
                     const SizedBox(height: 12),
                     SizedBox(
