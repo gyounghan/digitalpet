@@ -8,9 +8,13 @@ class BattleRewardOutcome {
   /// 배수(횟수별 감쇠·이벤트) 적용 후 실제 획득 EXP
   final int expGained;
 
+  /// 이번 배틀로 획득한 재화(코인)
+  final int coinsGained;
+
   const BattleRewardOutcome({
     required this.updatedPet,
     required this.expGained,
+    this.coinsGained = 0,
   });
 }
 
@@ -30,6 +34,31 @@ class BattleReward {
   static const int wildVictoryExp = 25;
   static const int wildDefeatExp = 5;
   static const int wildDominantVictoryExp = 35;
+
+  /// 배틀 재화 보상 — EXP와 별개. 일반 대전은 감쇠 배수 적용(연타 방지),
+  /// 야생 조우는 "잘 만나면" 두둑한 고정 보너스(감쇠 없음).
+  static const int victoryCoins = 8;
+  static const int dominantVictoryCoins = 12;
+  static const int defeatCoins = 2;
+  static const int wildVictoryCoins = 20;
+  static const int wildDominantVictoryCoins = 30;
+  static const int wildDefeatCoins = 4;
+
+  /// 승패·야생 여부 → 기본 재화
+  static int baseCoinsFor({
+    required bool isVictory,
+    required bool isDominantVictory,
+    required bool isWild,
+  }) {
+    if (isWild) {
+      return isDominantVictory
+          ? wildDominantVictoryCoins
+          : (isVictory ? wildVictoryCoins : wildDefeatCoins);
+    }
+    return isDominantVictory
+        ? dominantVictoryCoins
+        : (isVictory ? victoryCoins : defeatCoins);
+  }
 
   /// 하루 1·2·3번째 배틀 보상 배수
   static const List<double> rewardMultipliers = [1.0, 0.7, 0.5];
@@ -79,6 +108,14 @@ class BattleReward {
         : 1.0;
     final expGain = (resolvedBase * multiplier * eventMultiplier).round();
 
+    // 재화: 일반 대전은 EXP와 동일한 감쇠 배수, 야생은 고정(감쇠 없음)
+    final baseCoins = baseCoinsFor(
+        isVictory: isVictory,
+        isDominantVictory: isDominantVictory,
+        isWild: isWild);
+    final coinsGain =
+        isWild ? baseCoins : (baseCoins * multiplier).round();
+
     var currentExp = pet.exp + expGain;
     var currentLevel = pet.level;
     int levelUps = 0;
@@ -110,9 +147,11 @@ class BattleReward {
       // 승수는 야생도 기록 — 도깨비 각성 축(battleVictoryCount)에 기여
       battleVictoryCount:
           isVictory ? pet.battleVictoryCount + 1 : pet.battleVictoryCount,
+      coins: pet.coins + coinsGain,
       lastUpdated: nowMs,
     );
 
-    return BattleRewardOutcome(updatedPet: updatedPet, expGained: expGain);
+    return BattleRewardOutcome(
+        updatedPet: updatedPet, expGained: expGain, coinsGained: coinsGain);
   }
 }

@@ -34,6 +34,9 @@ class LoginBonusUseCase {
   /// 접속 보너스 EXP
   static const int expPerLogin = 3;
 
+  /// 접속 보너스 재화(코인) — 하루 첫 접속 보너스에만 지급
+  static const int coinsPerLogin = 5;
+
   /// 일일 이벤트 목록과 확률 (누적)
   static const List<Map<String, dynamic>> _eventTable = [
     {'id': 'sunny', 'cumWeight': 20},
@@ -114,6 +117,7 @@ class LoginBonusUseCase {
       hunger: (pet.hunger + (statBonus * gm.hunger).round()).clamp(0, 100),
       stamina: (pet.stamina + (statBonus * gm.stamina).round()).clamp(0, 100),
       exp: pet.exp + (expBonus * gm.exp).round() + (consecutiveExpBonus * gm.exp).round(),
+      coins: pet.coins + (expBonus > 0 ? coinsPerLogin : 0),
       consecutiveLoginDays: newConsecutiveDays,
       lastLoginDate: todayStr,
       todayLoginCount: newLoginCount,

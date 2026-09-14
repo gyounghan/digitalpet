@@ -168,6 +168,10 @@ class Pet {
   /// 누적 배틀 승리 횟수 (진화 조건용)
   final int battleVictoryCount;
 
+  /// 보유 재화(코인) — 배틀·목표·로그인·야생 조우 보상으로 모으고
+  /// 상점에서 소비한다. (소프트 커런시, 결제와 무관)
+  final int coins;
+
   /// 오늘의 일일 이벤트 ID (sunny/cozy/tasty/happy_day/adventure/normal)
   final String todayEvent;
 
@@ -330,6 +334,7 @@ class Pet {
     this.goalStartTotalSteps = 0,
     this.goalStartTotalExerciseMinutes = 0,
     this.battleVictoryCount = 0,
+    this.coins = 0,
     this.todayEvent = '',
     this.lastEventDate = '',
     this.consecutiveLoginDays = 0,
@@ -399,6 +404,7 @@ class Pet {
     int? goalStartTotalSteps,
     int? goalStartTotalExerciseMinutes,
     int? battleVictoryCount,
+    int? coins,
     String? todayEvent,
     String? lastEventDate,
     int? consecutiveLoginDays,
@@ -465,6 +471,7 @@ class Pet {
       goalStartTotalSteps: goalStartTotalSteps ?? this.goalStartTotalSteps,
       goalStartTotalExerciseMinutes: goalStartTotalExerciseMinutes ?? this.goalStartTotalExerciseMinutes,
       battleVictoryCount: battleVictoryCount ?? this.battleVictoryCount,
+      coins: coins ?? this.coins,
       todayEvent: todayEvent ?? this.todayEvent,
       lastEventDate: lastEventDate ?? this.lastEventDate,
       consecutiveLoginDays: consecutiveLoginDays ?? this.consecutiveLoginDays,

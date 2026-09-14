@@ -13,6 +13,9 @@ import 'calculate_daily_goals_score_usecase.dart';
 ///
 /// 하루 리셋/페널티 로직은 없다.
 class ApplyDailyGoalsScoreUseCase {
+  /// 하루 목표 세트(포만감+수면+운동 모두 달성) 1개 완성당 지급 재화
+  static const int coinsPerSet = 10;
+
   final PetRepository petRepository;
   final CalculateDailyGoalsScoreUseCase calculateScoreUseCase;
 
@@ -149,6 +152,8 @@ class ApplyDailyGoalsScoreUseCase {
       hunger: (pet.hunger + levelUpStatBonus).clamp(0, 100),
       happiness: (pet.happiness + levelUpStatBonus).clamp(0, 100),
       stamina: (pet.stamina + levelUpStatBonus).clamp(0, 100),
+      // 세트 완성 보상 재화 (하루 목표 3종 모두 달성한 세트 수만큼)
+      coins: pet.coins + newSets * coinsPerSet,
       lastUpdated: currentTime,
     );
 

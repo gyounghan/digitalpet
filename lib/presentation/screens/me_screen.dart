@@ -1498,6 +1498,12 @@ class _MeScreenState extends ConsumerState<MeScreen> {
             _formatNumber(pet.consecutiveLoginDays),
             '일',
           ),
+          _lifeRow(
+            Icons.monetization_on,
+            '보유 코인',
+            _formatNumber(pet.coins),
+            '개',
+          ),
         ],
       ),
     );

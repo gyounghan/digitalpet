@@ -293,4 +293,43 @@ void main() {
       expect(reward.expGained, 49); // 70 × 0.7 (온라인 2번째 판)
     });
   });
+
+  group('BattleReward.apply — 재화(코인) 보상', () {
+    test('일반 승리는 victoryCoins, 코인이 pet에 누적된다', () {
+      final r = BattleReward.apply(_pet(todayBattleCount: 0),
+          isVictory: true, isDominantVictory: false, nowMs: nowMs);
+      expect(r.coinsGained, BattleReward.victoryCoins);
+      expect(r.updatedPet.coins, BattleReward.victoryCoins);
+    });
+
+    test('일반 코인도 하루 배틀 횟수 감쇠 배수를 따른다', () {
+      final second = BattleReward.apply(_pet(todayBattleCount: 1),
+          isVictory: true, isDominantVictory: false, nowMs: nowMs);
+      // 8 × 0.7 = 5.6 → 6
+      expect(second.coinsGained, 6);
+    });
+
+    test('야생 승리는 감쇠 없이 wildVictoryCoins 고정 지급', () {
+      final r = BattleReward.apply(_pet(todayBattleCount: 5),
+          isVictory: true,
+          isDominantVictory: false,
+          isWild: true,
+          nowMs: nowMs);
+      expect(r.coinsGained, BattleReward.wildVictoryCoins);
+    });
+
+    test('야생 압승은 wildDominantVictoryCoins', () {
+      final r = BattleReward.apply(_pet(),
+          isVictory: true,
+          isDominantVictory: true,
+          isWild: true,
+          nowMs: nowMs);
+      expect(r.coinsGained, BattleReward.wildDominantVictoryCoins);
+    });
+
+    test('야생 승리 코인은 일반 승리보다 많다 (잘 만나면 보상)', () {
+      expect(BattleReward.wildVictoryCoins,
+          greaterThan(BattleReward.victoryCoins));
+    });
+  });
 }
