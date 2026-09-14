@@ -41,4 +41,17 @@ class AppSettingsService {
     await _ensureBox();
     await _box!.put(_kHapticsEnabled, enabled);
   }
+
+  static const _kHasSeenWelcome = 'has_seen_welcome';
+
+  /// 첫 실행 환영 가이드를 본 적이 있는지
+  Future<bool> hasSeenWelcome() async {
+    await _ensureBox();
+    return _box!.get(_kHasSeenWelcome, defaultValue: false) as bool;
+  }
+
+  Future<void> markWelcomeSeen() async {
+    await _ensureBox();
+    await _box!.put(_kHasSeenWelcome, true);
+  }
 }

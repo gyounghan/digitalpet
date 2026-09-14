@@ -19,6 +19,7 @@ import '../../data/services/feedback_service.dart';
 import '../../data/datasources/app_prefs_datasource.dart';
 import '../widgets/long_sleep_widget.dart';
 import '../widgets/sync_permission_banner.dart';
+import '../widgets/welcome_guide.dart';
 import 'evolution_reveal_screen.dart';
 import 'species_reveal_screen.dart';
 
@@ -55,6 +56,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    // 첫 실행 환영 가이드 (한 번만)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) showWelcomeGuideIfNeeded(context);
+    });
     // 모션 1사이클 900ms — 15사이클(13.5초)마다 대기 모션을 다시 뽑는다.
     _idleTimer = Timer.periodic(const Duration(milliseconds: 13500), (_) {
       final pet = ref.read(petNotifierProvider(_activePetId)).valueOrNull;
