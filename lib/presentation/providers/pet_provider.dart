@@ -8,6 +8,7 @@ import '../../domain/usecases/update_pet_state_usecase.dart';
 import '../../domain/usecases/feed_pet_usecase.dart';
 import '../../domain/entities/shop_item.dart';
 import '../../domain/usecases/purchase_shop_item_usecase.dart';
+import '../../domain/usecases/play_with_pet_usecase.dart';
 import '../../domain/usecases/sleep_pet_usecase.dart';
 import '../../domain/usecases/create_default_pet_usecase.dart';
 import '../../domain/usecases/evolve_pet_usecase.dart';
@@ -765,6 +766,15 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
     } catch (e, stackTrace) {
       state = AsyncValue.error(e, stackTrace);
     }
+  }
+
+  /// 놀아주기 — 미니게임 점수(hits)를 행복도로 반영 (위젯 동기화 포함).
+  Future<void> play(int hits) async {
+    final current = state.valueOrNull;
+    if (current == null || current.isDead) return;
+    final played = const PlayWithPetUseCase().call(current, hits);
+    final evolvedPet = await _updateAndEvolve(played);
+    state = AsyncValue.data(evolvedPet);
   }
 
   /// 상점 아이템 구매 — 코인 차감 + 효과 적용 (위젯 동기화 포함).

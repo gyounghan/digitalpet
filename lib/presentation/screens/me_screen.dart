@@ -21,6 +21,7 @@ import '../../domain/entities/evolution_type.dart';
 import 'debug_pixel_gallery_screen.dart';
 import 'debug_cheat_screen.dart';
 import 'shop_screen.dart';
+import 'play_minigame_screen.dart';
 
 /// 도감 화면 — 펫 프로필 + 성장 단계 정보 + 수집 앨범.
 ///
@@ -205,17 +206,34 @@ class _MeScreenState extends ConsumerState<MeScreen> {
                   const SizedBox(height: 10),
                   _buildLifetimeStats(pet, theme),
                   const SizedBox(height: 10),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const ShopScreen(),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const ShopScreen(),
+                            ),
+                          ),
+                          icon: const Icon(Icons.storefront, size: 18),
+                          label: const Text('상점'),
                         ),
                       ),
-                      icon: const Icon(Icons.storefront, size: 18),
-                      label: const Text('상점 가기'),
-                    ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: pet.isDead
+                              ? null
+                              : () => Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (_) => const PlayMinigameScreen(),
+                                    ),
+                                  ),
+                          icon: const Icon(Icons.favorite, size: 18),
+                          label: const Text('놀아주기'),
+                        ),
+                      ),
+                    ],
                   ),
                   if (pet.evolutionStage < 4) ...[
                     const SizedBox(height: 12),
