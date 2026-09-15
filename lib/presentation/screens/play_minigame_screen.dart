@@ -14,8 +14,8 @@ import '../../domain/entities/pet.dart';
 import '../../domain/usecases/play_with_pet_usecase.dart';
 
 /// 놀아주기 미니게임 — 튕겨다니는 공을 탭하면 펫이 기뻐하며(joy) 하트가 터진다.
-/// 펫이 화면에 등장해 반응하므로 "펫이랑 논다"는 느낌을 준다.
-/// 점수는 펫의 행복도로 돌아간다. (행복 상한 100이라 farming 불가)
+/// 연속으로 맞히면 콤보가 쌓여 점수가 커지고, 가끔 나오는 황금 간식은 보너스.
+/// 성공한 탭 수가 펫의 행복도로 돌아간다. (행복 상한 100이라 farming 불가)
 class PlayMinigameScreen extends ConsumerStatefulWidget {
   const PlayMinigameScreen({super.key});
 
@@ -26,22 +26,28 @@ class PlayMinigameScreen extends ConsumerStatefulWidget {
 class _Heart {
   final int id;
   final double dx; // 펫 기준 좌우 오프셋(px)
-  _Heart(this.id, this.dx);
+  final bool golden;
+  _Heart(this.id, this.dx, this.golden);
 }
 
 class _PlayMinigameScreenState extends ConsumerState<PlayMinigameScreen> {
-  static const int _durationSec = 15;
+  static const int _durationSec = 20;
   static const double _toy = 52; // 공 크기
   static const double _petSize = 200;
+  static const int _comboWindowMs = 1400; // 이 안에 다시 맞히면 콤보 유지
 
   final math.Random _random = math.Random();
   Timer? _tick;
   Timer? _mover;
   Timer? _joyTimer;
+  Timer? _comboTimer;
 
   int _remaining = _durationSec;
-  int _score = 0;
+  int _hits = 0; // 성공 탭 수 (행복 보상 기준)
+  int _score = 0; // 콤보·보너스 반영 점수 (표시용)
+  int _combo = 0;
   bool _petJoy = false;
+  bool _golden = false; // 현재 공이 황금 간식인가
   bool _finished = false;
 
   // 공 위치·속도 (놀이 영역 비율 0..1)
@@ -87,26 +93,45 @@ class _PlayMinigameScreenState extends ConsumerState<PlayMinigameScreen> {
   }
 
   void _hitBall() {
-    FeedbackService.light();
+    final wasGolden = _golden;
+    wasGolden ? FeedbackService.success() : FeedbackService.light();
     setState(() {
-      _score++;
+      _combo++;
+      _hits += wasGolden ? 3 : 1; // 황금은 행복 3배 가치
+      final comboBonus = (_combo ~/ 3); // 3콤보마다 +1
+      _score += (wasGolden ? 5 : 1) + comboBonus;
       _petJoy = true;
-      _hearts.add(_Heart(_heartSeq++, (_random.nextDouble() - 0.5) * 90));
-      // 공은 새 위치로 튀고 조금 빨라진다
+
+      // 하트 터뜨리기 (콤보/황금일수록 더 많이)
+      final burst = wasGolden ? 4 : (1 + (_combo >= 6 ? 2 : _combo ~/ 3));
+      for (var i = 0; i < burst; i++) {
+        _hearts.add(_Heart(
+            _heartSeq++, (_random.nextDouble() - 0.5) * 110, wasGolden));
+      }
+
+      // 다음 공: 새 위치로 튀고 조금 빨라지며, 가끔 황금 간식
       _ball = Offset(0.1 + _random.nextDouble() * 0.8,
           0.05 + _random.nextDouble() * 0.5);
-      final speedUp = 1.0 + _score * 0.015;
-      final dir = _random.nextBool() ? 1 : -1;
-      _vx = 0.016 * speedUp * dir;
+      final speedUp = 1.0 + _hits * 0.012;
+      _vx = 0.016 * speedUp * (_random.nextBool() ? 1 : -1);
       _vy = 0.013 * speedUp * (_random.nextBool() ? 1 : -1);
+      _golden = _random.nextDouble() < 0.18;
     });
-    final myHeart = _heartSeq - 1;
-    Timer(const Duration(milliseconds: 900), () {
-      if (mounted) setState(() => _hearts.removeWhere((h) => h.id == myHeart));
+
+    // 하트 자동 제거
+    final removeUpTo = _heartSeq;
+    Timer(const Duration(milliseconds: 950), () {
+      if (mounted) setState(() => _hearts.removeWhere((h) => h.id < removeUpTo));
     });
+    // joy 리셋
     _joyTimer?.cancel();
     _joyTimer = Timer(const Duration(milliseconds: 700), () {
       if (mounted) setState(() => _petJoy = false);
+    });
+    // 콤보 유지 창
+    _comboTimer?.cancel();
+    _comboTimer = Timer(const Duration(milliseconds: _comboWindowMs), () {
+      if (mounted) setState(() => _combo = 0);
     });
   }
 
@@ -116,12 +141,13 @@ class _PlayMinigameScreenState extends ConsumerState<PlayMinigameScreen> {
     _tick?.cancel();
     _mover?.cancel();
     _joyTimer?.cancel();
+    _comboTimer?.cancel();
     setState(() => _hearts.clear());
-    if (_score > 0) {
+    if (_hits > 0) {
       FeedbackService.success();
       await ref
           .read(petNotifierProvider(ref.read(activePetIdProvider)).notifier)
-          .play(_score);
+          .play(_hits);
     }
     if (mounted) setState(() {});
   }
@@ -131,6 +157,7 @@ class _PlayMinigameScreenState extends ConsumerState<PlayMinigameScreen> {
     _tick?.cancel();
     _mover?.cancel();
     _joyTimer?.cancel();
+    _comboTimer?.cancel();
     super.dispose();
   }
 
@@ -148,9 +175,7 @@ class _PlayMinigameScreenState extends ConsumerState<PlayMinigameScreen> {
             style: TextStyle(fontWeight: FontWeight.w800)),
       ),
       body: SafeArea(
-        child: (_finished || pet == null)
-            ? _buildResult()
-            : _buildGame(pet),
+        child: (_finished || pet == null) ? _buildResult() : _buildGame(pet),
       ),
     );
   }
@@ -180,6 +205,18 @@ class _PlayMinigameScreenState extends ConsumerState<PlayMinigameScreen> {
               return Stack(
                 alignment: Alignment.center,
                 children: [
+                  // 콤보 표시
+                  if (_combo >= 2)
+                    Positioned(
+                      top: 8,
+                      child: Text('콤보 x$_combo!',
+                          style: TextStyle(
+                              fontSize: 20 + math.min(_combo, 10).toDouble(),
+                              fontWeight: FontWeight.w900,
+                              color: _combo >= 6
+                                  ? MockUI.coral
+                                  : MockUI.lineStrong)),
+                    ),
                   // 펫 — 하단 중앙에서 논다
                   Positioned(
                     bottom: 12,
@@ -192,9 +229,10 @@ class _PlayMinigameScreenState extends ConsumerState<PlayMinigameScreen> {
                     Positioned(
                       bottom: 120,
                       left: w / 2 + heart.dx,
-                      child: _FloatingHeart(key: ValueKey(heart.id)),
+                      child: _FloatingHeart(
+                          key: ValueKey(heart.id), golden: heart.golden),
                     ),
-                  // 튕기는 공 (탭 대상)
+                  // 튕기는 공/간식 (탭 대상)
                   Positioned(
                     left: _ball.dx * (w - _toy),
                     top: _ball.dy * (h * 0.62),
@@ -205,25 +243,29 @@ class _PlayMinigameScreenState extends ConsumerState<PlayMinigameScreen> {
                         height: _toy,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: MockUI.coral,
+                          color: _golden ? MockUI.gold : MockUI.coral,
                           border: Border.all(color: Colors.white, width: 3),
                           boxShadow: [
                             BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.15),
-                                blurRadius: 6,
+                                color: (_golden ? MockUI.gold : Colors.black)
+                                    .withValues(alpha: _golden ? 0.5 : 0.15),
+                                blurRadius: _golden ? 12 : 6,
+                                spreadRadius: _golden ? 2 : 0,
                                 offset: const Offset(0, 3)),
                           ],
                         ),
-                        child: const Icon(Icons.sports_baseball,
-                            color: Colors.white, size: 24),
+                        child: Icon(
+                            _golden ? Icons.star : Icons.sports_baseball,
+                            color: Colors.white,
+                            size: _golden ? 28 : 24),
                       ),
                     ),
                   ),
                   const Positioned(
                     bottom: 0,
-                    child: Text('공을 탭해서 같이 놀아요!',
+                    child: Text('공을 탭! 연속으로 맞히면 콤보 · 별은 보너스',
                         style: TextStyle(
-                            fontSize: 12.5, color: DesignTokens.ink3)),
+                            fontSize: 12, color: DesignTokens.ink3)),
                   ),
                 ],
               );
@@ -251,8 +293,8 @@ class _PlayMinigameScreenState extends ConsumerState<PlayMinigameScreen> {
         pet.evolutionType, pet.evolutionStage, pet.evolutionGrade);
     if (spriteKey != null) {
       final theme = SpeciesTheme.forType(pet.evolutionType);
-      final (dotColor, accentColor) =
-          dotColorsForKey(spriteKey, pet.evolutionType, theme, pet.colorVariant);
+      final (dotColor, accentColor) = dotColorsForKey(
+          spriteKey, pet.evolutionType, theme, pet.colorVariant);
       return PixelMotionAnimation(
         spriteKey: spriteKey,
         motion: motion,
@@ -267,21 +309,21 @@ class _PlayMinigameScreenState extends ConsumerState<PlayMinigameScreen> {
   }
 
   Widget _buildResult() {
-    final gain = _score * PlayWithPetUseCase.happinessPerHit;
+    final gain = _hits * PlayWithPetUseCase.happinessPerHit;
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           const Icon(Icons.celebration, size: 56, color: DesignTokens.gold),
           const SizedBox(height: 12),
-          Text('$_score번 같이 놀았어요!',
+          Text('$_score점!',
               style: const TextStyle(
-                  fontSize: 22,
+                  fontSize: 26,
                   fontWeight: FontWeight.w900,
                   color: DesignTokens.ink)),
           const SizedBox(height: 6),
-          Text('행복 +$gain',
-              style: const TextStyle(fontSize: 15, color: DesignTokens.ink2)),
+          Text('$_hits번 같이 놀았어요 · 행복 +$gain',
+              style: const TextStyle(fontSize: 14, color: DesignTokens.ink2)),
           const SizedBox(height: 24),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(),
@@ -295,7 +337,8 @@ class _PlayMinigameScreenState extends ConsumerState<PlayMinigameScreen> {
 
 /// 펫에서 위로 떠오르며 사라지는 하트 하나.
 class _FloatingHeart extends StatefulWidget {
-  const _FloatingHeart({super.key});
+  final bool golden;
+  const _FloatingHeart({super.key, this.golden = false});
 
   @override
   State<_FloatingHeart> createState() => _FloatingHeartState();
@@ -305,8 +348,9 @@ class _FloatingHeartState extends State<_FloatingHeart>
     with SingleTickerProviderStateMixin {
   late final AnimationController _c = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 900),
+    duration: const Duration(milliseconds: 950),
   )..forward();
+  late final double _drift = (math.Random().nextDouble() - 0.5) * 40;
 
   @override
   void dispose() {
@@ -320,10 +364,14 @@ class _FloatingHeartState extends State<_FloatingHeart>
       animation: _c,
       builder: (context, _) {
         return Transform.translate(
-          offset: Offset(0, -60 * _c.value),
+          offset: Offset(_drift * _c.value, -70 * _c.value),
           child: Opacity(
             opacity: (1 - _c.value).clamp(0.0, 1.0),
-            child: const Icon(Icons.favorite, color: MockUI.coral, size: 26),
+            child: Icon(
+              widget.golden ? Icons.star : Icons.favorite,
+              color: widget.golden ? MockUI.gold : MockUI.coral,
+              size: widget.golden ? 30 : 26,
+            ),
           ),
         );
       },
