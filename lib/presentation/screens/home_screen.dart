@@ -11,6 +11,7 @@ import '../../core/anim/anim_manifest.dart';
 import '../../core/theme/species_theme.dart';
 import '../../core/constants/app_strings.dart';
 import '../../domain/entities/pet.dart';
+import '../../domain/entities/pet_background.dart';
 import '../../domain/usecases/drink_water_usecase.dart';
 import '../../domain/usecases/pet_transition_events.dart';
 import '../../core/utils/pet_image_helper.dart';
@@ -512,6 +513,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     // 펫 무대 — 좌우 여백 없는 풀블리드, 실제 시각에 따라
     // 새벽/낮/노을/밤 하늘로 바뀐다. 바닥 그림자는 없앴다.
     final phase = _DayPhase.now();
+    // 꾸미기: 장착 배경이 있으면 하늘 그라데이션 대신 그 씬을 깐다.
+    final bg = backgroundForId(pet.equippedBackground);
+    final hasBg = bg.assetPath.isNotEmpty;
     return Container(
       // 남는 공간을 전부 채우되(부모 Expanded), 최소 높이는 보장한다
       constraints: const BoxConstraints(minHeight: 460),
@@ -527,8 +531,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       ),
       child: Stack(
         children: [
+          // 장착 배경 (하늘 요소 대신)
+          if (hasBg)
+            Positioned.fill(
+              child: Image.asset(bg.assetPath, fit: BoxFit.cover),
+            ),
           // 밤·새벽 별
-          if (phase.showStars)
+          if (!hasBg && phase.showStars)
             for (final (dx, dy, size) in const [
               (0.12, 0.10, 3.0),
               (0.30, 0.22, 2.0),
@@ -548,26 +557,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ),
                 ),
               ),
-          // 우상단 해/달 (은은한 빛무리)
-          Positioned(
-            top: 22,
-            right: 26,
-            child: Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: phase.celestial,
-                boxShadow: [
-                  BoxShadow(
-                    color: phase.celestial.withValues(alpha: 0.24),
-                    blurRadius: 0,
-                    spreadRadius: 9,
-                  ),
-                ],
+          // 우상단 해/달 (은은한 빛무리) — 장착 배경이 없을 때만
+          if (!hasBg)
+            Positioned(
+              top: 22,
+              right: 26,
+              child: Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: phase.celestial,
+                  boxShadow: [
+                    BoxShadow(
+                      color: phase.celestial.withValues(alpha: 0.24),
+                      blurRadius: 0,
+                      spreadRadius: 9,
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
           // 펫 — 하단 중앙, 톡 건드리면 반응
           Align(
             alignment: Alignment.bottomCenter,

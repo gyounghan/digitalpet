@@ -768,6 +768,15 @@ class PetNotifier extends StateNotifier<AsyncValue<Pet>> {
     }
   }
 
+  /// 홈 배경(꾸미기) 장착 — 배경 id를 저장한다.
+  Future<void> equipBackground(String backgroundId) async {
+    final current = state.valueOrNull;
+    if (current == null) return;
+    final updated = current.copyWith(equippedBackground: backgroundId);
+    await repository.updatePet(updated);
+    state = AsyncValue.data(updated);
+  }
+
   /// 놀아주기 — 미니게임 점수(hits)를 행복도로 반영 (위젯 동기화 포함).
   Future<void> play(int hits) async {
     final current = state.valueOrNull;

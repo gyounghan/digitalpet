@@ -172,6 +172,9 @@ class Pet {
   /// 상점에서 소비한다. (소프트 커런시, 결제와 무관)
   final int coins;
 
+  /// 장착한 홈 배경 id (꾸미기). '' 또는 미지정이면 기본 그라데이션.
+  final String equippedBackground;
+
   /// 오늘의 일일 이벤트 ID (sunny/cozy/tasty/happy_day/adventure/normal)
   final String todayEvent;
 
@@ -335,6 +338,7 @@ class Pet {
     this.goalStartTotalExerciseMinutes = 0,
     this.battleVictoryCount = 0,
     this.coins = 0,
+    this.equippedBackground = '',
     this.todayEvent = '',
     this.lastEventDate = '',
     this.consecutiveLoginDays = 0,
@@ -405,6 +409,7 @@ class Pet {
     int? goalStartTotalExerciseMinutes,
     int? battleVictoryCount,
     int? coins,
+    String? equippedBackground,
     String? todayEvent,
     String? lastEventDate,
     int? consecutiveLoginDays,
@@ -472,6 +477,7 @@ class Pet {
       goalStartTotalExerciseMinutes: goalStartTotalExerciseMinutes ?? this.goalStartTotalExerciseMinutes,
       battleVictoryCount: battleVictoryCount ?? this.battleVictoryCount,
       coins: coins ?? this.coins,
+      equippedBackground: equippedBackground ?? this.equippedBackground,
       todayEvent: todayEvent ?? this.todayEvent,
       lastEventDate: lastEventDate ?? this.lastEventDate,
       consecutiveLoginDays: consecutiveLoginDays ?? this.consecutiveLoginDays,

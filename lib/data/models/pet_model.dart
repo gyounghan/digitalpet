@@ -273,6 +273,10 @@ class PetModel extends Pet {
   @override
   final int coins;
 
+  @HiveField(65)
+  @override
+  final String equippedBackground;
+
   PetModel({
     required this.id,
     this.name = '펫',
@@ -311,6 +315,7 @@ class PetModel extends Pet {
     this.goalStartTotalExerciseMinutes = 0,
     this.battleVictoryCount = 0,
     this.coins = 0,
+    this.equippedBackground = '',
     this.todayEvent = '',
     this.lastEventDate = '',
     this.consecutiveLoginDays = 0,
@@ -377,6 +382,7 @@ class PetModel extends Pet {
          goalStartTotalExerciseMinutes: goalStartTotalExerciseMinutes,
          battleVictoryCount: battleVictoryCount,
          coins: coins,
+         equippedBackground: equippedBackground,
          todayEvent: todayEvent,
          lastEventDate: lastEventDate,
          consecutiveLoginDays: consecutiveLoginDays,
@@ -456,6 +462,7 @@ class PetModel extends Pet {
       goalStartTotalExerciseMinutes: json['goalStartTotalExerciseMinutes'] as int? ?? 0,
       battleVictoryCount: json['battleVictoryCount'] as int? ?? 0,
       coins: json['coins'] as int? ?? 0,
+      equippedBackground: json['equippedBackground'] as String? ?? '',
       todayEvent: json['todayEvent'] as String? ?? '',
       lastEventDate: json['lastEventDate'] as String? ?? '',
       consecutiveLoginDays: json['consecutiveLoginDays'] as int? ?? 0,
@@ -532,6 +539,7 @@ class PetModel extends Pet {
       'goalStartTotalExerciseMinutes': goalStartTotalExerciseMinutes,
       'battleVictoryCount': battleVictoryCount,
       'coins': coins,
+      'equippedBackground': equippedBackground,
       'todayEvent': todayEvent,
       'lastEventDate': lastEventDate,
       'consecutiveLoginDays': consecutiveLoginDays,
@@ -607,6 +615,7 @@ class PetModel extends Pet {
       goalStartTotalExerciseMinutes: pet.goalStartTotalExerciseMinutes,
       battleVictoryCount: pet.battleVictoryCount,
       coins: pet.coins,
+      equippedBackground: pet.equippedBackground,
       todayEvent: pet.todayEvent,
       lastEventDate: pet.lastEventDate,
       consecutiveLoginDays: pet.consecutiveLoginDays,
@@ -680,6 +689,7 @@ class PetModel extends Pet {
       goalStartTotalExerciseMinutes: goalStartTotalExerciseMinutes,
       battleVictoryCount: battleVictoryCount,
       coins: coins,
+      equippedBackground: equippedBackground,
       todayEvent: todayEvent,
       lastEventDate: lastEventDate,
       consecutiveLoginDays: consecutiveLoginDays,
@@ -753,6 +763,7 @@ class PetModel extends Pet {
     int? goalStartTotalExerciseMinutes,
     int? battleVictoryCount,
     int? coins,
+    String? equippedBackground,
     String? todayEvent,
     String? lastEventDate,
     int? consecutiveLoginDays,
@@ -820,6 +831,7 @@ class PetModel extends Pet {
       goalStartTotalExerciseMinutes: goalStartTotalExerciseMinutes ?? this.goalStartTotalExerciseMinutes,
       battleVictoryCount: battleVictoryCount ?? this.battleVictoryCount,
       coins: coins ?? this.coins,
+      equippedBackground: equippedBackground ?? this.equippedBackground,
       todayEvent: todayEvent ?? this.todayEvent,
       lastEventDate: lastEventDate ?? this.lastEventDate,
       consecutiveLoginDays: consecutiveLoginDays ?? this.consecutiveLoginDays,
