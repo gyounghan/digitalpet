@@ -20,8 +20,6 @@ import '../../domain/entities/pet.dart';
 import '../../domain/entities/evolution_type.dart';
 import 'debug_pixel_gallery_screen.dart';
 import 'debug_cheat_screen.dart';
-import 'shop_screen.dart';
-import 'play_minigame_screen.dart';
 import 'settings_screen.dart';
 
 /// 도감 화면 — 펫 프로필 + 성장 단계 정보 + 수집 앨범.
@@ -193,62 +191,30 @@ class _MeScreenState extends ConsumerState<MeScreen> {
                 const SizedBox(height: 12),
                 MockDisclosureButton(
                   title: '도감 더보기',
-                  subtitle: '전체 종 도감 · 전적 · 계정',
+                  subtitle: '전체 종 도감 · 누적 기록 · 계정',
                   expanded: _showDexDetails,
                   onTap: () =>
                       setState(() => _showDexDetails = !_showDexDetails),
+                ),
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const SettingsScreen(),
+                      ),
+                    ),
+                    icon: const Icon(Icons.settings, size: 18),
+                    label: const Text('설정'),
+                  ),
                 ),
                 if (_showDexDetails) ...[
                   const SizedBox(height: 12),
                   const SectionTitle(title: '전체 도감', trailing: '발견 · 미발견'),
                   _buildSpeciesDex(),
                   const SizedBox(height: 14),
-                  _buildBattleStats(pet, theme),
-                  const SizedBox(height: 10),
                   _buildLifetimeStats(pet, theme),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => const ShopScreen(),
-                            ),
-                          ),
-                          icon: const Icon(Icons.storefront, size: 18),
-                          label: const Text('상점'),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: pet.isDead
-                              ? null
-                              : () => Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (_) => const PlayMinigameScreen(),
-                                    ),
-                                  ),
-                          icon: const Icon(Icons.favorite, size: 18),
-                          label: const Text('놀아주기'),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const SettingsScreen(),
-                        ),
-                      ),
-                      icon: const Icon(Icons.settings, size: 18),
-                      label: const Text('설정'),
-                    ),
-                  ),
                   if (pet.evolutionStage < 4) ...[
                     const SizedBox(height: 12),
                     SizedBox(
@@ -355,31 +321,36 @@ class _MeScreenState extends ConsumerState<MeScreen> {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  SizedBox(
-                    width: 124,
-                    height: 118,
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        Transform.translate(
-                          offset: const Offset(0, 38),
-                          child: Container(
-                            width: 94,
-                            height: 15,
-                            decoration: BoxDecoration(
-                              color: const Color(0x2A665C47),
-                              borderRadius: BorderRadius.circular(999),
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => setState(() => _selectedDexStage =
+                        _selectedDexStage == null ? visibleStage : null),
+                    child: SizedBox(
+                      width: 124,
+                      height: 118,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Transform.translate(
+                            offset: const Offset(0, 38),
+                            child: Container(
+                              width: 94,
+                              height: 15,
+                              decoration: BoxDecoration(
+                                color: const Color(0x2A665C47),
+                                borderRadius: BorderRadius.circular(999),
+                              ),
                             ),
                           ),
-                        ),
-                        PetMotionThumb(
-                          type: pet.evolutionType,
-                          stage: visibleStage,
-                          grade: pet.evolutionGrade,
-                          variant: colorVariantFor(pet),
-                          size: 108,
-                        ),
-                      ],
+                          PetMotionThumb(
+                            type: pet.evolutionType,
+                            stage: visibleStage,
+                            grade: pet.evolutionGrade,
+                            variant: colorVariantFor(pet),
+                            size: 108,
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                   const SizedBox(width: 13),
@@ -428,6 +399,8 @@ class _MeScreenState extends ConsumerState<MeScreen> {
         if (_selectedDexStage != null) ...[
           const SizedBox(height: 8),
           _buildStageDetails(pet, visibleStage),
+          const SizedBox(height: 8),
+          _buildBattleStats(pet, theme),
         ],
       ],
     );

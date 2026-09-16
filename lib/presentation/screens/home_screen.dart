@@ -23,6 +23,8 @@ import '../widgets/sync_permission_banner.dart';
 import '../widgets/welcome_guide.dart';
 import 'evolution_reveal_screen.dart';
 import 'species_reveal_screen.dart';
+import 'shop_screen.dart';
+import 'play_minigame_screen.dart';
 
 /// 홈 화면 — "펫이 주인공, 정보는 행동 가능한 것만"
 ///
@@ -455,7 +457,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
           ),
         ),
-        _CoinPill(text: 'Lv.${pet.level}'),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            _CoinPill(text: 'Lv.${pet.level}'),
+            const SizedBox(height: 6),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _CoinPill(text: '${pet.coins}'),
+                const SizedBox(width: 6),
+                _HeaderIconButton(
+                  icon: Icons.storefront_rounded,
+                  onTap: () {
+                    FeedbackService.light();
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const ShopScreen()),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ],
+        ),
       ],
     );
   }
@@ -810,6 +834,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             },
           ),
         ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _ActionTile(
+            label: '놀아주기',
+            color: MockUI.green,
+            icon: Icons.sports_baseball_rounded,
+            enabled: !pet.isDead,
+            onTap: () {
+              FeedbackService.light();
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const PlayMinigameScreen(),
+                ),
+              );
+            },
+          ),
+        ),
       ],
     );
   }
@@ -1022,6 +1063,31 @@ class _CoinPill extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// 홈 상단 우측 아이콘 버튼 (상점 등) — coin-pill과 어울리는 둥근 골드 톤.
+class _HeaderIconButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+  const _HeaderIconButton({required this.icon, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        width: 34,
+        height: 34,
+        decoration: BoxDecoration(
+          color: MockUI.goldSoft,
+          shape: BoxShape.circle,
+          border: Border.all(color: MockUI.gold.withValues(alpha: 0.72)),
+        ),
+        child: Icon(icon, size: 18, color: const Color(0xFF73510B)),
       ),
     );
   }
