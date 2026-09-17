@@ -126,7 +126,17 @@ function buildManifest({ animationFiles, characterFiles }) {
     originalsWithoutAnimations: [],
   };
 
-  for (const fileName of characterFiles.map(normalizeCharacterName).sort(compareKorean)) {
+  const normalizedCharacters = characterFiles
+    .map((f) => {
+      try {
+        return normalizeCharacterName(f);
+      } catch (_) {
+        return null; // 규칙 밖 파일(프레임 시트 등) 제외
+      }
+    })
+    .filter(Boolean)
+    .sort(compareKorean);
+  for (const fileName of normalizedCharacters) {
     const original = parseCharacterFile(fileName);
     const character = ensureCharacter(manifestMap, original.character);
     const stage = ensureStage(character, original.stage);
@@ -984,7 +994,12 @@ function buildRenamePlan(directory, type) {
   const targetToSource = new Map();
 
   return files.map((fileName) => {
-    const target = normalizer(fileName);
+    let target;
+    try {
+      target = normalizer(fileName);
+    } catch (_) {
+      return null; // 규칙 밖 파일(예: 현무_성숙기_0001 프레임 시트)은 미리보기 제외
+    }
     if (targetToSource.has(target) && targetToSource.get(target) !== fileName) {
       throw new Error(`Rename collision: ${targetToSource.get(target)} and ${fileName} -> ${target}`);
     }
@@ -997,7 +1012,7 @@ function buildRenamePlan(directory, type) {
       fromPath: path.join(directory, fileName),
       toPath: path.join(directory, target),
     };
-  }).filter((plan) => plan.fromName !== plan.toName);
+  }).filter((plan) => plan && plan.fromName !== plan.toName);
 }
 
 function applyRenamePlan(plans) {
