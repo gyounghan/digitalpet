@@ -661,8 +661,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     // 시나리오 모션은 뽑았을 때의 mood와 현재 mood가 같을 때만 유효.
     final idle = (_idleMood == pet.mood) ? _idleMotion : null;
     final motion = _transientMotion ?? idle ?? motionForMood(pet.mood);
-    // 1순위: AI/자체 제작 프레임 애니메이션 (있으면 도트 대신 사용)
-    final animKey = animKeyFor(pet.evolutionType, pet.evolutionStage, motion);
+    // 1순위: AI/자체 프레임 (정확한 모션이 없으면 유사 모션 프레임으로 대체 —
+    // 도트보다 프레임을 우선해 픽셀 노출을 없앤다).
+    final animKey =
+        animKeyForOrFallback(pet.evolutionType, pet.evolutionStage, motion);
     if (animKey != null) {
       return SizedBox(
         width: 356,

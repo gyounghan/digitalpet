@@ -1428,8 +1428,9 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
     bool flip = false,
   }) {
     final motionEff = motion ?? PixelMotion.walk;
-    // 1순위: AI/자체 프레임(assets/anim)이 있으면 프레임 애니메이션으로.
-    final animKey = animKeyFor(type, stage, motionEff);
+    // 1순위: AI/자체 프레임 (정확한 모션이 없으면 유사 모션 프레임으로 대체 —
+    // 도트보다 프레임을 우선해 픽셀 노출을 없앤다).
+    final animKey = animKeyForOrFallback(type, stage, motionEff);
     if (animKey != null) {
       final anim = FramePetAnimation(
         animKey: animKey,
@@ -1441,23 +1442,10 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
       return Transform.flip(flipX: true, child: anim);
     }
 
+    // 프레임이 아예 없는 종만 도트 폴백 (로스터엔 없음)
     final key = motionSpriteKeyForStage(type, stage, grade);
-    // 도트 폴백이 없는 프레임 전용 종(두꺼비 등)이 이 모션 프레임을 빠뜨렸으면
-    // 빈 렌더/아이콘 대신 유사 모션 프레임으로 대체.
-    if (key == null || motionFramesFor(key, motionEff) == null) {
-      final subKey = animKeyForOrFallback(type, stage, motionEff);
-      if (subKey != null) {
-        final anim = FramePetAnimation(
-          animKey: subKey,
-          frameCount: animFrameCounts[subKey]!,
-          width: size,
-          height: size,
-        );
-        return flip ? Transform.flip(flipX: true, child: anim) : anim;
-      }
-      if (key == null) {
-        return Icon(Icons.pets, size: size * 0.5, color: DesignTokens.ink3);
-      }
+    if (key == null) {
+      return Icon(Icons.pets, size: size * 0.5, color: DesignTokens.ink3);
     }
     final (dotColor, accentColor) = dotColorsForKey(key, type, theme, variant);
     final sprite = PixelMotionAnimation(

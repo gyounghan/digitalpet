@@ -5,6 +5,8 @@ import '../../domain/entities/evolution_type.dart';
 import '../../domain/entities/pet.dart';
 import '../../domain/usecases/species_reveal_narrator.dart';
 import '../widgets/pixel_motion_animation.dart';
+import '../widgets/frame_pet_animation.dart';
+import '../../core/anim/anim_manifest.dart';
 
 /// 종 결정 풀스크린 연출 — "당신의 생활이 {사신수}를 깨웠어요"
 ///
@@ -84,6 +86,8 @@ class _SpeciesRevealScreenState extends State<SpeciesRevealScreen>
       theme,
       widget.pet.colorVariant,
     );
+    // 렌더 우선순위: 애니메이션 프레임(joy) → 도트.
+    final animKey = animKeyForOrFallback(_story.type, 2, PixelMotion.joy);
 
     return Scaffold(
       backgroundColor: _stageBg,
@@ -113,15 +117,22 @@ class _SpeciesRevealScreenState extends State<SpeciesRevealScreen>
                           ),
                         ),
                         child: Center(
-                          child: PixelMotionAnimation(
-                            spriteKey: spriteKey,
-                            motion: PixelMotion.joy,
-                            width: 210,
-                            height: 210,
-                            dotColor: dotColor,
-                            accentColor: accentColor,
-                            colorVariant: widget.pet.colorVariant,
-                          ),
+                          child: animKey != null
+                              ? FramePetAnimation(
+                                  animKey: animKey,
+                                  frameCount: animFrameCounts[animKey]!,
+                                  width: 210,
+                                  height: 210,
+                                )
+                              : PixelMotionAnimation(
+                                  spriteKey: spriteKey,
+                                  motion: PixelMotion.joy,
+                                  width: 210,
+                                  height: 210,
+                                  dotColor: dotColor,
+                                  accentColor: accentColor,
+                                  colorVariant: widget.pet.colorVariant,
+                                ),
                         ),
                       ),
                     ),

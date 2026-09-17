@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import '../../core/constants/app_strings.dart';
 import '../../core/theme/species_theme.dart';
 import '../../core/utils/pose_sheet.dart';
+import '../../core/anim/anim_manifest.dart';
 import '../../domain/entities/evolution_type.dart';
 import '../../domain/entities/pet.dart';
 import '../widgets/pixel_motion_animation.dart';
+import '../widgets/frame_pet_animation.dart';
 
 /// 진화 풀스크린 연출 — 3단계(성장기)·4단계(성숙기) 도달 순간
 ///
@@ -99,7 +101,9 @@ class _EvolutionRevealScreenState extends State<EvolutionRevealScreen>
       theme,
       pet.colorVariant,
     );
-    // 손수 보정한 포즈시트가 있으면 그대로, 없으면 도트 모션 폴백.
+    // 렌더 우선순위: 애니메이션 프레임(joy) → 포즈시트 → 도트.
+    final animKey = animKeyForOrFallback(
+        pet.evolutionType, pet.evolutionStage, PixelMotion.joy);
     final posePath = poseSheetAssetFor(pet.evolutionType, pet.evolutionStage);
     final stageLabel = AppStrings.stageLabels[pet.evolutionStage] ?? '';
     final formName = _formName;
@@ -131,7 +135,14 @@ class _EvolutionRevealScreenState extends State<EvolutionRevealScreen>
                           ),
                         ),
                         child: Center(
-                          child: posePath != null
+                          child: animKey != null
+                              ? FramePetAnimation(
+                                  animKey: animKey,
+                                  frameCount: animFrameCounts[animKey]!,
+                                  width: 210,
+                                  height: 210,
+                                )
+                              : posePath != null
                               ? Image.asset(
                                   posePath,
                                   width: 210,
