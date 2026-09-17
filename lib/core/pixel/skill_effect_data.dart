@@ -1480,6 +1480,7 @@ final Map<String, List<PixelSprite>> skillProjectileSprites = {
   'water': skillEffectSprites['water']!.sublist(0, 2), // 커지는 물방울
   'gust': skillEffectSprites['gust']!.sublist(0, 2), // 바람 칼날
   'charm': skillEffectSprites['charm']!.sublist(0, 2), // 하트
+  'moon': skillEffectSprites['moon']!.sublist(0, 2), // 날아가는 달 (자기버프 아님)
   'mochi': _parseFrames(_mochiProjArt),
   'club': _parseFrames(_clubProjArt),
   'horn': _parseFrames(_hornProjArt),
@@ -1499,6 +1500,7 @@ final Map<String, List<PixelSprite>> skillImpactSprites = {
   'water': skillEffectSprites['water']!.sublist(1), // 물기둥·비말
   'gust': skillEffectSprites['gust']!.sublist(1),
   'charm': skillEffectSprites['charm']!.sublist(1),
+  'moon': skillEffectSprites['moon']!.sublist(1),
   'mochi': skillEffectSprites['slam']!.sublist(1), // 둔기 충격파
   'club': skillEffectSprites['slam']!.sublist(1),
   'horn': skillEffectSprites['slam']!.sublist(1),
@@ -1564,6 +1566,5 @@ List<PixelSprite>? skillImpactForSkillName(String skillName) {
 /// 시전자 자신 위에 표시하는 스킬인지 (자기 버프 계열)
 bool isSelfSkillEffect(String skillName) =>
     skillName == '방어자세' ||
-    skillName == '보름달' ||
     skillName == '여의주' ||
     skillName == '버티기';
