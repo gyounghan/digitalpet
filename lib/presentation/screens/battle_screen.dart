@@ -13,6 +13,7 @@ import '../../core/anim/anim_manifest.dart';
 import '../widgets/pixel_pet_image.dart';
 import '../../core/pixel/pet_pixel_data.dart';
 import '../../core/pixel/skill_effect_data.dart';
+import '../../core/pixel/skill_effect_images.dart';
 import '../../core/theme/species_theme.dart';
 import '../../core/constants/app_strings.dart';
 import '../../core/constants/feature_flags.dart';
@@ -1498,6 +1499,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
 
     List<PixelSprite>? frames;
     List<PixelSprite>? impactFrames;
+    String? projImage;
     SpeciesTheme effectTheme;
     double beginDx = 0;
     double endDx = 0;
@@ -1513,12 +1515,14 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
       } else if (panelIsActor) {
         // 공격자 패널 — 투사체가 캐릭터 가장자리에서 멀리 날아나감
         frames = skillProjectileForSkillName(actingSkill);
+        projImage = skillProjectileImageForSkillName(actingSkill);
         effectTheme = ownTheme;
         beginDx = outgoingBegin;
         endDx = outgoingEnd;
       } else {
         // 피격자 패널 — 투사체가 날아와 캐릭터 가장자리에 "착탄"해 터진다
         frames = skillProjectileForSkillName(actingSkill);
+        projImage = skillProjectileImageForSkillName(actingSkill);
         impactFrames = skillImpactForSkillName(actingSkill);
         effectTheme = attackerTheme;
         beginDx = incomingBegin;
@@ -1531,6 +1535,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
         effectTheme = ownTheme;
       } else if (!isSelfSkillEffect(incoming)) {
         frames = skillProjectileForSkillName(incoming);
+        projImage = skillProjectileImageForSkillName(incoming);
         impactFrames = skillImpactForSkillName(incoming);
         effectTheme = attackerTheme;
         beginDx = incomingBegin;
@@ -1546,6 +1551,7 @@ class _BattleScreenState extends ConsumerState<BattleScreen> {
         key: ValueKey('fx-$minePanel-$currentTurnIndex-$_actionPhase'),
         frames: frames,
         impactFrames: impactFrames,
+        projectileImage: projImage,
         size: size,
         dotColor: effectTheme.primaryDeep,
         slideBeginDx: beginDx,
@@ -2035,6 +2041,9 @@ class _SkillEffectBurst extends StatefulWidget {
   final double size;
   final Color dotColor;
 
+  /// 날아가는 투사체 이미지 경로 (있으면 도트 대신 이미지로 비행). 착탄은 도트 유지.
+  final String? projectileImage;
+
   /// 가로 슬라이드 시작/끝 오프셋 (0이면 제자리 재생 — 방어자세 등)
   final double slideBeginDx;
   final double slideEndDx;
@@ -2045,6 +2054,7 @@ class _SkillEffectBurst extends StatefulWidget {
     this.impactFrames,
     required this.size,
     required this.dotColor,
+    this.projectileImage,
     this.slideBeginDx = 0,
     this.slideEndDx = 0,
   });
@@ -2126,18 +2136,40 @@ class _SkillEffectBurstState extends State<_SkillEffectBurst>
               ? (1 - (v - 0.7) / 0.3).clamp(0.0, 1.0)
               : 1.0;
         }
+        // 비행 단계 판정 — 이 구간에서는 이미지 투사체가 있으면 이미지로.
+        final isFlight = slides && (impact == null || v < _impactStart);
+        Widget core;
+        if (widget.projectileImage != null && isFlight) {
+          // 진행 방향으로 좌우 반전 + 부드러운 회전으로 날아가는 느낌.
+          final movingLeft = widget.slideEndDx < widget.slideBeginDx;
+          final spin = v * 3.2 * (movingLeft ? -1 : 1);
+          core = Transform.flip(
+            flipX: movingLeft,
+            child: Transform.rotate(
+              angle: spin,
+              child: Image.asset(
+                widget.projectileImage!,
+                width: widget.size * 0.6,
+                height: widget.size * 0.6,
+                filterQuality: FilterQuality.medium,
+              ),
+            ),
+          );
+        } else {
+          core = PixelSpriteView(
+            sprite: sprite,
+            width: widget.size,
+            height: widget.size,
+            dotColor: widget.dotColor,
+            // 반짝이('+')는 종과 무관한 스파크 노랑
+            accentColor: const Color(0xFFFFC94D),
+          );
+        }
         return Opacity(
           opacity: opacity,
           child: Transform.translate(
             offset: Offset(dx, 0),
-            child: PixelSpriteView(
-              sprite: sprite,
-              width: widget.size,
-              height: widget.size,
-              dotColor: widget.dotColor,
-              // 반짝이('+')는 종과 무관한 스파크 노랑
-              accentColor: const Color(0xFFFFC94D),
-            ),
+            child: core,
           ),
         );
       },
