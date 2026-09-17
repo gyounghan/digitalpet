@@ -78,13 +78,18 @@ void main() {
       expect(skillEffectForSkillName('없는스킬'), isNull);
     });
 
-    test('자기 대상(버프) 이펙트 — 4종', () {
-      for (final s in ['방어자세', '보름달', '여의주', '버티기']) {
+    test('자기 대상(버프) 이펙트 — 3종 (방어형 방패)', () {
+      for (final s in ['방어자세', '여의주', '버티기']) {
         expect(isSelfSkillEffect(s), isTrue, reason: s);
       }
-      for (final s in ['쪼기', '포효', '물대포', '회오리']) {
+      // 보름달은 이제 self가 아닌 날아가는 투사체
+      for (final s in ['쪼기', '포효', '물대포', '회오리', '보름달']) {
         expect(isSelfSkillEffect(s), isFalse, reason: s);
       }
+    });
+
+    test('보름달은 투사체 프레임을 갖는다 (겹침 방지)', () {
+      expect(skillProjectileForSkillName('보름달'), isNotNull);
     });
 
     test('추가 이펙트 7종이 등록돼 있다', () {
