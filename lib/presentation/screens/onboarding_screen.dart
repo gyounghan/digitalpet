@@ -9,6 +9,8 @@ import '../../data/services/widget_service.dart';
 import '../../domain/usecases/calculate_daily_goals_score_usecase.dart';
 import '../../domain/usecases/species_reveal_narrator.dart';
 import '../providers/pet_provider.dart';
+import '../../core/anim/anim_manifest.dart';
+import '../widgets/frame_pet_animation.dart';
 import '../widgets/pixel_motion_animation.dart';
 import 'home_screen.dart';
 
@@ -155,17 +157,31 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   // ── 1장: 환영 + 이름 짓기 ──────────────────────────────────────────
 
-  Widget _welcomePage(SpeciesTheme theme) {
+  /// 털뭉치 히어로 — AI 프레임(fluff_1_*)이 있으면 우선, 없으면 도트 폴백
+  Widget _fluffSprite(PixelMotion motion, double size, SpeciesTheme theme) {
+    final animKey = animKeyFor(null, 1, motion);
+    if (animKey != null) {
+      return FramePetAnimation(
+        animKey: animKey,
+        frameCount: animFrameCounts[animKey]!,
+        width: size,
+        height: size,
+      );
+    }
     final (dotColor, accentColor) = dotColorsForKey('fluff', null, theme);
+    return PixelMotionAnimation(
+      spriteKey: 'fluff',
+      motion: motion,
+      width: size,
+      height: size,
+      dotColor: dotColor,
+      accentColor: accentColor,
+    );
+  }
+
+  Widget _welcomePage(SpeciesTheme theme) {
     return _pageFrame(
-      hero: PixelMotionAnimation(
-        spriteKey: 'fluff',
-        motion: PixelMotion.joy,
-        width: 170,
-        height: 170,
-        dotColor: dotColor,
-        accentColor: accentColor,
-      ),
+      hero: _fluffSprite(PixelMotion.joy, 170, theme),
       title: AppStrings.onboardWelcomeTitle,
       body: AppStrings.onboardWelcomeBody,
       extra: TextField(
@@ -302,7 +318,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   // ── 4장: 위젯 유도 ────────────────────────────────────────────────
 
   Widget _widgetPage(SpeciesTheme theme) {
-    final (dotColor, accentColor) = dotColorsForKey('fluff', null, theme);
     // 홈 위젯 미리보기 느낌의 미니 카드
     final preview = Container(
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
@@ -318,14 +333,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          PixelMotionAnimation(
-            spriteKey: 'fluff',
-            motion: PixelMotion.walk,
-            width: 64,
-            height: 64,
-            dotColor: dotColor,
-            accentColor: accentColor,
-          ),
+          _fluffSprite(PixelMotion.walk, 64, theme),
           const SizedBox(width: 14),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,

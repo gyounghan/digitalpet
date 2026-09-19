@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import '../../core/anim/anim_manifest.dart';
 import '../../core/constants/app_strings.dart';
 import '../../core/theme/species_theme.dart';
 import '../../core/utils/pet_image_helper.dart';
 import '../../domain/entities/pet.dart';
+import 'frame_pet_animation.dart';
 import 'pet_image_animation.dart';
 import 'pixel_motion_animation.dart';
 
@@ -143,6 +145,17 @@ class _LongSleepWidgetState extends State<LongSleepWidget> {
 
   /// 잠든 펫 스프라이트 — 홈 무대와 동일한 렌더 경로에서 수면 모션만 고정
   Widget _buildSleepingSprite(Pet pet, SpeciesTheme theme) {
+    // 1순위: AI/자체 프레임 애니메이션 (홈 무대와 동일한 우선순위)
+    final animKey =
+        animKeyFor(pet.evolutionType, pet.evolutionStage, PixelMotion.sleep);
+    if (animKey != null) {
+      return FramePetAnimation(
+        animKey: animKey,
+        frameCount: animFrameCounts[animKey]!,
+        width: 200,
+        height: 200,
+      );
+    }
     final spriteKey = motionSpriteKeyForStage(
         pet.evolutionType, pet.evolutionStage, pet.evolutionGrade);
     if (spriteKey != null) {

@@ -73,7 +73,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             color: DesignTokens.ink)),
                     subtitle: const Text('밥 주기·배틀·구매 시 진동 반응',
                         style: TextStyle(color: DesignTokens.ink3)),
-                    activeThumbColor: MockUI.green,
+                    activeColor: MockUI.green,
                   ),
                   const Divider(height: 24),
                   const Padding(

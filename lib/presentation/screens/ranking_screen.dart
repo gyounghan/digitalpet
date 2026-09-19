@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/pet_provider.dart';
 import '../widgets/app_design.dart';
-import '../widgets/pixel_pet_image.dart';
+import '../widgets/pet_motion_thumb.dart';
 import '../../core/theme/species_theme.dart';
-import '../../core/utils/pet_image_helper.dart';
 import '../../data/datasources/ranking_remote_datasource.dart';
 import '../../domain/entities/evolution_type.dart';
 import 'home_screen.dart';
@@ -477,21 +476,9 @@ class _RankingRow extends StatelessWidget {
 }
 
 /// 펫 썸네일 (서버 응답의 evolutionStage 사용)
+/// — 도감·배틀과 동일한 공용 썸네일(프레임 애니 우선, 도트 폴백)로 렌더
 Widget _buildPetThumb(_RowEntry entry, double size) {
-  final path = getEvolutionImagePath(entry.type, entry.stage);
-  if (path == null) {
-    return Icon(Icons.pets, size: size, color: DesignTokens.ink3);
-  }
-  // 각 엔트리의 종별 테마색 도트로 렌더링
-  final theme = SpeciesTheme.forType(entry.type);
-  return PixelPetImage(
-    assetPath: path,
-    width: size,
-    height: size,
-    dotColor: theme.primary,
-    accentColor: theme.spriteAccent,
-    fallback: Icon(Icons.pets, size: size, color: DesignTokens.ink3),
-  );
+  return PetMotionThumb(type: entry.type, stage: entry.stage, size: size);
 }
 
 class _RowEntry {
